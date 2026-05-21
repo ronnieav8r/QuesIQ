@@ -9,6 +9,7 @@ out/
 
 *.log
 coverage/
+*.tsbuildinfo
 
 .DS_Store
 Thumbs.db
