@@ -1,23 +1,34 @@
 # Next Steps
 
+## Current State
+
+- New rebuild repo exists at `C:\Users\weeks\Documents\GitHub\QuesIQ`.
+- Next.js TypeScript scaffold exists and passed lint, typecheck, and build.
+- First UI slice exists:
+  - dashboard-first Home
+  - Home / Practice / Stories / Me navigation
+  - practice setup wizard
+  - mode routing that skips or includes question type by mode
+- Render deployment files are in the GitHub repo.
+- Bubble reference material remains in the older QuesIQ workspace.
+
 ## Immediate
 
-1. Choose whether the coded rebuild gets a new GitHub repo.
-2. Choose the first technical stack defaults:
-   - Next.js
-   - Postgres
-   - auth provider
-   - ORM/migrations
-3. Inventory required credentials and environment variables.
-4. Scaffold the app and deployment baseline.
+1. Create the separate Render service for the rebuild from
+   `ronnieav8r/QuesIQ`.
+2. Pull/fetch the latest remote GitHub changes into the local clone before the
+   next local commit cycle.
+3. Refine the responsive UI into intentional mobile and desktop compositions.
+4. Build onboarding and interview context before live VAPI integration.
+5. Choose auth provider and ORM/migration tool when the first persistence slice
+   begins.
 
 ## First Implementation Backlog
 
-- Create app shell and design tokens
-- Create protected app layout and bottom navigation
-- Add onboarding/profile data model
+- Refine app shell for mobile and desktop layout variants
+- Add onboarding/profile flow and data model
 - Seed practice mode setup records
-- Build practice setup wizard
+- Move practice setup from UI-only state toward session setup data
 - Create Session record before voice launch
 - Add placeholder session page and review page
 

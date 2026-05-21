@@ -25,6 +25,28 @@ Bubble.
 
 They may share brand context later, but they are separate product surfaces.
 
+### Use The New Rebuild Repository
+
+The coded rebuild now lives in the new GitHub repository:
+
+- Local clone: `C:\Users\weeks\Documents\GitHub\QuesIQ`
+- GitHub: `ronnieav8r/QuesIQ`
+
+The older QuesIQ workspace remains a reference source for Bubble handoffs,
+product docs, and rebuild planning history.
+
+### Design Mobile And Desktop Intentionally
+
+The app should be responsive with two deliberate experiences:
+
+- Mobile: focused single-column app flows, bottom navigation, and large tap
+  targets.
+- Desktop: a wider workspace where dashboard, history, review, and story work
+  can use more room.
+
+Practice setup and live voice sessions should stay focused at every size rather
+than becoming cluttered desktop dashboards.
+
 ## Working Recommendations
 
 These are strong defaults until we decide otherwise:
@@ -33,28 +55,23 @@ These are strong defaults until we decide otherwise:
 - Use Postgres for product data.
 - Use Render/GitHub for the first coded deployment path.
 - Keep core session/evaluation/progression logic in the backend, not Make.
-- Keep the app mobile-first with intentional desktop support.
+- Keep the app responsive with first-class mobile and desktop layouts.
 
-## Open Decisions Before Scaffold
+## Open Decisions Before The Next Large Slice
 
-1. App repo placement:
-   - new GitHub repo for the rebuild
-   - or new app directory in an existing repo
-
-2. Web stack specifics:
-   - Next.js styling approach
+1. Web stack specifics:
    - ORM/migration tool
    - auth provider
 
-3. Storage:
+2. Storage:
    - resume storage provider
    - whether any recordings are stored by us in the first beta
 
-4. Evaluation provider:
+3. Evaluation provider:
    - exact model/provider for post-session review
    - structured output contract and cost controls
 
-5. Migration:
+4. Migration:
    - start with new beta users only
    - or migrate selected Bubble user/session data later
 
