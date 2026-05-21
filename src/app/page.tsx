@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 
-type AppView = "home" | "practice" | "stories" | "me";
+type AppView = "home" | "practice" | "stories" | "me" | "onboarding";
 type PracticeStep = "mode" | "question" | "style" | "ready";
 type PracticeMode = {
   description: string;
@@ -10,6 +10,13 @@ type PracticeMode = {
   name: string;
   questionTypeRequired: boolean;
   use: string;
+};
+type InterviewContext = {
+  jobDescription: string;
+  preferredName: string;
+  resumeName?: string;
+  targetCompany: string;
+  targetRole: string;
 };
 
 const practiceModes: PracticeMode[] = [
@@ -82,6 +89,12 @@ export default function Home() {
   const [selectedModeKey, setSelectedModeKey] = useState<string>();
   const [selectedQuestionKey, setSelectedQuestionKey] = useState<string>();
   const [selectedStyleKey, setSelectedStyleKey] = useState<string>();
+  const [interviewContext, setInterviewContext] = useState<InterviewContext>({
+    jobDescription: "",
+    preferredName: "Ronald",
+    targetCompany: "",
+    targetRole: "",
+  });
 
   const selectedMode = useMemo(
     () => practiceModes.find((mode) => mode.key === selectedModeKey),
@@ -93,6 +106,9 @@ export default function Home() {
   const selectedStyle = interviewStyles.find(
     ([key]) => key === selectedStyleKey,
   )?.[1];
+  const contextReady = Boolean(
+    interviewContext.preferredName.trim() && interviewContext.targetRole.trim(),
+  );
 
   function openPractice() {
     setActiveView("practice");
@@ -144,17 +160,33 @@ export default function Home() {
         <header className="app-header">
           <div>
             <p className="eyebrow">QuesIQ Interview</p>
-            <strong>Que is ready for practice.</strong>
+            <strong>
+              {contextReady
+                ? `Que is ready for ${interviewContext.targetRole} practice.`
+                : "Que is ready for practice."}
+            </strong>
           </div>
-          <button className="quiet-button" type="button">
-            Ronald
+          <button
+            className="quiet-button"
+            onClick={() => setActiveView("me")}
+            type="button"
+          >
+            {interviewContext.preferredName || "Me"}
           </button>
         </header>
 
         <div className="app-body">
-          {activeView === "home" && <Dashboard onPractice={openPractice} />}
+          {activeView === "home" && (
+            <Dashboard
+              contextReady={contextReady}
+              interviewContext={interviewContext}
+              onOnboarding={() => setActiveView("onboarding")}
+              onPractice={openPractice}
+            />
+          )}
           {activeView === "practice" && (
             <PracticeSetup
+              interviewContext={interviewContext}
               onBack={goBackInPractice}
               onMode={chooseMode}
               onQuestion={chooseQuestion}
@@ -166,7 +198,25 @@ export default function Home() {
             />
           )}
           {activeView === "stories" && <StoriesView />}
-          {activeView === "me" && <MeView onPractice={openPractice} />}
+          {activeView === "me" && (
+            <MeView
+              contextReady={contextReady}
+              interviewContext={interviewContext}
+              onOnboarding={() => setActiveView("onboarding")}
+              onPractice={openPractice}
+            />
+          )}
+          {activeView === "onboarding" && (
+            <OnboardingView
+              interviewContext={interviewContext}
+              onBack={() => setActiveView("home")}
+              onSave={(nextContext) => {
+                setInterviewContext(nextContext);
+                setActiveView("home");
+              }}
+              onSkip={openPractice}
+            />
+          )}
         </div>
 
         <nav aria-label="Primary" className="tab-bar">
@@ -189,7 +239,17 @@ export default function Home() {
   );
 }
 
-function Dashboard({ onPractice }: { onPractice: () => void }) {
+function Dashboard({
+  contextReady,
+  interviewContext,
+  onOnboarding,
+  onPractice,
+}: {
+  contextReady: boolean;
+  interviewContext: InterviewContext;
+  onOnboarding: () => void;
+  onPractice: () => void;
+}) {
   return (
     <section className="screen home-screen" aria-labelledby="home-title">
       <div className="welcome-row">
@@ -203,19 +263,57 @@ function Dashboard({ onPractice }: { onPractice: () => void }) {
         </div>
       </div>
 
-      <section className="next-action" aria-labelledby="next-action-title">
-        <div>
-          <p className="eyebrow">Recommended Next</p>
-          <h2 id="next-action-title">Start with your first impression.</h2>
-          <p>
-            Que will help you shape the answer that opens a real interview and
-            gives the rest of your practice a stronger base.
-          </p>
-        </div>
-        <button onClick={onPractice} type="button">
-          Start Practice
-        </button>
-      </section>
+      <div className="home-workspace">
+        <section className="next-action" aria-labelledby="next-action-title">
+          <div>
+            <p className="eyebrow">Recommended Next</p>
+            <h2 id="next-action-title">
+              {contextReady
+                ? `Practice your ${interviewContext.targetRole} opening.`
+                : "Start with your first impression."}
+            </h2>
+            <p>
+              {contextReady
+                ? "Que can use your interview context while you shape the answer that sets the tone."
+                : "Give Que a little context now, or jump straight into a focused first practice session."}
+            </p>
+          </div>
+          <div className="stacked-actions">
+            <button onClick={onPractice} type="button">
+              Start Practice
+            </button>
+            {!contextReady && (
+              <button className="secondary" onClick={onOnboarding} type="button">
+                Add Context
+              </button>
+            )}
+          </div>
+        </section>
+
+        <section aria-labelledby="context-title" className="context-panel">
+          <div className="section-head">
+            <h2 id="context-title">Interview Context</h2>
+            <span>{contextReady ? "Ready" : "Fast start"}</span>
+          </div>
+          <dl>
+            <div>
+              <dt>Name</dt>
+              <dd>{interviewContext.preferredName || "Add name"}</dd>
+            </div>
+            <div>
+              <dt>Target role</dt>
+              <dd>{interviewContext.targetRole || "Add role"}</dd>
+            </div>
+            <div>
+              <dt>Company</dt>
+              <dd>{interviewContext.targetCompany || "Optional"}</dd>
+            </div>
+          </dl>
+          <button className="secondary" onClick={onOnboarding} type="button">
+            {contextReady ? "Update Context" : "Start Onboarding"}
+          </button>
+        </section>
+      </div>
 
       <div className="dashboard-grid">
         <section aria-labelledby="progress-title" className="panel progress-panel">
@@ -238,11 +336,15 @@ function Dashboard({ onPractice }: { onPractice: () => void }) {
             <span>Waiting for feedback</span>
           </div>
           <div className="score-strip">
-            {["Confidence", "Clarity", "Impact", "Authenticity", "Relevance"].map(
-              (score) => (
-                <span key={score}>{score}</span>
-              ),
-            )}
+            {[
+              "Confidence",
+              "Clarity",
+              "Impact",
+              "Authenticity",
+              "Relevance",
+            ].map((score) => (
+              <span key={score}>{score}</span>
+            ))}
           </div>
         </section>
       </div>
@@ -251,6 +353,7 @@ function Dashboard({ onPractice }: { onPractice: () => void }) {
 }
 
 function PracticeSetup({
+  interviewContext,
   onBack,
   onMode,
   onQuestion,
@@ -260,6 +363,7 @@ function PracticeSetup({
   selectedStyle,
   step,
 }: {
+  interviewContext: InterviewContext;
   onBack: () => void;
   onMode: (mode: PracticeMode) => void;
   onQuestion: (questionKey: string) => void;
@@ -383,6 +487,10 @@ function PracticeSetup({
               <dt>Interviewer style</dt>
               <dd>{selectedStyle}</dd>
             </div>
+            <div>
+              <dt>Target role</dt>
+              <dd>{interviewContext.targetRole || "General practice"}</dd>
+            </div>
           </dl>
           <p>
             The next slice will create a session record, check microphone
@@ -409,7 +517,17 @@ function StoriesView() {
   );
 }
 
-function MeView({ onPractice }: { onPractice: () => void }) {
+function MeView({
+  contextReady,
+  interviewContext,
+  onOnboarding,
+  onPractice,
+}: {
+  contextReady: boolean;
+  interviewContext: InterviewContext;
+  onOnboarding: () => void;
+  onPractice: () => void;
+}) {
   return (
     <section className="screen me-screen" aria-labelledby="me-title">
       <div>
@@ -419,22 +537,175 @@ function MeView({ onPractice }: { onPractice: () => void }) {
       <section className="profile-grid" aria-label="Current practice context">
         <div>
           <span>Preferred name</span>
-          <strong>Ronald</strong>
+          <strong>{interviewContext.preferredName || "Add in onboarding"}</strong>
         </div>
         <div>
           <span>Target role</span>
-          <strong>Add in onboarding</strong>
+          <strong>{interviewContext.targetRole || "Add in onboarding"}</strong>
+        </div>
+        <div>
+          <span>Target company</span>
+          <strong>{interviewContext.targetCompany || "Optional"}</strong>
         </div>
         <div>
           <span>Resume</span>
-          <strong>Optional before first session</strong>
+          <strong>
+            {interviewContext.resumeName || "Optional before first session"}
+          </strong>
         </div>
       </section>
       <div className="inline-actions">
-        <button type="button">Start Onboarding</button>
+        <button onClick={onOnboarding} type="button">
+          {contextReady ? "Update Context" : "Start Onboarding"}
+        </button>
         <button className="secondary" onClick={onPractice} type="button">
           Practice Now
         </button>
+      </div>
+    </section>
+  );
+}
+
+function OnboardingView({
+  interviewContext,
+  onBack,
+  onSave,
+  onSkip,
+}: {
+  interviewContext: InterviewContext;
+  onBack: () => void;
+  onSave: (nextContext: InterviewContext) => void;
+  onSkip: () => void;
+}) {
+  const [draftContext, setDraftContext] = useState(interviewContext);
+
+  function saveContext(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onSave({
+      ...draftContext,
+      preferredName: draftContext.preferredName.trim(),
+      targetCompany: draftContext.targetCompany.trim(),
+      targetRole: draftContext.targetRole.trim(),
+    });
+  }
+
+  return (
+    <section className="screen onboarding-screen" aria-labelledby="onboarding-title">
+      <div className="screen-toolbar">
+        <button
+          aria-label="Return to dashboard"
+          className="back-button"
+          onClick={onBack}
+          type="button"
+        >
+          Back
+        </button>
+        <div>
+          <p className="eyebrow">Onboarding</p>
+          <h1 id="onboarding-title">Give Que your interview context</h1>
+        </div>
+      </div>
+
+      <div className="onboarding-layout">
+        <form className="context-form" onSubmit={saveContext}>
+          <div className="field-grid">
+            <label>
+              <span>Preferred name</span>
+              <input
+                onChange={(event) =>
+                  setDraftContext((current) => ({
+                    ...current,
+                    preferredName: event.target.value,
+                  }))
+                }
+                required
+                value={draftContext.preferredName}
+              />
+            </label>
+            <label>
+              <span>Target role</span>
+              <input
+                onChange={(event) =>
+                  setDraftContext((current) => ({
+                    ...current,
+                    targetRole: event.target.value,
+                  }))
+                }
+                placeholder="Product manager"
+                required
+                value={draftContext.targetRole}
+              />
+            </label>
+          </div>
+
+          <label>
+            <span>Target company</span>
+            <input
+              onChange={(event) =>
+                setDraftContext((current) => ({
+                  ...current,
+                  targetCompany: event.target.value,
+                }))
+              }
+              placeholder="Optional"
+              value={draftContext.targetCompany}
+            />
+          </label>
+
+          <label>
+            <span>Job description</span>
+            <textarea
+              onChange={(event) =>
+                setDraftContext((current) => ({
+                  ...current,
+                  jobDescription: event.target.value,
+                }))
+              }
+              placeholder="Paste the role details Que should know. You can skip this for now."
+              rows={5}
+              value={draftContext.jobDescription}
+            />
+          </label>
+
+          <label className="file-field">
+            <span>Resume</span>
+            <input
+              accept=".pdf,.doc,.docx"
+              onChange={(event) =>
+                setDraftContext((current) => ({
+                  ...current,
+                  resumeName: event.target.files?.[0]?.name || current.resumeName,
+                }))
+              }
+              type="file"
+            />
+            <small>
+              {draftContext.resumeName ||
+                "Optional now. Storage and parsing arrive with persistence work."}
+            </small>
+          </label>
+
+          <div className="inline-actions">
+            <button type="submit">Save Context</button>
+            <button className="secondary" onClick={onSkip} type="button">
+              Practice Without More
+            </button>
+          </div>
+        </form>
+
+        <aside className="onboarding-note" aria-label="Onboarding guidance">
+          <p className="eyebrow">Fast path</p>
+          <h2>Only your name and target role are required.</h2>
+          <p>
+            Company details, a job description, and your resume should improve
+            personalization later without blocking the first voice session.
+          </p>
+          <div className="context-checklist">
+            <span>Required context first</span>
+            <span>Optional resume path</span>
+            <span>Practice stays one tap away</span>
+          </div>
+        </aside>
       </div>
     </section>
   );
