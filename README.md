@@ -24,6 +24,12 @@ npm run typecheck
 
 Open the local app at `http://localhost:3000`.
 
+## Render
+
+The rebuild should deploy as its own Render web service from this repo. The
+included `render.yaml` uses the app's Node server shape so later auth, API,
+database, and VAPI webhook work can fit without changing deployment type.
+
 ## Plan
 
 Start with `docs/rebuild/REBUILD_PLAN.md`.
