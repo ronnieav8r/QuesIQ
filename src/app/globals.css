@@ -49,6 +49,15 @@ button:hover {
   background: var(--action-pressed);
 }
 
+button:disabled,
+button:disabled:hover {
+  background: var(--surface-raised);
+  border-color: var(--border);
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible {

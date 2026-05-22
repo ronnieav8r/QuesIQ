@@ -20,6 +20,17 @@ const emptyArtifactDraft: VoiceSessionArtifactDraft = {
   transcript: [],
 };
 
+const firstTurnInstructions: Record<SessionSetupSnapshot["modeKey"], string> = {
+  coaching:
+    "Open with one short coaching prompt for the selected question focus. Ask only one question.",
+  first_impression:
+    "Open with one short first-impression prompt asking the candidate for a quick introduction. Ask only one question.",
+  mock_interview:
+    "Open the mock interview with one short first question appropriate for the selected interview context. Ask only one question.",
+  rapid_fire:
+    "Open rapid fire with one short question for the selected question focus. Ask only one question.",
+};
+
 function toErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Voice session failed.";
 }
@@ -143,8 +154,7 @@ export function RealtimeVoiceSession({
       JSON.stringify({
         type: "response.create",
         response: {
-          instructions:
-            "Greet the candidate briefly, name the practice mode, and ask the first interview-practice question.",
+          instructions: firstTurnInstructions[snapshot.modeKey],
         },
       }),
     );
