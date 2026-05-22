@@ -8,6 +8,13 @@
       "when": 1779446366994,
       "tag": "0000_create_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779488706207,
+      "tag": "0001_bizarre_lady_bullseye",
+      "breakpoints": true
     }
   ]
 }

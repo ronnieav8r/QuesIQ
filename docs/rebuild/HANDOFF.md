@@ -27,6 +27,9 @@ being moved onto the active `quesiq-web` service.
 - Chose Drizzle for Postgres schema/migrations and Auth.js for the auth slice.
 - Added the first Drizzle Session migration plus `/api/sessions` launch creation
   before the voice screen opens.
+- Added Session voice artifact persistence after an ended direct voice attempt:
+  transcript turns, lifecycle events, start/end metadata, and direct Realtime
+  call id are stored without storing audio.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
   wires `DATABASE_URL`, and runs Drizzle migrations before service start.
 - Render was connected to Codex through Render MCP for service, deploy, log,
@@ -63,11 +66,13 @@ being moved onto the active `quesiq-web` service.
 
 ## Next Best Work
 
-1. Decide the beta transcript/audio retention contract before evaluation work.
-2. Capture direct Realtime correlation metadata on the Session record.
-3. Add Auth.js user ownership before history/progression depends on it.
-4. Confirm the active `quesiq-web` deploy reaches live and manually verify that
-   `Launch Voice Session` now creates a Session id before direct voice opens.
+1. Deploy and manually verify the ended voice artifact save state on
+   `quesiq-web`.
+2. Add Auth.js user ownership before history/progression depends on it.
+3. Build the first evaluation handoff from the saved Session transcript/event
+   artifact.
+4. Keep verifying that `Launch Voice Session` creates a Session id before direct
+   voice opens.
 
 ## Watch Outs
 

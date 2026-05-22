@@ -58,8 +58,10 @@ export type SessionSetupSnapshot = {
 
 export type SessionLaunchRecord = {
   id: string;
-  status: "created";
+  status: SessionStatus;
 };
+
+export type SessionStatus = "created" | "artifact_saved";
 
 export type VoiceSessionPhase =
   | "ready"

@@ -12,6 +12,7 @@ import type {
 
 type RealtimeVoiceSessionProps = {
   onArtifactChange: (artifact: VoiceSessionArtifactDraft) => void;
+  sessionId: string;
   snapshot: SessionSetupSnapshot;
 };
 
@@ -58,6 +59,7 @@ function getPhaseLabel(phase: VoiceSessionPhase, errorMessage?: string) {
 
 export function RealtimeVoiceSession({
   onArtifactChange,
+  sessionId,
   snapshot,
 }: RealtimeVoiceSessionProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -243,6 +245,7 @@ export function RealtimeVoiceSession({
       const sessionResponse = await fetch("/api/realtime/session", {
         body: JSON.stringify({
           sdp: offer.sdp,
+          sessionId,
           snapshot,
         }),
         headers: {

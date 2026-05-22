@@ -80,6 +80,16 @@ service path is being repointed to the active QuesIQ rebuild to avoid paying for
 two unused app services now, Quira can return to its own deploy boundary later
 when it needs to be live separately.
 
+### Store Beta Voice Transcript Artifacts Before Audio
+
+The first direct voice beta stores the app-owned Session launch snapshot,
+transcript turns, lifecycle events, start/end metadata, and direct OpenAI
+Realtime call correlation metadata needed for evaluation and debugging.
+
+Do not store raw session audio in this first artifact slice. Revisit recording
+retention only when a product, evaluation, support, or compliance need justifies
+the added privacy and storage surface.
+
 ## Working Recommendations
 
 These are strong defaults until we decide otherwise:
@@ -94,7 +104,7 @@ These are strong defaults until we decide otherwise:
 
 1. Storage:
    - resume storage provider
-   - whether any recordings are stored by us in the first beta
+   - whether a later beta or review workflow needs stored voice recordings
 
 2. Evaluation provider:
    - exact model/provider for post-session review

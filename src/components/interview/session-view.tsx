@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import { interviewStyles, practiceModes, questionTypes } from "@/product/practice-data";
@@ -20,6 +20,11 @@ export function SessionView({ onBackToSetup, onExit, session, snapshot }: Sessio
     events: [],
     transcript: [],
   });
+  const [artifactSaveError, setArtifactSaveError] = useState<string>();
+  const [artifactSaveStatus, setArtifactSaveStatus] = useState<
+    "collecting" | "error" | "saved" | "saving"
+  >("collecting");
+  const savedArtifactRef = useRef<string | undefined>(undefined);
   const mode = practiceModes.find((practiceMode) => practiceMode.key === snapshot.modeKey);
   const questionType = questionTypes.find(
     (practiceQuestionType) => practiceQuestionType.key === snapshot.questionTypeKey,
@@ -27,6 +32,45 @@ export function SessionView({ onBackToSetup, onExit, session, snapshot }: Sessio
   const style = interviewStyles.find(
     (interviewStyle) => interviewStyle.key === snapshot.styleKey,
   );
+
+  useEffect(() => {
+    if (!artifactDraft.endedAt || savedArtifactRef.current === artifactDraft.endedAt) {
+      return;
+    }
+
+    savedArtifactRef.current = artifactDraft.endedAt;
+    setArtifactSaveError(undefined);
+    setArtifactSaveStatus("saving");
+
+    async function saveArtifact() {
+      try {
+        const response = await fetch(`/api/sessions/${session.id}/artifact`, {
+          body: JSON.stringify({ artifact: artifactDraft }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          method: "PUT",
+        });
+        const body = (await response.json()) as { detail?: string; error?: string };
+
+        if (!response.ok) {
+          throw new Error(
+            body.detail || body.error || "Voice session artifact could not be saved.",
+          );
+        }
+
+        setArtifactSaveStatus("saved");
+      } catch (error) {
+        savedArtifactRef.current = undefined;
+        setArtifactSaveError(
+          error instanceof Error ? error.message : "Voice session artifact could not be saved.",
+        );
+        setArtifactSaveStatus("error");
+      }
+    }
+
+    void saveArtifact();
+  }, [artifactDraft, session.id]);
 
   return (
     <section className="screen session-screen" aria-labelledby="session-title">
@@ -49,22 +93,26 @@ export function SessionView({ onBackToSetup, onExit, session, snapshot }: Sessio
         </div>
         <div>
           <p className="eyebrow">Session Surface</p>
-          <h2 id="session-readiness-title">Setup snapshot ready for voice</h2>
+          <h2 id="session-readiness-title">Session created and ready for voice</h2>
           <p>
-            Que can launch from the client snapshot now. Transcript turns and
-            lifecycle events collect in an app-owned artifact draft for the next
-            persistence slice.
+            QuesIQ created this Session before voice launch. Transcript turns
+            and lifecycle events collect in an app-owned artifact draft for the
+            next persistence slice.
           </p>
         </div>
       </section>
 
-      <RealtimeVoiceSession onArtifactChange={setArtifactDraft} snapshot={snapshot} />
+      <RealtimeVoiceSession
+        onArtifactChange={setArtifactDraft}
+        sessionId={session.id}
+        snapshot={snapshot}
+      />
 
       <div className="session-grid">
         <section className="panel session-config" aria-labelledby="session-config-title">
           <div className="section-head">
             <h2 id="session-config-title">Launch Snapshot</h2>
-            <span>Client-side now</span>
+            <span>Session created</span>
           </div>
           <dl>
             <div>
@@ -98,8 +146,13 @@ export function SessionView({ onBackToSetup, onExit, session, snapshot }: Sessio
 
         <section className="panel session-artifact" aria-labelledby="session-artifact-title">
           <div className="section-head">
-            <h2 id="session-artifact-title">Artifact Draft</h2>
-            <span>{artifactDraft.endedAt ? "Ready to hand off" : "Collecting locally"}</span>
+            <h2 id="session-artifact-title">Voice Artifact</h2>
+            <span>
+              {artifactSaveStatus === "saving" && "Saving"}
+              {artifactSaveStatus === "saved" && "Saved"}
+              {artifactSaveStatus === "error" && "Save needed"}
+              {artifactSaveStatus === "collecting" && "Collecting locally"}
+            </span>
           </div>
           <dl>
             <div>
@@ -119,16 +172,17 @@ export function SessionView({ onBackToSetup, onExit, session, snapshot }: Sessio
               <dd>{artifactDraft.endReason?.replace("_", " ") || "Live or not started"}</dd>
             </div>
           </dl>
+          {artifactSaveError && <p className="form-error">{artifactSaveError}</p>}
         </section>
 
         <section className="panel session-next" aria-labelledby="session-next-title">
           <div>
             <p className="eyebrow">Next integration</p>
-            <h2 id="session-next-title">Persist the session before voice launch</h2>
+            <h2 id="session-next-title">Evaluate the saved practice artifact</h2>
           </div>
           <p>
-            The next data slice can create a Session first, then store this setup
-            snapshot with the transcript and lifecycle draft after voice ends.
+            The transcript, lifecycle events, and direct Realtime call metadata
+            can now land on this Session before the evaluation slice.
           </p>
           <div className="inline-actions">
             <button onClick={onBackToSetup} type="button">

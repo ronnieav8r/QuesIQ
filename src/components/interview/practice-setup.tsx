@@ -168,8 +168,8 @@ export function PracticeSetup({
             </div>
           </dl>
           <p>
-            QuesIQ creates the session snapshot before opening Que&apos;s live
-            browser voice practice.
+            QuesIQ creates the Session record before opening Que&apos;s live browser
+            voice practice.
           </p>
           {sessionLaunchError && <p className="form-error">{sessionLaunchError}</p>}
           <button disabled={sessionLaunchPending} onClick={onLaunch} type="button">

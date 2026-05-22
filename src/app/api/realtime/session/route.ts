@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 
 import type { SessionSetupSnapshot } from "@/product/interview-types";
+import { saveRealtimeCallId } from "@/server/sessions/save-realtime-call";
 
 export const runtime = "nodejs";
 
 type RealtimeSessionRequest = {
   sdp?: string;
+  sessionId?: string;
   snapshot?: SessionSetupSnapshot;
 };
 
@@ -29,6 +31,10 @@ function buildQueInstructions(snapshot?: SessionSetupSnapshot) {
     `Target role: ${role}.`,
     `Target company: ${company}.`,
   ].join(" ");
+}
+
+function getRealtimeCallId(location?: string | null) {
+  return location?.split("/").filter(Boolean).at(-1);
 }
 
 export async function POST(request: Request) {
@@ -86,6 +92,16 @@ export async function POST(request: Request) {
         },
         { status: realtimeResponse.status },
       );
+    }
+
+    const realtimeCallId = getRealtimeCallId(realtimeResponse.headers.get("Location"));
+
+    if (body.sessionId && realtimeCallId) {
+      try {
+        await saveRealtimeCallId(body.sessionId, realtimeCallId);
+      } catch (error) {
+        console.error("Realtime call correlation save failed.", error);
+      }
     }
 
     return new Response(await realtimeResponse.text(), {

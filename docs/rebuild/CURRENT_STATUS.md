@@ -39,6 +39,13 @@ Last updated: 2026-05-22
   - Drizzle ORM schema and first Session migration
   - `/api/sessions` creation route with setup-snapshot validation
   - practice launch waits for the app-owned Session record before voice
+- Ended voice artifact persistence slice:
+  - Session stores transcript turns, lifecycle events, start/end metadata, and
+    the direct Realtime call id without storing audio
+  - `/api/sessions/[sessionId]/artifact` validates and saves the browser draft
+    after a voice attempt ends
+  - Realtime exchange captures OpenAI WebRTC call correlation metadata from the
+    server response boundary
 
 ## Verification
 
@@ -76,9 +83,9 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Decide transcript/artifact storage requirements for evaluation and privacy.
-2. Capture direct Realtime correlation metadata on the app-owned Session record.
-3. Add the Auth.js user ownership slice before history/progression depends on it.
+1. Deploy and verify the ended voice artifact save path on `quesiq-web`.
+2. Add the Auth.js user ownership slice before history/progression depends on it.
+3. Start the evaluation handoff from the saved Session voice artifact.
 4. Complete deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 
