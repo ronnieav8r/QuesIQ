@@ -26,7 +26,7 @@ enough to prefer it over VAPI for the first coded browser beta.
 - Added the first Drizzle Session migration plus `/api/sessions` launch creation
   before the voice screen opens.
 - Updated the Render Blueprint to provision Postgres, wire `DATABASE_URL`, and
-  run Drizzle migrations before deploy start.
+  run Drizzle migrations before the free preview service starts.
 
 ## Verified
 

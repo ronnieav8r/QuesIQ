@@ -29,8 +29,9 @@ intentionally fix it. Prefer deploy-based or user-confirmed QA for now.
 ## Render
 
 The rebuild should deploy as its own Render web service from this repo. The
-included `render.yaml` uses the app's Node server shape so later auth, API,
-database, and voice API work can fit without changing deployment type.
+included `render.yaml` provisions Render Postgres, wires `DATABASE_URL`, and
+runs the Drizzle migration before the app starts so later auth, API, database,
+and voice API work can fit without changing deployment type.
 
 ## Plan
 
