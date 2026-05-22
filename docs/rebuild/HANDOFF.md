@@ -7,7 +7,9 @@ Last updated: 2026-05-22
 QuesIQ Interview has moved from the initial UI shell into the first direct
 browser voice slice. The practice wizard now hands a session setup snapshot into
 a focused session screen, and the direct OpenAI Realtime path works manually well
-enough to prefer it over VAPI for the first coded browser beta.
+enough to prefer it over VAPI for the first coded browser beta. The first
+Postgres launch record now lands before voice, and the Render deployment path is
+being moved onto the active `quesiq-web` service.
 
 ## Done Since Last Handoff
 
@@ -25,14 +27,22 @@ enough to prefer it over VAPI for the first coded browser beta.
 - Chose Drizzle for Postgres schema/migrations and Auth.js for the auth slice.
 - Added the first Drizzle Session migration plus `/api/sessions` launch creation
   before the voice screen opens.
-- Updated the Render Blueprint to provision Postgres, wire `DATABASE_URL`, and
-  run Drizzle migrations before the free preview service starts.
+- Updated `render.yaml` with a free Blueprint path that provisions Postgres,
+  wires `DATABASE_URL`, and runs Drizzle migrations before service start.
+- Render was connected to Codex through Render MCP for service, deploy, log,
+  Postgres, and environment-variable inspection.
+- The existing paid Render service `quesiq-web` was repointed from the older
+  Quira repo to `ronnieav8r/QuesIQ` for the active rebuild path.
+- Render Postgres `quesiq-interview-db` was created and `quesiq-web` was wired
+  to run `npm run db:migrate && npm start`.
 
 ## Verified
 
 - ESLint passed.
 - TypeScript check passed.
 - Next production build passed.
+- Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
+  succeeded, Drizzle migrations applied successfully, and Next started.
 - Manual voice spike test passed:
   - Que speaks first after start.
   - Audio sounded natural enough.
@@ -56,12 +66,19 @@ enough to prefer it over VAPI for the first coded browser beta.
 1. Decide the beta transcript/audio retention contract before evaluation work.
 2. Capture direct Realtime correlation metadata on the Session record.
 3. Add Auth.js user ownership before history/progression depends on it.
+4. Confirm the active `quesiq-web` deploy reaches live and manually verify that
+   `Launch Voice Session` now creates a Session id before direct voice opens.
 
 ## Watch Outs
 
 - A test `OPENAI_API_KEY` is currently stored locally in ignored `.env.local`;
   rotate the key after the spike/test cycle because it was shared in chat.
+- The Render Postgres connection URL was pasted during setup; rotate that
+  database credential after the wiring test and replace `DATABASE_URL`.
 - Localhost preview is deprecated on any port in this Codex environment until
   we intentionally invest time to fix it. Prefer deploy-based or
   user-confirmed QA instead.
+- Render currently also has a separate free `quesiq-interview-rebuild` web
+  service. Decide whether to keep, suspend, or remove it after `quesiq-web` is
+  confirmed as the active rebuild service.
 - `tsconfig.tsbuildinfo` is generated TypeScript cache and intentionally ignored.

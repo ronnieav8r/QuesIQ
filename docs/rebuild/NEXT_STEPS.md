@@ -10,7 +10,10 @@ Last updated: 2026-05-22
   app-owned Session launch record, and opens a focused voice session screen.
 - A direct OpenAI Realtime browser voice slice is wired into that session screen
   with client artifact drafting and passed its first manual test.
-- Render deployment files are in the GitHub repo.
+- Active Render deployment path is moving onto `quesiq-web`, now pointed at
+  `ronnieav8r/QuesIQ` with Render Postgres `quesiq-interview-db`.
+- Render MCP is connected for service, deploy, log, Postgres, and environment
+  inspection.
 - Bubble reference material remains in the older OneDrive workspace.
 
 ## Immediate
@@ -18,6 +21,8 @@ Last updated: 2026-05-22
 1. Decide the minimum transcript/artifact storage contract needed for evaluation.
 2. Capture direct Realtime correlation metadata with the Session record.
 3. Add Auth.js user ownership before history/progression depends on it.
+4. Confirm `quesiq-web` reaches live and verify Session-before-voice launch on
+   the deployed app.
 5. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
    any port until we intentionally invest time to fix it.
 

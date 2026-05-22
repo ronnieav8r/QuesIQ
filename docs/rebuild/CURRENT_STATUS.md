@@ -7,6 +7,15 @@ Last updated: 2026-05-22
 - Local repo: `C:\Users\weeks\Documents\GitHub\QuesIQ`
 - GitHub repo: `ronnieav8r/QuesIQ`
 - Living rebuild docs: `docs/rebuild/`
+- Active Render web service: `quesiq-web`
+  - now points at `ronnieav8r/QuesIQ`
+  - Render URL: `https://quesiq-web.onrender.com`
+  - custom domain remains attached there while the rebuild is the active app
+- Render Postgres for the rebuild: `quesiq-interview-db`
+  - free test database in the Virginia Render region
+  - `DATABASE_URL` is wired on `quesiq-web`
+- `render.yaml` still describes the separate free Blueprint service
+  `quesiq-interview-rebuild` until we decide whether to keep that path.
 - Older Bubble handoffs and the older rebuild-doc copy in the OneDrive workspace
   are reference material unless deliberately resynced.
 
@@ -38,6 +47,11 @@ The current coded app has passed:
 - ESLint
 - TypeScript check
 - Next production build
+- Render deploy log verification on 2026-05-22 for `quesiq-web`:
+  - QuesIQ build succeeded on the persistence commit
+  - `npm run db:migrate` ran
+  - the first Drizzle migration applied successfully
+  - Next started successfully while the service update was still settling
 - Manual direct OpenAI Realtime spike test on 2026-05-22:
   - Que starts the practice
   - audio quality is acceptable
@@ -65,8 +79,8 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 1. Decide transcript/artifact storage requirements for evaluation and privacy.
 2. Capture direct Realtime correlation metadata on the app-owned Session record.
 3. Add the Auth.js user ownership slice before history/progression depends on it.
-4. Use the Render Blueprint Postgres path for deploy-based QA while localhost
-   preview is deprecated until we intentionally fix it.
+4. Complete deploy-based QA on `quesiq-web` while localhost preview is
+   deprecated until we intentionally fix it.
 
 ## Reference Inputs
 

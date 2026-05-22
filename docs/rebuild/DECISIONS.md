@@ -68,6 +68,18 @@ creation can land before protected routes while the app is still operating as a
 thin rebuild slice, but durable user ownership should be added through the auth
 slice before beta history and progression depend on it.
 
+### Keep Product Channels In The QuesIQ App By Default
+
+Interview, Learn, Stories, Jobs, profile, and other shared-user QuesIQ product
+channels should default to routes/modules inside the same QuesIQ app and shared
+product database. Separate Render services are for real product, deploy,
+security, scaling, or operational boundaries, not every channel.
+
+Que and Quira remain distinct product surfaces. While the older Quira Render
+service path is being repointed to the active QuesIQ rebuild to avoid paying for
+two unused app services now, Quira can return to its own deploy boundary later
+when it needs to be live separately.
+
 ## Working Recommendations
 
 These are strong defaults until we decide otherwise:
