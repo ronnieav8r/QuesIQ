@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { auth } from "@/auth";
 import type { SessionSetupSnapshot } from "@/product/interview-types";
+import { getOwnedSession } from "@/server/sessions/get-owned-session";
 import { saveRealtimeCallId } from "@/server/sessions/save-realtime-call";
 
 export const runtime = "nodejs";
@@ -38,6 +40,12 @@ function getRealtimeCallId(location?: string | null) {
 }
 
 export async function POST(request: Request) {
+  const appSession = await auth();
+
+  if (!appSession?.user?.id) {
+    return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
+  }
+
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
@@ -51,6 +59,10 @@ export async function POST(request: Request) {
 
   if (!body.sdp) {
     return NextResponse.json({ error: "Missing WebRTC SDP offer." }, { status: 400 });
+  }
+
+  if (!body.sessionId || !(await getOwnedSession(body.sessionId, appSession.user.id))) {
+    return NextResponse.json({ error: "Session was not found." }, { status: 404 });
   }
 
   const sessionConfig = {
@@ -96,9 +108,9 @@ export async function POST(request: Request) {
 
     const realtimeCallId = getRealtimeCallId(realtimeResponse.headers.get("Location"));
 
-    if (body.sessionId && realtimeCallId) {
+    if (realtimeCallId) {
       try {
-        await saveRealtimeCallId(body.sessionId, realtimeCallId);
+        await saveRealtimeCallId(body.sessionId, appSession.user.id, realtimeCallId);
       } catch (error) {
         console.error("Realtime call correlation save failed.", error);
       }

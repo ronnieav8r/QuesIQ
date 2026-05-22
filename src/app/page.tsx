@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import { AuthControl } from "@/components/auth-control";
 import { Dashboard } from "@/components/interview/dashboard";
 import { MeView } from "@/components/interview/me-view";
 import { OnboardingView } from "@/components/interview/onboarding-view";
@@ -167,13 +168,16 @@ export default function Home() {
             </strong>
           </div>
           {activeView !== "session" && (
-            <button
-              className="quiet-button"
-              onClick={() => setActiveView("me")}
-              type="button"
-            >
-              {interviewContext.preferredName || "Me"}
-            </button>
+            <div className="header-actions">
+              <AuthControl />
+              <button
+                className="quiet-button"
+                onClick={() => setActiveView("me")}
+                type="button"
+              >
+                {interviewContext.preferredName || "Me"}
+              </button>
+            </div>
           )}
         </header>
 

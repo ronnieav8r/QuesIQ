@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import type { VoiceSessionArtifactDraft } from "@/product/interview-types";
 import { getDb } from "@/server/db/client";
@@ -10,6 +10,7 @@ function toDate(value?: string) {
 
 export async function saveSessionArtifact(
   sessionId: string,
+  userId: string,
   artifact: VoiceSessionArtifactDraft,
 ) {
   const [session] = await getDb()
@@ -21,7 +22,7 @@ export async function saveSessionArtifact(
       updatedAt: new Date(),
       voiceArtifact: artifact,
     })
-    .where(eq(sessions.id, sessionId))
+    .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)))
     .returning({
       id: sessions.id,
       status: sessions.status,

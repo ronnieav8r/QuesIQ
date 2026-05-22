@@ -68,6 +68,10 @@ creation can land before protected routes while the app is still operating as a
 thin rebuild slice, but durable user ownership should be added through the auth
 slice before beta history and progression depend on it.
 
+The first Auth.js implementation uses GitHub OAuth for real user ownership
+without adding app-owned password storage yet. New Session launch and its direct
+voice persistence boundaries require the authenticated Session owner.
+
 ### Keep Product Channels In The QuesIQ App By Default
 
 Interview, Learn, Stories, Jobs, profile, and other shared-user QuesIQ product

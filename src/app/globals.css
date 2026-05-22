@@ -139,6 +139,22 @@ p {
   padding-block: 0.55rem;
 }
 
+.auth-control,
+.header-actions {
+  align-items: center;
+  display: flex;
+  gap: 0.55rem;
+}
+
+.auth-control span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .app-body {
   grid-area: body;
   min-height: 0;

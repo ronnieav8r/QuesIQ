@@ -3,19 +3,14 @@ import { and, eq } from "drizzle-orm";
 import { getDb } from "@/server/db/client";
 import { sessions } from "@/server/db/schema";
 
-export async function saveRealtimeCallId(
-  sessionId: string,
-  userId: string,
-  realtimeCallId: string,
-) {
+export async function getOwnedSession(sessionId: string, userId: string) {
   const [session] = await getDb()
-    .update(sessions)
-    .set({
-      realtimeCallId,
-      updatedAt: new Date(),
+    .select({
+      id: sessions.id,
     })
+    .from(sessions)
     .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)))
-    .returning({ id: sessions.id });
+    .limit(1);
 
   return session;
 }

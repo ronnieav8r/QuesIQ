@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { auth } from "@/auth";
 import { parseVoiceSessionArtifact } from "@/product/voice-session-artifact";
 import { saveSessionArtifact } from "@/server/sessions/save-session-artifact";
 
@@ -12,6 +13,12 @@ type RouteContext = {
 };
 
 export async function PUT(request: Request, context: RouteContext) {
+  const appSession = await auth();
+
+  if (!appSession?.user?.id) {
+    return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
+  }
+
   const { sessionId } = await context.params;
   const body = (await request.json()) as { artifact?: unknown };
   const artifact = parseVoiceSessionArtifact(body.artifact);
@@ -34,7 +41,7 @@ export async function PUT(request: Request, context: RouteContext) {
   }
 
   try {
-    const session = await saveSessionArtifact(sessionId, artifact);
+    const session = await saveSessionArtifact(sessionId, appSession.user.id, artifact);
 
     if (!session) {
       return NextResponse.json({ error: "Session was not found." }, { status: 404 });

@@ -50,6 +50,19 @@ npm run db:migrate
 
 The practice setup flow creates a `Session` row before opening live voice.
 
+## Auth
+
+The first ownership slice uses Auth.js with GitHub sign-in. Set these server
+environment variables before testing sign-in and saved practice launch:
+
+- `AUTH_SECRET`
+- `AUTH_GITHUB_ID`
+- `AUTH_GITHUB_SECRET`
+- `AUTH_TRUST_HOST=true` on Render
+
+New Session creation requires a signed-in user so later evaluation, history,
+and progression records have an owner.
+
 ## Direct OpenAI Realtime Voice
 
 The voice session screen opens a direct browser WebRTC session with OpenAI Realtime.

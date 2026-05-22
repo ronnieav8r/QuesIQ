@@ -12,6 +12,8 @@ Last updated: 2026-05-22
   with client artifact drafting and passed its first manual test.
 - Ended direct voice attempts now save transcript/event artifacts and Realtime
   call correlation metadata on the app-owned Session without storing audio.
+- Auth.js GitHub sign-in and Drizzle ownership tables are wired so new Sessions
+  require an authenticated owner before saved practice launches.
 - Active Render deployment path is moving onto `quesiq-web`, now pointed at
   `ronnieav8r/QuesIQ` with Render Postgres `quesiq-interview-db`.
 - Render MCP is connected for service, deploy, log, Postgres, and environment
@@ -20,8 +22,10 @@ Last updated: 2026-05-22
 
 ## Immediate
 
-1. Deploy and verify voice artifact save state on `quesiq-web`.
-2. Add Auth.js user ownership before history/progression depends on it.
+1. Configure `AUTH_SECRET`, GitHub OAuth credentials, and trusted host handling
+   on `quesiq-web`.
+2. Verify sign-in, owned Session launch, voice start/end, and artifact save on
+   the deployed app.
 3. Build the first evaluation handoff from the saved Session voice artifact.
 4. Confirm `quesiq-web` keeps Session-before-voice launch working on the
    deployed app.
@@ -33,7 +37,7 @@ Last updated: 2026-05-22
 - Persist onboarding/profile context
 - Persist seeded practice mode, question type, and interview style records where
   useful for the backend
-- Extend Session persistence into evaluation status and output
+- Extend owned Session persistence into evaluation status and output
 - Keep Session artifact storage transcript/event-first until audio retention is
   intentionally revisited
 - Add placeholder review/history direction after session artifacts exist

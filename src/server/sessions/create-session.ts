@@ -2,7 +2,7 @@ import { getDb } from "@/server/db/client";
 import { sessions } from "@/server/db/schema";
 import type { SessionSetupSnapshot } from "@/product/interview-types";
 
-export async function createSession(snapshot: SessionSetupSnapshot) {
+export async function createSession(snapshot: SessionSetupSnapshot, userId: string) {
   const [session] = await getDb()
     .insert(sessions)
     .values({
@@ -10,6 +10,7 @@ export async function createSession(snapshot: SessionSetupSnapshot) {
       modeKey: snapshot.modeKey,
       questionTypeKey: snapshot.questionTypeKey,
       styleKey: snapshot.styleKey,
+      userId,
     })
     .returning({
       id: sessions.id,

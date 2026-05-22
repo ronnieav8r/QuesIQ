@@ -1,11 +1,24 @@
 import { NextResponse } from "next/server";
 
+import { auth } from "@/auth";
 import { parseSessionSetupSnapshot } from "@/product/session-snapshot";
 import { createSession } from "@/server/sessions/create-session";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const appSession = await auth();
+
+  if (!appSession?.user?.id) {
+    return NextResponse.json(
+      {
+        detail: "Sign in before launching a saved practice session.",
+        error: "Authentication is required.",
+      },
+      { status: 401 },
+    );
+  }
+
   const body = (await request.json()) as { snapshot?: unknown };
   const snapshot = parseSessionSetupSnapshot(body.snapshot);
 
@@ -27,7 +40,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const session = await createSession(snapshot);
+    const session = await createSession(snapshot, appSession.user.id);
 
     return NextResponse.json(
       {

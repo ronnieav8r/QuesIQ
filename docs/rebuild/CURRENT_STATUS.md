@@ -46,6 +46,11 @@ Last updated: 2026-05-22
     after a voice attempt ends
   - Realtime exchange captures OpenAI WebRTC call correlation metadata from the
     server response boundary
+- Auth.js ownership slice:
+  - GitHub sign-in route and Auth.js Drizzle tables are in code
+  - new app-owned Sessions store their authenticated user owner
+  - Session creation, artifact save, and Realtime exchange require that owner
+    before history, evaluation, and progression build on Session data
 
 ## Verification
 
@@ -83,9 +88,10 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Deploy and verify the ended voice artifact save path on `quesiq-web`.
-2. Add the Auth.js user ownership slice before history/progression depends on it.
-3. Start the evaluation handoff from the saved Session voice artifact.
+1. Configure GitHub OAuth Auth.js credentials on `quesiq-web` and verify
+   sign-in plus owned Session launch.
+2. Start the evaluation handoff from the saved Session voice artifact.
+3. Add the first owned session history/review routing after evaluation lands.
 4. Complete deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 

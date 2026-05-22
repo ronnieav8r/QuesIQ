@@ -30,6 +30,9 @@ being moved onto the active `quesiq-web` service.
 - Added Session voice artifact persistence after an ended direct voice attempt:
   transcript turns, lifecycle events, start/end metadata, and direct Realtime
   call id are stored without storing audio.
+- Added Auth.js GitHub sign-in scaffolding plus Drizzle auth tables and Session
+  ownership enforcement for new Session creation, Realtime exchange, and voice
+  artifact save.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
   wires `DATABASE_URL`, and runs Drizzle migrations before service start.
 - Render was connected to Codex through Render MCP for service, deploy, log,
@@ -66,9 +69,9 @@ being moved onto the active `quesiq-web` service.
 
 ## Next Best Work
 
-1. Deploy and manually verify the ended voice artifact save state on
-   `quesiq-web`.
-2. Add Auth.js user ownership before history/progression depends on it.
+1. Configure Auth.js GitHub OAuth credentials on `quesiq-web`.
+2. Verify sign-in, owned Session launch, Realtime voice, and artifact save on
+   the deployed app.
 3. Build the first evaluation handoff from the saved Session transcript/event
    artifact.
 4. Keep verifying that `Launch Voice Session` creates a Session id before direct
@@ -80,6 +83,9 @@ being moved onto the active `quesiq-web` service.
   rotate the key after the spike/test cycle because it was shared in chat.
 - The Render Postgres connection URL was pasted during setup; rotate that
   database credential after the wiring test and replace `DATABASE_URL`.
+- Owned practice launch now requires Auth.js sign-in after this auth slice
+  deploys. GitHub OAuth needs `AUTH_SECRET`, `AUTH_GITHUB_ID`,
+  `AUTH_GITHUB_SECRET`, and Render trusted host configuration before deploy QA.
 - Localhost preview is deprecated on any port in this Codex environment until
   we intentionally invest time to fix it. Prefer deploy-based or
   user-confirmed QA instead.

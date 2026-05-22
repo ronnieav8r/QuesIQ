@@ -17,3 +17,11 @@ services:
           property: connectionString
       - key: OPENAI_API_KEY
         sync: false
+      - key: AUTH_SECRET
+        sync: false
+      - key: AUTH_GITHUB_ID
+        sync: false
+      - key: AUTH_GITHUB_SECRET
+        sync: false
+      - key: AUTH_TRUST_HOST
+        value: "true"
