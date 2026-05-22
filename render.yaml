@@ -1,8 +1,20 @@
+databases:
+  - name: quesiq-interview-db
+    plan: free
+
 services:
   - type: web
     name: quesiq-interview-rebuild
     runtime: node
     plan: free
     buildCommand: npm install && npm run build
+    preDeployCommand: npm run db:migrate
     startCommand: npm start
     autoDeployTrigger: commit
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: quesiq-interview-db
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false

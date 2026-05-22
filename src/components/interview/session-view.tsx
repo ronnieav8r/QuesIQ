@@ -3,6 +3,7 @@ import { useState } from "react";
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import { interviewStyles, practiceModes, questionTypes } from "@/product/practice-data";
 import type {
+  SessionLaunchRecord,
   SessionSetupSnapshot,
   VoiceSessionArtifactDraft,
 } from "@/product/interview-types";
@@ -10,10 +11,11 @@ import type {
 type SessionViewProps = {
   onBackToSetup: () => void;
   onExit: () => void;
+  session: SessionLaunchRecord;
   snapshot: SessionSetupSnapshot;
 };
 
-export function SessionView({ onBackToSetup, onExit, snapshot }: SessionViewProps) {
+export function SessionView({ onBackToSetup, onExit, session, snapshot }: SessionViewProps) {
   const [artifactDraft, setArtifactDraft] = useState<VoiceSessionArtifactDraft>({
     events: [],
     transcript: [],
@@ -65,6 +67,10 @@ export function SessionView({ onBackToSetup, onExit, snapshot }: SessionViewProp
             <span>Client-side now</span>
           </div>
           <dl>
+            <div>
+              <dt>Session</dt>
+              <dd>{session.id}</dd>
+            </div>
             <div>
               <dt>Mode</dt>
               <dd>{mode?.name || snapshot.modeKey}</dd>

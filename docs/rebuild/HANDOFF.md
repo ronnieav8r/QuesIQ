@@ -22,6 +22,11 @@ enough to prefer it over VAPI for the first coded browser beta.
 - Added Que first-turn kickoff after the data channel opens.
 - Added browser readiness/live/ended/error states, clean session end handling,
   and a typed client artifact draft for transcript and lifecycle events.
+- Chose Drizzle for Postgres schema/migrations and Auth.js for the auth slice.
+- Added the first Drizzle Session migration plus `/api/sessions` launch creation
+  before the voice screen opens.
+- Updated the Render Blueprint to provision Postgres, wire `DATABASE_URL`, and
+  run Drizzle migrations before deploy start.
 
 ## Verified
 
@@ -48,11 +53,9 @@ enough to prefer it over VAPI for the first coded browser beta.
 
 ## Next Best Work
 
-1. Choose auth plus ORM/migration direction and persist the first Session record
-   before voice launch.
-2. Decide the beta transcript/audio retention contract before evaluation work.
-3. Capture direct Realtime correlation metadata once app-owned Session records
-   exist.
+1. Decide the beta transcript/audio retention contract before evaluation work.
+2. Capture direct Realtime correlation metadata on the Session record.
+3. Add Auth.js user ownership before history/progression depends on it.
 
 ## Watch Outs
 

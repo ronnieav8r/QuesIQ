@@ -54,6 +54,20 @@ The app should be responsive with two deliberate experiences:
 Practice setup and live voice sessions should stay focused at every size rather
 than becoming cluttered desktop dashboards.
 
+### Use Drizzle For Postgres Schema And Migrations
+
+The first app-owned persistence slice uses Drizzle ORM against Postgres with
+checked-in Drizzle migrations. The initial migration is intentionally narrow:
+create the Session launch record before browser voice starts, then extend the
+schema as transcript retention, auth, and evaluation contracts are decided.
+
+### Use Auth.js When Auth Lands
+
+Auth.js is the auth direction for the first coded app auth slice. Session
+creation can land before protected routes while the app is still operating as a
+thin rebuild slice, but durable user ownership should be added through the auth
+slice before beta history and progression depend on it.
+
 ## Working Recommendations
 
 These are strong defaults until we decide otherwise:
@@ -66,19 +80,15 @@ These are strong defaults until we decide otherwise:
 
 ## Open Decisions Before The Next Large Slice
 
-1. Web stack specifics:
-   - ORM/migration tool
-   - auth provider
-
-2. Storage:
+1. Storage:
    - resume storage provider
    - whether any recordings are stored by us in the first beta
 
-3. Evaluation provider:
+2. Evaluation provider:
    - exact model/provider for post-session review
    - structured output contract and cost controls
 
-4. Migration:
+3. Migration:
    - start with new beta users only
    - or migrate selected Bubble user/session data later
 

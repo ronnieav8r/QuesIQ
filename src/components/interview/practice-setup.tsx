@@ -19,6 +19,8 @@ type PracticeSetupProps = {
   selectedMode?: PracticeMode;
   selectedQuestion?: QuestionType;
   selectedStyle?: InterviewStyle;
+  sessionLaunchError?: string;
+  sessionLaunchPending: boolean;
   step: PracticeStep;
 };
 
@@ -45,6 +47,8 @@ export function PracticeSetup({
   selectedMode,
   selectedQuestion,
   selectedStyle,
+  sessionLaunchError,
+  sessionLaunchPending,
   step,
 }: PracticeSetupProps) {
   const visibleSteps: PracticeStep[] = selectedMode?.questionTypeRequired
@@ -164,10 +168,13 @@ export function PracticeSetup({
             </div>
           </dl>
           <p>
-            The next slice will create a session record, check microphone
-            readiness, and launch the VAPI voice call from here.
+            QuesIQ creates the session snapshot before opening Que&apos;s live
+            browser voice practice.
           </p>
-          <button onClick={onLaunch} type="button">Launch Voice Session</button>
+          {sessionLaunchError && <p className="form-error">{sessionLaunchError}</p>}
+          <button disabled={sessionLaunchPending} onClick={onLaunch} type="button">
+            {sessionLaunchPending ? "Creating Session..." : "Launch Voice Session"}
+          </button>
         </section>
       )}
     </section>

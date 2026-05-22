@@ -56,6 +56,11 @@ export type SessionSetupSnapshot = {
   styleKey: InterviewStyleKey;
 };
 
+export type SessionLaunchRecord = {
+  id: string;
+  status: "created";
+};
+
 export type VoiceSessionPhase =
   | "ready"
   | "requesting_microphone"

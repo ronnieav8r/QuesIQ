@@ -6,8 +6,8 @@ Last updated: 2026-05-22
 
 - The rebuild lives in `C:\Users\weeks\Documents\GitHub\QuesIQ`.
 - Responsive dashboard, onboarding/context UI, and practice setup are in code.
-- Practice setup creates a client-side session setup snapshot and launches a
-  focused placeholder session screen.
+- Practice setup creates a client-side session setup snapshot, persists the first
+  app-owned Session launch record, and opens a focused voice session screen.
 - A direct OpenAI Realtime browser voice slice is wired into that session screen
   with client artifact drafting and passed its first manual test.
 - Render deployment files are in the GitHub repo.
@@ -15,11 +15,9 @@ Last updated: 2026-05-22
 
 ## Immediate
 
-1. Choose auth provider and ORM/migration tool when persistence work begins.
-2. Create the first app-owned Session record before voice launch and persist the
-   immutable setup snapshot.
-3. Decide the minimum transcript/artifact storage contract needed for evaluation.
-4. Capture direct Realtime correlation metadata with the Session record.
+1. Decide the minimum transcript/artifact storage contract needed for evaluation.
+2. Capture direct Realtime correlation metadata with the Session record.
+3. Add Auth.js user ownership before history/progression depends on it.
 5. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
    any port until we intentionally invest time to fix it.
 
@@ -28,7 +26,7 @@ Last updated: 2026-05-22
 - Persist onboarding/profile context
 - Persist seeded practice mode, question type, and interview style records where
   useful for the backend
-- Create Session record before voice launch
+- Extend Session persistence after the first launch record
 - Store session setup snapshot and direct Realtime correlation metadata
 - Add placeholder review/history direction after session artifacts exist
 

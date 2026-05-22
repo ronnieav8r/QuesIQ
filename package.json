@@ -5,19 +5,25 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "drizzle-orm": "^0.45.2",
     "next": "^16.2.0",
+    "pg": "^8.21.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.29",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9.28.0",
     "eslint-config-next": "^16.2.0",
     "typescript": "^5.8.3"

@@ -26,6 +26,10 @@ Last updated: 2026-05-22
   - Que first-turn kickoff
   - transcript and recent-event session surfaces
   - typed client artifact draft for transcript and lifecycle-event handoff
+- Postgres Session launch persistence slice:
+  - Drizzle ORM schema and first Session migration
+  - `/api/sessions` creation route with setup-snapshot validation
+  - practice launch waits for the app-owned Session record before voice
 
 ## Verification
 
@@ -58,12 +62,11 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Choose the persistence/auth direction and create the first app-owned Session
-   record before voice launch.
-2. Decide transcript/artifact storage requirements for evaluation and privacy.
-3. Capture direct Realtime correlation metadata when the Session record exists.
-4. Create or confirm the Render test service path for deploy-based QA while
-   localhost preview is deprecated until we intentionally fix it.
+1. Decide transcript/artifact storage requirements for evaluation and privacy.
+2. Capture direct Realtime correlation metadata on the app-owned Session record.
+3. Add the Auth.js user ownership slice before history/progression depends on it.
+4. Use the Render Blueprint Postgres path for deploy-based QA while localhost
+   preview is deprecated until we intentionally fix it.
 
 ## Reference Inputs
 

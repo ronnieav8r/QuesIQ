@@ -20,6 +20,7 @@ import type {
   PracticeMode,
   PracticeStep,
   QuestionTypeKey,
+  SessionLaunchRecord,
   SessionSetupSnapshot,
 } from "@/product/interview-types";
 
@@ -37,6 +38,9 @@ export default function Home() {
   const [selectedQuestionKey, setSelectedQuestionKey] = useState<QuestionTypeKey>();
   const [selectedStyleKey, setSelectedStyleKey] = useState<InterviewStyleKey>();
   const [interviewContext, setInterviewContext] = useState(initialInterviewContext);
+  const [sessionLaunchError, setSessionLaunchError] = useState<string>();
+  const [sessionLaunchPending, setSessionLaunchPending] = useState(false);
+  const [sessionLaunchRecord, setSessionLaunchRecord] = useState<SessionLaunchRecord>();
   const [sessionSnapshot, setSessionSnapshot] = useState<SessionSetupSnapshot>();
 
   const selectedMode = useMemo(
@@ -56,6 +60,8 @@ export default function Home() {
   function openPractice() {
     setActiveView("practice");
     setPracticeStep("mode");
+    setSessionLaunchError(undefined);
+    setSessionLaunchRecord(undefined);
     setSelectedModeKey(undefined);
     setSelectedQuestionKey(undefined);
     setSelectedStyleKey(undefined);
@@ -78,7 +84,7 @@ export default function Home() {
     setPracticeStep("ready");
   }
 
-  function launchSession() {
+  async function launchSession() {
     if (!selectedMode || !selectedStyle) {
       return;
     }
@@ -87,13 +93,43 @@ export default function Home() {
       return;
     }
 
-    setSessionSnapshot({
+    const snapshot: SessionSetupSnapshot = {
       interviewContext: { ...interviewContext },
       modeKey: selectedMode.key,
       questionTypeKey: selectedQuestion?.key,
       styleKey: selectedStyle.key,
-    });
-    setActiveView("session");
+    };
+
+    try {
+      setSessionLaunchError(undefined);
+      setSessionLaunchPending(true);
+      const response = await fetch("/api/sessions", {
+        body: JSON.stringify({ snapshot }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        session?: SessionLaunchRecord;
+      };
+
+      if (!response.ok || !body.session) {
+        throw new Error(body.detail || body.error || "Session record could not be created.");
+      }
+
+      setSessionSnapshot(snapshot);
+      setSessionLaunchRecord(body.session);
+      setActiveView("session");
+    } catch (error) {
+      setSessionLaunchError(
+        error instanceof Error ? error.message : "Session record could not be created.",
+      );
+    } finally {
+      setSessionLaunchPending(false);
+    }
   }
 
   function goBackInPractice() {
@@ -161,17 +197,20 @@ export default function Home() {
               selectedMode={selectedMode}
               selectedQuestion={selectedQuestion}
               selectedStyle={selectedStyle}
+              sessionLaunchError={sessionLaunchError}
+              sessionLaunchPending={sessionLaunchPending}
               step={practiceStep}
             />
           )}
           {activeView === "stories" && <StoriesView />}
-          {activeView === "session" && sessionSnapshot && (
+          {activeView === "session" && sessionSnapshot && sessionLaunchRecord && (
             <SessionView
               onBackToSetup={() => {
                 setActiveView("practice");
                 setPracticeStep("ready");
               }}
               onExit={() => setActiveView("home")}
+              session={sessionLaunchRecord}
               snapshot={sessionSnapshot}
             />
           )}
