@@ -1,4 +1,10 @@
-export type AppView = "home" | "practice" | "stories" | "me" | "onboarding";
+export type AppView =
+  | "home"
+  | "practice"
+  | "stories"
+  | "me"
+  | "onboarding"
+  | "session";
 
 export type InterviewContext = {
   jobDescription: string;

@@ -6,14 +6,21 @@ import { Dashboard } from "@/components/interview/dashboard";
 import { MeView } from "@/components/interview/me-view";
 import { OnboardingView } from "@/components/interview/onboarding-view";
 import { PracticeSetup } from "@/components/interview/practice-setup";
+import { SessionView } from "@/components/interview/session-view";
 import { StoriesView } from "@/components/interview/stories-view";
-import { initialInterviewContext, interviewStyles, practiceModes, questionTypes } from "@/product/practice-data";
+import {
+  initialInterviewContext,
+  interviewStyles,
+  practiceModes,
+  questionTypes,
+} from "@/product/practice-data";
 import type {
   AppView,
   InterviewStyleKey,
   PracticeMode,
   PracticeStep,
   QuestionTypeKey,
+  SessionSetupSnapshot,
 } from "@/product/interview-types";
 
 const appTabs: { key: AppView; label: string }[] = [
@@ -30,6 +37,7 @@ export default function Home() {
   const [selectedQuestionKey, setSelectedQuestionKey] = useState<QuestionTypeKey>();
   const [selectedStyleKey, setSelectedStyleKey] = useState<InterviewStyleKey>();
   const [interviewContext, setInterviewContext] = useState(initialInterviewContext);
+  const [sessionSnapshot, setSessionSnapshot] = useState<SessionSetupSnapshot>();
 
   const selectedMode = useMemo(
     () => practiceModes.find((mode) => mode.key === selectedModeKey),
@@ -70,6 +78,24 @@ export default function Home() {
     setPracticeStep("ready");
   }
 
+  function launchSession() {
+    if (!selectedMode || !selectedStyle) {
+      return;
+    }
+
+    if (selectedMode.questionTypeRequired && !selectedQuestion) {
+      return;
+    }
+
+    setSessionSnapshot({
+      interviewContext: { ...interviewContext },
+      modeKey: selectedMode.key,
+      questionTypeKey: selectedQuestion?.key,
+      styleKey: selectedStyle.key,
+    });
+    setActiveView("session");
+  }
+
   function goBackInPractice() {
     if (practiceStep === "mode") {
       setActiveView("home");
@@ -91,7 +117,10 @@ export default function Home() {
 
   return (
     <main className="product-shell">
-      <section className="app-frame" aria-label="QuesIQ Interview app">
+      <section
+        aria-label="QuesIQ Interview app"
+        className={activeView === "session" ? "app-frame session-frame" : "app-frame"}
+      >
         <header className="app-header">
           <div>
             <p className="eyebrow">QuesIQ Interview</p>
@@ -101,13 +130,15 @@ export default function Home() {
                 : "Que is ready for practice."}
             </strong>
           </div>
-          <button
-            className="quiet-button"
-            onClick={() => setActiveView("me")}
-            type="button"
-          >
-            {interviewContext.preferredName || "Me"}
-          </button>
+          {activeView !== "session" && (
+            <button
+              className="quiet-button"
+              onClick={() => setActiveView("me")}
+              type="button"
+            >
+              {interviewContext.preferredName || "Me"}
+            </button>
+          )}
         </header>
 
         <div className="app-body">
@@ -123,6 +154,7 @@ export default function Home() {
             <PracticeSetup
               interviewContext={interviewContext}
               onBack={goBackInPractice}
+              onLaunch={launchSession}
               onMode={chooseMode}
               onQuestion={chooseQuestion}
               onStyle={chooseStyle}
@@ -133,6 +165,16 @@ export default function Home() {
             />
           )}
           {activeView === "stories" && <StoriesView />}
+          {activeView === "session" && sessionSnapshot && (
+            <SessionView
+              onBackToSetup={() => {
+                setActiveView("practice");
+                setPracticeStep("ready");
+              }}
+              onExit={() => setActiveView("home")}
+              snapshot={sessionSnapshot}
+            />
+          )}
           {activeView === "me" && (
             <MeView
               contextReady={contextReady}
@@ -154,21 +196,23 @@ export default function Home() {
           )}
         </div>
 
-        <nav aria-label="Primary" className="tab-bar">
-          {appTabs.map((tab) => (
-            <button
-              aria-current={activeView === tab.key ? "page" : undefined}
-              className={activeView === tab.key ? "tab active" : "tab"}
-              key={tab.key}
-              onClick={() =>
-                tab.key === "practice" ? openPractice() : setActiveView(tab.key)
-              }
-              type="button"
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
+        {activeView !== "session" && (
+          <nav aria-label="Primary" className="tab-bar">
+            {appTabs.map((tab) => (
+              <button
+                aria-current={activeView === tab.key ? "page" : undefined}
+                className={activeView === tab.key ? "tab active" : "tab"}
+                key={tab.key}
+                onClick={() =>
+                  tab.key === "practice" ? openPractice() : setActiveView(tab.key)
+                }
+                type="button"
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        )}
       </section>
     </main>
   );

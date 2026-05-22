@@ -12,6 +12,7 @@ import type {
 type PracticeSetupProps = {
   interviewContext: InterviewContext;
   onBack: () => void;
+  onLaunch: () => void;
   onMode: (mode: PracticeMode) => void;
   onQuestion: (questionKey: QuestionTypeKey) => void;
   onStyle: (styleKey: InterviewStyleKey) => void;
@@ -37,6 +38,7 @@ function stepLabel(step: PracticeStep) {
 export function PracticeSetup({
   interviewContext,
   onBack,
+  onLaunch,
   onMode,
   onQuestion,
   onStyle,
@@ -165,7 +167,7 @@ export function PracticeSetup({
             The next slice will create a session record, check microphone
             readiness, and launch the VAPI voice call from here.
           </p>
-          <button type="button">Launch Voice Session</button>
+          <button onClick={onLaunch} type="button">Launch Voice Session</button>
         </section>
       )}
     </section>

@@ -503,6 +503,91 @@ textarea::placeholder {
   gap: 0.55rem;
 }
 
+.session-screen {
+  align-content: start;
+  margin-inline: auto;
+  max-width: 62rem;
+  width: 100%;
+}
+
+.session-heading,
+.session-stage {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.session-stage {
+  background: var(--surface-band);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  justify-content: start;
+  padding: 1rem;
+}
+
+.session-stage p,
+.session-next p {
+  margin-bottom: 0;
+}
+
+.voice-meter {
+  align-items: center;
+  background: rgba(56, 182, 146, 0.12);
+  border: 1px solid var(--focus);
+  border-radius: 8px;
+  display: grid;
+  flex: 0 0 auto;
+  gap: 0.35rem;
+  grid-template-columns: repeat(4, 0.45rem);
+  height: 5rem;
+  justify-content: center;
+  width: 5rem;
+}
+
+.voice-meter span {
+  background: var(--focus);
+  border-radius: 999px;
+  display: block;
+  height: 1.4rem;
+}
+
+.voice-meter span:nth-child(2),
+.voice-meter span:nth-child(4) {
+  height: 2.4rem;
+}
+
+.session-grid,
+.session-next {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.session-config dl {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+}
+
+.session-config dl div {
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding-bottom: 0.65rem;
+}
+
+.session-config dt {
+  color: var(--muted);
+}
+
+.session-config dd {
+  font-weight: 800;
+  margin: 0;
+  max-width: 65%;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
 .context-checklist span {
   background: var(--surface-raised);
   border: 1px solid var(--border);
