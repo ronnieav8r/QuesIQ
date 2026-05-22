@@ -22,6 +22,7 @@ export function RealtimeVoiceSpike({ snapshot }: RealtimeVoiceSpikeProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const queStartedRef = useRef(false);
   const [eventTrail, setEventTrail] = useState<string[]>([]);
   const [status, setStatus] = useState("Ready to connect");
   const [transcript, setTranscript] = useState<TranscriptTurn[]>([]);
@@ -47,11 +48,30 @@ export function RealtimeVoiceSpike({ snapshot }: RealtimeVoiceSpikeProps) {
     ]);
   }
 
+  function startQue(dataChannel: RTCDataChannel) {
+    if (queStartedRef.current) {
+      return;
+    }
+
+    dataChannel.send(
+      JSON.stringify({
+        type: "response.create",
+        response: {
+          instructions:
+            "Greet the candidate briefly, name the practice mode, and ask the first interview-practice question.",
+        },
+      }),
+    );
+    queStartedRef.current = true;
+    addEvent("client.response.create");
+  }
+
   function disconnect() {
     peerConnectionRef.current?.close();
     mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
     peerConnectionRef.current = null;
     mediaStreamRef.current = null;
+    queStartedRef.current = false;
 
     if (audioRef.current) {
       audioRef.current.srcObject = null;
@@ -80,7 +100,10 @@ export function RealtimeVoiceSpike({ snapshot }: RealtimeVoiceSpikeProps) {
       peerConnection.onconnectionstatechange = () => {
         setStatus(`Connection: ${peerConnection.connectionState}`);
       };
-      dataChannel.addEventListener("open", () => addEvent("data_channel.open"));
+      dataChannel.addEventListener("open", () => {
+        addEvent("data_channel.open");
+        startQue(dataChannel);
+      });
       dataChannel.addEventListener("message", (event) => {
         const message = JSON.parse(event.data) as {
           transcript?: string;
@@ -129,7 +152,7 @@ export function RealtimeVoiceSpike({ snapshot }: RealtimeVoiceSpikeProps) {
 
       mediaStreamRef.current = mediaStream;
       peerConnectionRef.current = peerConnection;
-      setStatus("Connected. Speak to Que.");
+      setStatus("Connected. Que should start the practice.");
     } catch (error) {
       disconnect();
       setStatus(toErrorMessage(error));
