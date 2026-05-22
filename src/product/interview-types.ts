@@ -55,3 +55,33 @@ export type SessionSetupSnapshot = {
   questionTypeKey?: QuestionTypeKey;
   styleKey: InterviewStyleKey;
 };
+
+export type VoiceSessionPhase =
+  | "ready"
+  | "requesting_microphone"
+  | "connecting"
+  | "live"
+  | "ended"
+  | "error";
+
+export type VoiceTranscriptTurn = {
+  createdAt: string;
+  id: string;
+  role: "assistant" | "user";
+  speaker: "Que" | "You";
+  text: string;
+};
+
+export type VoiceSessionEvent = {
+  createdAt: string;
+  id: string;
+  type: string;
+};
+
+export type VoiceSessionArtifactDraft = {
+  endedAt?: string;
+  endReason?: "connection_lost" | "start_failed" | "user_ended";
+  events: VoiceSessionEvent[];
+  startedAt?: string;
+  transcript: VoiceTranscriptTurn[];
+};

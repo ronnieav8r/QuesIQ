@@ -563,13 +563,35 @@ textarea::placeholder {
   gap: 0.85rem;
 }
 
-.realtime-spike {
+.realtime-session {
   background: rgba(21, 29, 44, 0.82);
 }
 
-.realtime-spike audio {
+.realtime-session audio {
   height: 0;
   width: 0;
+}
+
+.session-status {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  max-width: 16rem;
+  overflow-wrap: anywhere;
+  padding: 0.55rem 0.7rem;
+  text-align: right;
+}
+
+.session-status.live {
+  background: var(--focus-soft);
+  border-color: var(--focus);
+  color: var(--text);
+}
+
+.session-status.error {
+  border-color: var(--action);
+  color: var(--text);
 }
 
 .realtime-grid,
@@ -599,13 +621,20 @@ textarea::placeholder {
   overflow-wrap: anywhere;
   padding: 0.45rem;
 }
-.session-config dl {
+
+.transcript-log {
+  min-height: 12rem;
+}
+
+.session-config dl,
+.session-artifact dl {
   display: grid;
   gap: 0.65rem;
   margin: 0;
 }
 
-.session-config dl div {
+.session-config dl div,
+.session-artifact dl div {
   border-bottom: 1px solid var(--border);
   display: flex;
   gap: 1rem;
@@ -613,11 +642,13 @@ textarea::placeholder {
   padding-bottom: 0.65rem;
 }
 
-.session-config dt {
+.session-config dt,
+.session-artifact dt {
   color: var(--muted);
 }
 
-.session-config dd {
+.session-config dd,
+.session-artifact dd {
   font-weight: 800;
   margin: 0;
   max-width: 65%;

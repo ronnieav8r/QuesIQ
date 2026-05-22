@@ -18,7 +18,7 @@ function buildQueInstructions(snapshot?: SessionSetupSnapshot) {
 
   return [
     "You are Que, QuesIQ Interview's live interview coach.",
-    "This is a development voice spike for one browser practice session.",
+    "This is one browser voice practice session.",
     "Keep your spoken turns concise and natural for live conversation.",
     "Start by greeting the candidate and ask one interview-practice question.",
     "Do not mention implementation details, APIs, or internal session data.",

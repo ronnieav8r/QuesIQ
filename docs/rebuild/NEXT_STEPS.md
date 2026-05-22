@@ -8,22 +8,20 @@ Last updated: 2026-05-22
 - Responsive dashboard, onboarding/context UI, and practice setup are in code.
 - Practice setup creates a client-side session setup snapshot and launches a
   focused placeholder session screen.
-- A direct OpenAI Realtime browser voice spike is wired into that session screen
-  and passed its first manual test.
+- A direct OpenAI Realtime browser voice slice is wired into that session screen
+  with client artifact drafting and passed its first manual test.
 - Render deployment files are in the GitHub repo.
 - Bubble reference material remains in the older OneDrive workspace.
 
 ## Immediate
 
-1. Harden the direct OpenAI voice spike into the first real voice slice:
-   microphone readiness, better error states, live/ended UI, and owned session
-   transcript/event handling.
-2. Choose auth provider and ORM/migration tool when persistence work begins.
-3. Create the first app-owned Session record before voice launch and persist the
+1. Choose auth provider and ORM/migration tool when persistence work begins.
+2. Create the first app-owned Session record before voice launch and persist the
    immutable setup snapshot.
-4. Decide the minimum transcript/artifact storage contract needed for evaluation.
-5. Prefer deploy-based or user-confirmed QA over repeated `localhost:3000`
-   preview attempts until local preview reliability is addressed separately.
+3. Decide the minimum transcript/artifact storage contract needed for evaluation.
+4. Capture direct Realtime correlation metadata with the Session record.
+5. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
+   any port until we intentionally invest time to fix it.
 
 ## First Implementation Backlog
 

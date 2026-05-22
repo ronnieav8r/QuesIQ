@@ -19,12 +19,13 @@ Last updated: 2026-05-22
 - UI-only onboarding/interview-context flow with a fast path into practice
 - Refactored interview UI components and typed seeded practice data
 - Practice setup wizard with mode-specific question-type routing
-- Client-side session setup snapshot and focused placeholder session screen
-- Direct OpenAI Realtime browser voice spike from the session screen:
+- Client-side session setup snapshot and focused voice session screen
+- Direct OpenAI Realtime browser voice slice from the session screen:
   - server-side `/api/realtime/session` WebRTC exchange route
-  - browser microphone connect/disconnect controls
+  - browser readiness, live, ended, and recoverable error states
   - Que first-turn kickoff
-  - transcript and recent-event debug surfaces
+  - transcript and recent-event session surfaces
+  - typed client artifact draft for transcript and lifecycle-event handoff
 
 ## Verification
 
@@ -57,14 +58,12 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Harden the direct OpenAI voice spike into the first real voice-session slice:
-   readiness/error states, session status, transcript/event ownership, and clean
-   end handling.
-2. Choose the persistence/auth direction and create the first app-owned Session
+1. Choose the persistence/auth direction and create the first app-owned Session
    record before voice launch.
-3. Decide transcript/artifact storage requirements for evaluation and privacy.
-4. Create or confirm the Render test service path for deploy-based QA when local
-   preview workflows are unreliable.
+2. Decide transcript/artifact storage requirements for evaluation and privacy.
+3. Capture direct Realtime correlation metadata when the Session record exists.
+4. Create or confirm the Render test service path for deploy-based QA while
+   localhost preview is deprecated until we intentionally fix it.
 
 ## Reference Inputs
 

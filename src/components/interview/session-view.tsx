@@ -1,6 +1,11 @@
-import { RealtimeVoiceSpike } from "@/components/interview/realtime-voice-spike";
+import { useState } from "react";
+
+import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import { interviewStyles, practiceModes, questionTypes } from "@/product/practice-data";
-import type { SessionSetupSnapshot } from "@/product/interview-types";
+import type {
+  SessionSetupSnapshot,
+  VoiceSessionArtifactDraft,
+} from "@/product/interview-types";
 
 type SessionViewProps = {
   onBackToSetup: () => void;
@@ -9,6 +14,10 @@ type SessionViewProps = {
 };
 
 export function SessionView({ onBackToSetup, onExit, snapshot }: SessionViewProps) {
+  const [artifactDraft, setArtifactDraft] = useState<VoiceSessionArtifactDraft>({
+    events: [],
+    transcript: [],
+  });
   const mode = practiceModes.find((practiceMode) => practiceMode.key === snapshot.modeKey);
   const questionType = questionTypes.find(
     (practiceQuestionType) => practiceQuestionType.key === snapshot.questionTypeKey,
@@ -37,16 +46,17 @@ export function SessionView({ onBackToSetup, onExit, snapshot }: SessionViewProp
           <span />
         </div>
         <div>
-          <p className="eyebrow">Placeholder Launch</p>
-          <h2 id="session-readiness-title">Session handoff created</h2>
+          <p className="eyebrow">Session Surface</p>
+          <h2 id="session-readiness-title">Setup snapshot ready for voice</h2>
           <p>
-            This screen now receives the setup snapshot the future session record,
-            microphone readiness check, and VAPI launch will use.
+            Que can launch from the client snapshot now. Transcript turns and
+            lifecycle events collect in an app-owned artifact draft for the next
+            persistence slice.
           </p>
         </div>
       </section>
 
-      <RealtimeVoiceSpike snapshot={snapshot} />
+      <RealtimeVoiceSession onArtifactChange={setArtifactDraft} snapshot={snapshot} />
 
       <div className="session-grid">
         <section className="panel session-config" aria-labelledby="session-config-title">
@@ -80,14 +90,39 @@ export function SessionView({ onBackToSetup, onExit, snapshot }: SessionViewProp
           </dl>
         </section>
 
+        <section className="panel session-artifact" aria-labelledby="session-artifact-title">
+          <div className="section-head">
+            <h2 id="session-artifact-title">Artifact Draft</h2>
+            <span>{artifactDraft.endedAt ? "Ready to hand off" : "Collecting locally"}</span>
+          </div>
+          <dl>
+            <div>
+              <dt>Started</dt>
+              <dd>{artifactDraft.startedAt ? "Captured" : "Waiting"}</dd>
+            </div>
+            <div>
+              <dt>Transcript turns</dt>
+              <dd>{artifactDraft.transcript.length}</dd>
+            </div>
+            <div>
+              <dt>Lifecycle events</dt>
+              <dd>{artifactDraft.events.length}</dd>
+            </div>
+            <div>
+              <dt>End reason</dt>
+              <dd>{artifactDraft.endReason?.replace("_", " ") || "Live or not started"}</dd>
+            </div>
+          </dl>
+        </section>
+
         <section className="panel session-next" aria-labelledby="session-next-title">
           <div>
             <p className="eyebrow">Next integration</p>
-            <h2 id="session-next-title">Prepare audio and persist the session</h2>
+            <h2 id="session-next-title">Persist the session before voice launch</h2>
           </div>
           <p>
-            Auth and data work can now create the session before voice launch,
-            then hand this same setup into Que&apos;s browser call configuration.
+            The next data slice can create a Session first, then store this setup
+            snapshot with the transcript and lifecycle draft after voice ends.
           </p>
           <div className="inline-actions">
             <button onClick={onBackToSetup} type="button">

@@ -4,10 +4,10 @@ Last updated: 2026-05-22
 
 ## Current Focus
 
-QuesIQ Interview has moved from the initial UI shell into a direct browser voice
-spike. The practice wizard now hands a session setup snapshot into a focused
-session screen, and a direct OpenAI Realtime test path works manually well enough
-to prefer it over VAPI for the first coded browser beta.
+QuesIQ Interview has moved from the initial UI shell into the first direct
+browser voice slice. The practice wizard now hands a session setup snapshot into
+a focused session screen, and the direct OpenAI Realtime path works manually well
+enough to prefer it over VAPI for the first coded browser beta.
 
 ## Done Since Last Handoff
 
@@ -16,10 +16,12 @@ to prefer it over VAPI for the first coded browser beta.
   company, job description, and resume path.
 - Split the interview UI into focused components and extracted practice types and
   seeded data.
-- Added client-side session setup snapshot launch and placeholder session screen.
-- Added direct OpenAI Realtime WebRTC voice spike from the session screen.
+- Added client-side session setup snapshot launch and focused session screen.
+- Added direct OpenAI Realtime WebRTC voice session slice from the session screen.
 - Added server-only API key path via `/api/realtime/session` and `.env.example`.
 - Added Que first-turn kickoff after the data channel opens.
+- Added browser readiness/live/ended/error states, clean session end handling,
+  and a typed client artifact draft for transcript and lifecycle events.
 
 ## Verified
 
@@ -46,16 +48,17 @@ to prefer it over VAPI for the first coded browser beta.
 
 ## Next Best Work
 
-1. Harden the voice spike into a real session surface and define its app-owned
-   transcript/event handoff.
-2. Choose auth plus ORM/migration direction and persist the first Session record
+1. Choose auth plus ORM/migration direction and persist the first Session record
    before voice launch.
-3. Decide the beta transcript/audio retention contract before evaluation work.
+2. Decide the beta transcript/audio retention contract before evaluation work.
+3. Capture direct Realtime correlation metadata once app-owned Session records
+   exist.
 
 ## Watch Outs
 
 - A test `OPENAI_API_KEY` is currently stored locally in ignored `.env.local`;
   rotate the key after the spike/test cycle because it was shared in chat.
-- Repeated `localhost:3000` preview attempts have been unreliable in this Codex
-  environment and should not be the default verification path right now.
+- Localhost preview is deprecated on any port in this Codex environment until
+  we intentionally invest time to fix it. Prefer deploy-based or
+  user-confirmed QA instead.
 - `tsconfig.tsbuildinfo` is generated TypeScript cache and intentionally ignored.
