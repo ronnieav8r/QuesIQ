@@ -8,9 +8,8 @@ flowchart LR
     A --> B["App Backend"]
     B --> D["Postgres"]
     B --> F["File/Object Storage"]
-    A --> V["VAPI Web Voice Runtime"]
-    V --> W["VAPI Webhooks"]
-    W --> B
+    A --> O["OpenAI Realtime Browser Voice Session"]
+    B --> O
     B --> E["Evaluation Model API"]
     B --> M["Make Automation Edges"]
     M --> R["Brevo / Other External Tools"]
@@ -29,12 +28,17 @@ flowchart LR
 - Stories, job targets, history, settings
 - UI design and analytics events
 
-### VAPI Owns In The First Beta
+### OpenAI Realtime Owns In The First Voice Beta
 
-- Browser live voice call runtime
-- Speech/audio session orchestration
-- Turn-taking behavior provided by its voice stack
-- Call events and voice artifacts exposed through SDK/webhooks
+- Browser live voice session transport through the Realtime API
+- Realtime speech-to-speech model behavior and turn events
+- Realtime session events surfaced to our browser/backend integration
+
+### VAPI Is A Fallback
+
+- Keep VAPI available as a fallback voice platform choice if direct Realtime
+  exposes a material beta blocker.
+- Phone-call/telephony capability is not a current voice requirement.
 
 ### Make Owns Only Edges
 
@@ -121,7 +125,7 @@ setup and voice session ownership are explicit in the coded app.
 - context snapshot
 - status
 - start/end times
-- VAPI call id
+- Realtime call/session correlation id
 - transcript artifact
 - evaluation status
 - user-facing session metadata
@@ -159,35 +163,34 @@ setup and voice session ownership are explicit in the coded app.
 
 1. User completes practice setup.
 2. Backend creates a Session with an immutable launch snapshot.
-3. Backend produces or authorizes the VAPI call configuration.
-4. Browser launches the VAPI session.
+3. Backend authorizes the OpenAI Realtime browser session config.
+4. Browser launches the direct Realtime voice session.
 5. Frontend shows live session state and graceful end controls.
-6. VAPI sends lifecycle/end artifacts to backend.
-7. Backend stores transcript/call references.
+6. Browser/backend integration captures the required transcript/events/artifacts.
+7. Backend stores transcript/session references.
 8. Backend runs evaluation.
 9. Backend updates session review and progression.
 10. User lands on review and dashboard reflects the result.
 
-## VAPI Integration Direction
+## Direct Realtime Voice Direction
 
-Use VAPI directly from the custom app through its web integration, backed by our
-server for sensitive configuration and webhook handling.
+Use direct OpenAI Realtime for the first coded browser voice beta, backed by our
+server for sensitive configuration and session ownership.
 
 The app should avoid exposing:
 
-- private VAPI keys
-- raw backend provider keys
+- private OpenAI API keys
 - sensitive prompt templates when a server-mediated design is practical
 - user context beyond what the session requires
 
-The first VAPI implementation should support:
+The first direct Realtime implementation should support:
 
 - dynamic per-session Que prompt/context
 - four practice modes
-- call ID correlation to our Session record
-- end-of-call processing
-- transcript artifact storage
-- recoverable failure states when a call fails or evaluation fails
+- server-mediated browser session authorization
+- start/readiness/end voice UI states
+- transcript/event artifact capture needed for evaluation
+- recoverable failure states when a voice session or evaluation fails
 
 ## Evaluation Direction
 

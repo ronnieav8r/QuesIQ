@@ -12,11 +12,18 @@ logic and UI outside Bubble.
 Bubble screens, Claude handoffs, context packs, and current docs inform the
 rebuild. They do not force implementation parity or preserve old constraints.
 
-### Keep VAPI For The First Voice Beta
+### Use Direct OpenAI Realtime First For Browser Voice
 
-VAPI remains the voice runtime at the start. Replacing VAPI would create a
-separate real-time voice infrastructure project and is not required to remove
-Bubble.
+The first coded browser voice path should use direct OpenAI Realtime, with the
+app backend mediating sensitive session configuration. A manual 2026-05-22 spike
+proved browser microphone connection, Que first-turn speech, audio quality,
+transcript/events, and disconnect behavior well enough to prefer this route
+while phone calls are out of scope.
+
+### Keep VAPI As A Voice Fallback
+
+VAPI remains a fallback option if direct OpenAI Realtime later shows a material
+quality, reliability, transcript, provider-flexibility, or tooling gap.
 
 ### Keep Que And Quira Distinct
 
@@ -77,7 +84,7 @@ These are strong defaults until we decide otherwise:
 
 ## Decisions To Make Later
 
-- Whether and when to replace VAPI
+- Whether direct OpenAI Realtime reveals a reason to fall back to VAPI
 - Whether native mobile apps are warranted
 - Whether Quira and the app backend should share infrastructure
 - Whether stories or job targets become first-launch requirements

@@ -28,8 +28,9 @@ habit, not obscure the product promise.
    Core users, sessions, evaluations, stories, recommendations, and progression
    belong in our code and database.
 
-2. Keep VAPI for the first coded beta.
-   VAPI should be the browser voice runtime, not the application platform.
+2. Use direct OpenAI Realtime first for browser voice.
+   The first coded voice path should stay server-mediated and app-owned. Keep
+   VAPI as fallback if direct voice testing reveals a material beta blocker.
 
 3. Keep Make for automation edges.
    Email, Brevo, beta operations, and external workflow glue can stay in Make.
@@ -65,7 +66,7 @@ habit, not obscure the product promise.
 
 ### AI And Voice
 
-- Voice runtime: VAPI Web SDK and VAPI server/webhook integration
+- Voice runtime: direct OpenAI Realtime browser voice session, server-mediated by this app
 - Interview coach: Que assistant configuration built per session
 - Evaluation: backend AI call after completed practice session
 - Text support chatbot: Quira remains separate unless we deliberately merge it
@@ -75,7 +76,7 @@ habit, not obscure the product promise.
 - Source control: GitHub
 - Hosting: Render is the default deployment target for now
 - Automation edges: Make and Brevo where they already fit
-- Observability: structured server logs, error reporting, AI/VAPI cost logging
+- Observability: structured server logs, error reporting, AI/voice cost logging
 
 ## Milestones
 
@@ -141,12 +142,12 @@ Exit test:
 
 Deliverables:
 
-- VAPI Web SDK session page
+- Direct OpenAI Realtime session page
 - Que dynamic assistant config path
 - Microphone permission/readiness handling
 - Speaking/listening/ended UI states
 - Transcript and call lifecycle handling
-- VAPI webhook endpoint for end-of-call events
+- Session artifact/event capture path for end-of-call handling
 
 Exit test:
 

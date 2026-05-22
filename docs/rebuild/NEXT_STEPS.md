@@ -1,50 +1,52 @@
 # Next Steps
 
+Last updated: 2026-05-22
+
 ## Current State
 
-- New rebuild repo exists at `C:\Users\weeks\Documents\GitHub\QuesIQ`.
-- Next.js TypeScript scaffold exists and passed lint, typecheck, and build.
-- First UI slice exists:
-  - dashboard-first Home
-  - Home / Practice / Stories / Me navigation
-  - practice setup wizard
-  - mode routing that skips or includes question type by mode
+- The rebuild lives in `C:\Users\weeks\Documents\GitHub\QuesIQ`.
+- Responsive dashboard, onboarding/context UI, and practice setup are in code.
+- Practice setup creates a client-side session setup snapshot and launches a
+  focused placeholder session screen.
+- A direct OpenAI Realtime browser voice spike is wired into that session screen
+  and passed its first manual test.
 - Render deployment files are in the GitHub repo.
-- Bubble reference material remains in the older QuesIQ workspace.
+- Bubble reference material remains in the older OneDrive workspace.
 
 ## Immediate
 
-1. Create the separate Render service for the rebuild from
-   `ronnieav8r/QuesIQ`.
-2. Pull/fetch the latest remote GitHub changes into the local clone before the
-   next local commit cycle.
-3. Refine the responsive UI into intentional mobile and desktop compositions.
-4. Build onboarding and interview context before live VAPI integration.
-5. Choose auth provider and ORM/migration tool when the first persistence slice
-   begins.
+1. Harden the direct OpenAI voice spike into the first real voice slice:
+   microphone readiness, better error states, live/ended UI, and owned session
+   transcript/event handling.
+2. Choose auth provider and ORM/migration tool when persistence work begins.
+3. Create the first app-owned Session record before voice launch and persist the
+   immutable setup snapshot.
+4. Decide the minimum transcript/artifact storage contract needed for evaluation.
+5. Prefer deploy-based or user-confirmed QA over repeated `localhost:3000`
+   preview attempts until local preview reliability is addressed separately.
 
 ## First Implementation Backlog
 
-- Refine app shell for mobile and desktop layout variants
-- Add onboarding/profile flow and data model
-- Seed practice mode setup records
-- Move practice setup from UI-only state toward session setup data
+- Persist onboarding/profile context
+- Persist seeded practice mode, question type, and interview style records where
+  useful for the backend
 - Create Session record before voice launch
-- Add placeholder session page and review page
+- Store session setup snapshot and direct Realtime correlation metadata
+- Add placeholder review/history direction after session artifacts exist
 
-## First VAPI Backlog
+## First Direct Voice Backlog
 
-- Define Que assistant config builder
-- Decide stored versus transient assistant launch path for the web app
-- Implement VAPI session launch from custom page
-- Correlate VAPI call ID with our Session row
-- Receive end-of-call webhook
-- Store transcript artifact
-- Run backend evaluation and route to review
+- Keep the server-mediated OpenAI Realtime WebRTC exchange route
+- Improve first-turn and start/end UX for Que
+- Capture transcript/events for app-owned session artifacts
+- Decide whether to store audio, transcript only, or derived excerpts for beta
+- Add evaluation handoff after completed voice sessions
+- Keep VAPI as fallback, not the default implementation path
 
 ## Things Not To Do First
 
-- Do not rebuild VAPI.
+- Do not add a second core voice provider path before direct Realtime is tested
+  through the next slice.
 - Do not port every Bubble screen blindly.
 - Do not bury the first voice practice session behind optional profile work.
 - Do not make Make the core state machine for interview sessions.
