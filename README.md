@@ -33,3 +33,15 @@ database, and VAPI webhook work can fit without changing deployment type.
 ## Plan
 
 Start with `docs/rebuild/REBUILD_PLAN.md`.
+
+## Direct OpenAI Realtime Spike
+
+The placeholder voice session screen includes a development spike that opens a direct browser WebRTC session with OpenAI Realtime.
+
+Set these server environment variables before testing it locally or on Render:
+
+- `OPENAI_API_KEY` - required server-side OpenAI API key
+- `OPENAI_REALTIME_MODEL` - optional model override, defaults to `gpt-realtime`
+- `OPENAI_REALTIME_VOICE` - optional voice override, defaults to `marin`
+
+The app keeps the API key on the server. The browser sends its WebRTC offer and the current practice setup snapshot to `/api/realtime/session`, and the backend exchanges that offer with OpenAI.

@@ -1,3 +1,4 @@
+import { RealtimeVoiceSpike } from "@/components/interview/realtime-voice-spike";
 import { interviewStyles, practiceModes, questionTypes } from "@/product/practice-data";
 import type { SessionSetupSnapshot } from "@/product/interview-types";
 
@@ -44,6 +45,8 @@ export function SessionView({ onBackToSetup, onExit, snapshot }: SessionViewProp
           </p>
         </div>
       </section>
+
+      <RealtimeVoiceSpike snapshot={snapshot} />
 
       <div className="session-grid">
         <section className="panel session-config" aria-labelledby="session-config-title">
