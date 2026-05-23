@@ -1,4 +1,5 @@
 import {
+  boolean,
   integer,
   jsonb,
   pgTable,
@@ -91,6 +92,37 @@ export const sessions = pgTable("sessions", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
   voiceArtifact: jsonb("voice_artifact").$type<VoiceSessionArtifactDraft>(),
+});
+
+export const practiceModes = pgTable("practice_modes", {
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  description: text("description").notNull(),
+  displayOrder: integer("display_order").default(0).notNull(),
+  enabled: boolean("enabled").default(true).notNull(),
+  key: text("key").primaryKey(),
+  name: text("name").notNull(),
+  questionTypeRequired: boolean("question_type_required").default(false).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  use: text("use").notNull(),
+});
+
+export const questionTypes = pgTable("question_types", {
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  displayOrder: integer("display_order").default(0).notNull(),
+  enabled: boolean("enabled").default(true).notNull(),
+  key: text("key").primaryKey(),
+  label: text("label").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const interviewStyles = pgTable("interview_styles", {
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  description: text("description").notNull(),
+  displayOrder: integer("display_order").default(0).notNull(),
+  enabled: boolean("enabled").default(true).notNull(),
+  key: text("key").primaryKey(),
+  label: text("label").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const profiles = pgTable(

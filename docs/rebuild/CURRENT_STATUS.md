@@ -29,6 +29,9 @@ Last updated: 2026-05-23
 - UI-only onboarding/interview-context flow with a fast path into practice
 - Refactored interview UI components and typed seeded practice data
 - Practice setup wizard with mode-specific question-type routing
+- Seeded backend Interview catalog records for practice modes, question types,
+  and interviewer styles, exposed through `/api/catalog` with frontend fallback
+  defaults
 - Client-side session setup snapshot and focused voice session screen
 - Direct OpenAI Realtime browser voice slice from the session screen:
   - server-side `/api/realtime/session` WebRTC exchange route
@@ -137,9 +140,10 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Deploy and user-confirm QA the resume-aware practice slice on `quesiq-web`.
-2. Decide whether seeded backend catalog tables or persisted progression/streak
-   records should follow.
+1. Deploy and user-confirm QA the resume-aware practice and catalog slices on
+   `quesiq-web`.
+2. Decide whether persisted progression/streak records or the next multi-module
+   foundation should follow.
 3. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 

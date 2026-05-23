@@ -133,6 +133,15 @@ Post-session review creation still runs inline after the voice artifact saves.
 Sessions now track evaluation status and last evaluation error so missing or
 failed reviews can be reopened and retried without adding a queue yet.
 
+### Own Interview Catalog Records In The Backend
+
+Practice modes, question types, and interviewer styles are seeded Postgres
+catalog records. The frontend loads them through `/api/catalog` so product
+configuration can move out of hardcoded UI data over time.
+
+Checked-in catalog defaults remain in the client as a resilience fallback. The
+canonical deployed path is the backend catalog once migrations have run.
+
 ## Working Recommendations
 
 These are strong defaults until we decide otherwise:

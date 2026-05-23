@@ -1,6 +1,6 @@
-import { interviewStyles, practiceModes, questionTypes } from "@/product/practice-data";
 import type {
   InterviewContext,
+  InterviewCatalog,
   InterviewStyle,
   PracticeMode,
   PracticeStep,
@@ -10,6 +10,7 @@ import type {
 } from "@/product/interview-types";
 
 type PracticeSetupProps = {
+  catalog: InterviewCatalog;
   interviewContext: InterviewContext;
   onBack: () => void;
   onLaunch: () => void;
@@ -38,6 +39,7 @@ function stepLabel(step: PracticeStep) {
 }
 
 export function PracticeSetup({
+  catalog,
   interviewContext,
   onBack,
   onLaunch,
@@ -51,6 +53,7 @@ export function PracticeSetup({
   sessionLaunchPending,
   step,
 }: PracticeSetupProps) {
+  const { interviewStyles, practiceModes, questionTypes } = catalog;
   const visibleSteps: PracticeStep[] = selectedMode?.questionTypeRequired
     ? ["mode", "question", "style", "ready"]
     : ["mode", "style", "ready"];

@@ -1,23 +1,29 @@
 import { useState } from "react";
 
-import { interviewStyles, practiceModes, questionTypes } from "@/product/practice-data";
-import type { SessionEvaluationResult, SessionHistoryItem } from "@/product/interview-types";
+import type {
+  InterviewCatalog,
+  SessionEvaluationResult,
+  SessionHistoryItem,
+} from "@/product/interview-types";
 
 type ReviewDetailProps = {
+  catalog: InterviewCatalog;
   onBack: () => void;
   onPractice: () => void;
   session: SessionHistoryItem;
 };
 
-export function ReviewDetail({ onBack, onPractice, session }: ReviewDetailProps) {
+export function ReviewDetail({ catalog, onBack, onPractice, session }: ReviewDetailProps) {
   const [currentSession, setCurrentSession] = useState(session);
   const [retryError, setRetryError] = useState<string>();
   const [retryPending, setRetryPending] = useState(false);
-  const mode = practiceModes.find((practiceMode) => practiceMode.key === session.modeKey);
-  const questionType = questionTypes.find(
+  const mode = catalog.practiceModes.find(
+    (practiceMode) => practiceMode.key === session.modeKey,
+  );
+  const questionType = catalog.questionTypes.find(
     (practiceQuestionType) => practiceQuestionType.key === session.questionTypeKey,
   );
-  const style = interviewStyles.find(
+  const style = catalog.interviewStyles.find(
     (interviewStyle) => interviewStyle.key === session.styleKey,
   );
   const reviewStatusLabel = currentSession.hasEvaluation

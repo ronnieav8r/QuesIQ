@@ -36,6 +36,7 @@ export type InterviewStyleKey = "friendly" | "neutral" | "tough";
 
 export type PracticeMode = {
   description: string;
+  displayOrder?: number;
   key: PracticeModeKey;
   name: string;
   questionTypeRequired: boolean;
@@ -43,14 +44,22 @@ export type PracticeMode = {
 };
 
 export type QuestionType = {
+  displayOrder?: number;
   key: QuestionTypeKey;
   label: string;
 };
 
 export type InterviewStyle = {
   description: string;
+  displayOrder?: number;
   key: InterviewStyleKey;
   label: string;
+};
+
+export type InterviewCatalog = {
+  interviewStyles: InterviewStyle[];
+  practiceModes: PracticeMode[];
+  questionTypes: QuestionType[];
 };
 
 export type SessionSetupSnapshot = {

@@ -8,6 +8,9 @@ Last updated: 2026-05-23
 - Responsive dashboard, onboarding/context UI, and practice setup are in code.
 - Practice setup creates a client-side session setup snapshot, persists the first
   app-owned Session launch record, and opens a focused voice session screen.
+- Practice modes, question types, and interviewer styles now live in seeded
+  backend catalog tables and load through `/api/catalog`, with frontend defaults
+  as a fallback.
 - A direct OpenAI Realtime browser voice slice is wired into that session screen
   with client artifact drafting and passed its first manual test.
 - Ended direct voice attempts now save transcript/event artifacts and Realtime
@@ -45,9 +48,9 @@ Last updated: 2026-05-23
 
 ## Immediate
 
-1. Deploy and user-confirm QA the resume-aware practice slice.
-2. Decide whether seeded backend catalog tables or persisted progression/streak
-   records should follow.
+1. Deploy and user-confirm QA the resume-aware practice and catalog slices.
+2. Decide whether persisted progression/streak records or the next multi-module
+   foundation should follow.
 3. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
    any port until we intentionally invest time to fix it.
 
@@ -55,8 +58,6 @@ Last updated: 2026-05-23
 
 - Decide whether resume binaries need object storage after the parsed-text beta
   slice proves useful
-- Persist seeded practice mode, question type, and interview style records where
-  useful for the backend
 - Add richer owned session history filters if the 50-session list becomes too
   noisy
 - Persist progression/streak records if derived XP/level is not enough

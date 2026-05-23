@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
-import { interviewStyles, practiceModes, questionTypes } from "@/product/practice-data";
 import type {
+  InterviewCatalog,
   SessionEvaluationResult,
   SessionLaunchRecord,
   SessionSetupSnapshot,
@@ -10,13 +10,20 @@ import type {
 } from "@/product/interview-types";
 
 type SessionViewProps = {
+  catalog: InterviewCatalog;
   onBackToSetup: () => void;
   onExit: () => void;
   session: SessionLaunchRecord;
   snapshot: SessionSetupSnapshot;
 };
 
-export function SessionView({ onBackToSetup, onExit, session, snapshot }: SessionViewProps) {
+export function SessionView({
+  catalog,
+  onBackToSetup,
+  onExit,
+  session,
+  snapshot,
+}: SessionViewProps) {
   const [artifactDraft, setArtifactDraft] = useState<VoiceSessionArtifactDraft>({
     events: [],
     transcript: [],
@@ -32,11 +39,13 @@ export function SessionView({ onBackToSetup, onExit, session, snapshot }: Sessio
   >("idle");
   const evaluationRequestedRef = useRef(false);
   const savedArtifactRef = useRef<string | undefined>(undefined);
-  const mode = practiceModes.find((practiceMode) => practiceMode.key === snapshot.modeKey);
-  const questionType = questionTypes.find(
+  const mode = catalog.practiceModes.find(
+    (practiceMode) => practiceMode.key === snapshot.modeKey,
+  );
+  const questionType = catalog.questionTypes.find(
     (practiceQuestionType) => practiceQuestionType.key === snapshot.questionTypeKey,
   );
-  const style = interviewStyles.find(
+  const style = catalog.interviewStyles.find(
     (interviewStyle) => interviewStyle.key === snapshot.styleKey,
   );
 

@@ -5,18 +5,14 @@ import { useEffect, useMemo, useState } from "react";
 import { AuthControl } from "@/components/auth-control";
 import { Dashboard } from "@/components/interview/dashboard";
 import { HistoryView } from "@/components/interview/history-view";
+import { useInterviewCatalog } from "@/components/interview/interview-catalog";
 import { MeView } from "@/components/interview/me-view";
 import { OnboardingView } from "@/components/interview/onboarding-view";
 import { PracticeSetup } from "@/components/interview/practice-setup";
 import { ReviewDetail } from "@/components/interview/review-detail";
 import { SessionView } from "@/components/interview/session-view";
 import { StoriesView } from "@/components/interview/stories-view";
-import {
-  initialInterviewContext,
-  interviewStyles,
-  practiceModes,
-  questionTypes,
-} from "@/product/practice-data";
+import { initialInterviewContext } from "@/product/practice-data";
 import type {
   AppView,
   InterviewStyleKey,
@@ -50,10 +46,12 @@ export default function Home() {
   const [selectedReview, setSelectedReview] = useState<SessionHistoryItem>();
   const [profileSaveError, setProfileSaveError] = useState<string>();
   const [profileSavePending, setProfileSavePending] = useState(false);
+  const interviewCatalog = useInterviewCatalog();
+  const { interviewStyles, practiceModes, questionTypes } = interviewCatalog.catalog;
 
   const selectedMode = useMemo(
     () => practiceModes.find((mode) => mode.key === selectedModeKey),
-    [selectedModeKey],
+    [practiceModes, selectedModeKey],
   );
   const selectedQuestion = questionTypes.find(
     (questionType) => questionType.key === selectedQuestionKey,
@@ -274,6 +272,7 @@ export default function Home() {
           )}
           {activeView === "practice" && (
             <PracticeSetup
+              catalog={interviewCatalog.catalog}
               interviewContext={interviewContext}
               onBack={goBackInPractice}
               onLaunch={launchSession}
@@ -290,6 +289,7 @@ export default function Home() {
           )}
           {activeView === "history" && (
             <HistoryView
+              catalog={interviewCatalog.catalog}
               onPractice={openPractice}
               onReview={(session) => {
                 setSelectedReview(session);
@@ -300,6 +300,7 @@ export default function Home() {
           {activeView === "stories" && <StoriesView />}
           {activeView === "session" && sessionSnapshot && sessionLaunchRecord && (
             <SessionView
+              catalog={interviewCatalog.catalog}
               onBackToSetup={() => {
                 setActiveView("practice");
                 setPracticeStep("ready");
@@ -311,6 +312,7 @@ export default function Home() {
           )}
           {activeView === "review" && selectedReview && (
             <ReviewDetail
+              catalog={interviewCatalog.catalog}
               onBack={() => setActiveView("home")}
               onPractice={openPractice}
               session={selectedReview}

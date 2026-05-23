@@ -1,5 +1,6 @@
 import type {
   InterviewContext,
+  InterviewCatalog,
   InterviewStyle,
   PracticeMode,
   QuestionType,
@@ -67,3 +68,9 @@ export const interviewStyles: InterviewStyle[] = [
     label: "Tough",
   },
 ];
+
+export const fallbackInterviewCatalog: InterviewCatalog = {
+  interviewStyles,
+  practiceModes,
+  questionTypes,
+};

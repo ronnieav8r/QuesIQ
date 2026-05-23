@@ -10,9 +10,9 @@ voice artifact persistence, a structured post-session practice review, saved
 review revisit, profile persistence, history, score summaries, and first derived
 progression.
 
-The next useful product slice is deciding the next durable product depth:
-deploying and QAing the resume-aware practice slice, then deciding between
-seeded backend catalog tables or more refined progression/streak persistence.
+The next useful product slice is deploying and QAing the resume-aware practice
+and backend-owned catalog table slices, then deciding whether persisted
+progression/streak records or the next module foundation should follow.
 
 ## Done Since Last Handoff
 
@@ -60,6 +60,10 @@ seeded backend catalog tables or more refined progression/streak persistence.
   resume, the backend saves resume metadata and best-effort parsed text for TXT,
   MD, DOCX, and most PDFs, session snapshots carry that parsed context, and Que
   plus post-session evaluation can use a capped resume excerpt.
+- Added seeded backend Interview catalog tables for practice modes, question
+  types, and interviewer styles, plus `/api/catalog`. The client now loads those
+  records and falls back to the checked-in defaults if the catalog endpoint is
+  unavailable.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -123,6 +127,9 @@ seeded backend catalog tables or more refined progression/streak persistence.
   scope.
 - QuesIQ should own durable user context, session snapshots, transcript/artifact
   records, evaluation, history, and progression.
+- Practice mode, question type, and interviewer style records are now
+  backend-owned seeded catalog data, with checked-in frontend defaults retained
+  as a resilience fallback.
 - Resume upload now stores resume metadata and parsed text in the Profile
   record. It does not store raw file binaries or use object storage yet.
 - Legacy `.doc` parsing is not supported; DOCX, TXT, MD, and most PDFs are the
@@ -132,9 +139,9 @@ seeded backend catalog tables or more refined progression/streak persistence.
 
 ## Next Best Work
 
-1. Deploy and user-confirm QA for the resume-aware practice slice.
-2. Decide whether seeded backend catalog tables or persisted progression/streak
-   records should follow.
+1. Deploy and user-confirm QA for the resume-aware practice plus catalog slices.
+2. Decide whether persisted progression/streak records or the next multi-module
+   foundation should follow.
 3. Add deploy/user-confirmed QA for any changes because localhost preview is
    deprecated in this environment.
 4. Keep verifying that `Launch Voice Session` creates a Session id before direct

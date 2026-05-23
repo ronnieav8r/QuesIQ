@@ -3,39 +3,41 @@ import {
   getSessionScoreAverage,
   useSessionHistory,
 } from "@/components/interview/session-history";
-import { interviewStyles, practiceModes, questionTypes } from "@/product/practice-data";
-import type { SessionHistoryItem } from "@/product/interview-types";
+import type { InterviewCatalog, SessionHistoryItem } from "@/product/interview-types";
 
 type HistoryViewProps = {
+  catalog: InterviewCatalog;
   onPractice: () => void;
   onReview: (session: SessionHistoryItem) => void;
 };
 
-function getModeLabel(session: SessionHistoryItem) {
+function getModeLabel(session: SessionHistoryItem, catalog: InterviewCatalog) {
   return (
-    practiceModes.find((mode) => mode.key === session.modeKey)?.name || session.modeKey
+    catalog.practiceModes.find((mode) => mode.key === session.modeKey)?.name ||
+    session.modeKey
   );
 }
 
-function getQuestionLabel(session: SessionHistoryItem) {
+function getQuestionLabel(session: SessionHistoryItem, catalog: InterviewCatalog) {
   if (!session.questionTypeKey) {
     return "General";
   }
 
   return (
-    questionTypes.find((questionType) => questionType.key === session.questionTypeKey)
-      ?.label || session.questionTypeKey
+    catalog.questionTypes.find(
+      (questionType) => questionType.key === session.questionTypeKey,
+    )?.label || session.questionTypeKey
   );
 }
 
-function getStyleLabel(session: SessionHistoryItem) {
+function getStyleLabel(session: SessionHistoryItem, catalog: InterviewCatalog) {
   return (
-    interviewStyles.find((style) => style.key === session.styleKey)?.label ||
+    catalog.interviewStyles.find((style) => style.key === session.styleKey)?.label ||
     session.styleKey
   );
 }
 
-export function HistoryView({ onPractice, onReview }: HistoryViewProps) {
+export function HistoryView({ catalog, onPractice, onReview }: HistoryViewProps) {
   const history = useSessionHistory();
   const visibleSessions = history.sessions.filter(
     (session) => session.hasEvaluation || session.transcript.length > 0,
@@ -98,8 +100,8 @@ export function HistoryView({ onPractice, onReview }: HistoryViewProps) {
                   <strong>{session.targetRole}</strong>
                 </div>
                 <p>
-                  {getModeLabel(session)} - {getQuestionLabel(session)} -{" "}
-                  {getStyleLabel(session)}
+                  {getModeLabel(session, catalog)} - {getQuestionLabel(session, catalog)} -{" "}
+                  {getStyleLabel(session, catalog)}
                 </p>
               </div>
               <div className="history-card-meta">
