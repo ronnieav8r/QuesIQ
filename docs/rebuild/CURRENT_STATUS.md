@@ -1,6 +1,6 @@
 # Current Status
 
-Last updated: 2026-05-22
+Last updated: 2026-05-23
 
 ## Rebuild Location
 
@@ -10,7 +10,7 @@ Last updated: 2026-05-22
 - Active Render web service: `quesiq-web`
   - now points at `ronnieav8r/QuesIQ`
   - Render URL: `https://quesiq-web.onrender.com`
-  - custom domain remains attached there while the rebuild is the active app
+  - custom domain `https://quesiq.com` is the active live app
 - Render Postgres for the rebuild: `quesiq-interview-db`
   - free test database in the Virginia Render region
   - `DATABASE_URL` is wired on `quesiq-web`
@@ -55,6 +55,7 @@ Last updated: 2026-05-22
   - ended Session transcript artifacts can produce an owned structured review
   - review stores five score dimensions, a coaching insight, and a next action
   - the session screen shows review progress after the voice artifact saves
+  - default evaluation model is `gpt-5.4-mini`
 
 ## Verification
 
@@ -68,6 +69,14 @@ The current coded app has passed:
   - `npm run db:migrate` ran
   - the first Drizzle migration applied successfully
   - Next started successfully while the service update was still settling
+- Live `quesiq.com` QA passed after the Auth.js and evaluation deploys:
+  - GitHub sign-in works.
+  - Owned Session launch works.
+  - Session UUID appears before voice starts.
+  - Direct Realtime voice starts and ends normally.
+  - Voice Artifact saves.
+  - Practice Review becomes ready with five scores, Coach Note, and Next Move.
+  - Signed-out practice launch is blocked by design.
 - Manual direct OpenAI Realtime spike test on 2026-05-22:
   - Que starts the practice
   - audio quality is acceptable
@@ -92,10 +101,11 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Deploy and verify the evaluation handoff on `quesiq-web`.
-2. Add the first owned session history/review routing after evaluation lands.
+1. Add the first owned session history/review routing so users can revisit
+   completed reviews.
+2. Persist onboarding/profile context and reuse it in future setup flows.
 3. Add review retry or queue behavior if live evaluation latency becomes rough.
-4. Complete deploy-based QA on `quesiq-web` while localhost preview is
+4. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 
 ## Reference Inputs

@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-05-22
+Last updated: 2026-05-23
 
 ## Current State
 
@@ -16,6 +16,8 @@ Last updated: 2026-05-22
   require an authenticated owner before saved practice launches.
 - The first evaluation handoff is in code: saved transcript artifacts can create
   an owned structured review with five QuesIQ score dimensions.
+- The deployed app on `quesiq.com` has passed the owned practice loop:
+  sign-in, Session-before-voice, direct voice, artifact save, and review ready.
 - Active Render deployment path is moving onto `quesiq-web`, now pointed at
   `ronnieav8r/QuesIQ` with Render Postgres `quesiq-interview-db`.
 - Render MCP is connected for service, deploy, log, Postgres, and environment
@@ -24,10 +26,11 @@ Last updated: 2026-05-22
 
 ## Immediate
 
-1. Deploy and verify the evaluation handoff on `quesiq-web`.
-2. Confirm the session screen moves from artifact saved to review ready.
-3. Confirm `quesiq-web` keeps Session-before-voice launch working on the
-   deployed app.
+1. Add owned session history/review routing so completed reviews can be opened
+   again after leaving the live session screen.
+2. Persist onboarding/profile context and reuse it in setup.
+3. Decide whether review creation should stay inline after voice save or move
+   to a queued/retryable server job.
 4. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
    any port until we intentionally invest time to fix it.
 
@@ -39,7 +42,7 @@ Last updated: 2026-05-22
 - Add owned session history/review routing after evaluation output is deployed
 - Keep Session artifact storage transcript/event-first until audio retention is
   intentionally revisited
-- Add placeholder review/history direction after session artifacts exist
+- Add a simple completed-session list and review detail surface
 
 ## First Direct Voice Backlog
 
@@ -47,7 +50,7 @@ Last updated: 2026-05-22
 - Improve first-turn and start/end UX for Que
 - Capture transcript/events for app-owned session artifacts
 - Decide whether to store audio, transcript only, or derived excerpts for beta
-- Add evaluation handoff after completed voice sessions
+- Tune the first-turn, transcript, and review handoff after beta testing
 - Keep VAPI as fallback, not the default implementation path
 
 ## Things Not To Do First

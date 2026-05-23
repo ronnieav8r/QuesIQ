@@ -103,6 +103,13 @@ Clarity, Relevance, Impact, and Authenticity.
 Evaluation is stored as derived feedback on the app-owned Session path. This
 keeps the beta review loop useful without expanding retention to raw audio.
 
+The live beta defaults are:
+
+- Interview voice model: `gpt-realtime`
+- Post-session evaluation model: `gpt-5.4-mini`
+
+Both can be overridden through Render environment variables.
+
 ## Working Recommendations
 
 These are strong defaults until we decide otherwise:
