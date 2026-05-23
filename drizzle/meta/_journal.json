@@ -36,6 +36,13 @@
       "when": 1779508590323,
       "tag": "0005_parched_wrecking_crew",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779510093582,
+      "tag": "0006_faulty_ulik",
+      "breakpoints": true
     }
   ]
 }

@@ -21,6 +21,9 @@ Last updated: 2026-05-23
   session screen.
 - User-owned profile context persistence is in code: onboarding saves context to
   Postgres and the app reloads it for future setup/session snapshots.
+- Thin review hardening is in code: Sessions track evaluation status/error,
+  saved transcript sessions can show pending/failed review states, and missing
+  or failed reviews can be retried from the saved review surface.
 - The deployed app on `quesiq.com` has passed the owned practice loop:
   sign-in, Session-before-voice, direct voice, artifact save, and review ready.
 - Active Render deployment path is moving onto `quesiq-web`, now pointed at
@@ -31,8 +34,7 @@ Last updated: 2026-05-23
 
 ## Immediate
 
-1. Decide whether review creation should stay inline after voice save or move
-   to a queued/retryable server job.
+1. Add richer progression/history summaries from saved Sessions and evaluations.
 2. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
    any port until we intentionally invest time to fix it.
 

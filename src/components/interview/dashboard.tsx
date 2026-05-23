@@ -64,6 +64,12 @@ export function Dashboard({
   }, []);
 
   const completedReviews = history.filter((session) => session.hasEvaluation);
+  const needsReview = history.filter(
+    (session) =>
+      !session.hasEvaluation &&
+      session.transcript.length > 0 &&
+      ["failed", "pending", "processing"].includes(session.evaluationStatus),
+  );
 
   return (
     <section className="screen home-screen" aria-labelledby="home-title">
@@ -140,8 +146,28 @@ export function Dashboard({
                 : `${completedReviews.length} ready`}
             </span>
           </div>
-          {completedReviews.length > 0 ? (
+          {completedReviews.length > 0 || needsReview.length > 0 ? (
             <div className="review-history">
+              {needsReview.slice(0, 2).map((session) => (
+                <article key={session.id}>
+                  <div>
+                    <strong>{session.targetRole}</strong>
+                    <span>{new Date(session.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <p>
+                    {session.evaluationStatus === "failed"
+                      ? "Review failed. Open this session to retry."
+                      : "Review is waiting to be completed."}
+                  </p>
+                  <button
+                    className="secondary"
+                    onClick={() => onReview(session)}
+                    type="button"
+                  >
+                    Open Session
+                  </button>
+                </article>
+              ))}
               {completedReviews.slice(0, 3).map((session) => (
                 <article key={session.id}>
                   <div>

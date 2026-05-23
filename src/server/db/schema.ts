@@ -76,6 +76,11 @@ export const sessions = pgTable("sessions", {
   contextSnapshot: jsonb("context_snapshot").$type<SessionSetupSnapshot>().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   endedAt: timestamp("ended_at", { withTimezone: true }),
+  evaluationError: text("evaluation_error"),
+  evaluationStatus: text("evaluation_status")
+    .$type<"completed" | "failed" | "not_started" | "pending" | "processing">()
+    .default("not_started")
+    .notNull(),
   id: uuid("id").defaultRandom().primaryKey(),
   modeKey: text("mode_key").notNull(),
   questionTypeKey: text("question_type_key"),

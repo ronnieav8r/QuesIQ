@@ -66,6 +66,8 @@ export type SessionHistoryItem = {
   createdAt: string;
   endedAt?: string;
   evaluation?: SessionEvaluationResult;
+  evaluationError?: string;
+  evaluationStatus: EvaluationStatus;
   hasEvaluation: boolean;
   id: string;
   modeKey: PracticeModeKey;
@@ -78,6 +80,13 @@ export type SessionHistoryItem = {
 };
 
 export type SessionStatus = "artifact_saved" | "created" | "evaluated";
+
+export type EvaluationStatus =
+  | "completed"
+  | "failed"
+  | "not_started"
+  | "pending"
+  | "processing";
 
 export type EvaluationScoreKey =
   | "confidence"

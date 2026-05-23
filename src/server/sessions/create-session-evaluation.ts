@@ -163,6 +163,7 @@ export async function createSessionEvaluation(
   sessionId: string,
   userId: string,
 ): Promise<SessionEvaluationRecord | undefined> {
+  const now = new Date();
   const [existing] = await getDb()
     .select({
       id: evaluations.id,
@@ -174,6 +175,16 @@ export async function createSessionEvaluation(
     .limit(1);
 
   if (existing) {
+    await getDb()
+      .update(sessions)
+      .set({
+        evaluationError: null,
+        evaluationStatus: "completed",
+        status: "evaluated",
+        updatedAt: now,
+      })
+      .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
+
     return existing;
   }
 
@@ -192,12 +203,45 @@ export async function createSessionEvaluation(
   }
 
   if (!session.voiceArtifact?.endedAt || session.voiceArtifact.transcript.length === 0) {
+    await getDb()
+      .update(sessions)
+      .set({
+        evaluationError: "This practice session does not have a saved transcript yet.",
+        evaluationStatus: "failed",
+        updatedAt: now,
+      })
+      .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
+
     throw new Error("This practice session does not have a saved transcript yet.");
   }
 
   const model = process.env.OPENAI_EVALUATION_MODEL || "gpt-5.4-mini";
-  const result = await requestEvaluation(session.contextSnapshot, session.voiceArtifact, model);
-  const now = new Date();
+  await getDb()
+    .update(sessions)
+    .set({
+      evaluationError: null,
+      evaluationStatus: "processing",
+      updatedAt: now,
+    })
+    .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
+
+  let result: SessionEvaluationResult;
+
+  try {
+    result = await requestEvaluation(session.contextSnapshot, session.voiceArtifact, model);
+  } catch (error) {
+    await getDb()
+      .update(sessions)
+      .set({
+        evaluationError:
+          error instanceof Error ? error.message : "Practice review could not be created.",
+        evaluationStatus: "failed",
+        updatedAt: new Date(),
+      })
+      .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
+
+    throw error;
+  }
 
   const [evaluation] = await getDb()
     .insert(evaluations)
@@ -225,6 +269,8 @@ export async function createSessionEvaluation(
   await getDb()
     .update(sessions)
     .set({
+      evaluationError: null,
+      evaluationStatus: "completed",
       status: "evaluated",
       updatedAt: now,
     })

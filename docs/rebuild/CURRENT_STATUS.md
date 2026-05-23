@@ -65,6 +65,11 @@ Last updated: 2026-05-23
     description, and resume filename in Postgres
   - the app reloads saved profile context and uses it in future setup/session
     snapshots
+- Thin review hardening:
+  - Sessions track evaluation status and last evaluation error
+  - saved transcript artifacts mark reviews pending
+  - review creation marks processing, completed, or failed
+  - Home surfaces saved transcript sessions that need review retry
 
 ## Verification
 
@@ -110,7 +115,7 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Add review retry or queue behavior if live evaluation latency becomes rough.
+1. Add richer progression/history summaries from saved Sessions and evaluations.
 2. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 

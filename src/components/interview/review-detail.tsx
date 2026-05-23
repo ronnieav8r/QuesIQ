@@ -1,5 +1,7 @@
+import { useState } from "react";
+
 import { interviewStyles, practiceModes, questionTypes } from "@/product/practice-data";
-import type { SessionHistoryItem } from "@/product/interview-types";
+import type { SessionEvaluationResult, SessionHistoryItem } from "@/product/interview-types";
 
 type ReviewDetailProps = {
   onBack: () => void;
@@ -8,6 +10,9 @@ type ReviewDetailProps = {
 };
 
 export function ReviewDetail({ onBack, onPractice, session }: ReviewDetailProps) {
+  const [currentSession, setCurrentSession] = useState(session);
+  const [retryError, setRetryError] = useState<string>();
+  const [retryPending, setRetryPending] = useState(false);
   const mode = practiceModes.find((practiceMode) => practiceMode.key === session.modeKey);
   const questionType = questionTypes.find(
     (practiceQuestionType) => practiceQuestionType.key === session.questionTypeKey,
@@ -15,6 +20,63 @@ export function ReviewDetail({ onBack, onPractice, session }: ReviewDetailProps)
   const style = interviewStyles.find(
     (interviewStyle) => interviewStyle.key === session.styleKey,
   );
+  const reviewStatusLabel = currentSession.hasEvaluation
+    ? "Ready"
+    : currentSession.evaluationStatus === "failed"
+      ? "Retry needed"
+      : currentSession.evaluationStatus === "processing"
+        ? "Reviewing"
+        : currentSession.evaluationStatus === "pending"
+          ? "Pending"
+          : "Not ready";
+
+  async function retryReview() {
+    try {
+      setRetryError(undefined);
+      setRetryPending(true);
+      setCurrentSession((current) => ({
+        ...current,
+        evaluationError: undefined,
+        evaluationStatus: "processing",
+      }));
+
+      const response = await fetch(`/api/sessions/${session.id}/evaluation`, {
+        method: "POST",
+      });
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        evaluation?: {
+          result: SessionEvaluationResult;
+        };
+      };
+
+      if (!response.ok || !body.evaluation) {
+        throw new Error(body.detail || body.error || "Practice review could not be created.");
+      }
+
+      setCurrentSession((current) => ({
+        ...current,
+        evaluation: body.evaluation?.result,
+        evaluationError: undefined,
+        evaluationStatus: "completed",
+        hasEvaluation: true,
+        status: "evaluated",
+      }));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Practice review could not be created.";
+
+      setRetryError(message);
+      setCurrentSession((current) => ({
+        ...current,
+        evaluationError: message,
+        evaluationStatus: "failed",
+      }));
+    } finally {
+      setRetryPending(false);
+    }
+  }
 
   return (
     <section className="screen review-detail-screen" aria-labelledby="review-detail-title">
@@ -66,13 +128,13 @@ export function ReviewDetail({ onBack, onPractice, session }: ReviewDetailProps)
       <section className="panel session-review" aria-labelledby="saved-review-title">
         <div className="section-head">
           <h2 id="saved-review-title">Saved Feedback</h2>
-          <span>{session.hasEvaluation ? "Ready" : "Not ready"}</span>
+          <span>{retryPending ? "Reviewing" : reviewStatusLabel}</span>
         </div>
-        {session.evaluation ? (
+        {currentSession.evaluation ? (
           <div className="review-body">
-            <p>{session.evaluation.summary}</p>
+            <p>{currentSession.evaluation.summary}</p>
             <div className="score-strip review-scores">
-              {session.evaluation.scores.map((score) => (
+              {currentSession.evaluation.scores.map((score) => (
                 <span key={score.key}>
                   <strong>{score.label}</strong>
                   <b>{score.score}/5</b>
@@ -82,15 +144,29 @@ export function ReviewDetail({ onBack, onPractice, session }: ReviewDetailProps)
             </div>
             <div className="review-callout">
               <h3>Coach Note</h3>
-              <p>{session.evaluation.coachingInsight}</p>
+              <p>{currentSession.evaluation.coachingInsight}</p>
             </div>
             <div className="review-callout">
               <h3>Next Move</h3>
-              <p>{session.evaluation.nextAction}</p>
+              <p>{currentSession.evaluation.nextAction}</p>
             </div>
           </div>
         ) : (
-          <p>This session does not have a completed review yet.</p>
+          <div className="review-body">
+            <p>
+              {currentSession.evaluationStatus === "failed"
+                ? "This session has a saved transcript, but the review did not complete."
+                : "This session has a saved transcript and is waiting for a completed review."}
+            </p>
+            {(currentSession.evaluationError || retryError) && (
+              <p className="form-error">{retryError || currentSession.evaluationError}</p>
+            )}
+            {currentSession.transcript.length > 0 && (
+              <button disabled={retryPending} onClick={retryReview} type="button">
+                {retryPending ? "Creating Review" : "Retry Review"}
+              </button>
+            )}
+          </div>
         )}
       </section>
 

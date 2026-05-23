@@ -17,6 +17,8 @@ export async function saveSessionArtifact(
     .update(sessions)
     .set({
       endedAt: toDate(artifact.endedAt),
+      evaluationError: null,
+      evaluationStatus: artifact.transcript.length > 0 ? "pending" : "not_started",
       startedAt: toDate(artifact.startedAt),
       status: "artifact_saved",
       updatedAt: new Date(),

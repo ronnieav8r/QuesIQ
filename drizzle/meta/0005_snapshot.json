@@ -1,6 +1,6 @@
 {
-  "id": "d252bc40-ab27-4465-ac7e-521a0aa4acfe",
-  "prevId": "f527a8d0-a67e-4e27-875c-debfe4295aea",
+  "id": "e81e1f14-9fdb-451d-9729-95e1fd6edda1",
+  "prevId": "d252bc40-ab27-4465-ac7e-521a0aa4acfe",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -384,6 +384,19 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "evaluation_error": {
+          "name": "evaluation_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "evaluation_status": {
+          "name": "evaluation_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'not_started'"
         },
         "id": {
           "name": "id",
