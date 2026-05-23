@@ -1,5 +1,6 @@
 export type AppView =
   | "home"
+  | "history"
   | "practice"
   | "review"
   | "stories"

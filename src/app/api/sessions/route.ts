@@ -25,7 +25,7 @@ export async function GET() {
   }
 
   try {
-    const sessions = await listOwnedSessions(appSession.user.id);
+    const sessions = await listOwnedSessions(appSession.user.id, 50);
 
     return NextResponse.json({ sessions });
   } catch (error) {

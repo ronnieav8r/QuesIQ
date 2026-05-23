@@ -70,6 +70,10 @@ Last updated: 2026-05-23
   - saved transcript artifacts mark reviews pending
   - review creation marks processing, completed, or failed
   - Home surfaces saved transcript sessions that need review retry
+- First history/progression summary:
+  - History tab lists owned sessions with review status and per-session average
+  - Home score strip calculates the five score averages from completed saved
+    evaluations
 
 ## Verification
 
@@ -115,7 +119,8 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Add richer progression/history summaries from saved Sessions and evaluations.
+1. Add true progression/retention mechanics such as XP, streaks, and dashboard
+   Up Next logic from saved Sessions and evaluations.
 2. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 

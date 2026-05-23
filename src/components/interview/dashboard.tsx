@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-
+import { useSessionHistory } from "@/components/interview/session-history";
 import type { InterviewContext } from "@/product/interview-types";
 import type { SessionHistoryItem } from "@/product/interview-types";
 
@@ -18,58 +17,34 @@ export function Dashboard({
   onPractice,
   onReview,
 }: DashboardProps) {
-  const [history, setHistory] = useState<SessionHistoryItem[]>([]);
-  const [historyError, setHistoryError] = useState<string>();
-  const [historyStatus, setHistoryStatus] = useState<"idle" | "loaded" | "loading">(
-    "idle",
-  );
-
-  useEffect(() => {
-    let ignore = false;
-
-    async function loadHistory() {
-      try {
-        setHistoryError(undefined);
-        setHistoryStatus("loading");
-        const response = await fetch("/api/sessions");
-        const body = (await response.json()) as {
-          detail?: string;
-          error?: string;
-          sessions?: SessionHistoryItem[];
-        };
-
-        if (!response.ok) {
-          throw new Error(body.detail || body.error || "Session history could not be loaded.");
-        }
-
-        if (!ignore) {
-          setHistory(body.sessions ?? []);
-          setHistoryStatus("loaded");
-        }
-      } catch (error) {
-        if (!ignore) {
-          setHistoryError(
-            error instanceof Error ? error.message : "Session history could not be loaded.",
-          );
-          setHistoryStatus("loaded");
-        }
-      }
-    }
-
-    void loadHistory();
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
-  const completedReviews = history.filter((session) => session.hasEvaluation);
-  const needsReview = history.filter(
+  const history = useSessionHistory();
+  const completedReviews = history.sessions.filter((session) => session.hasEvaluation);
+  const needsReview = history.sessions.filter(
     (session) =>
       !session.hasEvaluation &&
       session.transcript.length > 0 &&
       ["failed", "pending", "processing"].includes(session.evaluationStatus),
   );
+  const scoreAverages = [
+    "confidence",
+    "clarity",
+    "relevance",
+    "impact",
+    "authenticity",
+  ].map((key) => {
+    const scores = completedReviews
+      .flatMap((session) => session.evaluation?.scores ?? [])
+      .filter((score) => score.key === key);
+    const average =
+      scores.length > 0
+        ? scores.reduce((sum, score) => sum + score.score, 0) / scores.length
+        : undefined;
+
+    return {
+      average,
+      label: scores[0]?.label || key[0].toUpperCase() + key.slice(1),
+    };
+  });
 
   return (
     <section className="screen home-screen" aria-labelledby="home-title">
@@ -141,7 +116,7 @@ export function Dashboard({
           <div className="section-head">
             <h2 id="history-title">Recent Reviews</h2>
             <span>
-              {historyStatus === "loading"
+              {history.status === "loading"
                 ? "Loading"
                 : `${completedReviews.length} ready`}
             </span>
@@ -191,37 +166,39 @@ export function Dashboard({
               voice practice session.
             </p>
           )}
-          {historyError && <p className="form-error">{historyError}</p>}
+          {history.error && <p className="form-error">{history.error}</p>}
         </section>
 
         <section aria-labelledby="progress-title" className="panel progress-panel">
           <div className="section-head">
             <h2 id="progress-title">Progress</h2>
-            <span>{history.length} sessions</span>
+            <span>{history.sessions.length} sessions</span>
           </div>
           <div aria-label="0 percent toward level 2" className="progress-track">
             <span />
           </div>
           <p>
-            Scores and XP will appear after Que reviews your first voice
-            session.
+            XP arrives with progression. Session counts already reflect saved
+            practice history.
           </p>
         </section>
 
         <section aria-labelledby="stats-title" className="panel score-panel">
           <div className="section-head">
             <h2 id="stats-title">Skill Scores</h2>
-            <span>Waiting for feedback</span>
+            <span>
+              {completedReviews.length > 0
+                ? `${completedReviews.length} reviews`
+                : "Waiting for feedback"}
+            </span>
           </div>
           <div className="score-strip">
-            {[
-              "Confidence",
-              "Clarity",
-              "Impact",
-              "Authenticity",
-              "Relevance",
-            ].map((score) => (
-              <span key={score}>{score}</span>
+            {scoreAverages.map((score) => (
+              <span key={score.label}>
+                <strong>{score.label}</strong>
+                <b>{score.average ? score.average.toFixed(1) : "--"}</b>
+                <small>{score.average ? "Average score" : "No reviews yet"}</small>
+              </span>
             ))}
           </div>
         </section>

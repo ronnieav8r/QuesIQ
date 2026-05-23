@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { AuthControl } from "@/components/auth-control";
 import { Dashboard } from "@/components/interview/dashboard";
+import { HistoryView } from "@/components/interview/history-view";
 import { MeView } from "@/components/interview/me-view";
 import { OnboardingView } from "@/components/interview/onboarding-view";
 import { PracticeSetup } from "@/components/interview/practice-setup";
@@ -29,6 +30,7 @@ import type {
 
 const appTabs: { key: AppView; label: string }[] = [
   { key: "home", label: "Home" },
+  { key: "history", label: "History" },
   { key: "practice", label: "Practice" },
   { key: "stories", label: "Stories" },
   { key: "me", label: "Me" },
@@ -284,6 +286,15 @@ export default function Home() {
               sessionLaunchError={sessionLaunchError}
               sessionLaunchPending={sessionLaunchPending}
               step={practiceStep}
+            />
+          )}
+          {activeView === "history" && (
+            <HistoryView
+              onPractice={openPractice}
+              onReview={(session) => {
+                setSelectedReview(session);
+                setActiveView("review");
+              }}
             />
           )}
           {activeView === "stories" && <StoriesView />}

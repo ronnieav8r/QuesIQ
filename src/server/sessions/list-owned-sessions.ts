@@ -4,7 +4,10 @@ import type { SessionHistoryItem } from "@/product/interview-types";
 import { getDb } from "@/server/db/client";
 import { evaluations, sessions } from "@/server/db/schema";
 
-export async function listOwnedSessions(userId: string): Promise<SessionHistoryItem[]> {
+export async function listOwnedSessions(
+  userId: string,
+  limit = 12,
+): Promise<SessionHistoryItem[]> {
   const rows = await getDb()
     .select({
       contextSnapshot: sessions.contextSnapshot,
@@ -24,7 +27,7 @@ export async function listOwnedSessions(userId: string): Promise<SessionHistoryI
     .leftJoin(evaluations, eq(evaluations.sessionId, sessions.id))
     .where(eq(sessions.userId, userId))
     .orderBy(desc(sessions.createdAt))
-    .limit(12);
+    .limit(limit);
 
   return rows.map((row) => ({
     createdAt: row.createdAt.toISOString(),
