@@ -61,7 +61,28 @@ export type SessionLaunchRecord = {
   status: SessionStatus;
 };
 
-export type SessionStatus = "created" | "artifact_saved";
+export type SessionStatus = "artifact_saved" | "created" | "evaluated";
+
+export type EvaluationScoreKey =
+  | "confidence"
+  | "clarity"
+  | "relevance"
+  | "impact"
+  | "authenticity";
+
+export type EvaluationScore = {
+  key: EvaluationScoreKey;
+  label: string;
+  score: number;
+  summary: string;
+};
+
+export type SessionEvaluationResult = {
+  coachingInsight: string;
+  nextAction: string;
+  scores: EvaluationScore[];
+  summary: string;
+};
 
 export type VoiceSessionPhase =
   | "ready"

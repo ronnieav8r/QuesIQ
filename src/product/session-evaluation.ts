@@ -1,0 +1,74 @@
+import type {
+  EvaluationScore,
+  EvaluationScoreKey,
+  SessionEvaluationResult,
+} from "@/product/interview-types";
+
+const scoreKeys = [
+  "confidence",
+  "clarity",
+  "relevance",
+  "impact",
+  "authenticity",
+] as const satisfies EvaluationScoreKey[];
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function isScoreKey(value: unknown): value is EvaluationScoreKey {
+  return isString(value) && scoreKeys.includes(value as EvaluationScoreKey);
+}
+
+function isEvaluationScore(value: unknown): value is EvaluationScore {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<EvaluationScore>;
+  const score = candidate.score;
+
+  return (
+    isScoreKey(candidate.key) &&
+    isString(candidate.label) &&
+    typeof score === "number" &&
+    Number.isInteger(score) &&
+    score >= 1 &&
+    score <= 5 &&
+    isString(candidate.summary)
+  );
+}
+
+export function parseSessionEvaluation(
+  value: unknown,
+): SessionEvaluationResult | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const candidate = value as Partial<SessionEvaluationResult>;
+
+  if (
+    !isString(candidate.summary) ||
+    !isString(candidate.coachingInsight) ||
+    !isString(candidate.nextAction) ||
+    !Array.isArray(candidate.scores) ||
+    candidate.scores.length !== scoreKeys.length ||
+    !candidate.scores.every(isEvaluationScore)
+  ) {
+    return undefined;
+  }
+
+  const returnedKeys = new Set(candidate.scores.map((score) => score.key));
+
+  if (!scoreKeys.every((key) => returnedKeys.has(key))) {
+    return undefined;
+  }
+
+  return {
+    coachingInsight: candidate.coachingInsight,
+    nextAction: candidate.nextAction,
+    scores: candidate.scores,
+    summary: candidate.summary,
+  };
+}

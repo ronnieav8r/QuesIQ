@@ -94,6 +94,15 @@ Do not store raw session audio in this first artifact slice. Revisit recording
 retention only when a product, evaluation, support, or compliance need justifies
 the added privacy and storage surface.
 
+### Evaluate Saved Transcript Artifacts First
+
+The first evaluation slice uses the saved Session transcript artifact to create
+an owned, structured practice review with five score dimensions: Confidence,
+Clarity, Relevance, Impact, and Authenticity.
+
+Evaluation is stored as derived feedback on the app-owned Session path. This
+keeps the beta review loop useful without expanding retention to raw audio.
+
 ## Working Recommendations
 
 These are strong defaults until we decide otherwise:
@@ -110,9 +119,10 @@ These are strong defaults until we decide otherwise:
    - resume storage provider
    - whether a later beta or review workflow needs stored voice recordings
 
-2. Evaluation provider:
-   - exact model/provider for post-session review
-   - structured output contract and cost controls
+2. Evaluation hardening:
+   - cost controls
+   - retry/queue behavior
+   - prompt/config versioning
 
 3. Migration:
    - start with new beta users only

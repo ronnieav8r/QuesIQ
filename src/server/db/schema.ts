@@ -1,6 +1,16 @@
-import { integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  integer,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 import type {
+  SessionEvaluationResult,
   SessionSetupSnapshot,
   SessionStatus,
   VoiceSessionArtifactDraft,
@@ -77,3 +87,22 @@ export const sessions = pgTable("sessions", {
   userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
   voiceArtifact: jsonb("voice_artifact").$type<VoiceSessionArtifactDraft>(),
 });
+
+export const evaluations = pgTable(
+  "evaluations",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    model: text("model").notNull(),
+    result: jsonb("result").$type<SessionEvaluationResult>().notNull(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    status: text("status").default("completed").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  },
+  (evaluation) => ({
+    sessionIdIdx: uniqueIndex("evaluations_session_id_idx").on(evaluation.sessionId),
+  }),
+);

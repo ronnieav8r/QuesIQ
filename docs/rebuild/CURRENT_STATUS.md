@@ -51,6 +51,10 @@ Last updated: 2026-05-22
   - new app-owned Sessions store their authenticated user owner
   - Session creation, artifact save, and Realtime exchange require that owner
     before history, evaluation, and progression build on Session data
+- First evaluation handoff:
+  - ended Session transcript artifacts can produce an owned structured review
+  - review stores five score dimensions, a coaching insight, and a next action
+  - the session screen shows review progress after the voice artifact saves
 
 ## Verification
 
@@ -88,10 +92,9 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Configure GitHub OAuth Auth.js credentials on `quesiq-web` and verify
-   sign-in plus owned Session launch.
-2. Start the evaluation handoff from the saved Session voice artifact.
-3. Add the first owned session history/review routing after evaluation lands.
+1. Deploy and verify the evaluation handoff on `quesiq-web`.
+2. Add the first owned session history/review routing after evaluation lands.
+3. Add review retry or queue behavior if live evaluation latency becomes rough.
 4. Complete deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 

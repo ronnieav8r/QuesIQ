@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import { interviewStyles, practiceModes, questionTypes } from "@/product/practice-data";
 import type {
+  SessionEvaluationResult,
   SessionLaunchRecord,
   SessionSetupSnapshot,
   VoiceSessionArtifactDraft,
@@ -24,6 +25,12 @@ export function SessionView({ onBackToSetup, onExit, session, snapshot }: Sessio
   const [artifactSaveStatus, setArtifactSaveStatus] = useState<
     "collecting" | "error" | "saved" | "saving"
   >("collecting");
+  const [evaluation, setEvaluation] = useState<SessionEvaluationResult>();
+  const [evaluationError, setEvaluationError] = useState<string>();
+  const [evaluationStatus, setEvaluationStatus] = useState<
+    "idle" | "ready" | "reviewing" | "unavailable"
+  >("idle");
+  const evaluationRequestedRef = useRef(false);
   const savedArtifactRef = useRef<string | undefined>(undefined);
   const mode = practiceModes.find((practiceMode) => practiceMode.key === snapshot.modeKey);
   const questionType = questionTypes.find(
@@ -71,6 +78,46 @@ export function SessionView({ onBackToSetup, onExit, session, snapshot }: Sessio
 
     void saveArtifact();
   }, [artifactDraft, session.id]);
+
+  useEffect(() => {
+    if (artifactSaveStatus !== "saved" || evaluationRequestedRef.current) {
+      return;
+    }
+
+    evaluationRequestedRef.current = true;
+    setEvaluationError(undefined);
+    setEvaluationStatus("reviewing");
+
+    async function createEvaluation() {
+      try {
+        const response = await fetch(`/api/sessions/${session.id}/evaluation`, {
+          method: "POST",
+        });
+        const body = (await response.json()) as {
+          detail?: string;
+          error?: string;
+          evaluation?: {
+            result: SessionEvaluationResult;
+          };
+        };
+
+        if (!response.ok || !body.evaluation) {
+          throw new Error(body.detail || body.error || "Practice review could not be created.");
+        }
+
+        setEvaluation(body.evaluation.result);
+        setEvaluationStatus("ready");
+      } catch (error) {
+        evaluationRequestedRef.current = false;
+        setEvaluationError(
+          error instanceof Error ? error.message : "Practice review could not be created.",
+        );
+        setEvaluationStatus("unavailable");
+      }
+    }
+
+    void createEvaluation();
+  }, [artifactSaveStatus, session.id]);
 
   return (
     <section className="screen session-screen" aria-labelledby="session-title">
@@ -181,8 +228,8 @@ export function SessionView({ onBackToSetup, onExit, session, snapshot }: Sessio
             <h2 id="session-next-title">Evaluate the saved practice artifact</h2>
           </div>
           <p>
-            The transcript, lifecycle events, and direct Realtime call metadata
-            can now land on this Session before the evaluation slice.
+            The saved transcript now turns into a first QuesIQ review with
+            scores, a coaching insight, and the next suggested move.
           </p>
           <div className="inline-actions">
             <button onClick={onBackToSetup} type="button">
@@ -192,6 +239,46 @@ export function SessionView({ onBackToSetup, onExit, session, snapshot }: Sessio
               Return Home
             </button>
           </div>
+        </section>
+
+        <section className="panel session-review" aria-labelledby="session-review-title">
+          <div className="section-head">
+            <h2 id="session-review-title">Practice Review</h2>
+            <span>
+              {evaluationStatus === "idle" && "Waiting for save"}
+              {evaluationStatus === "reviewing" && "Reviewing"}
+              {evaluationStatus === "ready" && "Ready"}
+              {evaluationStatus === "unavailable" && "Try again"}
+            </span>
+          </div>
+          {evaluation ? (
+            <div className="review-body">
+              <p>{evaluation.summary}</p>
+              <div className="score-strip review-scores">
+                {evaluation.scores.map((score) => (
+                  <span key={score.key}>
+                    <strong>{score.label}</strong>
+                    <b>{score.score}/5</b>
+                    <small>{score.summary}</small>
+                  </span>
+                ))}
+              </div>
+              <div className="review-callout">
+                <h3>Coach Note</h3>
+                <p>{evaluation.coachingInsight}</p>
+              </div>
+              <div className="review-callout">
+                <h3>Next Move</h3>
+                <p>{evaluation.nextAction}</p>
+              </div>
+            </div>
+          ) : (
+            <p>
+              After the voice artifact is saved, Que will review the transcript
+              and prepare your first feedback summary here.
+            </p>
+          )}
+          {evaluationError && <p className="form-error">{evaluationError}</p>}
         </section>
       </div>
     </section>

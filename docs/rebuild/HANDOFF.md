@@ -33,6 +33,8 @@ being moved onto the active `quesiq-web` service.
 - Added Auth.js GitHub sign-in scaffolding plus Drizzle auth tables and Session
   ownership enforcement for new Session creation, Realtime exchange, and voice
   artifact save.
+- Added the first evaluation handoff from saved Session transcripts into an
+  owned structured review with five score dimensions and a next action.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
   wires `DATABASE_URL`, and runs Drizzle migrations before service start.
 - Render was connected to Codex through Render MCP for service, deploy, log,
@@ -69,11 +71,10 @@ being moved onto the active `quesiq-web` service.
 
 ## Next Best Work
 
-1. Configure Auth.js GitHub OAuth credentials on `quesiq-web`.
-2. Verify sign-in, owned Session launch, Realtime voice, and artifact save on
-   the deployed app.
-3. Build the first evaluation handoff from the saved Session transcript/event
-   artifact.
+1. Deploy and verify the evaluation handoff on `quesiq-web`.
+2. Verify review creation after an ended saved voice session.
+3. Add the first owned session history/review routing after the review slice is
+   live.
 4. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
 

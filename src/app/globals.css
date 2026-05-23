@@ -73,6 +73,7 @@ button.quiet-button {
 
 h1,
 h2,
+h3,
 p {
   margin-top: 0;
 }
@@ -88,6 +89,12 @@ h2 {
   font-size: 1.25rem;
   line-height: 1.2;
   margin-bottom: 0;
+}
+
+h3 {
+  font-size: 1rem;
+  line-height: 1.2;
+  margin-bottom: 0.35rem;
 }
 
 p {
@@ -686,6 +693,37 @@ textarea::placeholder {
   max-width: 65%;
   overflow-wrap: anywhere;
   text-align: right;
+}
+
+.review-body,
+.session-review {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.review-scores span {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.review-scores b {
+  color: var(--focus);
+}
+
+.review-scores small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.review-callout {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.85rem;
+}
+
+.review-callout p {
+  margin-bottom: 0;
 }
 .context-checklist span {
   background: var(--surface-raised);

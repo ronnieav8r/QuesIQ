@@ -63,6 +63,15 @@ environment variables before testing sign-in and saved practice launch:
 New Session creation requires a signed-in user so later evaluation, history,
 and progression records have an owner.
 
+## Practice Review
+
+Ended voice sessions save transcript and lifecycle artifacts first, then create
+an owned practice review from that saved transcript.
+
+Set this optional server environment variable to override the review model:
+
+- `OPENAI_EVALUATION_MODEL` - optional model override, defaults to `gpt-5.4-mini`
+
 ## Direct OpenAI Realtime Voice
 
 The voice session screen opens a direct browser WebRTC session with OpenAI Realtime.

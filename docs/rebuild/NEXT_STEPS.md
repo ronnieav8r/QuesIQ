@@ -14,6 +14,8 @@ Last updated: 2026-05-22
   call correlation metadata on the app-owned Session without storing audio.
 - Auth.js GitHub sign-in and Drizzle ownership tables are wired so new Sessions
   require an authenticated owner before saved practice launches.
+- The first evaluation handoff is in code: saved transcript artifacts can create
+  an owned structured review with five QuesIQ score dimensions.
 - Active Render deployment path is moving onto `quesiq-web`, now pointed at
   `ronnieav8r/QuesIQ` with Render Postgres `quesiq-interview-db`.
 - Render MCP is connected for service, deploy, log, Postgres, and environment
@@ -22,14 +24,11 @@ Last updated: 2026-05-22
 
 ## Immediate
 
-1. Configure `AUTH_SECRET`, GitHub OAuth credentials, and trusted host handling
-   on `quesiq-web`.
-2. Verify sign-in, owned Session launch, voice start/end, and artifact save on
-   the deployed app.
-3. Build the first evaluation handoff from the saved Session voice artifact.
-4. Confirm `quesiq-web` keeps Session-before-voice launch working on the
+1. Deploy and verify the evaluation handoff on `quesiq-web`.
+2. Confirm the session screen moves from artifact saved to review ready.
+3. Confirm `quesiq-web` keeps Session-before-voice launch working on the
    deployed app.
-5. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
+4. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
    any port until we intentionally invest time to fix it.
 
 ## First Implementation Backlog
@@ -37,7 +36,7 @@ Last updated: 2026-05-22
 - Persist onboarding/profile context
 - Persist seeded practice mode, question type, and interview style records where
   useful for the backend
-- Extend owned Session persistence into evaluation status and output
+- Add owned session history/review routing after evaluation output is deployed
 - Keep Session artifact storage transcript/event-first until audio retention is
   intentionally revisited
 - Add placeholder review/history direction after session artifacts exist
