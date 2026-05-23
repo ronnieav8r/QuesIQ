@@ -5,7 +5,9 @@ import type { InterviewContext } from "@/product/interview-types";
 type OnboardingViewProps = {
   interviewContext: InterviewContext;
   onBack: () => void;
-  onSave: (nextContext: InterviewContext) => void;
+  onSave: (nextContext: InterviewContext) => Promise<void> | void;
+  saveError?: string;
+  savePending?: boolean;
   onSkip: () => void;
 };
 
@@ -13,14 +15,17 @@ export function OnboardingView({
   interviewContext,
   onBack,
   onSave,
+  saveError,
+  savePending = false,
   onSkip,
 }: OnboardingViewProps) {
   const [draftContext, setDraftContext] = useState(interviewContext);
 
-  function saveContext(event: FormEvent<HTMLFormElement>) {
+  async function saveContext(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onSave({
+    await onSave({
       ...draftContext,
+      jobDescription: draftContext.jobDescription.trim(),
       preferredName: draftContext.preferredName.trim(),
       targetCompany: draftContext.targetCompany.trim(),
       targetRole: draftContext.targetRole.trim(),
@@ -124,11 +129,14 @@ export function OnboardingView({
           </label>
 
           <div className="inline-actions">
-            <button type="submit">Save Context</button>
+            <button disabled={savePending} type="submit">
+              {savePending ? "Saving Context" : "Save Context"}
+            </button>
             <button className="secondary" onClick={onSkip} type="button">
               Practice Without More
             </button>
           </div>
+          {saveError && <p className="form-error">{saveError}</p>}
         </form>
 
         <aside className="onboarding-note" aria-label="Onboarding guidance">

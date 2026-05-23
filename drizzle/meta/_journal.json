@@ -29,6 +29,13 @@
       "when": 1779505949827,
       "tag": "0003_chubby_bishop",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779508590323,
+      "tag": "0005_parched_wrecking_crew",
+      "breakpoints": true
     }
   ]
 }

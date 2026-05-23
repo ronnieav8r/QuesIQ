@@ -60,6 +60,11 @@ Last updated: 2026-05-23
   - Home loads the signed-in user's recent app-owned Sessions from Postgres
   - completed saved reviews can be reopened after leaving the live session
     screen
+- User-owned profile context persistence:
+  - onboarding saves preferred name, target role, target company, job
+    description, and resume filename in Postgres
+  - the app reloads saved profile context and uses it in future setup/session
+    snapshots
 
 ## Verification
 
@@ -105,9 +110,8 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Persist onboarding/profile context and reuse it in future setup flows.
-2. Add review retry or queue behavior if live evaluation latency becomes rough.
-3. Continue deploy-based QA on `quesiq-web` while localhost preview is
+1. Add review retry or queue behavior if live evaluation latency becomes rough.
+2. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 
 ## Reference Inputs

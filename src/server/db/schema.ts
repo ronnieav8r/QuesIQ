@@ -88,6 +88,26 @@ export const sessions = pgTable("sessions", {
   voiceArtifact: jsonb("voice_artifact").$type<VoiceSessionArtifactDraft>(),
 });
 
+export const profiles = pgTable(
+  "profiles",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    jobDescription: text("job_description").default("").notNull(),
+    preferredName: text("preferred_name").default("").notNull(),
+    resumeName: text("resume_name"),
+    targetCompany: text("target_company").default("").notNull(),
+    targetRole: text("target_role").default("").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (profile) => ({
+    userIdIdx: uniqueIndex("profiles_user_id_idx").on(profile.userId),
+  }),
+);
+
 export const evaluations = pgTable(
   "evaluations",
   {

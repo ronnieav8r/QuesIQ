@@ -8,8 +8,8 @@ QuesIQ Interview now has the first owned practice loop live on `quesiq.com`:
 GitHub sign-in, Session-before-voice launch, direct OpenAI Realtime voice,
 voice artifact persistence, and a structured post-session practice review.
 
-The next useful product slice is persisted onboarding/profile context so setup
-can reuse saved user context instead of asking for it every session.
+The next useful product slice is deciding whether review creation should stay
+inline after voice save or move to a queued/retryable server job.
 
 ## Done Since Last Handoff
 
@@ -38,6 +38,9 @@ can reuse saved user context instead of asking for it every session.
 - Added the first owned session history/review revisit path: Home now loads the
   signed-in user's recent Sessions from Postgres and can reopen completed saved
   reviews after leaving the live session screen.
+- Added user-owned profile context persistence: onboarding saves preferred name,
+  target role, target company, job description, and resume filename into
+  Postgres, and the app reloads it for future setup/session snapshots.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -89,10 +92,9 @@ can reuse saved user context instead of asking for it every session.
 
 ## Next Best Work
 
-1. Persist onboarding/profile context and use it to reduce repeated setup.
-2. Add review retry/queue behavior if live evaluation latency or failure rate
+1. Add review retry/queue behavior if live evaluation latency or failure rate
    becomes rough.
-3. Keep verifying that `Launch Voice Session` creates a Session id before direct
+2. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
 
 ## Watch Outs

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AuthControl } from "@/components/auth-control";
 import { Dashboard } from "@/components/interview/dashboard";
@@ -46,6 +46,8 @@ export default function Home() {
   const [sessionLaunchRecord, setSessionLaunchRecord] = useState<SessionLaunchRecord>();
   const [sessionSnapshot, setSessionSnapshot] = useState<SessionSetupSnapshot>();
   const [selectedReview, setSelectedReview] = useState<SessionHistoryItem>();
+  const [profileSaveError, setProfileSaveError] = useState<string>();
+  const [profileSavePending, setProfileSavePending] = useState(false);
 
   const selectedMode = useMemo(
     () => practiceModes.find((mode) => mode.key === selectedModeKey),
@@ -60,6 +62,77 @@ export default function Home() {
   const contextReady = Boolean(
     interviewContext.preferredName.trim() && interviewContext.targetRole.trim(),
   );
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadProfile() {
+      try {
+        const response = await fetch("/api/profile");
+
+        if (response.status === 401) {
+          return;
+        }
+
+        const body = (await response.json()) as {
+          detail?: string;
+          error?: string;
+          profile?: typeof interviewContext;
+        };
+
+        if (!response.ok) {
+          throw new Error(body.detail || body.error || "Profile context could not be loaded.");
+        }
+
+        if (!ignore && body.profile) {
+          setInterviewContext(body.profile);
+        }
+      } catch (error) {
+        if (!ignore) {
+          console.error("Profile context load failed.", error);
+        }
+      }
+    }
+
+    void loadProfile();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  async function saveProfileContext(nextContext: typeof interviewContext) {
+    try {
+      setProfileSaveError(undefined);
+      setProfileSavePending(true);
+
+      const response = await fetch("/api/profile", {
+        body: JSON.stringify({ profile: nextContext }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "PUT",
+      });
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        profile?: typeof interviewContext;
+      };
+
+      if (!response.ok || !body.profile) {
+        throw new Error(body.detail || body.error || "Profile context could not be saved.");
+      }
+
+      setInterviewContext(body.profile);
+      setActiveView("home");
+    } catch (error) {
+      setProfileSaveError(
+        error instanceof Error ? error.message : "Profile context could not be saved.",
+      );
+    } finally {
+      setProfileSavePending(false);
+    }
+  }
 
   function openPractice() {
     setActiveView("practice");
@@ -243,12 +316,17 @@ export default function Home() {
           {activeView === "onboarding" && (
             <OnboardingView
               interviewContext={interviewContext}
+              key={[
+                interviewContext.preferredName,
+                interviewContext.targetRole,
+                interviewContext.targetCompany,
+                interviewContext.resumeName,
+              ].join(":")}
               onBack={() => setActiveView("home")}
-              onSave={(nextContext) => {
-                setInterviewContext(nextContext);
-                setActiveView("home");
-              }}
+              onSave={saveProfileContext}
               onSkip={openPractice}
+              saveError={profileSaveError}
+              savePending={profileSavePending}
             />
           )}
         </div>

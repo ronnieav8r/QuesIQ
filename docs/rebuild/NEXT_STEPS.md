@@ -19,6 +19,8 @@ Last updated: 2026-05-23
 - The first owned history/review revisit path is in code: Home loads recent
   signed-in Sessions and opens completed saved reviews after leaving the live
   session screen.
+- User-owned profile context persistence is in code: onboarding saves context to
+  Postgres and the app reloads it for future setup/session snapshots.
 - The deployed app on `quesiq.com` has passed the owned practice loop:
   sign-in, Session-before-voice, direct voice, artifact save, and review ready.
 - Active Render deployment path is moving onto `quesiq-web`, now pointed at
@@ -29,15 +31,13 @@ Last updated: 2026-05-23
 
 ## Immediate
 
-1. Persist onboarding/profile context and reuse it in setup.
-2. Decide whether review creation should stay inline after voice save or move
+1. Decide whether review creation should stay inline after voice save or move
    to a queued/retryable server job.
-3. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
+2. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
    any port until we intentionally invest time to fix it.
 
 ## First Implementation Backlog
 
-- Persist onboarding/profile context
 - Persist seeded practice mode, question type, and interview style records where
   useful for the backend
 - Add richer owned session history filters and review summaries
