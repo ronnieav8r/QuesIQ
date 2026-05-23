@@ -56,6 +56,10 @@ Last updated: 2026-05-23
   - review stores five score dimensions, a coaching insight, and a next action
   - the session screen shows review progress after the voice artifact saves
   - default evaluation model is `gpt-5.4-mini`
+- First owned history/review revisit path:
+  - Home loads the signed-in user's recent app-owned Sessions from Postgres
+  - completed saved reviews can be reopened after leaving the live session
+    screen
 
 ## Verification
 
@@ -101,11 +105,9 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Add the first owned session history/review routing so users can revisit
-   completed reviews.
-2. Persist onboarding/profile context and reuse it in future setup flows.
-3. Add review retry or queue behavior if live evaluation latency becomes rough.
-4. Continue deploy-based QA on `quesiq-web` while localhost preview is
+1. Persist onboarding/profile context and reuse it in future setup flows.
+2. Add review retry or queue behavior if live evaluation latency becomes rough.
+3. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 
 ## Reference Inputs

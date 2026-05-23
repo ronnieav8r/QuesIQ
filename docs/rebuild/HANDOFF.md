@@ -8,8 +8,8 @@ QuesIQ Interview now has the first owned practice loop live on `quesiq.com`:
 GitHub sign-in, Session-before-voice launch, direct OpenAI Realtime voice,
 voice artifact persistence, and a structured post-session practice review.
 
-The next useful product slice is owned history/review routing so a user can
-return to completed practice reviews after leaving the live session screen.
+The next useful product slice is persisted onboarding/profile context so setup
+can reuse saved user context instead of asking for it every session.
 
 ## Done Since Last Handoff
 
@@ -35,6 +35,9 @@ return to completed practice reviews after leaving the live session screen.
   artifact save.
 - Added the first evaluation handoff from saved Session transcripts into an
   owned structured review with five score dimensions and a next action.
+- Added the first owned session history/review revisit path: Home now loads the
+  signed-in user's recent Sessions from Postgres and can reopen completed saved
+  reviews after leaving the live session screen.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -86,12 +89,10 @@ return to completed practice reviews after leaving the live session screen.
 
 ## Next Best Work
 
-1. Add the first owned session history/review routing so completed reviews can
-   be revisited.
-2. Persist onboarding/profile context and use it to reduce repeated setup.
-3. Add review retry/queue behavior if live evaluation latency or failure rate
+1. Persist onboarding/profile context and use it to reduce repeated setup.
+2. Add review retry/queue behavior if live evaluation latency or failure rate
    becomes rough.
-4. Keep verifying that `Launch Voice Session` creates a Session id before direct
+3. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
 
 ## Watch Outs

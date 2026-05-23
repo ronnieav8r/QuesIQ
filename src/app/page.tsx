@@ -7,6 +7,7 @@ import { Dashboard } from "@/components/interview/dashboard";
 import { MeView } from "@/components/interview/me-view";
 import { OnboardingView } from "@/components/interview/onboarding-view";
 import { PracticeSetup } from "@/components/interview/practice-setup";
+import { ReviewDetail } from "@/components/interview/review-detail";
 import { SessionView } from "@/components/interview/session-view";
 import { StoriesView } from "@/components/interview/stories-view";
 import {
@@ -21,6 +22,7 @@ import type {
   PracticeMode,
   PracticeStep,
   QuestionTypeKey,
+  SessionHistoryItem,
   SessionLaunchRecord,
   SessionSetupSnapshot,
 } from "@/product/interview-types";
@@ -43,6 +45,7 @@ export default function Home() {
   const [sessionLaunchPending, setSessionLaunchPending] = useState(false);
   const [sessionLaunchRecord, setSessionLaunchRecord] = useState<SessionLaunchRecord>();
   const [sessionSnapshot, setSessionSnapshot] = useState<SessionSetupSnapshot>();
+  const [selectedReview, setSelectedReview] = useState<SessionHistoryItem>();
 
   const selectedMode = useMemo(
     () => practiceModes.find((mode) => mode.key === selectedModeKey),
@@ -188,6 +191,10 @@ export default function Home() {
               interviewContext={interviewContext}
               onOnboarding={() => setActiveView("onboarding")}
               onPractice={openPractice}
+              onReview={(session) => {
+                setSelectedReview(session);
+                setActiveView("review");
+              }}
             />
           )}
           {activeView === "practice" && (
@@ -216,6 +223,13 @@ export default function Home() {
               onExit={() => setActiveView("home")}
               session={sessionLaunchRecord}
               snapshot={sessionSnapshot}
+            />
+          )}
+          {activeView === "review" && selectedReview && (
+            <ReviewDetail
+              onBack={() => setActiveView("home")}
+              onPractice={openPractice}
+              session={selectedReview}
             />
           )}
           {activeView === "me" && (

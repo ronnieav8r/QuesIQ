@@ -16,6 +16,9 @@ Last updated: 2026-05-23
   require an authenticated owner before saved practice launches.
 - The first evaluation handoff is in code: saved transcript artifacts can create
   an owned structured review with five QuesIQ score dimensions.
+- The first owned history/review revisit path is in code: Home loads recent
+  signed-in Sessions and opens completed saved reviews after leaving the live
+  session screen.
 - The deployed app on `quesiq.com` has passed the owned practice loop:
   sign-in, Session-before-voice, direct voice, artifact save, and review ready.
 - Active Render deployment path is moving onto `quesiq-web`, now pointed at
@@ -26,12 +29,10 @@ Last updated: 2026-05-23
 
 ## Immediate
 
-1. Add owned session history/review routing so completed reviews can be opened
-   again after leaving the live session screen.
-2. Persist onboarding/profile context and reuse it in setup.
-3. Decide whether review creation should stay inline after voice save or move
+1. Persist onboarding/profile context and reuse it in setup.
+2. Decide whether review creation should stay inline after voice save or move
    to a queued/retryable server job.
-4. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
+3. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
    any port until we intentionally invest time to fix it.
 
 ## First Implementation Backlog
@@ -39,7 +40,7 @@ Last updated: 2026-05-23
 - Persist onboarding/profile context
 - Persist seeded practice mode, question type, and interview style records where
   useful for the backend
-- Add owned session history/review routing after evaluation output is deployed
+- Add richer owned session history filters and review summaries
 - Keep Session artifact storage transcript/event-first until audio retention is
   intentionally revisited
 - Add a simple completed-session list and review detail surface

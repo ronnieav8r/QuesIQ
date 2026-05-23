@@ -1,6 +1,7 @@
 export type AppView =
   | "home"
   | "practice"
+  | "review"
   | "stories"
   | "me"
   | "onboarding"
@@ -59,6 +60,20 @@ export type SessionSetupSnapshot = {
 export type SessionLaunchRecord = {
   id: string;
   status: SessionStatus;
+};
+
+export type SessionHistoryItem = {
+  createdAt: string;
+  endedAt?: string;
+  evaluation?: SessionEvaluationResult;
+  hasEvaluation: boolean;
+  id: string;
+  modeKey: PracticeModeKey;
+  questionTypeKey?: QuestionTypeKey;
+  status: SessionStatus;
+  styleKey: InterviewStyleKey;
+  targetCompany: string;
+  targetRole: string;
 };
 
 export type SessionStatus = "artifact_saved" | "created" | "evaluated";
