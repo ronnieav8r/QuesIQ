@@ -37,7 +37,10 @@ function getStyleLabel(session: SessionHistoryItem) {
 
 export function HistoryView({ onPractice, onReview }: HistoryViewProps) {
   const history = useSessionHistory();
-  const completedCount = history.sessions.filter((session) => session.hasEvaluation).length;
+  const visibleSessions = history.sessions.filter(
+    (session) => session.hasEvaluation || session.transcript.length > 0,
+  );
+  const completedCount = visibleSessions.filter((session) => session.hasEvaluation).length;
 
   return (
     <section className="screen history-screen" aria-labelledby="history-view-title">
@@ -54,7 +57,7 @@ export function HistoryView({ onPractice, onReview }: HistoryViewProps) {
       <section className="panel history-summary" aria-label="History summary">
         <div>
           <span>Total sessions</span>
-          <strong>{history.sessions.length}</strong>
+          <strong>{visibleSessions.length}</strong>
         </div>
         <div>
           <span>Completed reviews</span>
@@ -64,7 +67,7 @@ export function HistoryView({ onPractice, onReview }: HistoryViewProps) {
           <span>Needs review</span>
           <strong>
             {
-              history.sessions.filter(
+              visibleSessions.filter(
                 (session) =>
                   !session.hasEvaluation &&
                   session.transcript.length > 0 &&
@@ -78,13 +81,13 @@ export function HistoryView({ onPractice, onReview }: HistoryViewProps) {
       <section className="history-list" aria-label="Saved practice sessions">
         {history.status === "loading" && <p>Loading practice history.</p>}
         {history.error && <p className="form-error">{history.error}</p>}
-        {history.status === "loaded" && history.sessions.length === 0 && (
+        {history.status === "loaded" && visibleSessions.length === 0 && (
           <section className="panel">
             <h2>No sessions yet</h2>
-            <p>Your saved practice sessions will appear here after launch.</p>
+            <p>Your completed or transcript-backed practice sessions will appear here.</p>
           </section>
         )}
-        {history.sessions.map((session) => {
+        {visibleSessions.map((session) => {
           const average = getSessionScoreAverage(session);
 
           return (
