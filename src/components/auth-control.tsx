@@ -1,7 +1,7 @@
 "use client";
 
 import { signIn, signOut } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 type AuthSessionResponse = {
   user?: {
@@ -12,6 +12,10 @@ type AuthSessionResponse = {
 
 export function AuthControl() {
   const [authSession, setAuthSession] = useState<AuthSessionResponse>();
+  const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState<string>();
+  const [emailPending, setEmailPending] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   useEffect(() => {
     async function loadAuthSession() {
@@ -47,14 +51,57 @@ export function AuthControl() {
     );
   }
 
+  async function sendMagicLink(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    try {
+      setEmailError(undefined);
+      setEmailPending(true);
+      setEmailSent(false);
+      const response = await signIn("email", {
+        email,
+        redirect: false,
+        redirectTo: "/",
+      });
+
+      if (!response?.ok) {
+        throw new Error(response?.error || "Sign-in email could not be sent.");
+      }
+
+      setEmailSent(true);
+    } catch (error) {
+      setEmailError(error instanceof Error ? error.message : "Sign-in email could not be sent.");
+    } finally {
+      setEmailPending(false);
+    }
+  }
+
   return (
-    <div className="auth-control">
-      <button className="quiet-button" onClick={() => signIn("google")} type="button">
-        Continue with Google
-      </button>
-      <button className="quiet-button" onClick={() => signIn("github")} type="button">
-        GitHub
-      </button>
+    <div className="auth-control auth-options">
+      <form className="auth-email-form" onSubmit={sendMagicLink}>
+        <input
+          aria-label="Email address"
+          onChange={(event) => {
+            setEmail(event.target.value);
+            setEmailError(undefined);
+            setEmailSent(false);
+          }}
+          placeholder="Email address"
+          required
+          type="email"
+          value={email}
+        />
+        <button className="quiet-button" disabled={emailPending} type="submit">
+          {emailPending ? "Sending" : "Email Link"}
+        </button>
+      </form>
+      {emailSent && <p className="auth-message">Check your email for the sign-in link.</p>}
+      {emailError && <p className="auth-error">{emailError}</p>}
+      <div className="auth-provider-row">
+        <button className="quiet-button" onClick={() => signIn("github")} type="button">
+          GitHub
+        </button>
+      </div>
     </div>
   );
 }

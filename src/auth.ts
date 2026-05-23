@@ -5,6 +5,7 @@ import Google from "next-auth/providers/google";
 
 import { getDb } from "@/server/db/client";
 import { accounts, authSessions, users, verificationTokens } from "@/server/db/schema";
+import { MagicLinkProvider } from "@/server/auth/magic-link-provider";
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(getDb(), {
@@ -20,5 +21,5 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       return session;
     },
   },
-  providers: [Google, GitHub],
+  providers: [MagicLinkProvider(), Google, GitHub],
 });

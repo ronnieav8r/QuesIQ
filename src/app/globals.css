@@ -158,6 +158,41 @@ p {
   justify-content: end;
 }
 
+.auth-options {
+  align-items: end;
+  display: grid;
+  gap: 0.45rem;
+  justify-items: end;
+}
+
+.auth-email-form,
+.auth-provider-row {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.auth-email-form input {
+  min-height: 2.6rem;
+  min-width: 12rem;
+  padding-block: 0.55rem;
+}
+
+.auth-message,
+.auth-error {
+  font-size: 0.78rem;
+  margin: 0;
+  max-width: 18rem;
+  text-align: right;
+}
+
+.auth-message {
+  color: var(--focus);
+}
+
+.auth-error {
+  color: var(--text);
+}
+
 .auth-control span {
   color: var(--muted);
   font-size: 0.82rem;
@@ -1053,5 +1088,22 @@ textarea::placeholder {
   .auth-control button,
   .stacked-actions button {
     flex: 1 1 100%;
+  }
+
+  .auth-email-form,
+  .auth-provider-row,
+  .auth-options {
+    justify-items: stretch;
+    width: 100%;
+  }
+
+  .auth-email-form {
+    display: grid;
+  }
+
+  .auth-message,
+  .auth-error {
+    max-width: none;
+    text-align: left;
   }
 }

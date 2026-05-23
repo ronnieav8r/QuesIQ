@@ -68,11 +68,11 @@ creation can land before protected routes while the app is still operating as a
 thin rebuild slice, but durable user ownership should be added through the auth
 slice before beta history and progression depend on it.
 
-The first Auth.js implementation uses OAuth for real user ownership without
-adding app-owned password storage yet. Google is the primary user-facing sign-in
-path, with GitHub retained for developer/admin convenience. New Session launch
-and its direct voice persistence boundaries require the authenticated Session
-owner.
+The first Auth.js implementation uses email magic links for the primary
+user-facing sign-in path without adding app-owned password storage yet. Google
+OAuth is wired but deferred until Google Cloud setup is complete, and GitHub is
+retained for developer/admin convenience. New Session launch and its direct
+voice persistence boundaries require the authenticated Session owner.
 
 ### Keep Product Channels In The QuesIQ App By Default
 

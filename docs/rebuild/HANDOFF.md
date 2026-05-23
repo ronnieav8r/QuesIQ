@@ -5,7 +5,8 @@ Last updated: 2026-05-23
 ## Current Focus
 
 QuesIQ Interview now has the first owned practice loop live on `quesiq.com`:
-Google/GitHub sign-in, Session-before-voice launch, direct OpenAI Realtime voice,
+email magic-link plus OAuth sign-in, Session-before-voice launch, direct
+OpenAI Realtime voice,
 voice artifact persistence, a structured post-session practice review, saved
 review revisit, profile persistence, history, score summaries, and first derived
 progression.
@@ -38,6 +39,9 @@ progression/streak records or the next module foundation should follow.
   artifact save.
 - Added Google OAuth as the primary user-facing sign-in provider while keeping
   GitHub OAuth available.
+- Added email magic-link sign-in through Auth.js and Brevo transactional email
+  env vars, making email the preferred nontechnical user sign-in path once env
+  setup is complete.
 - Added the first evaluation handoff from saved Session transcripts into an
   owned structured review with five score dimensions and a next action.
 - Added the first owned session history/review revisit path: Home now loads the
@@ -89,6 +93,7 @@ progression/streak records or the next module foundation should follow.
 - Live `quesiq.com` QA passed across the owned practice loop and tonight's
   deployed follow-up slices:
   - GitHub sign-in works.
+  - Email magic-link sign-in is wired in code and needs deployed Brevo/env QA.
   - Google sign-in is wired in code and needs deployed OAuth/env QA.
   - GitHub OAuth may silently reauthorize after app sign-out because the browser
     remains signed into GitHub; this is normal provider-session behavior.
