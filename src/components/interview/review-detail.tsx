@@ -94,6 +94,25 @@ export function ReviewDetail({ onBack, onPractice, session }: ReviewDetailProps)
         )}
       </section>
 
+      <details className="panel transcript-panel">
+        <summary>
+          <span>Transcript</span>
+          <small>{session.transcript.length} turns</small>
+        </summary>
+        {session.transcript.length > 0 ? (
+          <div className="transcript-review-list">
+            {session.transcript.map((turn) => (
+              <article key={turn.id}>
+                <strong>{turn.speaker}</strong>
+                <p>{turn.text}</p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p>No transcript turns were saved for this session.</p>
+        )}
+      </details>
+
       <div className="inline-actions">
         <button onClick={onPractice} type="button">
           Practice Again

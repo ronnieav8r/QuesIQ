@@ -759,6 +759,43 @@ textarea::placeholder {
   max-width: 62rem;
   width: 100%;
 }
+
+.transcript-panel summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.transcript-panel summary span {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.transcript-panel summary small {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.transcript-review-list {
+  display: grid;
+  gap: 0.65rem;
+  padding-top: 0.9rem;
+}
+
+.transcript-review-list article {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem;
+}
+
+.transcript-review-list p {
+  margin-bottom: 0;
+}
 .context-checklist span {
   background: var(--surface-raised);
   border: 1px solid var(--border);

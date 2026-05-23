@@ -16,6 +16,7 @@ export async function listOwnedSessions(userId: string): Promise<SessionHistoryI
       questionTypeKey: sessions.questionTypeKey,
       status: sessions.status,
       styleKey: sessions.styleKey,
+      voiceArtifact: sessions.voiceArtifact,
     })
     .from(sessions)
     .leftJoin(evaluations, eq(evaluations.sessionId, sessions.id))
@@ -35,5 +36,6 @@ export async function listOwnedSessions(userId: string): Promise<SessionHistoryI
     styleKey: row.contextSnapshot.styleKey,
     targetCompany: row.contextSnapshot.interviewContext.targetCompany,
     targetRole: row.contextSnapshot.interviewContext.targetRole || "General practice",
+    transcript: row.voiceArtifact?.transcript ?? [],
   }));
 }

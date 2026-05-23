@@ -74,6 +74,7 @@ export type SessionHistoryItem = {
   styleKey: InterviewStyleKey;
   targetCompany: string;
   targetRole: string;
+  transcript: VoiceTranscriptTurn[];
 };
 
 export type SessionStatus = "artifact_saved" | "created" | "evaluated";
