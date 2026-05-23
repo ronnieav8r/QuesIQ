@@ -51,7 +51,7 @@ Last updated: 2026-05-23
   - Realtime exchange captures OpenAI WebRTC call correlation metadata from the
     server response boundary
 - Auth.js ownership slice:
-  - GitHub sign-in route and Auth.js Drizzle tables are in code
+  - Google and GitHub sign-in routes and Auth.js Drizzle tables are in code
   - new app-owned Sessions store their authenticated user owner
   - Session creation, artifact save, and Realtime exchange require that owner
     before history, evaluation, and progression build on Session data
@@ -101,6 +101,7 @@ The current coded app has passed:
   - Next started successfully while the service update was still settling
 - Live `quesiq.com` QA passed after the Auth.js and evaluation deploys:
   - GitHub sign-in works.
+  - Google sign-in is wired in code and needs deployed OAuth/env QA.
   - Owned Session launch works.
   - Session UUID appears before voice starts.
   - Direct Realtime voice starts and ends normally.

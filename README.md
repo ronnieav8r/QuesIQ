@@ -52,10 +52,12 @@ The practice setup flow creates a `Session` row before opening live voice.
 
 ## Auth
 
-The first ownership slice uses Auth.js with GitHub sign-in. Set these server
-environment variables before testing sign-in and saved practice launch:
+The first ownership slice uses Auth.js with Google and GitHub sign-in. Set these
+server environment variables before testing sign-in and saved practice launch:
 
 - `AUTH_SECRET`
+- `AUTH_GOOGLE_ID`
+- `AUTH_GOOGLE_SECRET`
 - `AUTH_GITHUB_ID`
 - `AUTH_GITHUB_SECRET`
 - `AUTH_TRUST_HOST=true` on Render

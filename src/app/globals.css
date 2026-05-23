@@ -153,6 +153,11 @@ p {
   gap: 0.55rem;
 }
 
+.auth-control {
+  flex-wrap: wrap;
+  justify-content: end;
+}
+
 .auth-control span {
   color: var(--muted);
   font-size: 0.82rem;
@@ -1045,6 +1050,7 @@ textarea::placeholder {
   }
 
   .inline-actions button,
+  .auth-control button,
   .stacked-actions button {
     flex: 1 1 100%;
   }

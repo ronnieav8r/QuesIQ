@@ -5,7 +5,7 @@ Last updated: 2026-05-23
 ## Current Focus
 
 QuesIQ Interview now has the first owned practice loop live on `quesiq.com`:
-GitHub sign-in, Session-before-voice launch, direct OpenAI Realtime voice,
+Google/GitHub sign-in, Session-before-voice launch, direct OpenAI Realtime voice,
 voice artifact persistence, a structured post-session practice review, saved
 review revisit, profile persistence, history, score summaries, and first derived
 progression.
@@ -36,6 +36,8 @@ progression/streak records or the next module foundation should follow.
 - Added Auth.js GitHub sign-in scaffolding plus Drizzle auth tables and Session
   ownership enforcement for new Session creation, Realtime exchange, and voice
   artifact save.
+- Added Google OAuth as the primary user-facing sign-in provider while keeping
+  GitHub OAuth available.
 - Added the first evaluation handoff from saved Session transcripts into an
   owned structured review with five score dimensions and a next action.
 - Added the first owned session history/review revisit path: Home now loads the
@@ -87,6 +89,7 @@ progression/streak records or the next module foundation should follow.
 - Live `quesiq.com` QA passed across the owned practice loop and tonight's
   deployed follow-up slices:
   - GitHub sign-in works.
+  - Google sign-in is wired in code and needs deployed OAuth/env QA.
   - GitHub OAuth may silently reauthorize after app sign-out because the browser
     remains signed into GitHub; this is normal provider-session behavior.
   - Practice launch creates an owned Session before the voice screen opens.

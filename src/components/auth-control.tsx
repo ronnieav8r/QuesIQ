@@ -48,8 +48,13 @@ export function AuthControl() {
   }
 
   return (
-    <button className="quiet-button" onClick={() => signIn("github")} type="button">
-      Sign In
-    </button>
+    <div className="auth-control">
+      <button className="quiet-button" onClick={() => signIn("google")} type="button">
+        Continue with Google
+      </button>
+      <button className="quiet-button" onClick={() => signIn("github")} type="button">
+        GitHub
+      </button>
+    </div>
   );
 }

@@ -15,8 +15,8 @@ Last updated: 2026-05-23
   with client artifact drafting and passed its first manual test.
 - Ended direct voice attempts now save transcript/event artifacts and Realtime
   call correlation metadata on the app-owned Session without storing audio.
-- Auth.js GitHub sign-in and Drizzle ownership tables are wired so new Sessions
-  require an authenticated owner before saved practice launches.
+- Auth.js Google/GitHub sign-in and Drizzle ownership tables are wired so new
+  Sessions require an authenticated owner before saved practice launches.
 - The first evaluation handoff is in code: saved transcript artifacts can create
   an owned structured review with five QuesIQ score dimensions.
 - The first owned history/review revisit path is in code: Home loads recent
@@ -48,7 +48,8 @@ Last updated: 2026-05-23
 
 ## Immediate
 
-1. Deploy and user-confirm QA the resume-aware practice and catalog slices.
+1. Add Render Google OAuth environment variables, deploy, and user-confirm QA
+   Google sign-in plus the existing resume-aware practice and catalog slices.
 2. Decide whether persisted progression/streak records or the next multi-module
    foundation should follow.
 3. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
