@@ -25,6 +25,7 @@ Last updated: 2026-05-23
 - Next.js TypeScript baseline and Render readiness files
 - Responsive app shell with intentional mobile and desktop compositions
 - Home, Practice, Stories, and Me navigation
+- History navigation with owned session list
 - UI-only onboarding/interview-context flow with a fast path into practice
 - Refactored interview UI components and typed seeded practice data
 - Practice setup wizard with mode-specific question-type routing
@@ -72,6 +73,8 @@ Last updated: 2026-05-23
   - Home surfaces saved transcript sessions that need review retry
 - First history/progression summary:
   - History tab lists owned sessions with review status and per-session average
+  - created-only Sessions with no transcript/review are hidden from visible
+    History
   - Home score strip calculates the five score averages from completed saved
     evaluations
   - Home derives simple XP, level progress, last-practiced text, latest next
@@ -84,6 +87,8 @@ The current coded app has passed:
 - ESLint
 - TypeScript check
 - Next production build
+- Latest local checks were run through the bundled Node runtime because local
+  `npm`/`git` were not available on PATH in this shell.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran
@@ -96,6 +101,12 @@ The current coded app has passed:
   - Direct Realtime voice starts and ends normally.
   - Voice Artifact saves.
   - Practice Review becomes ready with five scores, Coach Note, and Next Move.
+  - Saved reviews reopen from Home and History.
+  - Saved review detail includes expandable Transcript.
+  - Profile context persists and reloads.
+  - History and Home score/progression summaries render correctly.
+  - Retry Review was manually confirmed working.
+  - Created-only/incomplete Sessions are hidden from visible History.
   - Signed-out practice launch is blocked by design.
 - Manual direct OpenAI Realtime spike test on 2026-05-22:
   - Que starts the practice
@@ -116,6 +127,8 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 - Que is the in-app coach. Quira remains the separate public/support assistant.
 - Keep QuesIQ-owned session snapshots, transcripts/artifacts, evaluations,
   history, and progression in the app backend/data layer.
+- Resume files are not yet uploaded, stored, parsed, or used by Que. Only the
+  selected filename is persisted as profile/session metadata.
 - Build both mobile and desktop intentionally while keeping practice setup and
   live voice focused.
 

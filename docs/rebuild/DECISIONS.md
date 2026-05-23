@@ -110,6 +110,23 @@ The live beta defaults are:
 
 Both can be overridden through Render environment variables.
 
+### Persist Profile Context Separately From Session Snapshots
+
+User-owned onboarding/profile context is stored in a Profile record and copied
+into each Session setup snapshot when practice launches. This keeps current
+user context reusable while preserving the exact context that produced each
+historical Session.
+
+Current persisted profile fields are preferred name, target role, target
+company, job description, and resume filename. Resume files themselves are not
+stored or parsed yet.
+
+### Keep Review Creation Inline For Now, But Retryable
+
+Post-session review creation still runs inline after the voice artifact saves.
+Sessions now track evaluation status and last evaluation error so missing or
+failed reviews can be reopened and retried without adding a queue yet.
+
 ## Working Recommendations
 
 These are strong defaults until we decide otherwise:
@@ -128,7 +145,7 @@ These are strong defaults until we decide otherwise:
 
 2. Evaluation hardening:
    - cost controls
-   - retry/queue behavior
+   - whether inline retry is enough or a queued worker is needed later
    - prompt/config versioning
 
 3. Migration:

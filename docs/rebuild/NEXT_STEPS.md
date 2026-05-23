@@ -29,6 +29,9 @@ Last updated: 2026-05-23
   completed evaluations.
 - Home now derives simple XP, level progress, last-practiced text, latest next
   move, and Recommended Next from saved Sessions and evaluations.
+- Created-only/incomplete Sessions are hidden from visible History.
+- Resume upload currently persists only the selected filename. File storage,
+  text extraction, and use in Que prompts are not wired yet.
 - The deployed app on `quesiq.com` has passed the owned practice loop:
   sign-in, Session-before-voice, direct voice, artifact save, and review ready.
 - Active Render deployment path is moving onto `quesiq-web`, now pointed at
@@ -46,12 +49,15 @@ Last updated: 2026-05-23
 
 ## First Implementation Backlog
 
+- Resume storage/parsing decision and implementation, if resume context becomes
+  the next priority
 - Persist seeded practice mode, question type, and interview style records where
   useful for the backend
-- Add richer owned session history filters and review summaries
+- Add richer owned session history filters if the 50-session list becomes too
+  noisy
+- Persist progression/streak records if derived XP/level is not enough
 - Keep Session artifact storage transcript/event-first until audio retention is
   intentionally revisited
-- Add a simple completed-session list and review detail surface
 
 ## First Direct Voice Backlog
 

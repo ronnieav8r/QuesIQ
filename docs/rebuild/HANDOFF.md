@@ -6,7 +6,9 @@ Last updated: 2026-05-23
 
 QuesIQ Interview now has the first owned practice loop live on `quesiq.com`:
 GitHub sign-in, Session-before-voice launch, direct OpenAI Realtime voice,
-voice artifact persistence, and a structured post-session practice review.
+voice artifact persistence, a structured post-session practice review, saved
+review revisit, profile persistence, history, score summaries, and first derived
+progression.
 
 The next useful product slice is deciding the next durable product depth:
 resume storage/parsing, seeded backend catalog tables, or more refined
@@ -52,6 +54,8 @@ progression/streak persistence.
 - Added first derived progression on Home: completed reviews create simple XP,
   level progress, last-practiced text, latest next move, and Recommended Next
   reacts to pending reviews or the weakest score dimension.
+- Hid created-only/incomplete Sessions from the visible History list so rows
+  without transcript or review do not invite users into dead-end session detail.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -68,16 +72,31 @@ progression/streak persistence.
 - ESLint passed.
 - TypeScript check passed.
 - Next production build passed.
+- Local checks for the latest slices passed using the bundled Node runtime
+  because local `npm`/`git` were not available on PATH in this shell.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
   succeeded, Drizzle migrations applied successfully, and Next started.
-- Live `quesiq.com` QA passed after Auth.js and evaluation deploys:
+- Live `quesiq.com` QA passed across the owned practice loop and tonight's
+  deployed follow-up slices:
   - GitHub sign-in works.
+  - GitHub OAuth may silently reauthorize after app sign-out because the browser
+    remains signed into GitHub; this is normal provider-session behavior.
   - Practice launch creates an owned Session before the voice screen opens.
   - The voice screen shows a real Session UUID.
   - Direct Realtime voice starts and ends normally.
   - Voice Artifact moves to Saved.
   - Practice Review moves to Ready and shows five scores, Coach Note, and Next
     Move.
+  - Saved reviews can be reopened from Home and History.
+  - Saved review detail shows Session Context, Saved Feedback, and expandable
+    Transcript.
+  - Profile context persists across refresh/sign-out/sign-in and is reused in
+    setup/session snapshots.
+  - History lists transcript-backed or reviewed sessions and hides created-only
+    incomplete sessions.
+  - Home shows score averages, simple XP/level progress, last practiced, latest
+    next move, and smarter Recommended Next.
+  - Retry Review was manually confirmed working.
   - Signed-out launch is blocked by design.
 - Manual voice spike test passed:
   - Que speaks first after start.
@@ -100,12 +119,18 @@ progression/streak persistence.
   scope.
 - QuesIQ should own durable user context, session snapshots, transcript/artifact
   records, evaluation, history, and progression.
+- Resume upload is not wired for storage/parsing yet. Current UI only captures
+  the selected resume filename as profile/session context metadata.
+- Review creation remains inline after voice artifact save, with retryable
+  status/error tracking. There is no background queue yet.
 
 ## Next Best Work
 
 1. Decide whether to add resume storage/parsing, seeded backend catalog tables,
    or persisted progression/streak records next.
-2. Keep verifying that `Launch Voice Session` creates a Session id before direct
+2. Add deploy/user-confirmed QA for any changes because localhost preview is
+   deprecated in this environment.
+3. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
 
 ## Watch Outs
