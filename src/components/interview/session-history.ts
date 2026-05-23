@@ -31,6 +31,17 @@ export function useSessionHistory(): SessionHistoryState {
           sessions?: SessionHistoryItem[];
         };
 
+        if (response.status === 401) {
+          if (!ignore) {
+            setHistory({
+              sessions: [],
+              status: "loaded",
+            });
+          }
+
+          return;
+        }
+
         if (!response.ok) {
           throw new Error(body.detail || body.error || "Session history could not be loaded.");
         }

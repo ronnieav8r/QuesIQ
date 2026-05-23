@@ -8,7 +8,7 @@ import type {
 
 export const initialInterviewContext: InterviewContext = {
   jobDescription: "",
-  preferredName: "Ronald",
+  preferredName: "",
   targetCompany: "",
   targetRole: "",
 };

@@ -158,41 +158,6 @@ p {
   justify-content: end;
 }
 
-.auth-options {
-  align-items: end;
-  display: grid;
-  gap: 0.45rem;
-  justify-items: end;
-}
-
-.auth-email-form,
-.auth-provider-row {
-  display: flex;
-  gap: 0.45rem;
-}
-
-.auth-email-form input {
-  min-height: 2.6rem;
-  min-width: 12rem;
-  padding-block: 0.55rem;
-}
-
-.auth-message,
-.auth-error {
-  font-size: 0.78rem;
-  margin: 0;
-  max-width: 18rem;
-  text-align: right;
-}
-
-.auth-message {
-  color: var(--focus);
-}
-
-.auth-error {
-  color: var(--text);
-}
-
 .auth-control span {
   color: var(--muted);
   font-size: 0.82rem;
@@ -404,11 +369,35 @@ label span {
 }
 
 .practice-screen,
-.onboarding-screen {
+.onboarding-screen,
+.auth-screen {
   align-content: start;
   margin-inline: auto;
   max-width: 58rem;
   width: 100%;
+}
+
+.auth-layout {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.auth-panel {
+  background: var(--surface-band);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.auth-panel p {
+  margin-bottom: 0;
+}
+
+.auth-secondary {
+  align-content: start;
+  background: var(--surface-raised);
 }
 
 .back-button {
@@ -963,7 +952,7 @@ textarea::placeholder {
   display: grid;
   gap: 0.4rem;
   grid-area: tabs;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   padding: 0.65rem;
 }
 
@@ -1021,6 +1010,11 @@ textarea::placeholder {
     justify-content: start;
     padding-inline: 0.9rem;
     text-align: left;
+  }
+
+  .auth-layout {
+    align-items: start;
+    grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.65fr);
   }
 
   .home-workspace {
@@ -1085,25 +1079,7 @@ textarea::placeholder {
   }
 
   .inline-actions button,
-  .auth-control button,
   .stacked-actions button {
     flex: 1 1 100%;
-  }
-
-  .auth-email-form,
-  .auth-provider-row,
-  .auth-options {
-    justify-items: stretch;
-    width: 100%;
-  }
-
-  .auth-email-form {
-    display: grid;
-  }
-
-  .auth-message,
-  .auth-error {
-    max-width: none;
-    text-align: left;
   }
 }

@@ -10,12 +10,8 @@ type AuthSessionResponse = {
   };
 } | null;
 
-export function AuthControl() {
+export function useAuthSession() {
   const [authSession, setAuthSession] = useState<AuthSessionResponse>();
-  const [email, setEmail] = useState("");
-  const [emailError, setEmailError] = useState<string>();
-  const [emailPending, setEmailPending] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
 
   useEffect(() => {
     async function loadAuthSession() {
@@ -31,6 +27,12 @@ export function AuthControl() {
 
     void loadAuthSession();
   }, []);
+
+  return authSession;
+}
+
+export function AuthControl({ onSignIn }: { onSignIn: () => void }) {
+  const authSession = useAuthSession();
 
   if (authSession === undefined) {
     return null;
@@ -50,6 +52,20 @@ export function AuthControl() {
       </div>
     );
   }
+
+  return (
+    <button className="quiet-button" onClick={onSignIn} type="button">
+      Sign In
+    </button>
+  );
+}
+
+export function AuthView({ onBack }: { onBack: () => void }) {
+  const authSession = useAuthSession();
+  const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState<string>();
+  const [emailPending, setEmailPending] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   async function sendMagicLink(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -77,31 +93,75 @@ export function AuthControl() {
   }
 
   return (
-    <div className="auth-control auth-options">
-      <form className="auth-email-form" onSubmit={sendMagicLink}>
-        <input
-          aria-label="Email address"
-          onChange={(event) => {
-            setEmail(event.target.value);
-            setEmailError(undefined);
-            setEmailSent(false);
-          }}
-          placeholder="Email address"
-          required
-          type="email"
-          value={email}
-        />
-        <button className="quiet-button" disabled={emailPending} type="submit">
-          {emailPending ? "Sending" : "Email Link"}
-        </button>
-      </form>
-      {emailSent && <p className="auth-message">Check your email for the sign-in link.</p>}
-      {emailError && <p className="auth-error">{emailError}</p>}
-      <div className="auth-provider-row">
-        <button className="quiet-button" onClick={() => signIn("github")} type="button">
-          GitHub
+    <section className="screen auth-screen" aria-labelledby="auth-title">
+      <div className="screen-toolbar">
+        <div>
+          <p className="eyebrow">Account</p>
+          <h1 id="auth-title">Sign in to QuesIQ</h1>
+        </div>
+        <button className="back-button" onClick={onBack} type="button">
+          Back
         </button>
       </div>
-    </div>
+
+      {authSession?.user ? (
+        <section className="auth-panel" aria-label="Signed in account">
+          <h2>You are signed in.</h2>
+          <p>{authSession.user.name || authSession.user.email || "Your account is active."}</p>
+          <div className="inline-actions">
+            <button onClick={onBack} type="button">
+              Continue
+            </button>
+            <button
+              className="secondary"
+              onClick={() => signOut({ redirectTo: "/" })}
+              type="button"
+            >
+              Sign Out
+            </button>
+          </div>
+        </section>
+      ) : (
+        <div className="auth-layout">
+          <form className="auth-panel" onSubmit={sendMagicLink}>
+            <div>
+              <h2>Email sign-in</h2>
+              <p>No password needed. We will send a secure link to your inbox.</p>
+            </div>
+            <label>
+              <span>Email address</span>
+              <input
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setEmailError(undefined);
+                  setEmailSent(false);
+                }}
+                placeholder="you@example.com"
+                required
+                type="email"
+                value={email}
+              />
+            </label>
+            <button disabled={emailPending} type="submit">
+              {emailPending ? "Sending Link" : "Send Sign-In Link"}
+            </button>
+            {emailSent && <p className="form-note">Check your email for the sign-in link.</p>}
+            {emailError && <p className="form-error">{emailError}</p>}
+          </form>
+
+          <aside className="auth-panel auth-secondary">
+            <h2>Other sign-in options</h2>
+            <p>GitHub remains available for testing and admin use.</p>
+            <button
+              className="secondary"
+              onClick={() => signIn("github")}
+              type="button"
+            >
+              Continue with GitHub
+            </button>
+          </aside>
+        </div>
+      )}
+    </section>
   );
 }

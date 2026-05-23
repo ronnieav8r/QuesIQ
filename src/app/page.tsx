@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { AuthControl } from "@/components/auth-control";
+import { AuthControl, AuthView } from "@/components/auth-control";
 import { Dashboard } from "@/components/interview/dashboard";
 import { HistoryView } from "@/components/interview/history-view";
 import { useInterviewCatalog } from "@/components/interview/interview-catalog";
@@ -30,6 +30,7 @@ const appTabs: { key: AppView; label: string }[] = [
   { key: "practice", label: "Practice" },
   { key: "stories", label: "Stories" },
   { key: "me", label: "Me" },
+  { key: "auth", label: "Sign In" },
 ];
 
 export default function Home() {
@@ -245,13 +246,13 @@ export default function Home() {
           </div>
           {activeView !== "session" && (
             <div className="header-actions">
-              <AuthControl />
+              <AuthControl onSignIn={() => setActiveView("auth")} />
               <button
                 className="quiet-button"
                 onClick={() => setActiveView("me")}
                 type="button"
               >
-                {interviewContext.preferredName || "Me"}
+                Me
               </button>
             </div>
           )}
@@ -298,6 +299,7 @@ export default function Home() {
             />
           )}
           {activeView === "stories" && <StoriesView />}
+          {activeView === "auth" && <AuthView onBack={() => setActiveView("home")} />}
           {activeView === "session" && sessionSnapshot && sessionLaunchRecord && (
             <SessionView
               catalog={interviewCatalog.catalog}
