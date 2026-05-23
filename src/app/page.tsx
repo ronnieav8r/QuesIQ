@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { AuthControl, AuthView } from "@/components/auth-control";
+import { AuthControl, AuthView, useAuthSession } from "@/components/auth-control";
 import { Dashboard } from "@/components/interview/dashboard";
 import { HistoryView } from "@/components/interview/history-view";
 import { useInterviewCatalog } from "@/components/interview/interview-catalog";
@@ -30,7 +30,6 @@ const appTabs: { key: AppView; label: string }[] = [
   { key: "practice", label: "Practice" },
   { key: "stories", label: "Stories" },
   { key: "me", label: "Me" },
-  { key: "auth", label: "Sign In" },
 ];
 
 export default function Home() {
@@ -47,6 +46,8 @@ export default function Home() {
   const [selectedReview, setSelectedReview] = useState<SessionHistoryItem>();
   const [profileSaveError, setProfileSaveError] = useState<string>();
   const [profileSavePending, setProfileSavePending] = useState(false);
+  const authSession = useAuthSession();
+  const signedIn = Boolean(authSession?.user);
   const interviewCatalog = useInterviewCatalog();
   const { interviewStyles, practiceModes, questionTypes } = interviewCatalog.catalog;
 
@@ -68,6 +69,11 @@ export default function Home() {
     let ignore = false;
 
     async function loadProfile() {
+      if (!signedIn) {
+        setInterviewContext(initialInterviewContext);
+        return;
+      }
+
       try {
         const response = await fetch("/api/profile");
 
@@ -100,7 +106,7 @@ export default function Home() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [signedIn]);
 
   async function saveProfileContext(nextContext: typeof interviewContext) {
     try {
@@ -233,7 +239,9 @@ export default function Home() {
     <main className="product-shell">
       <section
         aria-label="QuesIQ Interview app"
-        className={activeView === "session" ? "app-frame session-frame" : "app-frame"}
+        className={
+          activeView === "session" && signedIn ? "app-frame session-frame" : "app-frame"
+        }
       >
         <header className="app-header">
           <div>
@@ -246,7 +254,7 @@ export default function Home() {
           </div>
           {activeView !== "session" && (
             <div className="header-actions">
-              <AuthControl onSignIn={() => setActiveView("auth")} />
+              <AuthControl authSession={authSession} />
               <button
                 className="quiet-button"
                 onClick={() => setActiveView("me")}
@@ -259,7 +267,16 @@ export default function Home() {
         </header>
 
         <div className="app-body">
-          {activeView === "home" && (
+          {authSession === undefined && (
+            <section className="screen placeholder-screen" aria-label="Loading account">
+              <p className="eyebrow">Account</p>
+              <h1>Checking your sign-in.</h1>
+            </section>
+          )}
+          {authSession !== undefined && !signedIn && (
+            <AuthView authSession={authSession} onContinue={() => setActiveView("home")} />
+          )}
+          {signedIn && activeView === "home" && (
             <Dashboard
               contextReady={contextReady}
               interviewContext={interviewContext}
@@ -271,7 +288,7 @@ export default function Home() {
               }}
             />
           )}
-          {activeView === "practice" && (
+          {signedIn && activeView === "practice" && (
             <PracticeSetup
               catalog={interviewCatalog.catalog}
               interviewContext={interviewContext}
@@ -288,7 +305,7 @@ export default function Home() {
               step={practiceStep}
             />
           )}
-          {activeView === "history" && (
+          {signedIn && activeView === "history" && (
             <HistoryView
               catalog={interviewCatalog.catalog}
               onPractice={openPractice}
@@ -298,9 +315,8 @@ export default function Home() {
               }}
             />
           )}
-          {activeView === "stories" && <StoriesView />}
-          {activeView === "auth" && <AuthView onBack={() => setActiveView("home")} />}
-          {activeView === "session" && sessionSnapshot && sessionLaunchRecord && (
+          {signedIn && activeView === "stories" && <StoriesView />}
+          {signedIn && activeView === "session" && sessionSnapshot && sessionLaunchRecord && (
             <SessionView
               catalog={interviewCatalog.catalog}
               onBackToSetup={() => {
@@ -312,7 +328,7 @@ export default function Home() {
               snapshot={sessionSnapshot}
             />
           )}
-          {activeView === "review" && selectedReview && (
+          {signedIn && activeView === "review" && selectedReview && (
             <ReviewDetail
               catalog={interviewCatalog.catalog}
               onBack={() => setActiveView("home")}
@@ -320,7 +336,7 @@ export default function Home() {
               session={selectedReview}
             />
           )}
-          {activeView === "me" && (
+          {signedIn && activeView === "me" && (
             <MeView
               contextReady={contextReady}
               interviewContext={interviewContext}
@@ -328,7 +344,7 @@ export default function Home() {
               onPractice={openPractice}
             />
           )}
-          {activeView === "onboarding" && (
+          {signedIn && activeView === "onboarding" && (
             <OnboardingView
               interviewContext={interviewContext}
               key={[
@@ -347,7 +363,7 @@ export default function Home() {
           )}
         </div>
 
-        {activeView !== "session" && (
+        {signedIn && activeView !== "session" && (
           <nav aria-label="Primary" className="tab-bar">
             {appTabs.map((tab) => (
               <button

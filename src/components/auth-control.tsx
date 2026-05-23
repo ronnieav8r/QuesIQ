@@ -10,6 +10,8 @@ type AuthSessionResponse = {
   };
 } | null;
 
+export type AppAuthSession = AuthSessionResponse | undefined;
+
 export function useAuthSession() {
   const [authSession, setAuthSession] = useState<AuthSessionResponse>();
 
@@ -31,9 +33,7 @@ export function useAuthSession() {
   return authSession;
 }
 
-export function AuthControl({ onSignIn }: { onSignIn: () => void }) {
-  const authSession = useAuthSession();
-
+export function AuthControl({ authSession }: { authSession: AppAuthSession }) {
   if (authSession === undefined) {
     return null;
   }
@@ -53,15 +53,16 @@ export function AuthControl({ onSignIn }: { onSignIn: () => void }) {
     );
   }
 
-  return (
-    <button className="quiet-button" onClick={onSignIn} type="button">
-      Sign In
-    </button>
-  );
+  return null;
 }
 
-export function AuthView({ onBack }: { onBack: () => void }) {
-  const authSession = useAuthSession();
+export function AuthView({
+  authSession,
+  onContinue,
+}: {
+  authSession: AppAuthSession;
+  onContinue: () => void;
+}) {
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState<string>();
   const [emailPending, setEmailPending] = useState(false);
@@ -99,9 +100,6 @@ export function AuthView({ onBack }: { onBack: () => void }) {
           <p className="eyebrow">Account</p>
           <h1 id="auth-title">Sign in to QuesIQ</h1>
         </div>
-        <button className="back-button" onClick={onBack} type="button">
-          Back
-        </button>
       </div>
 
       {authSession?.user ? (
@@ -109,7 +107,7 @@ export function AuthView({ onBack }: { onBack: () => void }) {
           <h2>You are signed in.</h2>
           <p>{authSession.user.name || authSession.user.email || "Your account is active."}</p>
           <div className="inline-actions">
-            <button onClick={onBack} type="button">
+            <button onClick={onContinue} type="button">
               Continue
             </button>
             <button

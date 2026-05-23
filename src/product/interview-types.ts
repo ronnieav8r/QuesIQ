@@ -6,7 +6,6 @@ export type AppView =
   | "stories"
   | "me"
   | "onboarding"
-  | "auth"
   | "session";
 
 export type InterviewContext = {
