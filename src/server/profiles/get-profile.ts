@@ -10,6 +10,8 @@ export async function getProfile(userId: string): Promise<InterviewContext | und
       jobDescription: profiles.jobDescription,
       preferredName: profiles.preferredName,
       resumeName: profiles.resumeName,
+      resumeParsedAt: profiles.resumeParsedAt,
+      resumeText: profiles.resumeText,
       targetCompany: profiles.targetCompany,
       targetRole: profiles.targetRole,
     })
@@ -25,6 +27,8 @@ export async function getProfile(userId: string): Promise<InterviewContext | und
     jobDescription: profile.jobDescription,
     preferredName: profile.preferredName,
     resumeName: profile.resumeName ?? undefined,
+    resumeParsedAt: profile.resumeParsedAt?.toISOString(),
+    resumeText: profile.resumeText ?? undefined,
     targetCompany: profile.targetCompany,
     targetRole: profile.targetRole,
   };

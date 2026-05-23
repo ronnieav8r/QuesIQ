@@ -118,8 +118,14 @@ user context reusable while preserving the exact context that produced each
 historical Session.
 
 Current persisted profile fields are preferred name, target role, target
-company, job description, and resume filename. Resume files themselves are not
-stored or parsed yet.
+company, job description, resume filename, resume metadata, and parsed resume
+text. Raw resume file binaries are not retained yet; the first beta slice stores
+parsed text directly in Postgres so Que and post-session evaluation can use it
+without adding object storage.
+
+TXT, MD, DOCX, and most PDFs are the first supported resume parsing targets.
+Legacy `.doc` files remain filename-only until there is a strong need to support
+that older format.
 
 ### Keep Review Creation Inline For Now, But Retryable
 

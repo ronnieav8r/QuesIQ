@@ -13,9 +13,14 @@ type RealtimeSessionRequest = {
   snapshot?: SessionSetupSnapshot;
 };
 
+function resumeExcerpt(snapshot?: SessionSetupSnapshot) {
+  return snapshot?.interviewContext.resumeText?.trim().slice(0, 3000);
+}
+
 function buildQueInstructions(snapshot?: SessionSetupSnapshot) {
   const role = snapshot?.interviewContext.targetRole || "the user's target role";
   const company = snapshot?.interviewContext.targetCompany || "an unspecified company";
+  const resumeContext = resumeExcerpt(snapshot);
   const questionFocus = snapshot?.questionTypeKey
     ? `Question focus: ${snapshot.questionTypeKey}.`
     : "Question focus: choose questions appropriate for this mode.";
@@ -32,6 +37,9 @@ function buildQueInstructions(snapshot?: SessionSetupSnapshot) {
     questionFocus,
     `Target role: ${role}.`,
     `Target company: ${company}.`,
+    resumeContext
+      ? `Resume context: ${resumeContext}. Use it to ask role-relevant questions, but do not read it aloud or imply you have seen private files unless it naturally helps the conversation.`
+      : "No parsed resume context was provided.",
   ].join(" ");
 }
 

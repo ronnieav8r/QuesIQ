@@ -23,7 +23,9 @@ export function parseInterviewContext(value: unknown): InterviewContext | undefi
   return {
     jobDescription: candidate.jobDescription,
     preferredName: candidate.preferredName,
+    resumeParsedAt: isString(candidate.resumeParsedAt) ? candidate.resumeParsedAt : undefined,
     resumeName: isString(candidate.resumeName) ? candidate.resumeName : undefined,
+    resumeText: isString(candidate.resumeText) ? candidate.resumeText : undefined,
     targetCompany: candidate.targetCompany,
     targetRole: candidate.targetRole,
   };

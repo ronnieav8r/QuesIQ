@@ -12,6 +12,8 @@ export type InterviewContext = {
   jobDescription: string;
   preferredName: string;
   resumeName?: string;
+  resumeParsedAt?: string;
+  resumeText?: string;
   targetCompany: string;
   targetRole: string;
 };

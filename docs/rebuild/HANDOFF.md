@@ -11,8 +11,8 @@ review revisit, profile persistence, history, score summaries, and first derived
 progression.
 
 The next useful product slice is deciding the next durable product depth:
-resume storage/parsing, seeded backend catalog tables, or more refined
-progression/streak persistence.
+deploying and QAing the resume-aware practice slice, then deciding between
+seeded backend catalog tables or more refined progression/streak persistence.
 
 ## Done Since Last Handoff
 
@@ -56,6 +56,10 @@ progression/streak persistence.
   reacts to pending reviews or the weakest score dimension.
 - Hid created-only/incomplete Sessions from the visible History list so rows
   without transcript or review do not invite users into dead-end session detail.
+- Added the first resume-aware context slice: signed-in onboarding can upload a
+  resume, the backend saves resume metadata and best-effort parsed text for TXT,
+  MD, DOCX, and most PDFs, session snapshots carry that parsed context, and Que
+  plus post-session evaluation can use a capped resume excerpt.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -119,18 +123,21 @@ progression/streak persistence.
   scope.
 - QuesIQ should own durable user context, session snapshots, transcript/artifact
   records, evaluation, history, and progression.
-- Resume upload is not wired for storage/parsing yet. Current UI only captures
-  the selected resume filename as profile/session context metadata.
+- Resume upload now stores resume metadata and parsed text in the Profile
+  record. It does not store raw file binaries or use object storage yet.
+- Legacy `.doc` parsing is not supported; DOCX, TXT, MD, and most PDFs are the
+  first supported parsing path.
 - Review creation remains inline after voice artifact save, with retryable
   status/error tracking. There is no background queue yet.
 
 ## Next Best Work
 
-1. Decide whether to add resume storage/parsing, seeded backend catalog tables,
-   or persisted progression/streak records next.
-2. Add deploy/user-confirmed QA for any changes because localhost preview is
+1. Deploy and user-confirm QA for the resume-aware practice slice.
+2. Decide whether seeded backend catalog tables or persisted progression/streak
+   records should follow.
+3. Add deploy/user-confirmed QA for any changes because localhost preview is
    deprecated in this environment.
-3. Keep verifying that `Launch Voice Session` creates a Session id before direct
+4. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
 
 ## Watch Outs

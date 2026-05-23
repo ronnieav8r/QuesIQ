@@ -35,7 +35,11 @@ export function MeView({
         <div>
           <span>Resume</span>
           <strong>
-            {interviewContext.resumeName || "Optional before first session"}
+            {interviewContext.resumeName
+              ? `${interviewContext.resumeName}${
+                  interviewContext.resumeText ? " - parsed" : ""
+                }`
+              : "Optional before first session"}
           </strong>
         </div>
       </section>

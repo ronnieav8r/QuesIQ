@@ -20,15 +20,62 @@ export function OnboardingView({
   onSkip,
 }: OnboardingViewProps) {
   const [draftContext, setDraftContext] = useState(interviewContext);
+  const [resumeUploadError, setResumeUploadError] = useState<string>();
+  const [resumeUploadPending, setResumeUploadPending] = useState(false);
+  const [resumeUploadWarning, setResumeUploadWarning] = useState<string>();
+  const [selectedResumeFile, setSelectedResumeFile] = useState<File>();
 
   async function saveContext(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await onSave({
+    setResumeUploadError(undefined);
+    setResumeUploadWarning(undefined);
+    let nextContext = {
       ...draftContext,
       jobDescription: draftContext.jobDescription.trim(),
       preferredName: draftContext.preferredName.trim(),
       targetCompany: draftContext.targetCompany.trim(),
       targetRole: draftContext.targetRole.trim(),
+    };
+
+    if (selectedResumeFile) {
+      const formData = new FormData();
+
+      formData.set("resume", selectedResumeFile);
+      setResumeUploadPending(true);
+
+      try {
+        const response = await fetch("/api/profile/resume", {
+          body: formData,
+          method: "POST",
+        });
+        const body = (await response.json()) as {
+          error?: string;
+          resume?: Pick<InterviewContext, "resumeName" | "resumeParsedAt" | "resumeText">;
+          warning?: string;
+        };
+
+        if (!response.ok || !body.resume) {
+          setResumeUploadError(body.error || "Resume could not be saved.");
+          return;
+        }
+
+        if (body.warning) {
+          setResumeUploadWarning(body.warning);
+        }
+
+        nextContext = {
+          ...nextContext,
+          ...body.resume,
+        };
+        setDraftContext(nextContext);
+        setSelectedResumeFile(undefined);
+      } finally {
+        setResumeUploadPending(false);
+      }
+    }
+
+    await onSave({
+      ...nextContext,
     });
   }
 
@@ -113,29 +160,39 @@ export function OnboardingView({
           <label className="file-field">
             <span>Resume</span>
             <input
-              accept=".pdf,.doc,.docx"
-              onChange={(event) =>
+              accept=".pdf,.docx,.md,.txt,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+
+                setSelectedResumeFile(file);
+                setResumeUploadError(undefined);
+                setResumeUploadWarning(undefined);
                 setDraftContext((current) => ({
                   ...current,
-                  resumeName: event.target.files?.[0]?.name || current.resumeName,
-                }))
-              }
+                  resumeName: file?.name || current.resumeName,
+                }));
+              }}
               type="file"
             />
             <small>
-              {draftContext.resumeName ||
-                "Optional now. Storage and parsing arrive with persistence work."}
+              {draftContext.resumeName
+                ? `${draftContext.resumeName}${
+                    draftContext.resumeText ? " - parsed for Que" : " - ready to save"
+                  }`
+                : "Optional. TXT, MD, DOCX, and most PDF resumes can be parsed for Que."}
             </small>
           </label>
 
           <div className="inline-actions">
-            <button disabled={savePending} type="submit">
-              {savePending ? "Saving Context" : "Save Context"}
+            <button disabled={savePending || resumeUploadPending} type="submit">
+              {savePending || resumeUploadPending ? "Saving Context" : "Save Context"}
             </button>
             <button className="secondary" onClick={onSkip} type="button">
               Practice Without More
             </button>
           </div>
+          {resumeUploadWarning && <p className="form-note">{resumeUploadWarning}</p>}
+          {resumeUploadError && <p className="form-error">{resumeUploadError}</p>}
           {saveError && <p className="form-error">{saveError}</p>}
         </form>
 
@@ -143,12 +200,12 @@ export function OnboardingView({
           <p className="eyebrow">Fast path</p>
           <h2>Only your name and target role are required.</h2>
           <p>
-            Company details, a job description, and your resume should improve
-            personalization later without blocking the first voice session.
+            Company details, a job description, and a parsed resume help Que shape
+            sharper interview questions without blocking the first voice session.
           </p>
           <div className="context-checklist">
             <span>Required context first</span>
-            <span>Optional resume path</span>
+            <span>Optional parsed resume</span>
             <span>Practice stays one tap away</span>
           </div>
         </aside>

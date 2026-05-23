@@ -166,6 +166,10 @@ export function PracticeSetup({
               <dt>Target role</dt>
               <dd>{interviewContext.targetRole || "General practice"}</dd>
             </div>
+            <div>
+              <dt>Resume context</dt>
+              <dd>{interviewContext.resumeText ? "Parsed for Que" : "Not added"}</dd>
+            </div>
           </dl>
           <p>
             QuesIQ creates the Session record before opening Que&apos;s live browser

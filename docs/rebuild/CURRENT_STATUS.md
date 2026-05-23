@@ -63,9 +63,11 @@ Last updated: 2026-05-23
     screen
 - User-owned profile context persistence:
   - onboarding saves preferred name, target role, target company, job
-    description, and resume filename in Postgres
+    description, resume filename, and parsed resume text in Postgres
   - the app reloads saved profile context and uses it in future setup/session
     snapshots
+  - resume upload currently parses TXT, MD, DOCX, and most PDFs with a 2 MB beta
+    limit; raw file binaries are not retained yet
 - Thin review hardening:
   - Sessions track evaluation status and last evaluation error
   - saved transcript artifacts mark reviews pending
@@ -127,16 +129,18 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 - Que is the in-app coach. Quira remains the separate public/support assistant.
 - Keep QuesIQ-owned session snapshots, transcripts/artifacts, evaluations,
   history, and progression in the app backend/data layer.
-- Resume files are not yet uploaded, stored, parsed, or used by Que. Only the
-  selected filename is persisted as profile/session metadata.
+- Resume files are uploaded through signed-in onboarding and parsed into profile
+  resume text for Que and post-session evaluation. The app stores resume
+  metadata and parsed text, not raw resume file binaries or object-storage keys.
 - Build both mobile and desktop intentionally while keeping practice setup and
   live voice focused.
 
 ## Next Work
 
-1. Decide whether to add resume storage/parsing, seeded backend catalog tables,
-   or persisted progression/streak records next.
-2. Continue deploy-based QA on `quesiq-web` while localhost preview is
+1. Deploy and user-confirm QA the resume-aware practice slice on `quesiq-web`.
+2. Decide whether seeded backend catalog tables or persisted progression/streak
+   records should follow.
+3. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 
 ## Reference Inputs

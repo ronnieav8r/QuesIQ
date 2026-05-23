@@ -332,6 +332,7 @@ export default function Home() {
                 interviewContext.targetRole,
                 interviewContext.targetCompany,
                 interviewContext.resumeName,
+                interviewContext.resumeParsedAt,
               ].join(":")}
               onBack={() => setActiveView("home")}
               onSave={saveProfileContext}

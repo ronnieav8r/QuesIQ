@@ -57,7 +57,9 @@ export function parseSessionSetupSnapshot(value: unknown): SessionSetupSnapshot 
     interviewContext: {
       jobDescription: context.jobDescription,
       preferredName: context.preferredName,
+      resumeParsedAt: isString(context.resumeParsedAt) ? context.resumeParsedAt : undefined,
       resumeName: isString(context.resumeName) ? context.resumeName : undefined,
+      resumeText: isString(context.resumeText) ? context.resumeText : undefined,
       targetCompany: context.targetCompany,
       targetRole: context.targetRole,
     },

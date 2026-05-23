@@ -30,8 +30,11 @@ Last updated: 2026-05-23
 - Home now derives simple XP, level progress, last-practiced text, latest next
   move, and Recommended Next from saved Sessions and evaluations.
 - Created-only/incomplete Sessions are hidden from visible History.
-- Resume upload currently persists only the selected filename. File storage,
-  text extraction, and use in Que prompts are not wired yet.
+- Resume upload now persists metadata and parsed text to the signed-in Profile
+  record for TXT, MD, DOCX, and most PDFs. Parsed resume context is copied into
+  session snapshots and used by Que plus the saved review handoff.
+- Raw resume file binaries and object-storage-backed file retention are not
+  wired yet.
 - The deployed app on `quesiq.com` has passed the owned practice loop:
   sign-in, Session-before-voice, direct voice, artifact save, and review ready.
 - Active Render deployment path is moving onto `quesiq-web`, now pointed at
@@ -42,15 +45,16 @@ Last updated: 2026-05-23
 
 ## Immediate
 
-1. Decide whether to add resume storage/parsing, seeded backend catalog tables,
-   or persisted progression/streak records next.
-2. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
+1. Deploy and user-confirm QA the resume-aware practice slice.
+2. Decide whether seeded backend catalog tables or persisted progression/streak
+   records should follow.
+3. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
    any port until we intentionally invest time to fix it.
 
 ## First Implementation Backlog
 
-- Resume storage/parsing decision and implementation, if resume context becomes
-  the next priority
+- Decide whether resume binaries need object storage after the parsed-text beta
+  slice proves useful
 - Persist seeded practice mode, question type, and interview style records where
   useful for the backend
 - Add richer owned session history filters if the 50-session list becomes too

@@ -96,6 +96,12 @@ function buildEvaluationInput(
       targetCompany: snapshot.interviewContext.targetCompany || "Optional",
       targetRole: snapshot.interviewContext.targetRole || "General practice",
     },
+    candidateContext: {
+      jobDescription: snapshot.interviewContext.jobDescription || "Not provided",
+      resumeExcerpt:
+        snapshot.interviewContext.resumeText?.trim().slice(0, 5000) || "Not provided",
+      resumeName: snapshot.interviewContext.resumeName || "Not provided",
+    },
     transcript: artifact.transcript.map((turn) => ({
       speaker: turn.speaker,
       text: turn.text,
@@ -113,7 +119,7 @@ async function requestEvaluation(
       input: [
         {
           content:
-            "You are Que, QuesIQ Interview's interview coach. Evaluate the candidate's spoken practice transcript. Be specific, kind, and useful. Score each dimension from 1 to 5 where 5 is strongest. Do not mention APIs or implementation details.",
+            "You are Que, QuesIQ Interview's interview coach. Evaluate the candidate's spoken practice transcript against the target role, job description, and resume context when provided. Be specific, kind, and useful. Score each dimension from 1 to 5 where 5 is strongest. Do not mention APIs or implementation details.",
           role: "system",
         },
         {
