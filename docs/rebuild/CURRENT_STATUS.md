@@ -74,6 +74,8 @@ Last updated: 2026-05-23
   - History tab lists owned sessions with review status and per-session average
   - Home score strip calculates the five score averages from completed saved
     evaluations
+  - Home derives simple XP, level progress, last-practiced text, latest next
+    move, and Recommended Next from saved Sessions and evaluations
 
 ## Verification
 
@@ -119,8 +121,8 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Add true progression/retention mechanics such as XP, streaks, and dashboard
-   Up Next logic from saved Sessions and evaluations.
+1. Decide whether to add resume storage/parsing, seeded backend catalog tables,
+   or persisted progression/streak records next.
 2. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 

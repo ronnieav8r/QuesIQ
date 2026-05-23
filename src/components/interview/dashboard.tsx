@@ -45,6 +45,33 @@ export function Dashboard({
       label: scores[0]?.label || key[0].toUpperCase() + key.slice(1),
     };
   });
+  const completedCount = completedReviews.length;
+  const xp = completedCount * 100;
+  const level = Math.floor(xp / 300) + 1;
+  const levelXp = xp % 300;
+  const levelProgress = Math.min(100, Math.round((levelXp / 300) * 100));
+  const lastPracticed = history.sessions.find(
+    (session) => session.hasEvaluation || session.transcript.length > 0,
+  );
+  const weakestScore = scoreAverages
+    .filter((score) => score.average !== undefined)
+    .sort((a, b) => (a.average ?? 0) - (b.average ?? 0))[0];
+  const attentionSession = needsReview[0];
+  const latestCompleted = completedReviews[0];
+  const recommendedTitle = attentionSession
+    ? "Finish your pending review."
+    : weakestScore
+      ? `Practice ${weakestScore.label.toLowerCase()} next.`
+      : contextReady
+        ? `Practice your ${interviewContext.targetRole} opening.`
+        : "Start with your first impression.";
+  const recommendedBody = attentionSession
+    ? "A saved transcript is waiting for a review retry before it can count toward your progress."
+    : weakestScore
+      ? `Your ${weakestScore.label.toLowerCase()} average is ${weakestScore.average?.toFixed(1)}. Use the next session to strengthen that dimension.`
+      : contextReady
+        ? "Que can use your interview context while you shape the answer that sets the tone."
+        : "Give Que a little context now, or jump straight into a focused first practice session.";
 
   return (
     <section className="screen home-screen" aria-labelledby="home-title">
@@ -54,8 +81,8 @@ export function Dashboard({
           <h1 id="home-title">Practice interviews out loud.</h1>
         </div>
         <div className="level-chip">
-          <span>Level 1</span>
-          <strong>Rookie</strong>
+          <span>Level {level}</span>
+          <strong>{xp} XP</strong>
         </div>
       </div>
 
@@ -63,21 +90,19 @@ export function Dashboard({
         <section className="next-action" aria-labelledby="next-action-title">
           <div>
             <p className="eyebrow">Recommended Next</p>
-            <h2 id="next-action-title">
-              {contextReady
-                ? `Practice your ${interviewContext.targetRole} opening.`
-                : "Start with your first impression."}
-            </h2>
-            <p>
-              {contextReady
-                ? "Que can use your interview context while you shape the answer that sets the tone."
-                : "Give Que a little context now, or jump straight into a focused first practice session."}
-            </p>
+            <h2 id="next-action-title">{recommendedTitle}</h2>
+            <p>{recommendedBody}</p>
           </div>
           <div className="stacked-actions">
-            <button onClick={onPractice} type="button">
-              Start Practice
-            </button>
+            {attentionSession ? (
+              <button onClick={() => onReview(attentionSession)} type="button">
+                Open Review
+              </button>
+            ) : (
+              <button onClick={onPractice} type="button">
+                Start Practice
+              </button>
+            )}
             {!contextReady && (
               <button className="secondary" onClick={onOnboarding} type="button">
                 Add Context
@@ -172,15 +197,25 @@ export function Dashboard({
         <section aria-labelledby="progress-title" className="panel progress-panel">
           <div className="section-head">
             <h2 id="progress-title">Progress</h2>
-            <span>{history.sessions.length} sessions</span>
+            <span>{completedCount} completed</span>
           </div>
-          <div aria-label="0 percent toward level 2" className="progress-track">
-            <span />
+          <div
+            aria-label={`${levelProgress} percent toward level ${level + 1}`}
+            className="progress-track"
+          >
+            <span style={{ width: `${Math.max(levelProgress, 4)}%` }} />
           </div>
           <p>
-            XP arrives with progression. Session counts already reflect saved
-            practice history.
+            {lastPracticed
+              ? `Last practiced ${new Date(lastPracticed.createdAt).toLocaleDateString()}. ${300 - levelXp} XP to level ${level + 1}.`
+              : "Complete a reviewed session to start earning XP and progress."}
           </p>
+          {latestCompleted?.evaluation?.nextAction && (
+            <div className="progress-next">
+              <span>Latest next move</span>
+              <p>{latestCompleted.evaluation.nextAction}</p>
+            </div>
+          )}
         </section>
 
         <section aria-labelledby="stats-title" className="panel score-panel">

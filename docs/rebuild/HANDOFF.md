@@ -8,9 +8,9 @@ QuesIQ Interview now has the first owned practice loop live on `quesiq.com`:
 GitHub sign-in, Session-before-voice launch, direct OpenAI Realtime voice,
 voice artifact persistence, and a structured post-session practice review.
 
-The next useful product slice is true progression/retention mechanics now that
-the owned practice loop, profile context, retryable reviews, history, and score
-summaries are in place.
+The next useful product slice is deciding the next durable product depth:
+resume storage/parsing, seeded backend catalog tables, or more refined
+progression/streak persistence.
 
 ## Done Since Last Handoff
 
@@ -49,6 +49,9 @@ summaries are in place.
 - Added the first full History view and score summary pass: the app now has a
   History tab with owned sessions, status labels, per-session review averages,
   and Home shows five score averages from completed saved evaluations.
+- Added first derived progression on Home: completed reviews create simple XP,
+  level progress, last-practiced text, latest next move, and Recommended Next
+  reacts to pending reviews or the weakest score dimension.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -100,8 +103,8 @@ summaries are in place.
 
 ## Next Best Work
 
-1. Add true progression/retention mechanics such as XP, streaks, and dashboard
-   Up Next logic from saved Sessions and evaluations.
+1. Decide whether to add resume storage/parsing, seeded backend catalog tables,
+   or persisted progression/streak records next.
 2. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
 

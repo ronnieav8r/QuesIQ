@@ -27,6 +27,8 @@ Last updated: 2026-05-23
 - First history/progression summary is in code: History lists owned sessions,
   status, and per-session average, while Home shows five score averages from
   completed evaluations.
+- Home now derives simple XP, level progress, last-practiced text, latest next
+  move, and Recommended Next from saved Sessions and evaluations.
 - The deployed app on `quesiq.com` has passed the owned practice loop:
   sign-in, Session-before-voice, direct voice, artifact save, and review ready.
 - Active Render deployment path is moving onto `quesiq-web`, now pointed at
@@ -37,8 +39,8 @@ Last updated: 2026-05-23
 
 ## Immediate
 
-1. Add true progression/retention mechanics such as XP, streaks, and dashboard
-   Up Next logic from saved Sessions and evaluations.
+1. Decide whether to add resume storage/parsing, seeded backend catalog tables,
+   or persisted progression/streak records next.
 2. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
    any port until we intentionally invest time to fix it.
 
