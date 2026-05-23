@@ -35,6 +35,10 @@ export function ReviewDetail({ onBack, onPractice, session }: ReviewDetailProps)
         </div>
         <dl>
           <div>
+            <dt>Target role</dt>
+            <dd>{session.targetRole}</dd>
+          </div>
+          <div>
             <dt>Mode</dt>
             <dd>{mode?.name || session.modeKey}</dd>
           </div>
