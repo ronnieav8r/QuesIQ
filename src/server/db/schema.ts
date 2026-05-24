@@ -104,6 +104,7 @@ export const practiceModes = pgTable("practice_modes", {
   enabled: boolean("enabled").default(true).notNull(),
   key: text("key").primaryKey(),
   name: text("name").notNull(),
+  promptInstructions: text("prompt_instructions").default("").notNull(),
   questionTypeRequired: boolean("question_type_required").default(false).notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   use: text("use").notNull(),
@@ -115,6 +116,7 @@ export const questionTypes = pgTable("question_types", {
   enabled: boolean("enabled").default(true).notNull(),
   key: text("key").primaryKey(),
   label: text("label").notNull(),
+  promptInstructions: text("prompt_instructions").default("").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -125,6 +127,7 @@ export const interviewStyles = pgTable("interview_styles", {
   enabled: boolean("enabled").default(true).notNull(),
   key: text("key").primaryKey(),
   label: text("label").notNull(),
+  promptInstructions: text("prompt_instructions").default("").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

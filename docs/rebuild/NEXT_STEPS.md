@@ -14,6 +14,8 @@ Last updated: 2026-05-23
 - Realtime interviewer and post-session evaluation prompts now live in
   versioned backend prompt config records, with an `ADMIN_EMAILS`-gated Admin
   tab for viewing versions, saving drafts, and activating versions.
+- Practice modes, question types, and interviewer styles now have editable
+  prompt instructions that are composed into Realtime and evaluation calls.
 - A direct OpenAI Realtime browser voice slice is wired into that session screen
   with client artifact drafting and passed its first manual test.
 - Ended direct voice attempts now save transcript/event artifacts and Realtime
@@ -58,7 +60,7 @@ Last updated: 2026-05-23
 1. Add `ADMIN_EMAILS` on Render and deploy/user-confirm QA the Admin prompt
    config panel.
 2. Confirm live voice and evaluation still use the active prompt config and
-   record the prompt version on new Sessions/Evaluations.
+   mode/style/question prompt components on new Sessions/Evaluations.
 3. Decide whether persisted progression/streak records or cost/observability
    hardening should follow.
 4. Note email template polish as a later UX task.

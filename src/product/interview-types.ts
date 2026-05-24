@@ -40,6 +40,7 @@ export type PracticeMode = {
   displayOrder?: number;
   key: PracticeModeKey;
   name: string;
+  promptInstructions?: string;
   questionTypeRequired: boolean;
   use: string;
 };
@@ -48,6 +49,7 @@ export type QuestionType = {
   displayOrder?: number;
   key: QuestionTypeKey;
   label: string;
+  promptInstructions?: string;
 };
 
 export type InterviewStyle = {
@@ -55,6 +57,7 @@ export type InterviewStyle = {
   displayOrder?: number;
   key: InterviewStyleKey;
   label: string;
+  promptInstructions?: string;
 };
 
 export type InterviewCatalog = {
@@ -168,4 +171,12 @@ export type PromptConfigRecord = {
   updatedAt: string;
   version: number;
   voice?: string;
+};
+
+export type PromptComponentRecord = {
+  description?: string;
+  displayName: string;
+  key: string;
+  promptInstructions: string;
+  type: "mode" | "question_type" | "style";
 };

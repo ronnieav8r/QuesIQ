@@ -36,8 +36,14 @@ Last updated: 2026-05-23
   - `ADMIN_EMAILS` gates admin access by signed-in email
   - Realtime interviewer and post-session evaluation prompts are stored as
     versioned Postgres records
+  - practice modes, question types, and interviewer styles now have editable
+    prompt instructions
   - the Admin tab can view versions, save drafts, and activate a version
-  - Realtime Sessions and Evaluations record the prompt config version used
+  - Realtime calls compose base prompt, mode instructions, question-focus
+    instructions, style instructions, and user/session context
+  - Evaluations receive the same mode/style/question prompt context alongside
+    job, resume, and transcript context
+  - Realtime Sessions and Evaluations record the base prompt config version used
 - Client-side session setup snapshot and focused voice session screen
 - Direct OpenAI Realtime browser voice slice from the session screen:
   - server-side `/api/realtime/session` WebRTC exchange route

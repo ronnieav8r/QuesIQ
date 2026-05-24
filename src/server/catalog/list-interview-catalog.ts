@@ -21,6 +21,7 @@ export async function listInterviewCatalog(): Promise<InterviewCatalog> {
         displayOrder: practiceModes.displayOrder,
         key: practiceModes.key,
         name: practiceModes.name,
+        promptInstructions: practiceModes.promptInstructions,
         questionTypeRequired: practiceModes.questionTypeRequired,
         use: practiceModes.use,
       })
@@ -32,6 +33,7 @@ export async function listInterviewCatalog(): Promise<InterviewCatalog> {
         displayOrder: questionTypes.displayOrder,
         key: questionTypes.key,
         label: questionTypes.label,
+        promptInstructions: questionTypes.promptInstructions,
       })
       .from(questionTypes)
       .where(eq(questionTypes.enabled, true))
@@ -42,6 +44,7 @@ export async function listInterviewCatalog(): Promise<InterviewCatalog> {
         displayOrder: interviewStyles.displayOrder,
         key: interviewStyles.key,
         label: interviewStyles.label,
+        promptInstructions: interviewStyles.promptInstructions,
       })
       .from(interviewStyles)
       .where(eq(interviewStyles.enabled, true))

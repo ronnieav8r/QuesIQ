@@ -75,9 +75,10 @@ cost/observability hardening should follow.
   records and falls back to the checked-in defaults if the catalog endpoint is
   unavailable.
 - Added the first admin prompt config slice: `ADMIN_EMAILS` gates a signed-in
-  Admin tab, prompt configs are versioned in Postgres, admins can view versions,
-  save drafts, and activate versions, and Realtime/Evaluation calls record the
-  prompt config version used.
+  Admin tab, base prompt configs are versioned in Postgres, admins can view
+  versions, save drafts, and activate versions, practice modes/question
+  types/interviewer styles have editable prompt instructions, and
+  Realtime/Evaluation calls compose those components with user/session context.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -139,6 +140,8 @@ cost/observability hardening should follow.
 - Default prompt configs are seeded with `gpt-realtime`/`marin` for interview
   voice and `gpt-5.4-mini` for evaluation. After migration, the active
   Postgres prompt config is the editable runtime source.
+- Practice mode, question-focus, and interviewer-style instructions are
+  editable catalog prompt components and are composed into AI calls at runtime.
 - VAPI is a fallback path, not the default path, while phone calls are out of
   scope.
 - QuesIQ should own durable user context, session snapshots, transcript/artifact

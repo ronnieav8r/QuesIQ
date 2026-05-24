@@ -122,13 +122,16 @@ available.
 
 ### Use Versioned Prompt Configs For AI Calls
 
-Realtime interviewer and post-session evaluation prompts are product
-configuration, not one-off implementation strings. Store them in versioned
-Postgres prompt config records, gate editing behind `ADMIN_EMAILS`, and save the
-prompt config version used on Sessions and Evaluations.
+Realtime interviewer and post-session evaluation prompts are composed product
+configuration, not one-off implementation strings. Store base prompts in
+versioned Postgres prompt config records, store mode/question/style prompt
+instructions on backend catalog records, gate editing behind `ADMIN_EMAILS`, and
+save the base prompt config version used on Sessions and Evaluations.
 
 Admin edits should create a new version. Activating a version should not rewrite
-historical prompt records.
+historical base prompt records. Catalog prompt component edits can update the
+current mode/question/style instructions directly while the beta prompt surface
+is still small.
 
 ### Persist Profile Context Separately From Session Snapshots
 

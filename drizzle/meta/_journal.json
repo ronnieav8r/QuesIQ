@@ -64,6 +64,13 @@
       "when": 1779580800000,
       "tag": "0009_add_prompt_configs",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1779584400000,
+      "tag": "0010_add_catalog_prompt_instructions",
+      "breakpoints": true
     }
   ]
 }

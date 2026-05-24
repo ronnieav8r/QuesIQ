@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import type { PromptConfigKey, PromptConfigRecord } from "@/product/interview-types";
+import type {
+  PromptComponentRecord,
+  PromptConfigKey,
+  PromptConfigRecord,
+} from "@/product/interview-types";
 
 type PromptDraft = {
   instructions: string;
@@ -44,15 +48,25 @@ function emptyDraft(): PromptDraft {
 
 export function AdminView() {
   const [configs, setConfigs] = useState<PromptConfigRecord[]>([]);
+  const [components, setComponents] = useState<PromptComponentRecord[]>([]);
+  const [componentDraft, setComponentDraft] = useState("");
   const [draft, setDraft] = useState<PromptDraft>(emptyDraft);
   const [error, setError] = useState<string>();
   const [pending, setPending] = useState(false);
+  const [selectedComponentKey, setSelectedComponentKey] = useState<string>();
   const [selectedId, setSelectedId] = useState<string>();
   const [status, setStatus] = useState<"loading" | "ready">("loading");
 
   const selectedConfig = useMemo(
     () => configs.find((config) => config.id === selectedId),
     [configs, selectedId],
+  );
+  const selectedComponent = useMemo(
+    () =>
+      components.find(
+        (component) => `${component.type}:${component.key}` === selectedComponentKey,
+      ),
+    [components, selectedComponentKey],
   );
   const groupedConfigs = useMemo(
     () =>
@@ -76,6 +90,15 @@ export function AdminView() {
       name: config.name,
       voice: config.voice ?? "",
     });
+  }
+
+  function applySelectedComponent(component?: PromptComponentRecord) {
+    if (!component) {
+      return;
+    }
+
+    setSelectedComponentKey(`${component.type}:${component.key}`);
+    setComponentDraft(component.promptInstructions);
   }
 
   async function loadConfigs(preferredId?: string) {
@@ -111,29 +134,86 @@ export function AdminView() {
     }
   }
 
+  async function loadComponents(preferredKey?: string) {
+    try {
+      setError(undefined);
+      const response = await fetch("/api/admin/prompt-components");
+      const body = (await response.json()) as {
+        components?: PromptComponentRecord[];
+        detail?: string;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(body.detail || body.error || "Prompt components could not be loaded.");
+      }
+
+      const nextComponents = body.components ?? [];
+      const nextSelected =
+        nextComponents.find(
+          (component) => `${component.type}:${component.key}` === preferredKey,
+        ) ||
+        nextComponents.find(
+          (component) => `${component.type}:${component.key}` === selectedComponentKey,
+        ) ||
+        nextComponents[0];
+
+      setComponents(nextComponents);
+      applySelectedComponent(nextSelected);
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Prompt components could not be loaded.",
+      );
+    }
+  }
+
   useEffect(() => {
     let ignore = false;
 
     async function loadInitialConfigs() {
       try {
         setError(undefined);
-        const response = await fetch("/api/admin/prompt-configs");
-        const body = (await response.json()) as {
+        const [configResponse, componentResponse] = await Promise.all([
+          fetch("/api/admin/prompt-configs"),
+          fetch("/api/admin/prompt-components"),
+        ]);
+        const configBody = (await configResponse.json()) as {
           configs?: PromptConfigRecord[];
           detail?: string;
           error?: string;
         };
+        const componentBody = (await componentResponse.json()) as {
+          components?: PromptComponentRecord[];
+          detail?: string;
+          error?: string;
+        };
 
-        if (!response.ok) {
-          throw new Error(body.detail || body.error || "Prompt configs could not be loaded.");
+        if (!configResponse.ok) {
+          throw new Error(
+            configBody.detail || configBody.error || "Prompt configs could not be loaded.",
+          );
+        }
+
+        if (!componentResponse.ok) {
+          throw new Error(
+            componentBody.detail ||
+              componentBody.error ||
+              "Prompt components could not be loaded.",
+          );
         }
 
         if (!ignore) {
-          const nextConfigs = body.configs ?? [];
+          const nextConfigs = configBody.configs ?? [];
           const nextSelected = nextConfigs.find((config) => config.active);
+          const nextComponents = componentBody.components ?? [];
+          const nextSelectedComponent = nextComponents[0];
 
           setConfigs(nextConfigs);
+          setComponents(nextComponents);
           applySelectedConfig(nextSelected);
+          applySelectedComponent(nextSelectedComponent);
         }
       } catch (loadError) {
         if (!ignore) {
@@ -230,6 +310,46 @@ export function AdminView() {
         activateError instanceof Error
           ? activateError.message
           : "Prompt config could not be activated.",
+      );
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function saveComponent() {
+    if (!selectedComponent) {
+      return;
+    }
+
+    try {
+      setPending(true);
+      setError(undefined);
+      const response = await fetch("/api/admin/prompt-components", {
+        body: JSON.stringify({
+          key: selectedComponent.key,
+          promptInstructions: componentDraft,
+          type: selectedComponent.type,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "PATCH",
+      });
+      const body = (await response.json()) as {
+        component?: PromptComponentRecord;
+        error?: string;
+      };
+
+      if (!response.ok || !body.component) {
+        throw new Error(body.error || "Prompt component could not be saved.");
+      }
+
+      await loadComponents(`${body.component.type}:${body.component.key}`);
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Prompt component could not be saved.",
       );
     } finally {
       setPending(false);
@@ -364,6 +484,98 @@ export function AdminView() {
           )}
         </div>
       )}
+
+      <div className="admin-layout">
+        <aside className="prompt-version-list" aria-label="Prompt components">
+          <section>
+            <h2>Mode Components</h2>
+            {components
+              .filter((component) => component.type === "mode")
+              .map((component) => (
+                <button
+                  className={
+                    selectedComponentKey === `${component.type}:${component.key}`
+                      ? "active"
+                      : ""
+                  }
+                  key={`${component.type}:${component.key}`}
+                  onClick={() => applySelectedComponent(component)}
+                  type="button"
+                >
+                  <span>{component.displayName}</span>
+                  <small>{component.description || component.key}</small>
+                </button>
+              ))}
+          </section>
+          <section>
+            <h2>Question Components</h2>
+            {components
+              .filter((component) => component.type === "question_type")
+              .map((component) => (
+                <button
+                  className={
+                    selectedComponentKey === `${component.type}:${component.key}`
+                      ? "active"
+                      : ""
+                  }
+                  key={`${component.type}:${component.key}`}
+                  onClick={() => applySelectedComponent(component)}
+                  type="button"
+                >
+                  <span>{component.displayName}</span>
+                  <small>{component.key}</small>
+                </button>
+              ))}
+          </section>
+          <section>
+            <h2>Style Components</h2>
+            {components
+              .filter((component) => component.type === "style")
+              .map((component) => (
+                <button
+                  className={
+                    selectedComponentKey === `${component.type}:${component.key}`
+                      ? "active"
+                      : ""
+                  }
+                  key={`${component.type}:${component.key}`}
+                  onClick={() => applySelectedComponent(component)}
+                  type="button"
+                >
+                  <span>{component.displayName}</span>
+                  <small>{component.description || component.key}</small>
+                </button>
+              ))}
+          </section>
+        </aside>
+
+        {selectedComponent && (
+          <form className="prompt-editor" onSubmit={(event) => event.preventDefault()}>
+            <div className="section-head">
+              <h2>{selectedComponent.displayName}</h2>
+              <span>{selectedComponent.type.replace("_", " ")}</span>
+            </div>
+            <label>
+              <span>Component instructions</span>
+              <textarea
+                onChange={(event) => setComponentDraft(event.target.value)}
+                rows={8}
+                value={componentDraft}
+              />
+            </label>
+            <div className="inline-actions">
+              <button disabled={pending} onClick={saveComponent} type="button">
+                Save Component
+              </button>
+            </div>
+            <p>
+              This component is composed into Realtime voice instructions and the
+              post-session evaluation input when the matching mode, question focus,
+              or style is selected.
+            </p>
+          </form>
+        )}
+      </div>
     </section>
   );
 }

@@ -78,6 +78,10 @@ Prompt configs for live Que voice sessions and post-session evaluation are
 stored in Postgres and editable through the signed-in Admin tab for emails in
 `ADMIN_EMAILS`.
 
+The Admin tab also edits prompt components for practice modes, question types,
+and interviewer styles. Those components are composed into the live voice prompt
+and the post-session evaluation input with the user's session context.
+
 Set this server environment variable before using the admin panel:
 
 - `ADMIN_EMAILS` - comma-separated signed-in email addresses with admin access

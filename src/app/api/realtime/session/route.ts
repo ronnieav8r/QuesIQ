@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import type { SessionSetupSnapshot } from "@/product/interview-types";
 import type { PromptConfigRecord } from "@/product/interview-types";
+import type { SessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
+import { getSessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 import { getOwnedSession } from "@/server/sessions/get-owned-session";
 import { saveRealtimeSessionConfig } from "@/server/sessions/save-realtime-call";
@@ -22,25 +24,40 @@ function resumeExcerpt(snapshot?: SessionSetupSnapshot) {
 function buildQueInstructions(
   promptConfig: PromptConfigRecord,
   snapshot?: SessionSetupSnapshot,
+  promptComponents?: SessionPromptComponents,
 ) {
   const role = snapshot?.interviewContext.targetRole || "the user's target role";
   const company = snapshot?.interviewContext.targetCompany || "an unspecified company";
   const resumeContext = resumeExcerpt(snapshot);
-  const questionFocus = snapshot?.questionTypeKey
-    ? `Question focus: ${snapshot.questionTypeKey}.`
+  const modeLabel = promptComponents?.mode?.name || snapshot?.modeKey || "first_impression";
+  const styleLabel = promptComponents?.style?.label || snapshot?.styleKey || "friendly";
+  const questionLabel = promptComponents?.questionType?.label || snapshot?.questionTypeKey;
+  const questionFocus = questionLabel
+    ? `Question focus: ${questionLabel}.`
     : "Question focus: choose questions appropriate for this mode.";
 
   return [
     promptConfig.instructions,
-    `Practice mode: ${snapshot?.modeKey || "first_impression"}.`,
-    `Interviewer style: ${snapshot?.styleKey || "friendly"}.`,
+    `Practice mode: ${modeLabel}.`,
+    promptComponents?.mode?.promptInstructions
+      ? `Mode instructions: ${promptComponents.mode.promptInstructions}`
+      : undefined,
+    `Interviewer style: ${styleLabel}.`,
+    promptComponents?.style?.promptInstructions
+      ? `Style instructions: ${promptComponents.style.promptInstructions}`
+      : undefined,
     questionFocus,
+    promptComponents?.questionType?.promptInstructions
+      ? `Question-focus instructions: ${promptComponents.questionType.promptInstructions}`
+      : undefined,
     `Target role: ${role}.`,
     `Target company: ${company}.`,
     resumeContext
       ? `Resume context: ${resumeContext}. Use it quietly to ask role-relevant questions. If the candidate asks whether you have their resume, say you have the context they provided for this practice session and can tailor questions from it. Do not say you have a file, a private file, or a resume summary in front of you. Do not read resume text aloud unless the candidate asks about a specific detail.`
       : "No parsed resume context was provided.",
-  ].join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function getRealtimeCallId(location?: string | null) {
@@ -73,11 +90,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Session was not found." }, { status: 404 });
   }
 
-  const promptConfig = await getActivePromptConfig("realtime_interviewer");
+  const [promptConfig, promptComponents] = await Promise.all([
+    getActivePromptConfig("realtime_interviewer"),
+    body.snapshot ? getSessionPromptComponents(body.snapshot) : Promise.resolve({}),
+  ]);
   const sessionConfig = {
     type: "realtime",
     model: promptConfig.model,
-    instructions: buildQueInstructions(promptConfig, body.snapshot),
+    instructions: buildQueInstructions(promptConfig, body.snapshot, promptComponents),
     audio: {
       input: {
         transcription: {

@@ -8,6 +8,8 @@ import type {
 } from "@/product/interview-types";
 import { getDb } from "@/server/db/client";
 import { evaluations, sessions } from "@/server/db/schema";
+import type { SessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
+import { getSessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 
 type SessionEvaluationRecord = {
@@ -88,12 +90,18 @@ function extractResponseText(body: ResponsesApiBody) {
 function buildEvaluationInput(
   snapshot: SessionSetupSnapshot,
   artifact: VoiceSessionArtifactDraft,
+  promptComponents: SessionPromptComponents,
 ) {
   return {
     session: {
-      mode: snapshot.modeKey,
-      questionFocus: snapshot.questionTypeKey || "general",
-      style: snapshot.styleKey,
+      mode: promptComponents.mode?.name || snapshot.modeKey,
+      modeInstructions: promptComponents.mode?.promptInstructions || "Not provided",
+      questionFocus:
+        promptComponents.questionType?.label || snapshot.questionTypeKey || "general",
+      questionFocusInstructions:
+        promptComponents.questionType?.promptInstructions || "Not provided",
+      style: promptComponents.style?.label || snapshot.styleKey,
+      styleInstructions: promptComponents.style?.promptInstructions || "Not provided",
       targetCompany: snapshot.interviewContext.targetCompany || "Optional",
       targetRole: snapshot.interviewContext.targetRole || "General practice",
     },
@@ -113,6 +121,7 @@ function buildEvaluationInput(
 async function requestEvaluation(
   snapshot: SessionSetupSnapshot,
   artifact: VoiceSessionArtifactDraft,
+  promptComponents: SessionPromptComponents,
   instructions: string,
   model: string,
 ) {
@@ -124,7 +133,9 @@ async function requestEvaluation(
           role: "system",
         },
         {
-          content: JSON.stringify(buildEvaluationInput(snapshot, artifact)),
+          content: JSON.stringify(
+            buildEvaluationInput(snapshot, artifact, promptComponents),
+          ),
           role: "user",
         },
       ],
@@ -222,7 +233,10 @@ export async function createSessionEvaluation(
     throw new Error("This practice session does not have a saved transcript yet.");
   }
 
-  const promptConfig = await getActivePromptConfig("session_evaluation");
+  const [promptConfig, promptComponents] = await Promise.all([
+    getActivePromptConfig("session_evaluation"),
+    getSessionPromptComponents(session.contextSnapshot),
+  ]);
   const model = promptConfig.model;
   await getDb()
     .update(sessions)
@@ -239,6 +253,7 @@ export async function createSessionEvaluation(
     result = await requestEvaluation(
       session.contextSnapshot,
       session.voiceArtifact,
+      promptComponents,
       promptConfig.instructions,
       model,
     );
