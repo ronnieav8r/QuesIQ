@@ -21,6 +21,8 @@ Last updated: 2026-05-23
   compact estimated usage records with duration, transcript split, model, voice,
   estimated audio tokens, estimated cost, pricing version, and estimation
   method.
+- AI pricing records are editable in Admin, and both exact-token API call costs
+  and estimated Realtime costs use active pricing records.
 - A direct OpenAI Realtime browser voice slice is wired into that session screen
   with client artifact drafting and passed its first manual test.
 - Ended direct voice attempts now save transcript/event artifacts and Realtime
@@ -62,8 +64,8 @@ Last updated: 2026-05-23
 
 ## Immediate
 
-1. Add `ADMIN_EMAILS` on Render and deploy/user-confirm QA the Admin prompt
-   config panel plus AI Usage tabs.
+1. Add `ADMIN_EMAILS` and `PRICING_CHECK_SECRET` on Render, then deploy and
+   user-confirm QA the Admin prompt config panel plus AI Usage tabs.
 2. Confirm live voice and evaluation still use the active prompt config and
    mode/style/question prompt components, and that new voice sessions create
    Realtime usage estimates after artifact save.
@@ -82,6 +84,8 @@ Last updated: 2026-05-23
 - Persist progression/streak records if derived XP/level is not enough
 - Add daily Google Sheets export for AI run rows once the Admin run data is
   confirmed useful
+- Wire a Render Cron to call `/api/pricing/check` daily or weekly using
+  `PRICING_CHECK_SECRET`
 - Polish the Brevo magic-link email template/HTML once auth behavior is stable
 - Keep Session artifact storage transcript/event-first until audio retention is
   intentionally revisited

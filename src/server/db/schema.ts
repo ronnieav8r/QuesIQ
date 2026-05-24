@@ -219,6 +219,7 @@ export const aiRuns = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     durationMs: integer("duration_ms"),
     errorMessage: text("error_message"),
+    estimatedCostMicroUsd: integer("estimated_cost_micro_usd"),
     id: uuid("id").defaultRandom().primaryKey(),
     inputAudioTokens: integer("input_audio_tokens"),
     inputTokens: integer("input_tokens"),
@@ -281,5 +282,48 @@ export const realtimeSessionUsage = pgTable(
   (usage) => ({
     sessionIdx: uniqueIndex("realtime_session_usage_session_idx").on(usage.sessionId),
     userIdx: index("realtime_session_usage_user_idx").on(usage.userId),
+  }),
+);
+
+export const aiPricing = pgTable(
+  "ai_pricing",
+  {
+    active: boolean("active").default(true).notNull(),
+    cachedInputMicroUsdPerMillion: integer("cached_input_micro_usd_per_million"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    inputMicroUsdPerMillion: integer("input_micro_usd_per_million").notNull(),
+    model: text("model").notNull(),
+    modality: text("modality").$type<"audio" | "text">().notNull(),
+    outputMicroUsdPerMillion: integer("output_micro_usd_per_million"),
+    provider: text("provider").default("openai").notNull(),
+    sourceUrl: text("source_url").notNull(),
+    unit: text("unit").default("per_1m_tokens").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    version: text("version").notNull(),
+  },
+  (pricing) => ({
+    activeIdx: index("ai_pricing_active_idx").on(
+      pricing.provider,
+      pricing.model,
+      pricing.modality,
+      pricing.active,
+    ),
+  }),
+);
+
+export const pricingChecks = pgTable(
+  "pricing_checks",
+  {
+    checkedAt: timestamp("checked_at", { withTimezone: true }).defaultNow().notNull(),
+    detectedChange: boolean("detected_change").default(false).notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    sourceHash: text("source_hash"),
+    sourceUrl: text("source_url").notNull(),
+    status: text("status").$type<"failed" | "succeeded">().notNull(),
+    summary: text("summary").notNull(),
+  },
+  (check) => ({
+    checkedAtIdx: index("pricing_checks_checked_at_idx").on(check.checkedAt),
   }),
 );

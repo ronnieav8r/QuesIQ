@@ -55,6 +55,10 @@ Last updated: 2026-05-23
     tokens, estimated cost, pricing version, and estimation method
   - Realtime cost estimates use configurable audio-token-per-minute assumptions
     and can be audited/adjusted over time
+  - AI pricing records are editable in Admin under AI Usage > Pricing, and cost
+    calculations now read active pricing records instead of hardcoded rates
+  - pricing checks can compare the official OpenAI pricing page hash against the
+    last successful check through Admin or the scheduled-check endpoint
 - Client-side session setup snapshot and focused voice session screen
 - Direct OpenAI Realtime browser voice slice from the session screen:
   - server-side `/api/realtime/session` WebRTC exchange route

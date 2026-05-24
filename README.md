@@ -94,6 +94,8 @@ Set this server environment variable before using the admin panel:
   estimate override, defaults to `5000`
 - `REALTIME_ESTIMATED_AUDIO_OUTPUT_TOKENS_PER_MINUTE` - optional Realtime cost
   estimate override, defaults to `5000`
+- `PRICING_CHECK_SECRET` - optional shared secret for scheduled pricing checks
+  against `/api/pricing/check`
 
 ## Practice Review
 

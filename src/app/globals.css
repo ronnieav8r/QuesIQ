@@ -30,6 +30,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -60,6 +61,7 @@ button:disabled:hover {
 
 button:focus-visible,
 input:focus-visible,
+select:focus-visible,
 textarea:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
@@ -554,6 +556,7 @@ label span {
 }
 
 input,
+select,
 textarea {
   background: var(--surface-raised);
   border: 1px solid var(--border);
@@ -573,6 +576,17 @@ textarea {
 input::placeholder,
 textarea::placeholder {
   color: var(--muted);
+}
+
+.checkbox-row {
+  align-items: center;
+  display: flex;
+  gap: 0.65rem;
+}
+
+.checkbox-row input {
+  min-height: 1.2rem;
+  width: 1.2rem;
 }
 
 .form-error {
@@ -974,6 +988,41 @@ textarea::placeholder {
 .ai-runs-list {
   display: grid;
   gap: 0.85rem;
+}
+
+.usage-table-wrap {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: auto;
+}
+
+.usage-table {
+  background: var(--surface-band);
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  min-width: 70rem;
+  width: 100%;
+}
+
+.usage-table th,
+.usage-table td {
+  border-bottom: 1px solid var(--border);
+  max-width: 18rem;
+  overflow-wrap: anywhere;
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.usage-table th {
+  background: var(--surface-raised);
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.usage-table tr:last-child td {
+  border-bottom: 0;
 }
 
 .ai-run-card {

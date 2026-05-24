@@ -187,6 +187,7 @@ export type AiRunRecord = {
   costSource: "estimated" | "exact" | "unavailable";
   durationMs?: number;
   errorMessage?: string;
+  estimatedCostMicroUsd?: number;
   id: string;
   inputAudioTokens?: number;
   inputTokens?: number;
@@ -227,4 +228,30 @@ export type RealtimeSessionUsageRecord = {
   userId?: string;
   userTranscriptCharacters: number;
   voice?: string;
+};
+
+export type AiPricingRecord = {
+  active: boolean;
+  cachedInputMicroUsdPerMillion?: number;
+  createdAt: string;
+  id: string;
+  inputMicroUsdPerMillion: number;
+  model: string;
+  modality: "audio" | "text";
+  outputMicroUsdPerMillion?: number;
+  provider: "openai";
+  sourceUrl: string;
+  unit: "per_1m_tokens";
+  updatedAt: string;
+  version: string;
+};
+
+export type PricingCheckRecord = {
+  checkedAt: string;
+  detectedChange: boolean;
+  id: string;
+  sourceHash?: string;
+  sourceUrl: string;
+  status: "failed" | "succeeded";
+  summary: string;
 };

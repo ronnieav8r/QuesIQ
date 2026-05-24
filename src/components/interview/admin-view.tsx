@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import type {
   AiRunRecord,
+  AiPricingRecord,
+  PricingCheckRecord,
   PromptComponentRecord,
   PromptConfigKey,
   PromptConfigRecord,
@@ -15,6 +17,17 @@ type PromptDraft = {
   model: string;
   name: string;
   voice: string;
+};
+
+type PricingDraft = {
+  active: boolean;
+  cachedInputUsd: string;
+  inputUsd: string;
+  model: string;
+  modality: AiPricingRecord["modality"];
+  outputUsd: string;
+  sourceUrl: string;
+  version: string;
 };
 
 const promptLabels: Record<PromptConfigKey, string> = {
@@ -48,10 +61,56 @@ function emptyDraft(): PromptDraft {
   };
 }
 
+function formatUsd(microUsd?: number) {
+  if (microUsd === undefined) {
+    return "--";
+  }
+
+  return `$${(microUsd / 1_000_000).toFixed(4)}`;
+}
+
+function formatDuration(ms?: number) {
+  if (!ms) {
+    return "--";
+  }
+
+  if (ms < 1000) {
+    return `${ms}ms`;
+  }
+
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
+function dollarsToMicroUsd(value: string) {
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? Math.round(parsed * 1_000_000) : undefined;
+}
+
+function microUsdToDollars(value?: number) {
+  return value === undefined ? "" : (value / 1_000_000).toString();
+}
+
+function pricingToDraft(pricing?: AiPricingRecord): PricingDraft {
+  return {
+    active: pricing?.active ?? true,
+    cachedInputUsd: microUsdToDollars(pricing?.cachedInputMicroUsdPerMillion),
+    inputUsd: microUsdToDollars(pricing?.inputMicroUsdPerMillion),
+    model: pricing?.model ?? "",
+    modality: pricing?.modality ?? "text",
+    outputUsd: microUsdToDollars(pricing?.outputMicroUsdPerMillion),
+    sourceUrl: pricing?.sourceUrl ?? "https://openai.com/api/pricing/",
+    version: pricing?.version ?? "manual-v1",
+  };
+}
+
 export function AdminView() {
   const [configs, setConfigs] = useState<PromptConfigRecord[]>([]);
   const [components, setComponents] = useState<PromptComponentRecord[]>([]);
   const [aiRuns, setAiRuns] = useState<AiRunRecord[]>([]);
+  const [pricing, setPricing] = useState<AiPricingRecord[]>([]);
+  const [pricingChecks, setPricingChecks] = useState<PricingCheckRecord[]>([]);
+  const [pricingDraft, setPricingDraft] = useState<PricingDraft>(pricingToDraft());
   const [realtimeUsage, setRealtimeUsage] = useState<RealtimeSessionUsageRecord[]>([]);
   const [componentDraft, setComponentDraft] = useState("");
   const [draft, setDraft] = useState<PromptDraft>(emptyDraft);
@@ -65,9 +124,9 @@ export function AdminView() {
   const [selectedComponentKey, setSelectedComponentKey] = useState<string>();
   const [selectedId, setSelectedId] = useState<string>();
   const [status, setStatus] = useState<"loading" | "ready">("loading");
-  const [usageSection, setUsageSection] = useState<"api_calls" | "realtime">(
-    "api_calls",
-  );
+  const [usageSection, setUsageSection] =
+    useState<"api_calls" | "pricing" | "realtime">("api_calls");
+  const [selectedPricingId, setSelectedPricingId] = useState<string>();
 
   const selectedConfig = useMemo(
     () => configs.find((config) => config.id === selectedId),
@@ -88,6 +147,10 @@ export function AdminView() {
         return groups;
       }, {}),
     [configs],
+  );
+  const selectedPricing = useMemo(
+    () => pricing.find((record) => record.id === selectedPricingId),
+    [pricing, selectedPricingId],
   );
 
   function applySelectedConfig(config?: PromptConfigRecord) {
@@ -226,6 +289,45 @@ export function AdminView() {
     }
   }
 
+  function applySelectedPricing(record?: AiPricingRecord) {
+    if (!record) {
+      setSelectedPricingId(undefined);
+      setPricingDraft(pricingToDraft());
+      return;
+    }
+
+    setSelectedPricingId(record.id);
+    setPricingDraft(pricingToDraft(record));
+  }
+
+  async function loadPricing(preferredId?: string) {
+    try {
+      setError(undefined);
+      const response = await fetch("/api/admin/pricing");
+      const body = (await response.json()) as {
+        checks?: PricingCheckRecord[];
+        error?: string;
+        pricing?: AiPricingRecord[];
+      };
+
+      if (!response.ok) {
+        throw new Error(body.error || "Pricing could not be loaded.");
+      }
+
+      const nextPricing = body.pricing ?? [];
+      const nextSelected =
+        nextPricing.find((record) => record.id === preferredId) ||
+        nextPricing.find((record) => record.id === selectedPricingId) ||
+        nextPricing[0];
+
+      setPricing(nextPricing);
+      setPricingChecks(body.checks ?? []);
+      applySelectedPricing(nextSelected);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Pricing could not be loaded.");
+    }
+  }
+
   useEffect(() => {
     let ignore = false;
 
@@ -237,11 +339,13 @@ export function AdminView() {
           componentResponse,
           aiRunsResponse,
           realtimeUsageResponse,
+          pricingResponse,
         ] = await Promise.all([
           fetch("/api/admin/prompt-configs"),
           fetch("/api/admin/prompt-components"),
           fetch("/api/admin/ai-runs"),
           fetch("/api/admin/realtime-usage"),
+          fetch("/api/admin/pricing"),
         ]);
         const configBody = (await configResponse.json()) as {
           configs?: PromptConfigRecord[];
@@ -260,6 +364,11 @@ export function AdminView() {
         const realtimeUsageBody = (await realtimeUsageResponse.json()) as {
           error?: string;
           usage?: RealtimeSessionUsageRecord[];
+        };
+        const pricingBody = (await pricingResponse.json()) as {
+          checks?: PricingCheckRecord[];
+          error?: string;
+          pricing?: AiPricingRecord[];
         };
 
         if (!configResponse.ok) {
@@ -286,6 +395,10 @@ export function AdminView() {
           );
         }
 
+        if (!pricingResponse.ok) {
+          throw new Error(pricingBody.error || "Pricing could not be loaded.");
+        }
+
         if (!ignore) {
           const nextConfigs = configBody.configs ?? [];
           const nextSelected = nextConfigs.find((config) => config.active);
@@ -296,8 +409,11 @@ export function AdminView() {
           setComponents(nextComponents);
           setAiRuns(aiRunsBody.runs ?? []);
           setRealtimeUsage(realtimeUsageBody.usage ?? []);
+          setPricing(pricingBody.pricing ?? []);
+          setPricingChecks(pricingBody.checks ?? []);
           applySelectedConfig(nextSelected);
           applySelectedComponent(nextSelectedComponent);
+          applySelectedPricing(pricingBody.pricing?.[0]);
         }
       } catch (loadError) {
         if (!ignore) {
@@ -457,12 +573,87 @@ export function AdminView() {
       return;
     }
 
+    if (usageSection === "pricing") {
+      void loadPricing();
+      return;
+    }
+
     if (promptSection === "base") {
       void loadConfigs();
       return;
     }
 
     void loadComponents();
+  }
+
+  async function savePricing() {
+    const inputMicroUsdPerMillion = dollarsToMicroUsd(pricingDraft.inputUsd);
+
+    if (!pricingDraft.model || !pricingDraft.version || inputMicroUsdPerMillion === undefined) {
+      setError("Pricing model, version, and input price are required.");
+      return;
+    }
+
+    try {
+      setPending(true);
+      setError(undefined);
+      const response = await fetch("/api/admin/pricing", {
+        body: JSON.stringify({
+          active: pricingDraft.active,
+          cachedInputMicroUsdPerMillion: dollarsToMicroUsd(pricingDraft.cachedInputUsd),
+          id: selectedPricingId,
+          inputMicroUsdPerMillion,
+          model: pricingDraft.model,
+          modality: pricingDraft.modality,
+          outputMicroUsdPerMillion: dollarsToMicroUsd(pricingDraft.outputUsd),
+          sourceUrl: pricingDraft.sourceUrl,
+          version: pricingDraft.version,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: selectedPricingId ? "PATCH" : "POST",
+      });
+      const body = (await response.json()) as {
+        error?: string;
+        pricing?: AiPricingRecord;
+      };
+
+      if (!response.ok || !body.pricing) {
+        throw new Error(body.error || "Pricing could not be saved.");
+      }
+
+      await loadPricing(body.pricing.id);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Pricing could not be saved.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function runPricingCheckNow() {
+    try {
+      setPending(true);
+      setError(undefined);
+      const response = await fetch("/api/admin/pricing", {
+        body: JSON.stringify({ action: "check" }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const body = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(body.error || "Pricing check failed.");
+      }
+
+      await loadPricing();
+    } catch (checkError) {
+      setError(checkError instanceof Error ? checkError.message : "Pricing check failed.");
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -546,6 +737,13 @@ export function AdminView() {
                 type="button"
               >
                 Realtime Sessions
+              </button>
+              <button
+                className={usageSection === "pricing" ? "active" : ""}
+                onClick={() => setUsageSection("pricing")}
+                type="button"
+              >
+                Pricing
               </button>
             </div>
           )}
@@ -737,53 +935,43 @@ export function AdminView() {
             <span>{aiRuns.length} shown</span>
           </div>
           {aiRuns.length > 0 ? (
-            <div className="ai-runs-list">
-              {aiRuns.map((run) => (
-                <article className="ai-run-card" key={run.id}>
-                  <div className="ai-run-main">
-                    <strong>
-                      {run.runType} - {run.status}
-                    </strong>
-                    <span>{new Date(run.startedAt).toLocaleString()}</span>
-                  </div>
-                  <dl>
-                    <div>
-                      <dt>Model</dt>
-                      <dd>{run.model}</dd>
-                    </div>
-                    <div>
-                      <dt>User</dt>
-                      <dd>{run.userEmail || run.userId || "Unknown"}</dd>
-                    </div>
-                    <div>
-                      <dt>Prompt</dt>
-                      <dd>
-                        {run.promptConfigKey
-                          ? `${run.promptConfigKey} v${run.promptConfigVersion ?? "--"}`
-                          : "Not recorded"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Tokens</dt>
-                      <dd>
+            <div className="usage-table-wrap">
+              <table className="usage-table">
+                <thead>
+                  <tr>
+                    <th>Started</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>User</th>
+                    <th>Model</th>
+                    <th>Tokens</th>
+                    <th>Cost</th>
+                    <th>Duration</th>
+                    <th>Session</th>
+                    <th>Error</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {aiRuns.map((run) => (
+                    <tr key={run.id}>
+                      <td>{new Date(run.startedAt).toLocaleString()}</td>
+                      <td>{run.runType}</td>
+                      <td>{run.status}</td>
+                      <td>{run.userEmail || run.userId || "--"}</td>
+                      <td>{run.model}</td>
+                      <td>
                         {run.totalTokens !== undefined
-                          ? `${run.inputTokens ?? 0} in / ${run.outputTokens ?? 0} out / ${run.totalTokens} total`
-                          : "Unavailable"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Duration</dt>
-                      <dd>{run.durationMs ? `${run.durationMs} ms` : "Open"}</dd>
-                    </div>
-                    <div>
-                      <dt>Provider id</dt>
-                      <dd>{run.providerRequestId || "Unavailable"}</dd>
-                    </div>
-                  </dl>
-                  {run.sessionId && <p>Session: {run.sessionId}</p>}
-                  {run.errorMessage && <p className="form-error">{run.errorMessage}</p>}
-                </article>
-              ))}
+                          ? `${run.inputTokens ?? 0} / ${run.outputTokens ?? 0} / ${run.totalTokens}`
+                          : "--"}
+                      </td>
+                      <td>{formatUsd(run.estimatedCostMicroUsd)}</td>
+                      <td>{formatDuration(run.durationMs)}</td>
+                      <td>{run.sessionId || "--"}</td>
+                      <td>{run.errorMessage || "--"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
             <p>No AI runs have been recorded yet.</p>
@@ -799,65 +987,222 @@ export function AdminView() {
             <span>{realtimeUsage.length} shown</span>
           </div>
           {realtimeUsage.length > 0 ? (
-            <div className="ai-runs-list">
-              {realtimeUsage.map((usage) => (
-                <article className="ai-run-card" key={usage.id}>
-                  <div className="ai-run-main">
-                    <strong>
-                      {usage.model} - ${(usage.estimatedCostMicroUsd / 1_000_000).toFixed(4)}
-                    </strong>
-                    <span>
-                      {usage.startedAt
-                        ? new Date(usage.startedAt).toLocaleString()
-                        : "No start time"}
-                    </span>
-                  </div>
-                  <dl>
-                    <div>
-                      <dt>Duration</dt>
-                      <dd>{usage.durationSeconds}s</dd>
-                    </div>
-                    <div>
-                      <dt>Estimated audio tokens</dt>
-                      <dd>
-                        {usage.estimatedAudioInputTokens} in /{" "}
-                        {usage.estimatedAudioOutputTokens} out
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Transcript</dt>
-                      <dd>
+            <div className="usage-table-wrap">
+              <table className="usage-table">
+                <thead>
+                  <tr>
+                    <th>Started</th>
+                    <th>User</th>
+                    <th>Model</th>
+                    <th>Voice</th>
+                    <th>Duration</th>
+                    <th>Audio Tokens</th>
+                    <th>Cost</th>
+                    <th>Transcript</th>
+                    <th>Session</th>
+                    <th>Method</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {realtimeUsage.map((usage) => (
+                    <tr key={usage.id}>
+                      <td>
+                        {usage.startedAt
+                          ? new Date(usage.startedAt).toLocaleString()
+                          : "--"}
+                      </td>
+                      <td>{usage.userEmail || usage.userId || "--"}</td>
+                      <td>{usage.model}</td>
+                      <td>{usage.voice || "--"}</td>
+                      <td>{usage.durationSeconds}s</td>
+                      <td>
+                        {usage.estimatedAudioInputTokens} /{" "}
+                        {usage.estimatedAudioOutputTokens}
+                      </td>
+                      <td>{formatUsd(usage.estimatedCostMicroUsd)}</td>
+                      <td>
                         {usage.transcriptTurns} turns / {usage.userTranscriptCharacters} user
-                        chars / {usage.assistantTranscriptCharacters} Que chars
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>User</dt>
-                      <dd>{usage.userEmail || usage.userId || "Unknown"}</dd>
-                    </div>
-                    <div>
-                      <dt>Prompt</dt>
-                      <dd>
-                        {usage.promptConfigKey
-                          ? `${usage.promptConfigKey} v${usage.promptConfigVersion ?? "--"}`
-                          : "Not recorded"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Method</dt>
-                      <dd>{usage.estimationMethod}</dd>
-                    </div>
-                  </dl>
-                  <p>Session: {usage.sessionId}</p>
-                  {usage.realtimeCallId && <p>Realtime call: {usage.realtimeCallId}</p>}
-                  <p>Pricing: {usage.pricingVersion}</p>
-                </article>
-              ))}
+                        / {usage.assistantTranscriptCharacters} Que
+                      </td>
+                      <td>{usage.sessionId}</td>
+                      <td>{usage.estimationMethod}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
             <p>No realtime sessions have been recorded yet.</p>
           )}
           {error && <p className="form-error">{error}</p>}
+        </section>
+      )}
+
+      {adminSection === "ai_usage" && usageSection === "pricing" && status === "ready" && (
+        <section className="ai-runs-panel" aria-labelledby="pricing-title">
+          <div className="section-head">
+            <h2 id="pricing-title">Pricing</h2>
+            <span>{pricing.length} records</span>
+          </div>
+          <div className="admin-layout component-admin-layout">
+            <aside className="prompt-version-list" aria-label="Pricing records">
+              <section>
+                <h2>Models</h2>
+                <button
+                  className={!selectedPricingId ? "active" : ""}
+                  onClick={() => applySelectedPricing(undefined)}
+                  type="button"
+                >
+                  <span>New pricing record</span>
+                  <small>Add a model or version</small>
+                </button>
+                {pricing.map((record) => (
+                  <button
+                    className={selectedPricingId === record.id ? "active" : ""}
+                    key={record.id}
+                    onClick={() => applySelectedPricing(record)}
+                    type="button"
+                  >
+                    <span>
+                      {record.model} {record.modality}
+                    </span>
+                    <small>
+                      {record.active ? "Active" : "Inactive"} · {record.version}
+                    </small>
+                  </button>
+                ))}
+              </section>
+            </aside>
+
+            <form className="prompt-editor" onSubmit={(event) => event.preventDefault()}>
+              <div className="section-head">
+                <h2>{selectedPricing ? "Edit Pricing" : "New Pricing"}</h2>
+                <span>USD per 1M tokens</span>
+              </div>
+              <label>
+                <span>Model</span>
+                <input
+                  onChange={(event) =>
+                    setPricingDraft((current) => ({ ...current, model: event.target.value }))
+                  }
+                  value={pricingDraft.model}
+                />
+              </label>
+              <label>
+                <span>Modality</span>
+                <select
+                  onChange={(event) =>
+                    setPricingDraft((current) => ({
+                      ...current,
+                      modality: event.target.value as AiPricingRecord["modality"],
+                    }))
+                  }
+                  value={pricingDraft.modality}
+                >
+                  <option value="text">Text</option>
+                  <option value="audio">Audio</option>
+                </select>
+              </label>
+              <div className="field-grid">
+                <label>
+                  <span>Input $ / 1M</span>
+                  <input
+                    onChange={(event) =>
+                      setPricingDraft((current) => ({
+                        ...current,
+                        inputUsd: event.target.value,
+                      }))
+                    }
+                    type="number"
+                    value={pricingDraft.inputUsd}
+                  />
+                </label>
+                <label>
+                  <span>Cached input $ / 1M</span>
+                  <input
+                    onChange={(event) =>
+                      setPricingDraft((current) => ({
+                        ...current,
+                        cachedInputUsd: event.target.value,
+                      }))
+                    }
+                    type="number"
+                    value={pricingDraft.cachedInputUsd}
+                  />
+                </label>
+                <label>
+                  <span>Output $ / 1M</span>
+                  <input
+                    onChange={(event) =>
+                      setPricingDraft((current) => ({
+                        ...current,
+                        outputUsd: event.target.value,
+                      }))
+                    }
+                    type="number"
+                    value={pricingDraft.outputUsd}
+                  />
+                </label>
+              </div>
+              <label>
+                <span>Version</span>
+                <input
+                  onChange={(event) =>
+                    setPricingDraft((current) => ({
+                      ...current,
+                      version: event.target.value,
+                    }))
+                  }
+                  value={pricingDraft.version}
+                />
+              </label>
+              <label>
+                <span>Source URL</span>
+                <input
+                  onChange={(event) =>
+                    setPricingDraft((current) => ({
+                      ...current,
+                      sourceUrl: event.target.value,
+                    }))
+                  }
+                  value={pricingDraft.sourceUrl}
+                />
+              </label>
+              <label className="checkbox-row">
+                <input
+                  checked={pricingDraft.active}
+                  onChange={(event) =>
+                    setPricingDraft((current) => ({
+                      ...current,
+                      active: event.target.checked,
+                    }))
+                  }
+                  type="checkbox"
+                />
+                <span>Active for new estimates</span>
+              </label>
+              <div className="inline-actions">
+                <button disabled={pending} onClick={savePricing} type="button">
+                  Save Pricing
+                </button>
+                <button
+                  className="secondary"
+                  disabled={pending}
+                  onClick={runPricingCheckNow}
+                  type="button"
+                >
+                  Check Official Page
+                </button>
+              </div>
+              {pricingChecks[0] && (
+                <p>
+                  Last check: {new Date(pricingChecks[0].checkedAt).toLocaleString()} -{" "}
+                  {pricingChecks[0].summary}
+                </p>
+              )}
+              {error && <p className="form-error">{error}</p>}
+            </form>
+          </div>
         </section>
       )}
     </section>

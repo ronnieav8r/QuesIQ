@@ -11,6 +11,10 @@ import { getDb } from "@/server/db/client";
 import { evaluations, sessions } from "@/server/db/schema";
 import type { SessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
 import { getSessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
+import {
+  estimateTokenCostMicroUsd,
+  getActiveAiPricing,
+} from "@/server/pricing/ai-pricing";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 
 type SessionEvaluationRecord = {
@@ -284,6 +288,7 @@ export async function createSessionEvaluation(
     .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
 
   let result: SessionEvaluationResult;
+  const pricing = await getActiveAiPricing(model, "text");
   const aiRun = await startAiRun({
     model,
     promptConfigKey: promptConfig.key,
@@ -304,6 +309,11 @@ export async function createSessionEvaluation(
     result = evaluationResponse.evaluation;
     await completeAiRun(aiRun.id, {
       costSource: "exact",
+      estimatedCostMicroUsd: estimateTokenCostMicroUsd(
+        pricing,
+        evaluationResponse.usage?.input_tokens,
+        evaluationResponse.usage?.output_tokens,
+      ),
       inputTokens: evaluationResponse.usage?.input_tokens,
       outputTokens: evaluationResponse.usage?.output_tokens,
       providerRequestId: evaluationResponse.providerRequestId,
@@ -316,6 +326,11 @@ export async function createSessionEvaluation(
       costSource: usage ? "exact" : "unavailable",
       errorMessage:
         error instanceof Error ? error.message : "Practice review could not be created.",
+      estimatedCostMicroUsd: estimateTokenCostMicroUsd(
+        pricing,
+        usage?.input_tokens,
+        usage?.output_tokens,
+      ),
       inputTokens: usage?.input_tokens,
       outputTokens: usage?.output_tokens,
       providerRequestId: getProviderRequestId(error),

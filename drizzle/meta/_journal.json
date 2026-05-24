@@ -85,6 +85,20 @@
       "when": 1779670800000,
       "tag": "0012_add_realtime_session_usage",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1779674400000,
+      "tag": "0013_add_ai_run_estimated_cost",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1779678000000,
+      "tag": "0014_add_ai_pricing",
+      "breakpoints": true
     }
   ]
 }

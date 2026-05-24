@@ -150,6 +150,17 @@ Google Sheets can become the daily ops hub through export/sync after the app
 data is reliable. Do not build spreadsheet-like admin functionality inside the
 app before the daily reporting questions are clearer.
 
+### Keep Pricing Editable And Checked, Not Silently Auto-Changed
+
+AI pricing belongs in editable app-owned pricing records. Cost calculations
+should read active pricing records and store the pricing version used on derived
+usage rows where practical.
+
+Pricing checks should compare the official OpenAI pricing page and surface a
+detected change for admin review. Do not silently mutate active pricing from a
+scraped page because pricing pages can change format, include footnotes, or
+carry temporary announcements.
+
 ### Persist Profile Context Separately From Session Snapshots
 
 User-owned onboarding/profile context is stored in a Profile record and copied

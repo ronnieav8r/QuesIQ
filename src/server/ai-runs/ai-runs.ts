@@ -17,6 +17,7 @@ type StartAiRunInput = {
 type CompleteAiRunInput = {
   costSource?: AiRunRecord["costSource"];
   errorMessage?: string;
+  estimatedCostMicroUsd?: number;
   inputAudioTokens?: number;
   inputTokens?: number;
   outputAudioTokens?: number;
@@ -31,6 +32,7 @@ function toRecord(row: {
   costSource: AiRunRecord["costSource"];
   durationMs: number | null;
   errorMessage: string | null;
+  estimatedCostMicroUsd: number | null;
   id: string;
   inputAudioTokens: number | null;
   inputTokens: number | null;
@@ -54,6 +56,7 @@ function toRecord(row: {
     costSource: row.costSource,
     durationMs: row.durationMs ?? undefined,
     errorMessage: row.errorMessage ?? undefined,
+    estimatedCostMicroUsd: row.estimatedCostMicroUsd ?? undefined,
     id: row.id,
     inputAudioTokens: row.inputAudioTokens ?? undefined,
     inputTokens: row.inputTokens ?? undefined,
@@ -111,6 +114,7 @@ export async function completeAiRun(id: string, input: CompleteAiRunInput) {
       costSource: input.costSource ?? "unavailable",
       durationMs,
       errorMessage: input.errorMessage,
+      estimatedCostMicroUsd: input.estimatedCostMicroUsd,
       inputAudioTokens: input.inputAudioTokens,
       inputTokens: input.inputTokens,
       outputAudioTokens: input.outputAudioTokens,
@@ -130,6 +134,7 @@ export async function listAiRuns(limit = 100): Promise<AiRunRecord[]> {
       costSource: aiRuns.costSource,
       durationMs: aiRuns.durationMs,
       errorMessage: aiRuns.errorMessage,
+      estimatedCostMicroUsd: aiRuns.estimatedCostMicroUsd,
       id: aiRuns.id,
       inputAudioTokens: aiRuns.inputAudioTokens,
       inputTokens: aiRuns.inputTokens,

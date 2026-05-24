@@ -6,21 +6,14 @@ import type {
 } from "@/product/interview-types";
 import { getDb } from "@/server/db/client";
 import { realtimeSessionUsage, sessions, users } from "@/server/db/schema";
+import {
+  estimateTokenCostMicroUsd,
+  getActiveAiPricing,
+} from "@/server/pricing/ai-pricing";
 
-const pricingVersion = "openai-realtime-2026-05-24-user-provided-v1";
 const estimationMethod = "duration-v1-configurable-audio-tokens-per-minute";
 const defaultAudioInputTokensPerMinute = 5000;
 const defaultAudioOutputTokensPerMinute = 5000;
-
-const audioRatesPerMillionTokens: Record<
-  string,
-  { input: number; output: number }
-> = {
-  "gpt-realtime": { input: 32, output: 64 },
-  "gpt-realtime-1.5": { input: 32, output: 64 },
-  "gpt-realtime-2": { input: 32, output: 64 },
-  "gpt-realtime-mini": { input: 10, output: 20 },
-};
 
 function toDate(value?: string) {
   return value ? new Date(value) : undefined;
@@ -32,10 +25,6 @@ function envNumber(name: string, fallback: number) {
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
-function rateForModel(model: string) {
-  return audioRatesPerMillionTokens[model] ?? audioRatesPerMillionTokens["gpt-realtime"];
-}
-
 function transcriptCharacters(
   artifact: VoiceSessionArtifactDraft,
   speaker: "Que" | "You",
@@ -43,15 +32,6 @@ function transcriptCharacters(
   return artifact.transcript
     .filter((turn) => turn.speaker === speaker)
     .reduce((sum, turn) => sum + turn.text.length, 0);
-}
-
-function estimateCostMicroUsd(inputTokens: number, outputTokens: number, model: string) {
-  const rates = rateForModel(model);
-  const usd =
-    (inputTokens / 1_000_000) * rates.input +
-    (outputTokens / 1_000_000) * rates.output;
-
-  return Math.round(usd * 1_000_000);
 }
 
 function toRecord(row: {
@@ -119,6 +99,7 @@ export async function saveRealtimeSessionUsage(
     .limit(1);
 
   const model = session?.realtimeModel || process.env.OPENAI_REALTIME_MODEL || "gpt-realtime";
+  const pricing = await getActiveAiPricing(model, "audio");
   const durationSeconds =
     artifact.durationSeconds ??
     (artifact.startedAt && artifact.endedAt
@@ -147,6 +128,9 @@ export async function saveRealtimeSessionUsage(
       ),
   );
   const now = new Date();
+  const estimatedCostMicroUsd =
+    estimateTokenCostMicroUsd(pricing, inputTokens, outputTokens) ?? 0;
+  const pricingVersion = pricing?.version ?? "missing-pricing";
 
   await getDb()
     .insert(realtimeSessionUsage)
@@ -156,7 +140,7 @@ export async function saveRealtimeSessionUsage(
       endedAt: toDate(artifact.endedAt),
       estimatedAudioInputTokens: inputTokens,
       estimatedAudioOutputTokens: outputTokens,
-      estimatedCostMicroUsd: estimateCostMicroUsd(inputTokens, outputTokens, model),
+      estimatedCostMicroUsd,
       estimationMethod,
       model,
       pricingVersion,
@@ -178,7 +162,7 @@ export async function saveRealtimeSessionUsage(
         endedAt: toDate(artifact.endedAt),
         estimatedAudioInputTokens: inputTokens,
         estimatedAudioOutputTokens: outputTokens,
-        estimatedCostMicroUsd: estimateCostMicroUsd(inputTokens, outputTokens, model),
+        estimatedCostMicroUsd,
         estimationMethod,
         model,
         pricingVersion,
