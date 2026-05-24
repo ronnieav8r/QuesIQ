@@ -1,4 +1,5 @@
 export type AppView =
+  | "admin"
   | "home"
   | "history"
   | "practice"
@@ -149,4 +150,22 @@ export type VoiceSessionArtifactDraft = {
   events: VoiceSessionEvent[];
   startedAt?: string;
   transcript: VoiceTranscriptTurn[];
+};
+
+export type PromptConfigKey = "realtime_interviewer" | "session_evaluation";
+
+export type PromptConfigTarget = "evaluation" | "realtime";
+
+export type PromptConfigRecord = {
+  active: boolean;
+  createdAt: string;
+  id: string;
+  instructions: string;
+  key: PromptConfigKey;
+  model: string;
+  name: string;
+  target: PromptConfigTarget;
+  updatedAt: string;
+  version: number;
+  voice?: string;
 };

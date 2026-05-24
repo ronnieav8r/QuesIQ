@@ -11,6 +11,9 @@ Last updated: 2026-05-23
 - Practice modes, question types, and interviewer styles now live in seeded
   backend catalog tables and load through `/api/catalog`, with frontend defaults
   as a fallback.
+- Realtime interviewer and post-session evaluation prompts now live in
+  versioned backend prompt config records, with an `ADMIN_EMAILS`-gated Admin
+  tab for viewing versions, saving drafts, and activating versions.
 - A direct OpenAI Realtime browser voice slice is wired into that session screen
   with client artifact drafting and passed its first manual test.
 - Ended direct voice attempts now save transcript/event artifacts and Realtime
@@ -18,6 +21,8 @@ Last updated: 2026-05-23
 - Auth.js email magic-link plus Google/GitHub sign-in and Drizzle ownership
   tables are wired so new Sessions require an authenticated owner before saved
   practice launches.
+- Signed-out users now land on the sign-in screen; app tabs are hidden until
+  Auth.js reports a signed-in user.
 - The first evaluation handoff is in code: saved transcript artifacts can create
   an owned structured review with five QuesIQ score dimensions.
 - The first owned history/review revisit path is in code: Home loads recent
@@ -40,7 +45,8 @@ Last updated: 2026-05-23
 - Raw resume file binaries and object-storage-backed file retention are not
   wired yet.
 - The deployed app on `quesiq.com` has passed the owned practice loop:
-  sign-in, Session-before-voice, direct voice, artifact save, and review ready.
+  email/Google/GitHub sign-in, Session-before-voice, direct voice, artifact save,
+  and review ready.
 - Active Render deployment path is moving onto `quesiq-web`, now pointed at
   `ronnieav8r/QuesIQ` with Render Postgres `quesiq-interview-db`.
 - Render MCP is connected for service, deploy, log, Postgres, and environment
@@ -49,13 +55,14 @@ Last updated: 2026-05-23
 
 ## Immediate
 
-1. Add Render Brevo email auth environment variables, deploy, and user-confirm
-   QA email magic-link sign-in plus the existing resume-aware practice and
-   catalog slices.
-2. Keep Google OAuth deferred until Google Cloud client setup is complete.
-3. Decide whether persisted progression/streak records or the next multi-module
-   foundation should follow.
-4. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
+1. Add `ADMIN_EMAILS` on Render and deploy/user-confirm QA the Admin prompt
+   config panel.
+2. Confirm live voice and evaluation still use the active prompt config and
+   record the prompt version on new Sessions/Evaluations.
+3. Decide whether persisted progression/streak records or cost/observability
+   hardening should follow.
+4. Note email template polish as a later UX task.
+5. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
    any port until we intentionally invest time to fix it.
 
 ## First Implementation Backlog
@@ -65,6 +72,8 @@ Last updated: 2026-05-23
 - Add richer owned session history filters if the 50-session list becomes too
   noisy
 - Persist progression/streak records if derived XP/level is not enough
+- Add cost/error observability around prompt-configured AI calls
+- Polish the Brevo magic-link email template/HTML once auth behavior is stable
 - Keep Session artifact storage transcript/event-first until audio retention is
   intentionally revisited
 

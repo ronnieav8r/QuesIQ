@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { AuthControl, AuthView, useAuthSession } from "@/components/auth-control";
+import { AdminView } from "@/components/interview/admin-view";
 import { Dashboard } from "@/components/interview/dashboard";
 import { HistoryView } from "@/components/interview/history-view";
 import { useInterviewCatalog } from "@/components/interview/interview-catalog";
@@ -46,6 +47,7 @@ export default function Home() {
   const [selectedReview, setSelectedReview] = useState<SessionHistoryItem>();
   const [profileSaveError, setProfileSaveError] = useState<string>();
   const [profileSavePending, setProfileSavePending] = useState(false);
+  const [adminAccess, setAdminAccess] = useState(false);
   const authSession = useAuthSession();
   const signedIn = Boolean(authSession?.user);
   const interviewCatalog = useInterviewCatalog();
@@ -64,6 +66,9 @@ export default function Home() {
   const contextReady = Boolean(
     interviewContext.preferredName.trim() && interviewContext.targetRole.trim(),
   );
+  const visibleTabs = adminAccess
+    ? [...appTabs, { key: "admin" as const, label: "Admin" }]
+    : appTabs;
 
   useEffect(() => {
     let ignore = false;
@@ -102,6 +107,36 @@ export default function Home() {
     }
 
     void loadProfile();
+
+    return () => {
+      ignore = true;
+    };
+  }, [signedIn]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadAdminAccess() {
+      if (!signedIn) {
+        setAdminAccess(false);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/admin/status");
+        const body = (await response.json()) as { admin?: boolean };
+
+        if (!ignore) {
+          setAdminAccess(Boolean(body.admin));
+        }
+      } catch {
+        if (!ignore) {
+          setAdminAccess(false);
+        }
+      }
+    }
+
+    void loadAdminAccess();
 
     return () => {
       ignore = true;
@@ -344,6 +379,7 @@ export default function Home() {
               onPractice={openPractice}
             />
           )}
+          {signedIn && activeView === "admin" && adminAccess && <AdminView />}
           {signedIn && activeView === "onboarding" && (
             <OnboardingView
               interviewContext={interviewContext}
@@ -365,7 +401,7 @@ export default function Home() {
 
         {signedIn && activeView !== "session" && (
           <nav aria-label="Primary" className="tab-bar">
-            {appTabs.map((tab) => (
+            {visibleTabs.map((tab) => (
               <button
                 aria-current={activeView === tab.key ? "page" : undefined}
                 className={activeView === tab.key ? "tab active" : "tab"}

@@ -1,5 +1,6 @@
 import {
   boolean,
+  index,
   integer,
   jsonb,
   pgTable,
@@ -86,6 +87,8 @@ export const sessions = pgTable("sessions", {
   modeKey: text("mode_key").notNull(),
   questionTypeKey: text("question_type_key"),
   realtimeCallId: text("realtime_call_id"),
+  realtimePromptConfigKey: text("realtime_prompt_config_key"),
+  realtimePromptConfigVersion: integer("realtime_prompt_config_version"),
   startedAt: timestamp("started_at", { withTimezone: true }),
   status: text("status").$type<SessionStatus>().default("created").notNull(),
   styleKey: text("style_key").notNull(),
@@ -155,6 +158,8 @@ export const evaluations = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     id: uuid("id").defaultRandom().primaryKey(),
     model: text("model").notNull(),
+    promptConfigKey: text("prompt_config_key"),
+    promptConfigVersion: integer("prompt_config_version"),
     result: jsonb("result").$type<SessionEvaluationResult>().notNull(),
     sessionId: uuid("session_id")
       .notNull()
@@ -165,5 +170,35 @@ export const evaluations = pgTable(
   },
   (evaluation) => ({
     sessionIdIdx: uniqueIndex("evaluations_session_id_idx").on(evaluation.sessionId),
+  }),
+);
+
+export const promptConfigs = pgTable(
+  "prompt_configs",
+  {
+    active: boolean("active").default(false).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    createdByUserId: text("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    id: uuid("id").defaultRandom().primaryKey(),
+    instructions: text("instructions").notNull(),
+    key: text("key").notNull(),
+    model: text("model").notNull(),
+    name: text("name").notNull(),
+    target: text("target").$type<"evaluation" | "realtime">().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    version: integer("version").notNull(),
+    voice: text("voice"),
+  },
+  (promptConfig) => ({
+    activeIdx: index("prompt_configs_active_idx").on(
+      promptConfig.key,
+      promptConfig.active,
+    ),
+    keyVersionIdx: uniqueIndex("prompt_configs_key_version_idx").on(
+      promptConfig.key,
+      promptConfig.version,
+    ),
   }),
 );

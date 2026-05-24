@@ -8,6 +8,7 @@ import type {
 } from "@/product/interview-types";
 import { getDb } from "@/server/db/client";
 import { evaluations, sessions } from "@/server/db/schema";
+import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 
 type SessionEvaluationRecord = {
   id: string;
@@ -112,14 +113,14 @@ function buildEvaluationInput(
 async function requestEvaluation(
   snapshot: SessionSetupSnapshot,
   artifact: VoiceSessionArtifactDraft,
+  instructions: string,
   model: string,
 ) {
   const response = await fetch("https://api.openai.com/v1/responses", {
     body: JSON.stringify({
       input: [
         {
-          content:
-            "You are Que, QuesIQ Interview's interview coach. Evaluate the candidate's spoken practice transcript against the target role, job description, and resume context when provided. Be specific, kind, and useful. Score each dimension from 1 to 5 where 5 is strongest. Do not mention APIs or implementation details.",
+          content: instructions,
           role: "system",
         },
         {
@@ -221,7 +222,8 @@ export async function createSessionEvaluation(
     throw new Error("This practice session does not have a saved transcript yet.");
   }
 
-  const model = process.env.OPENAI_EVALUATION_MODEL || "gpt-5.4-mini";
+  const promptConfig = await getActivePromptConfig("session_evaluation");
+  const model = promptConfig.model;
   await getDb()
     .update(sessions)
     .set({
@@ -234,7 +236,12 @@ export async function createSessionEvaluation(
   let result: SessionEvaluationResult;
 
   try {
-    result = await requestEvaluation(session.contextSnapshot, session.voiceArtifact, model);
+    result = await requestEvaluation(
+      session.contextSnapshot,
+      session.voiceArtifact,
+      promptConfig.instructions,
+      model,
+    );
   } catch (error) {
     await getDb()
       .update(sessions)
@@ -253,6 +260,8 @@ export async function createSessionEvaluation(
     .insert(evaluations)
     .values({
       model,
+      promptConfigKey: promptConfig.key,
+      promptConfigVersion: promptConfig.version,
       result,
       sessionId,
       updatedAt: now,
@@ -261,6 +270,8 @@ export async function createSessionEvaluation(
     .onConflictDoUpdate({
       set: {
         model,
+        promptConfigKey: promptConfig.key,
+        promptConfigVersion: promptConfig.version,
         result,
         updatedAt: now,
       },

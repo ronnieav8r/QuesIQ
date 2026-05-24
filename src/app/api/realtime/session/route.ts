@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import type { SessionSetupSnapshot } from "@/product/interview-types";
+import type { PromptConfigRecord } from "@/product/interview-types";
+import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 import { getOwnedSession } from "@/server/sessions/get-owned-session";
-import { saveRealtimeCallId } from "@/server/sessions/save-realtime-call";
+import { saveRealtimeSessionConfig } from "@/server/sessions/save-realtime-call";
 
 export const runtime = "nodejs";
 
@@ -17,7 +19,10 @@ function resumeExcerpt(snapshot?: SessionSetupSnapshot) {
   return snapshot?.interviewContext.resumeText?.trim().slice(0, 3000);
 }
 
-function buildQueInstructions(snapshot?: SessionSetupSnapshot) {
+function buildQueInstructions(
+  promptConfig: PromptConfigRecord,
+  snapshot?: SessionSetupSnapshot,
+) {
   const role = snapshot?.interviewContext.targetRole || "the user's target role";
   const company = snapshot?.interviewContext.targetCompany || "an unspecified company";
   const resumeContext = resumeExcerpt(snapshot);
@@ -26,15 +31,7 @@ function buildQueInstructions(snapshot?: SessionSetupSnapshot) {
     : "Question focus: choose questions appropriate for this mode.";
 
   return [
-    "You are Que, QuesIQ Interview's live AI interviewer.",
-    "This is one browser voice job interview practice session.",
-    "Speak in English only unless the product explicitly provides a different session language.",
-    "Keep your spoken turns concise and natural for live conversation.",
-    "When opening a session, act as the interviewer: greet the candidate briefly, then ask exactly one interview question.",
-    "The first question must be role-relevant and should sound like a real interviewer, not like a writing coach or product tutor.",
-    "Do not ask the candidate to clarify, sharpen, improve, or make a question more specific unless the candidate has first asked you for help writing a question.",
-    "After the candidate answers, you may give brief coaching when the practice mode calls for it, then continue with the next interview question.",
-    "Do not mention implementation details, APIs, or internal session data.",
+    promptConfig.instructions,
     `Practice mode: ${snapshot?.modeKey || "first_impression"}.`,
     `Interviewer style: ${snapshot?.styleKey || "friendly"}.`,
     questionFocus,
@@ -76,10 +73,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Session was not found." }, { status: 404 });
   }
 
+  const promptConfig = await getActivePromptConfig("realtime_interviewer");
   const sessionConfig = {
     type: "realtime",
-    model: process.env.OPENAI_REALTIME_MODEL || "gpt-realtime",
-    instructions: buildQueInstructions(body.snapshot),
+    model: promptConfig.model,
+    instructions: buildQueInstructions(promptConfig, body.snapshot),
     audio: {
       input: {
         transcription: {
@@ -87,7 +85,7 @@ export async function POST(request: Request) {
         },
       },
       output: {
-        voice: process.env.OPENAI_REALTIME_VOICE || "marin",
+        voice: promptConfig.voice || process.env.OPENAI_REALTIME_VOICE || "marin",
       },
     },
   };
@@ -121,9 +119,22 @@ export async function POST(request: Request) {
 
     if (realtimeCallId) {
       try {
-        await saveRealtimeCallId(body.sessionId, appSession.user.id, realtimeCallId);
+        await saveRealtimeSessionConfig(body.sessionId, appSession.user.id, {
+          promptConfigKey: promptConfig.key,
+          promptConfigVersion: promptConfig.version,
+          realtimeCallId,
+        });
       } catch (error) {
         console.error("Realtime call correlation save failed.", error);
+      }
+    } else {
+      try {
+        await saveRealtimeSessionConfig(body.sessionId, appSession.user.id, {
+          promptConfigKey: promptConfig.key,
+          promptConfigVersion: promptConfig.version,
+        });
+      } catch (error) {
+        console.error("Realtime prompt config save failed.", error);
       }
     }
 

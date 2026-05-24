@@ -70,9 +70,14 @@ slice before beta history and progression depend on it.
 
 The first Auth.js implementation uses email magic links for the primary
 user-facing sign-in path without adding app-owned password storage yet. Google
-OAuth is wired but deferred until Google Cloud setup is complete, and GitHub is
-retained for developer/admin convenience. New Session launch and its direct
-voice persistence boundaries require the authenticated Session owner.
+OAuth is enabled as a second user-friendly option, and GitHub is retained for
+developer/admin convenience. Google OAuth is allowed to link to an existing
+email-owned account when the verified email matches. New Session launch and its
+direct voice persistence boundaries require the authenticated Session owner.
+
+The app shell is auth-gated for V1 readiness: signed-out users see the sign-in
+screen, and Home, History, Practice, Stories, Me, and live Sessions are only
+available after sign-in.
 
 ### Keep Product Channels In The QuesIQ App By Default
 
@@ -105,12 +110,25 @@ Clarity, Relevance, Impact, and Authenticity.
 Evaluation is stored as derived feedback on the app-owned Session path. This
 keeps the beta review loop useful without expanding retention to raw audio.
 
-The live beta defaults are:
+The seeded live beta prompt configs are:
 
 - Interview voice model: `gpt-realtime`
 - Post-session evaluation model: `gpt-5.4-mini`
 
-Both can be overridden through Render environment variables.
+After prompt config migrations run, active Postgres prompt config records are
+the runtime source for live voice and evaluation instructions/model settings.
+The checked-in defaults remain a fallback if prompt config records are not
+available.
+
+### Use Versioned Prompt Configs For AI Calls
+
+Realtime interviewer and post-session evaluation prompts are product
+configuration, not one-off implementation strings. Store them in versioned
+Postgres prompt config records, gate editing behind `ADMIN_EMAILS`, and save the
+prompt config version used on Sessions and Evaluations.
+
+Admin edits should create a new version. Activating a version should not rewrite
+historical prompt records.
 
 ### Persist Profile Context Separately From Session Snapshots
 
@@ -163,7 +181,7 @@ These are strong defaults until we decide otherwise:
 2. Evaluation hardening:
    - cost controls
    - whether inline retry is enough or a queued worker is needed later
-   - prompt/config versioning
+   - richer prompt/config observability
 
 3. Migration:
    - start with new beta users only

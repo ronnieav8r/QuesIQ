@@ -11,9 +11,9 @@ voice artifact persistence, a structured post-session practice review, saved
 review revisit, profile persistence, history, score summaries, and first derived
 progression.
 
-The next useful product slice is deploying and QAing the resume-aware practice
-and backend-owned catalog table slices, then deciding whether persisted
-progression/streak records or the next module foundation should follow.
+The next useful product slice is deploying and QAing the admin prompt config
+panel, then deciding whether persisted progression/streak records or
+cost/observability hardening should follow.
 
 ## Done Since Last Handoff
 
@@ -37,11 +37,15 @@ progression/streak records or the next module foundation should follow.
 - Added Auth.js GitHub sign-in scaffolding plus Drizzle auth tables and Session
   ownership enforcement for new Session creation, Realtime exchange, and voice
   artifact save.
-- Added Google OAuth as the primary user-facing sign-in provider while keeping
-  GitHub OAuth available.
+- Added Google OAuth as a user-facing sign-in provider while keeping GitHub
+  OAuth available.
 - Added email magic-link sign-in through Auth.js and Brevo transactional email
-  env vars, making email the preferred nontechnical user sign-in path once env
-  setup is complete.
+  env vars, making email the preferred nontechnical user sign-in path.
+- Moved sign-in/sign-up into a dedicated auth-gated screen and removed signed-out
+  access to Home, History, Practice, Stories, and Me.
+- Allowed Google OAuth to link to existing email magic-link accounts that share
+  the same verified email, avoiding `OAuthAccountNotLinked` for users who try
+  both paths.
 - Added the first evaluation handoff from saved Session transcripts into an
   owned structured review with five score dimensions and a next action.
 - Added the first owned session history/review revisit path: Home now loads the
@@ -70,6 +74,10 @@ progression/streak records or the next module foundation should follow.
   types, and interviewer styles, plus `/api/catalog`. The client now loads those
   records and falls back to the checked-in defaults if the catalog endpoint is
   unavailable.
+- Added the first admin prompt config slice: `ADMIN_EMAILS` gates a signed-in
+  Admin tab, prompt configs are versioned in Postgres, admins can view versions,
+  save drafts, and activate versions, and Realtime/Evaluation calls record the
+  prompt config version used.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -93,10 +101,11 @@ progression/streak records or the next module foundation should follow.
 - Live `quesiq.com` QA passed across the owned practice loop and tonight's
   deployed follow-up slices:
   - GitHub sign-in works.
-  - Email magic-link sign-in is wired in code and needs deployed Brevo/env QA.
-  - Google sign-in is wired in code and needs deployed OAuth/env QA.
+  - Email magic-link sign-in works.
+  - Google sign-in works and can link to an existing email-owned account.
   - GitHub OAuth may silently reauthorize after app sign-out because the browser
     remains signed into GitHub; this is normal provider-session behavior.
+  - Signed-out users land on the sign-in screen and cannot access the app tabs.
   - Practice launch creates an owned Session before the voice screen opens.
   - The voice screen shows a real Session UUID.
   - Direct Realtime voice starts and ends normally.
@@ -127,10 +136,9 @@ progression/streak records or the next module foundation should follow.
 - Older OneDrive Bubble/rebuild files are reference copies, not a second source
   of truth unless intentionally resynced.
 - Direct OpenAI Realtime is the preferred first browser voice path.
-- Default interview model is `gpt-realtime` unless `OPENAI_REALTIME_MODEL`
-  overrides it.
-- Default evaluation model is `gpt-5.4-mini` unless
-  `OPENAI_EVALUATION_MODEL` overrides it.
+- Default prompt configs are seeded with `gpt-realtime`/`marin` for interview
+  voice and `gpt-5.4-mini` for evaluation. After migration, the active
+  Postgres prompt config is the editable runtime source.
 - VAPI is a fallback path, not the default path, while phone calls are out of
   scope.
 - QuesIQ should own durable user context, session snapshots, transcript/artifact
@@ -138,6 +146,8 @@ progression/streak records or the next module foundation should follow.
 - Practice mode, question type, and interviewer style records are now
   backend-owned seeded catalog data, with checked-in frontend defaults retained
   as a resilience fallback.
+- Email magic links are the primary low-friction auth path. Google OAuth is also
+  enabled. GitHub remains available for testing/admin use.
 - Resume upload now stores resume metadata and parsed text in the Profile
   record. It does not store raw file binaries or use object storage yet.
 - Legacy `.doc` parsing is not supported; DOCX, TXT, MD, and most PDFs are the
@@ -147,12 +157,13 @@ progression/streak records or the next module foundation should follow.
 
 ## Next Best Work
 
-1. Deploy and user-confirm QA for the resume-aware practice plus catalog slices.
-2. Decide whether persisted progression/streak records or the next multi-module
-   foundation should follow.
-3. Add deploy/user-confirmed QA for any changes because localhost preview is
+1. Deploy and user-confirm QA for the Admin prompt config panel.
+2. Add `ADMIN_EMAILS` to Render before trying the Admin tab.
+3. Decide whether persisted progression/streak records or cost/observability
+   hardening should follow.
+4. Add deploy/user-confirmed QA for any changes because localhost preview is
    deprecated in this environment.
-4. Keep verifying that `Launch Voice Session` creates a Session id before direct
+5. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
 
 ## Watch Outs

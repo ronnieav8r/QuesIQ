@@ -69,12 +69,26 @@ saved practice launch:
 New Session creation requires a signed-in user so later evaluation, history,
 and progression records have an owner.
 
+The app shell is locked behind sign-in. Email magic links are the primary
+nontechnical user path, with Google OAuth and GitHub OAuth also available.
+
+## Admin
+
+Prompt configs for live Que voice sessions and post-session evaluation are
+stored in Postgres and editable through the signed-in Admin tab for emails in
+`ADMIN_EMAILS`.
+
+Set this server environment variable before using the admin panel:
+
+- `ADMIN_EMAILS` - comma-separated signed-in email addresses with admin access
+
 ## Practice Review
 
 Ended voice sessions save transcript and lifecycle artifacts first, then create
 an owned practice review from that saved transcript.
 
-Set this optional server environment variable to override the review model:
+Before prompt config records are migrated, this optional server environment
+variable provides the fallback review model:
 
 - `OPENAI_EVALUATION_MODEL` - optional model override, defaults to `gpt-5.4-mini`
 
@@ -83,7 +97,9 @@ Set this optional server environment variable to override the review model:
 The voice session screen opens a direct browser WebRTC session with OpenAI Realtime.
 
 Set these server environment variables before testing it on Render or another
-approved preview path:
+approved preview path. After prompt config records are migrated, model and voice
+come from the active admin-managed prompt config unless the code fallback is
+used.
 
 - `OPENAI_API_KEY` - required server-side OpenAI API key
 - `OPENAI_REALTIME_MODEL` - optional model override, defaults to `gpt-realtime`

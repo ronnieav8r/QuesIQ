@@ -32,6 +32,12 @@ Last updated: 2026-05-23
 - Seeded backend Interview catalog records for practice modes, question types,
   and interviewer styles, exposed through `/api/catalog` with frontend fallback
   defaults
+- Admin-only prompt config slice:
+  - `ADMIN_EMAILS` gates admin access by signed-in email
+  - Realtime interviewer and post-session evaluation prompts are stored as
+    versioned Postgres records
+  - the Admin tab can view versions, save drafts, and activate a version
+  - Realtime Sessions and Evaluations record the prompt config version used
 - Client-side session setup snapshot and focused voice session screen
 - Direct OpenAI Realtime browser voice slice from the session screen:
   - server-side `/api/realtime/session` WebRTC exchange route
@@ -54,6 +60,10 @@ Last updated: 2026-05-23
   - email magic-link, Google, and GitHub sign-in routes and Auth.js Drizzle
     tables are in code
   - email magic links use Brevo transactional email env vars
+  - signed-out users land on a dedicated sign-in screen; app tabs are available
+    only after sign-in
+  - Google OAuth can link to an existing email magic-link account with the same
+    verified email
   - new app-owned Sessions store their authenticated user owner
   - Session creation, artifact save, and Realtime exchange require that owner
     before history, evaluation, and progression build on Session data
@@ -61,7 +71,8 @@ Last updated: 2026-05-23
   - ended Session transcript artifacts can produce an owned structured review
   - review stores five score dimensions, a coaching insight, and a next action
   - the session screen shows review progress after the voice artifact saves
-  - default evaluation model is `gpt-5.4-mini`
+  - default evaluation config is seeded as `gpt-5.4-mini` and can be edited
+    through the admin prompt config panel
 - First owned history/review revisit path:
   - Home loads the signed-in user's recent app-owned Sessions from Postgres
   - completed saved reviews can be reopened after leaving the live session
@@ -103,8 +114,9 @@ The current coded app has passed:
   - Next started successfully while the service update was still settling
 - Live `quesiq.com` QA passed after the Auth.js and evaluation deploys:
   - GitHub sign-in works.
-  - Email magic-link sign-in is wired in code and needs deployed Brevo/env QA.
-  - Google sign-in is wired in code and needs deployed OAuth/env QA.
+  - Email magic-link sign-in works.
+  - Google sign-in works and linked to the existing Gmail-backed account.
+  - Signed-out users land on the sign-in screen instead of the app Home view.
   - Owned Session launch works.
   - Session UUID appears before voice starts.
   - Direct Realtime voice starts and ends normally.
@@ -144,11 +156,11 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Deploy and user-confirm QA the resume-aware practice and catalog slices on
-   `quesiq-web`.
-2. Decide whether persisted progression/streak records or the next multi-module
-   foundation should follow.
-3. Continue deploy-based QA on `quesiq-web` while localhost preview is
+1. Deploy and user-confirm QA the admin prompt config slice on `quesiq-web`.
+2. Add `ADMIN_EMAILS` in Render before QAing the Admin tab.
+3. Decide whether persisted progression/streak records or cost/observability
+   hardening should follow.
+4. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 
 ## Reference Inputs
