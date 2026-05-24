@@ -894,6 +894,24 @@ textarea::placeholder {
   min-height: 24rem;
 }
 
+.runtime-context-panel {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.85rem;
+}
+
+.runtime-context-panel ul {
+  color: var(--muted);
+  display: grid;
+  gap: 0.35rem;
+  line-height: 1.4;
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
 .history-summary {
   grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
 }

@@ -16,6 +16,23 @@ const promptLabels: Record<PromptConfigKey, string> = {
   session_evaluation: "Post-Session Evaluation",
 };
 
+const runtimeContextByTarget = {
+  evaluation: [
+    "Session: mode, question focus, interviewer style, target role, target company",
+    "Candidate context: job description, resume name, capped resume excerpt",
+    "Transcript: speaker and text for each saved turn",
+    "Response format: required JSON with summary, coaching insight, next action, and five scores",
+  ],
+  realtime: [
+    "Practice mode",
+    "Interviewer style",
+    "Question focus",
+    "Target role",
+    "Target company",
+    "Capped resume context when available",
+  ],
+};
+
 function emptyDraft(): PromptDraft {
   return {
     instructions: "",
@@ -306,6 +323,14 @@ export function AdminView() {
                   value={draft.instructions}
                 />
               </label>
+              <section className="runtime-context-panel" aria-labelledby="runtime-context-title">
+                <h3 id="runtime-context-title">Runtime context also sent</h3>
+                <ul>
+                  {runtimeContextByTarget[selectedConfig.target].map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </section>
               <div className="inline-actions">
                 <button disabled={pending} onClick={() => saveVersion(true)} type="button">
                   Save And Activate
