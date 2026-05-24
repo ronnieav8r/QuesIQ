@@ -21,5 +21,11 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       return session;
     },
   },
-  providers: [MagicLinkProvider(), Google, GitHub],
+  providers: [
+    MagicLinkProvider(),
+    Google({
+      allowDangerousEmailAccountLinking: true,
+    }),
+    GitHub,
+  ],
 });
