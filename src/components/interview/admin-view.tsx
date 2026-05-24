@@ -53,6 +53,8 @@ export function AdminView() {
   const [draft, setDraft] = useState<PromptDraft>(emptyDraft);
   const [error, setError] = useState<string>();
   const [adminSection, setAdminSection] = useState<"components" | "prompts">("components");
+  const [componentType, setComponentType] =
+    useState<PromptComponentRecord["type"]>("mode");
   const [pending, setPending] = useState(false);
   const [selectedComponentKey, setSelectedComponentKey] = useState<string>();
   const [selectedId, setSelectedId] = useState<string>();
@@ -157,6 +159,7 @@ export function AdminView() {
         nextComponents.find(
           (component) => `${component.type}:${component.key}` === selectedComponentKey,
         ) ||
+        nextComponents.find((component) => component.type === componentType) ||
         nextComponents[0];
 
       setComponents(nextComponents);
@@ -357,6 +360,11 @@ export function AdminView() {
     }
   }
 
+  function chooseComponentType(type: PromptComponentRecord["type"]) {
+    setComponentType(type);
+    applySelectedComponent(components.find((component) => component.type === type));
+  }
+
   return (
     <section className="screen admin-screen" aria-labelledby="admin-title">
       <div className="screen-toolbar">
@@ -511,97 +519,86 @@ export function AdminView() {
       )}
 
       {adminSection === "components" && status === "ready" && (
-      <div className="admin-layout component-admin-layout">
-        <aside className="prompt-version-list" aria-label="Prompt components">
-          <section>
-            <h2>Mode Components</h2>
-            {components
-              .filter((component) => component.type === "mode")
-              .map((component) => (
-                <button
-                  className={
-                    selectedComponentKey === `${component.type}:${component.key}`
-                      ? "active"
-                      : ""
-                  }
-                  key={`${component.type}:${component.key}`}
-                  onClick={() => applySelectedComponent(component)}
-                  type="button"
-                >
-                  <span>{component.displayName}</span>
-                  <small>{component.description || component.key}</small>
-                </button>
-              ))}
-          </section>
-          <section>
-            <h2>Question Components</h2>
-            {components
-              .filter((component) => component.type === "question_type")
-              .map((component) => (
-                <button
-                  className={
-                    selectedComponentKey === `${component.type}:${component.key}`
-                      ? "active"
-                      : ""
-                  }
-                  key={`${component.type}:${component.key}`}
-                  onClick={() => applySelectedComponent(component)}
-                  type="button"
-                >
-                  <span>{component.displayName}</span>
-                  <small>{component.key}</small>
-                </button>
-              ))}
-          </section>
-          <section>
-            <h2>Style Components</h2>
-            {components
-              .filter((component) => component.type === "style")
-              .map((component) => (
-                <button
-                  className={
-                    selectedComponentKey === `${component.type}:${component.key}`
-                      ? "active"
-                      : ""
-                  }
-                  key={`${component.type}:${component.key}`}
-                  onClick={() => applySelectedComponent(component)}
-                  type="button"
-                >
-                  <span>{component.displayName}</span>
-                  <small>{component.description || component.key}</small>
-                </button>
-              ))}
-          </section>
-        </aside>
+        <>
+          <div className="component-tabs" aria-label="Prompt component type">
+            <button
+              className={componentType === "mode" ? "active" : ""}
+              onClick={() => chooseComponentType("mode")}
+              type="button"
+            >
+              Modes
+            </button>
+            <button
+              className={componentType === "question_type" ? "active" : ""}
+              onClick={() => chooseComponentType("question_type")}
+              type="button"
+            >
+              Questions
+            </button>
+            <button
+              className={componentType === "style" ? "active" : ""}
+              onClick={() => chooseComponentType("style")}
+              type="button"
+            >
+              Styles
+            </button>
+          </div>
+          <div className="admin-layout component-admin-layout">
+            <aside className="prompt-version-list" aria-label="Prompt components">
+              <section>
+                <h2>
+                  {componentType === "mode" && "Mode Components"}
+                  {componentType === "question_type" && "Question Components"}
+                  {componentType === "style" && "Style Components"}
+                </h2>
+                {components
+                  .filter((component) => component.type === componentType)
+                  .map((component) => (
+                    <button
+                      className={
+                        selectedComponentKey === `${component.type}:${component.key}`
+                          ? "active"
+                          : ""
+                      }
+                      key={`${component.type}:${component.key}`}
+                      onClick={() => applySelectedComponent(component)}
+                      type="button"
+                    >
+                      <span>{component.displayName}</span>
+                      <small>{component.description || component.key}</small>
+                    </button>
+                  ))}
+              </section>
+            </aside>
 
-        {selectedComponent && (
-          <form className="prompt-editor" onSubmit={(event) => event.preventDefault()}>
-            <div className="section-head">
-              <h2>{selectedComponent.displayName}</h2>
-              <span>{selectedComponent.type.replace("_", " ")}</span>
-            </div>
-            <label>
-              <span>Component instructions</span>
-              <textarea
-                onChange={(event) => setComponentDraft(event.target.value)}
-                rows={8}
-                value={componentDraft}
-              />
-            </label>
-            <div className="inline-actions">
-              <button disabled={pending} onClick={saveComponent} type="button">
-                Save Component
-              </button>
-            </div>
-            <p>
-              This component is composed into Realtime voice instructions and the
-              post-session evaluation input when the matching mode, question focus,
-              or style is selected.
-            </p>
-          </form>
-        )}
-      </div>
+            {selectedComponent && selectedComponent.type === componentType && (
+              <form className="prompt-editor" onSubmit={(event) => event.preventDefault()}>
+                <div className="section-head">
+                  <h2>{selectedComponent.displayName}</h2>
+                  <span>{selectedComponent.type.replace("_", " ")}</span>
+                </div>
+                <label>
+                  <span>Component instructions</span>
+                  <textarea
+                    onChange={(event) => setComponentDraft(event.target.value)}
+                    rows={8}
+                    value={componentDraft}
+                  />
+                </label>
+                <div className="inline-actions">
+                  <button disabled={pending} onClick={saveComponent} type="button">
+                    Save Component
+                  </button>
+                </div>
+                <p>
+                  This component is composed into Realtime voice instructions and the
+                  post-session evaluation input when the matching mode, question focus,
+                  or style is selected.
+                </p>
+              </form>
+            )}
+          </div>
+        </>
       )}
     </section>
   );

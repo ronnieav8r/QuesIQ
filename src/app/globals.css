@@ -870,6 +870,25 @@ textarea::placeholder {
   border-color: var(--focus);
 }
 
+.component-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.component-tabs button {
+  background: transparent;
+  border-color: var(--border);
+  flex: 1 1 8rem;
+  min-height: 2.75rem;
+}
+
+.component-tabs button.active,
+.component-tabs button:hover {
+  background: var(--focus-soft);
+  border-color: var(--focus);
+}
+
 .prompt-version-list,
 .prompt-editor {
   background: var(--surface-band);
