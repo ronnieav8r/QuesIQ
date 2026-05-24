@@ -848,6 +848,28 @@ textarea::placeholder {
   gap: 0.85rem;
 }
 
+.admin-tabs {
+  background: var(--surface-band);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 0.4rem;
+}
+
+.admin-tabs button {
+  background: transparent;
+  border-color: transparent;
+  min-height: 2.7rem;
+}
+
+.admin-tabs button.active,
+.admin-tabs button:hover {
+  background: var(--focus-soft);
+  border-color: var(--focus);
+}
+
 .prompt-version-list,
 .prompt-editor {
   background: var(--surface-band);
@@ -856,6 +878,12 @@ textarea::placeholder {
   display: grid;
   gap: 0.85rem;
   padding: 1rem;
+}
+
+.component-admin-layout .prompt-editor {
+  align-self: start;
+  position: sticky;
+  top: 1rem;
 }
 
 .prompt-version-list {
@@ -1119,6 +1147,10 @@ textarea::placeholder {
   .admin-layout {
     align-items: start;
     grid-template-columns: minmax(13rem, 0.34fr) minmax(0, 1fr);
+  }
+
+  .component-admin-layout {
+    grid-template-columns: minmax(17rem, 0.45fr) minmax(0, 1fr);
   }
 
   .history-card-meta {

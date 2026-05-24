@@ -52,6 +52,7 @@ export function AdminView() {
   const [componentDraft, setComponentDraft] = useState("");
   const [draft, setDraft] = useState<PromptDraft>(emptyDraft);
   const [error, setError] = useState<string>();
+  const [adminSection, setAdminSection] = useState<"components" | "prompts">("components");
   const [pending, setPending] = useState(false);
   const [selectedComponentKey, setSelectedComponentKey] = useState<string>();
   const [selectedId, setSelectedId] = useState<string>();
@@ -371,121 +372,146 @@ export function AdminView() {
       {status === "loading" ? (
         <p>Loading prompt configs.</p>
       ) : (
-        <div className="admin-layout">
-          <aside className="prompt-version-list" aria-label="Prompt versions">
-            {Object.entries(groupedConfigs).map(([key, group]) => (
-              <section key={key}>
-                <h2>{promptLabels[key as PromptConfigKey] || key}</h2>
-                {group.map((config) => (
-                  <button
-                    className={selectedId === config.id ? "active" : ""}
-                    key={config.id}
-                    onClick={() => applySelectedConfig(config)}
-                    type="button"
-                  >
-                    <span>
-                      v{config.version} {config.active ? "Active" : "Draft"}
-                    </span>
-                    <small>{config.model}</small>
-                  </button>
-                ))}
-              </section>
-            ))}
-          </aside>
+        <>
+          <div className="admin-tabs" aria-label="Admin prompt sections">
+            <button
+              className={adminSection === "components" ? "active" : ""}
+              onClick={() => setAdminSection("components")}
+              type="button"
+            >
+              Prompt Components
+            </button>
+            <button
+              className={adminSection === "prompts" ? "active" : ""}
+              onClick={() => setAdminSection("prompts")}
+              type="button"
+            >
+              Base Prompts
+            </button>
+          </div>
 
-          {selectedConfig ? (
-            <form className="prompt-editor" onSubmit={(event) => event.preventDefault()}>
-              <div className="section-head">
-                <h2>
-                  {selectedConfig.name} v{selectedConfig.version}
-                </h2>
-                <span>{selectedConfig.active ? "Active" : "Draft"}</span>
-              </div>
-              <label>
-                <span>Name</span>
-                <input
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, name: event.target.value }))
-                  }
-                  value={draft.name}
-                />
-              </label>
-              <label>
-                <span>Model</span>
-                <input
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, model: event.target.value }))
-                  }
-                  value={draft.model}
-                />
-              </label>
-              {selectedConfig.target === "realtime" && (
-                <label>
-                  <span>Voice</span>
-                  <input
-                    onChange={(event) =>
-                      setDraft((current) => ({ ...current, voice: event.target.value }))
-                    }
-                    value={draft.voice}
-                  />
-                </label>
-              )}
-              <label>
-                <span>Instructions</span>
-                <textarea
-                  onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      instructions: event.target.value,
-                    }))
-                  }
-                  rows={18}
-                  value={draft.instructions}
-                />
-              </label>
-              <section className="runtime-context-panel" aria-labelledby="runtime-context-title">
-                <h3 id="runtime-context-title">Runtime context also sent</h3>
-                <ul>
-                  {runtimeContextByTarget[selectedConfig.target].map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </section>
-              <div className="inline-actions">
-                <button disabled={pending} onClick={() => saveVersion(true)} type="button">
-                  Save And Activate
-                </button>
-                <button
-                  className="secondary"
-                  disabled={pending}
-                  onClick={() => saveVersion(false)}
-                  type="button"
-                >
-                  Save Draft
-                </button>
-                {!selectedConfig.active && (
-                  <button
-                    className="secondary"
-                    disabled={pending}
-                    onClick={activateVersion}
-                    type="button"
+          {adminSection === "prompts" && (
+            <div className="admin-layout">
+              <aside className="prompt-version-list" aria-label="Prompt versions">
+                {Object.entries(groupedConfigs).map(([key, group]) => (
+                  <section key={key}>
+                    <h2>{promptLabels[key as PromptConfigKey] || key}</h2>
+                    {group.map((config) => (
+                      <button
+                        className={selectedId === config.id ? "active" : ""}
+                        key={config.id}
+                        onClick={() => applySelectedConfig(config)}
+                        type="button"
+                      >
+                        <span>
+                          v{config.version} {config.active ? "Active" : "Draft"}
+                        </span>
+                        <small>{config.model}</small>
+                      </button>
+                    ))}
+                  </section>
+                ))}
+              </aside>
+
+              {selectedConfig ? (
+                <form className="prompt-editor" onSubmit={(event) => event.preventDefault()}>
+                  <div className="section-head">
+                    <h2>
+                      {selectedConfig.name} v{selectedConfig.version}
+                    </h2>
+                    <span>{selectedConfig.active ? "Active" : "Draft"}</span>
+                  </div>
+                  <label>
+                    <span>Name</span>
+                    <input
+                      onChange={(event) =>
+                        setDraft((current) => ({ ...current, name: event.target.value }))
+                      }
+                      value={draft.name}
+                    />
+                  </label>
+                  <label>
+                    <span>Model</span>
+                    <input
+                      onChange={(event) =>
+                        setDraft((current) => ({ ...current, model: event.target.value }))
+                      }
+                      value={draft.model}
+                    />
+                  </label>
+                  {selectedConfig.target === "realtime" && (
+                    <label>
+                      <span>Voice</span>
+                      <input
+                        onChange={(event) =>
+                          setDraft((current) => ({ ...current, voice: event.target.value }))
+                        }
+                        value={draft.voice}
+                      />
+                    </label>
+                  )}
+                  <label>
+                    <span>Instructions</span>
+                    <textarea
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          instructions: event.target.value,
+                        }))
+                      }
+                      rows={18}
+                      value={draft.instructions}
+                    />
+                  </label>
+                  <section
+                    className="runtime-context-panel"
+                    aria-labelledby="runtime-context-title"
                   >
-                    Activate Selected
-                  </button>
-                )}
-              </div>
-              {error && <p className="form-error">{error}</p>}
-            </form>
-          ) : (
-            <section className="prompt-editor">
-              <p>No prompt configs found. Run database migrations and refresh.</p>
-              {error && <p className="form-error">{error}</p>}
-            </section>
+                    <h3 id="runtime-context-title">Runtime context also sent</h3>
+                    <ul>
+                      {runtimeContextByTarget[selectedConfig.target].map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </section>
+                  <div className="inline-actions">
+                    <button disabled={pending} onClick={() => saveVersion(true)} type="button">
+                      Save And Activate
+                    </button>
+                    <button
+                      className="secondary"
+                      disabled={pending}
+                      onClick={() => saveVersion(false)}
+                      type="button"
+                    >
+                      Save Draft
+                    </button>
+                    {!selectedConfig.active && (
+                      <button
+                        className="secondary"
+                        disabled={pending}
+                        onClick={activateVersion}
+                        type="button"
+                      >
+                        Activate Selected
+                      </button>
+                    )}
+                  </div>
+                  {error && <p className="form-error">{error}</p>}
+                </form>
+              ) : (
+                <section className="prompt-editor">
+                  <p>No prompt configs found. Run database migrations and refresh.</p>
+                  {error && <p className="form-error">{error}</p>}
+                </section>
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
 
-      <div className="admin-layout">
+      {adminSection === "components" && status === "ready" && (
+      <div className="admin-layout component-admin-layout">
         <aside className="prompt-version-list" aria-label="Prompt components">
           <section>
             <h2>Mode Components</h2>
@@ -576,6 +602,7 @@ export function AdminView() {
           </form>
         )}
       </div>
+      )}
     </section>
   );
 }
