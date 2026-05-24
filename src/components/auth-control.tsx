@@ -149,7 +149,14 @@ export function AuthView({
 
           <aside className="auth-panel auth-secondary">
             <h2>Other sign-in options</h2>
-            <p>GitHub remains available for testing and admin use.</p>
+            <p>Use Google for a quick account connection, or GitHub for testing and admin use.</p>
+            <button
+              className="secondary"
+              onClick={() => signIn("google")}
+              type="button"
+            >
+              Continue with Google
+            </button>
             <button
               className="secondary"
               onClick={() => signIn("github")}
