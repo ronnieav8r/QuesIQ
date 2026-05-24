@@ -87,8 +87,10 @@ export const sessions = pgTable("sessions", {
   modeKey: text("mode_key").notNull(),
   questionTypeKey: text("question_type_key"),
   realtimeCallId: text("realtime_call_id"),
+  realtimeModel: text("realtime_model"),
   realtimePromptConfigKey: text("realtime_prompt_config_key"),
   realtimePromptConfigVersion: integer("realtime_prompt_config_version"),
+  realtimeVoice: text("realtime_voice"),
   startedAt: timestamp("started_at", { withTimezone: true }),
   status: text("status").$type<SessionStatus>().default("created").notNull(),
   styleKey: text("style_key").notNull(),
@@ -240,5 +242,44 @@ export const aiRuns = pgTable(
     sessionIdx: index("ai_runs_session_idx").on(aiRun.sessionId),
     statusIdx: index("ai_runs_status_idx").on(aiRun.status),
     typeIdx: index("ai_runs_type_idx").on(aiRun.runType),
+  }),
+);
+
+export const realtimeSessionUsage = pgTable(
+  "realtime_session_usage",
+  {
+    assistantTranscriptCharacters: integer("assistant_transcript_characters")
+      .default(0)
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    durationSeconds: integer("duration_seconds").default(0).notNull(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    estimatedAudioInputTokens: integer("estimated_audio_input_tokens")
+      .default(0)
+      .notNull(),
+    estimatedAudioOutputTokens: integer("estimated_audio_output_tokens")
+      .default(0)
+      .notNull(),
+    estimatedCostMicroUsd: integer("estimated_cost_micro_usd").default(0).notNull(),
+    estimationMethod: text("estimation_method").notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    model: text("model").notNull(),
+    pricingVersion: text("pricing_version").notNull(),
+    promptConfigKey: text("prompt_config_key"),
+    promptConfigVersion: integer("prompt_config_version"),
+    realtimeCallId: text("realtime_call_id"),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    transcriptTurns: integer("transcript_turns").default(0).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    userTranscriptCharacters: integer("user_transcript_characters").default(0).notNull(),
+    voice: text("voice"),
+  },
+  (usage) => ({
+    sessionIdx: uniqueIndex("realtime_session_usage_session_idx").on(usage.sessionId),
+    userIdx: index("realtime_session_usage_user_idx").on(usage.userId),
   }),
 );

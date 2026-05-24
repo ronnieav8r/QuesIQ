@@ -50,6 +50,7 @@ export function parseVoiceSessionArtifact(
   }
 
   const candidate = value as Partial<VoiceSessionArtifactDraft>;
+  const durationSeconds = candidate.durationSeconds;
 
   if (
     !isString(candidate.endedAt) ||
@@ -57,6 +58,10 @@ export function parseVoiceSessionArtifact(
     !candidate.events.every(isVoiceEvent) ||
     !Array.isArray(candidate.transcript) ||
     !candidate.transcript.every(isTranscriptTurn) ||
+    (durationSeconds !== undefined &&
+      (typeof durationSeconds !== "number" ||
+        !Number.isFinite(durationSeconds) ||
+        durationSeconds < 0)) ||
     (candidate.startedAt !== undefined && !isString(candidate.startedAt)) ||
     (candidate.endReason !== undefined && !endReasons.includes(candidate.endReason))
   ) {
@@ -64,6 +69,7 @@ export function parseVoiceSessionArtifact(
   }
 
   return {
+    durationSeconds: candidate.durationSeconds,
     endedAt: candidate.endedAt,
     endReason: candidate.endReason,
     events: candidate.events,

@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import type { VoiceSessionArtifactDraft } from "@/product/interview-types";
 import { getDb } from "@/server/db/client";
 import { sessions } from "@/server/db/schema";
+import { saveRealtimeSessionUsage } from "@/server/realtime-usage/realtime-session-usage";
 
 function toDate(value?: string) {
   return value ? new Date(value) : undefined;
@@ -29,6 +30,10 @@ export async function saveSessionArtifact(
       id: sessions.id,
       status: sessions.status,
     });
+
+  if (session) {
+    await saveRealtimeSessionUsage(sessionId, userId, artifact);
+  }
 
   return session;
 }

@@ -136,9 +136,15 @@ is still small.
 ### Track AI Runs In The App Before Exporting
 
 QuesIQ should own AI call observability in Postgres before exporting to external
-ops tools. Realtime and Evaluation calls should create AI run records with
-status, model, prompt config version, provider id where available, duration,
-errors, and token usage when the provider returns it.
+ops tools. API calls with clear provider usage, such as post-session
+Evaluations, should create exact-token API call records. Realtime voice sessions
+should use a separate compact usage table with duration, transcript split,
+model, voice, estimated audio tokens, estimated cost, pricing version, and
+estimation method.
+
+Do not store raw Realtime event streams or audio by default for cost tracking.
+Use configurable estimation assumptions and audit them against provider billing
+over time.
 
 Google Sheets can become the daily ops hub through export/sync after the app
 data is reliable. Do not build spreadsheet-like admin functionality inside the

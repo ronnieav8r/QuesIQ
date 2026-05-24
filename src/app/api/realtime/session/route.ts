@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import type { SessionSetupSnapshot } from "@/product/interview-types";
 import type { PromptConfigRecord } from "@/product/interview-types";
-import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
 import type { SessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
 import { getSessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
@@ -115,15 +114,6 @@ export async function POST(request: Request) {
   formData.set("sdp", body.sdp);
   formData.set("session", JSON.stringify(sessionConfig));
 
-  const aiRun = await startAiRun({
-    model: promptConfig.model,
-    promptConfigKey: promptConfig.key,
-    promptConfigVersion: promptConfig.version,
-    runType: "realtime",
-    sessionId: body.sessionId,
-    userId: appSession.user.id,
-  });
-
   try {
     const realtimeResponse = await fetch("https://api.openai.com/v1/realtime/calls", {
       body: formData,
@@ -135,10 +125,6 @@ export async function POST(request: Request) {
 
     if (!realtimeResponse.ok) {
       const detail = await realtimeResponse.text();
-      await completeAiRun(aiRun.id, {
-        errorMessage: detail || "OpenAI Realtime session exchange failed.",
-        status: "failed",
-      });
 
       return NextResponse.json(
         {
@@ -150,17 +136,15 @@ export async function POST(request: Request) {
     }
 
     const realtimeCallId = getRealtimeCallId(realtimeResponse.headers.get("Location"));
-    await completeAiRun(aiRun.id, {
-      providerRequestId: realtimeCallId,
-      status: "succeeded",
-    });
 
     if (realtimeCallId) {
       try {
         await saveRealtimeSessionConfig(body.sessionId, appSession.user.id, {
+          model: promptConfig.model,
           promptConfigKey: promptConfig.key,
           promptConfigVersion: promptConfig.version,
           realtimeCallId,
+          voice: sessionConfig.audio.output.voice,
         });
       } catch (error) {
         console.error("Realtime call correlation save failed.", error);
@@ -168,8 +152,10 @@ export async function POST(request: Request) {
     } else {
       try {
         await saveRealtimeSessionConfig(body.sessionId, appSession.user.id, {
+          model: promptConfig.model,
           promptConfigKey: promptConfig.key,
           promptConfigVersion: promptConfig.version,
+          voice: sessionConfig.audio.output.voice,
         });
       } catch (error) {
         console.error("Realtime prompt config save failed.", error);
@@ -182,11 +168,6 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    await completeAiRun(aiRun.id, {
-      errorMessage: error instanceof Error ? error.message : "Unknown network error.",
-      status: "failed",
-    });
-
     return NextResponse.json(
       {
         error: "OpenAI Realtime session exchange could not reach the API.",

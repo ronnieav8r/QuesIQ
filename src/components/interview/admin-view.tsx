@@ -7,6 +7,7 @@ import type {
   PromptComponentRecord,
   PromptConfigKey,
   PromptConfigRecord,
+  RealtimeSessionUsageRecord,
 } from "@/product/interview-types";
 
 type PromptDraft = {
@@ -51,17 +52,22 @@ export function AdminView() {
   const [configs, setConfigs] = useState<PromptConfigRecord[]>([]);
   const [components, setComponents] = useState<PromptComponentRecord[]>([]);
   const [aiRuns, setAiRuns] = useState<AiRunRecord[]>([]);
+  const [realtimeUsage, setRealtimeUsage] = useState<RealtimeSessionUsageRecord[]>([]);
   const [componentDraft, setComponentDraft] = useState("");
   const [draft, setDraft] = useState<PromptDraft>(emptyDraft);
   const [error, setError] = useState<string>();
-  const [adminSection, setAdminSection] =
-    useState<"ai_runs" | "components" | "prompts">("components");
+  const [adminSection, setAdminSection] = useState<"ai_usage" | "prompts">("prompts");
   const [componentType, setComponentType] =
     useState<PromptComponentRecord["type"]>("mode");
+  const [promptSection, setPromptSection] =
+    useState<"base" | PromptComponentRecord["type"]>("mode");
   const [pending, setPending] = useState(false);
   const [selectedComponentKey, setSelectedComponentKey] = useState<string>();
   const [selectedId, setSelectedId] = useState<string>();
   const [status, setStatus] = useState<"loading" | "ready">("loading");
+  const [usageSection, setUsageSection] = useState<"api_calls" | "realtime">(
+    "api_calls",
+  );
 
   const selectedConfig = useMemo(
     () => configs.find((config) => config.id === selectedId),
@@ -196,16 +202,46 @@ export function AdminView() {
     }
   }
 
+  async function loadRealtimeUsage() {
+    try {
+      setError(undefined);
+      const response = await fetch("/api/admin/realtime-usage");
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        usage?: RealtimeSessionUsageRecord[];
+      };
+
+      if (!response.ok) {
+        throw new Error(body.detail || body.error || "Realtime usage could not be loaded.");
+      }
+
+      setRealtimeUsage(body.usage ?? []);
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Realtime usage could not be loaded.",
+      );
+    }
+  }
+
   useEffect(() => {
     let ignore = false;
 
     async function loadInitialConfigs() {
       try {
         setError(undefined);
-        const [configResponse, componentResponse, aiRunsResponse] = await Promise.all([
+        const [
+          configResponse,
+          componentResponse,
+          aiRunsResponse,
+          realtimeUsageResponse,
+        ] = await Promise.all([
           fetch("/api/admin/prompt-configs"),
           fetch("/api/admin/prompt-components"),
           fetch("/api/admin/ai-runs"),
+          fetch("/api/admin/realtime-usage"),
         ]);
         const configBody = (await configResponse.json()) as {
           configs?: PromptConfigRecord[];
@@ -220,6 +256,10 @@ export function AdminView() {
         const aiRunsBody = (await aiRunsResponse.json()) as {
           error?: string;
           runs?: AiRunRecord[];
+        };
+        const realtimeUsageBody = (await realtimeUsageResponse.json()) as {
+          error?: string;
+          usage?: RealtimeSessionUsageRecord[];
         };
 
         if (!configResponse.ok) {
@@ -240,6 +280,12 @@ export function AdminView() {
           throw new Error(aiRunsBody.error || "AI runs could not be loaded.");
         }
 
+        if (!realtimeUsageResponse.ok) {
+          throw new Error(
+            realtimeUsageBody.error || "Realtime usage could not be loaded.",
+          );
+        }
+
         if (!ignore) {
           const nextConfigs = configBody.configs ?? [];
           const nextSelected = nextConfigs.find((config) => config.active);
@@ -249,6 +295,7 @@ export function AdminView() {
           setConfigs(nextConfigs);
           setComponents(nextComponents);
           setAiRuns(aiRunsBody.runs ?? []);
+          setRealtimeUsage(realtimeUsageBody.usage ?? []);
           applySelectedConfig(nextSelected);
           applySelectedComponent(nextSelectedComponent);
         }
@@ -395,21 +442,27 @@ export function AdminView() {
 
   function chooseComponentType(type: PromptComponentRecord["type"]) {
     setComponentType(type);
+    setPromptSection(type);
     applySelectedComponent(components.find((component) => component.type === type));
   }
 
   function refreshAdminSection() {
-    if (adminSection === "ai_runs") {
-      void loadAiRuns();
+    if (adminSection === "ai_usage") {
+      if (usageSection === "api_calls") {
+        void loadAiRuns();
+        return;
+      }
+
+      void loadRealtimeUsage();
       return;
     }
 
-    if (adminSection === "components") {
-      void loadComponents();
+    if (promptSection === "base") {
+      void loadConfigs();
       return;
     }
 
-    void loadConfigs();
+    void loadComponents();
   }
 
   return (
@@ -417,7 +470,7 @@ export function AdminView() {
       <div className="screen-toolbar">
         <div>
           <p className="eyebrow">Admin</p>
-          <h1 id="admin-title">Prompt configs</h1>
+          <h1 id="admin-title">Admin</h1>
         </div>
         <button className="secondary" onClick={refreshAdminSection} type="button">
           Refresh
@@ -428,31 +481,76 @@ export function AdminView() {
         <p>Loading prompt configs.</p>
       ) : (
         <>
-          <div className="admin-tabs" aria-label="Admin prompt sections">
-            <button
-              className={adminSection === "components" ? "active" : ""}
-              onClick={() => setAdminSection("components")}
-              type="button"
-            >
-              Prompt Components
-            </button>
+          <div className="admin-tabs" aria-label="Admin sections">
             <button
               className={adminSection === "prompts" ? "active" : ""}
               onClick={() => setAdminSection("prompts")}
               type="button"
             >
-              Base Prompts
+              Prompts
             </button>
             <button
-              className={adminSection === "ai_runs" ? "active" : ""}
-              onClick={() => setAdminSection("ai_runs")}
+              className={adminSection === "ai_usage" ? "active" : ""}
+              onClick={() => setAdminSection("ai_usage")}
               type="button"
             >
-              AI Runs
+              AI Usage
             </button>
           </div>
 
           {adminSection === "prompts" && (
+            <div className="component-tabs" aria-label="Prompt section">
+              <button
+                className={promptSection === "base" ? "active" : ""}
+                onClick={() => setPromptSection("base")}
+                type="button"
+              >
+                Base
+              </button>
+              <button
+                className={promptSection === "mode" ? "active" : ""}
+                onClick={() => chooseComponentType("mode")}
+                type="button"
+              >
+                Modes
+              </button>
+              <button
+                className={promptSection === "question_type" ? "active" : ""}
+                onClick={() => chooseComponentType("question_type")}
+                type="button"
+              >
+                Questions
+              </button>
+              <button
+                className={promptSection === "style" ? "active" : ""}
+                onClick={() => chooseComponentType("style")}
+                type="button"
+              >
+                Styles
+              </button>
+            </div>
+          )}
+
+          {adminSection === "ai_usage" && (
+            <div className="component-tabs" aria-label="AI usage section">
+              <button
+                className={usageSection === "api_calls" ? "active" : ""}
+                onClick={() => setUsageSection("api_calls")}
+                type="button"
+              >
+                API Calls
+              </button>
+              <button
+                className={usageSection === "realtime" ? "active" : ""}
+                onClick={() => setUsageSection("realtime")}
+                type="button"
+              >
+                Realtime Sessions
+              </button>
+            </div>
+          )}
+
+          {adminSection === "prompts" && promptSection === "base" && (
             <div className="admin-layout">
               <aside className="prompt-version-list" aria-label="Prompt versions">
                 {Object.entries(groupedConfigs).map(([key, group]) => (
@@ -572,31 +670,8 @@ export function AdminView() {
         </>
       )}
 
-      {adminSection === "components" && status === "ready" && (
+      {adminSection === "prompts" && promptSection !== "base" && status === "ready" && (
         <>
-          <div className="component-tabs" aria-label="Prompt component type">
-            <button
-              className={componentType === "mode" ? "active" : ""}
-              onClick={() => chooseComponentType("mode")}
-              type="button"
-            >
-              Modes
-            </button>
-            <button
-              className={componentType === "question_type" ? "active" : ""}
-              onClick={() => chooseComponentType("question_type")}
-              type="button"
-            >
-              Questions
-            </button>
-            <button
-              className={componentType === "style" ? "active" : ""}
-              onClick={() => chooseComponentType("style")}
-              type="button"
-            >
-              Styles
-            </button>
-          </div>
           <div className="admin-layout component-admin-layout">
             <aside className="prompt-version-list" aria-label="Prompt components">
               <section>
@@ -655,7 +730,7 @@ export function AdminView() {
         </>
       )}
 
-      {adminSection === "ai_runs" && status === "ready" && (
+      {adminSection === "ai_usage" && usageSection === "api_calls" && status === "ready" && (
         <section className="ai-runs-panel" aria-labelledby="ai-runs-title">
           <div className="section-head">
             <h2 id="ai-runs-title">Recent AI runs</h2>
@@ -667,7 +742,7 @@ export function AdminView() {
                 <article className="ai-run-card" key={run.id}>
                   <div className="ai-run-main">
                     <strong>
-                      {run.runType} · {run.status}
+                      {run.runType} - {run.status}
                     </strong>
                     <span>{new Date(run.startedAt).toLocaleString()}</span>
                   </div>
@@ -712,6 +787,75 @@ export function AdminView() {
             </div>
           ) : (
             <p>No AI runs have been recorded yet.</p>
+          )}
+          {error && <p className="form-error">{error}</p>}
+        </section>
+      )}
+
+      {adminSection === "ai_usage" && usageSection === "realtime" && status === "ready" && (
+        <section className="ai-runs-panel" aria-labelledby="realtime-usage-title">
+          <div className="section-head">
+            <h2 id="realtime-usage-title">Realtime Sessions</h2>
+            <span>{realtimeUsage.length} shown</span>
+          </div>
+          {realtimeUsage.length > 0 ? (
+            <div className="ai-runs-list">
+              {realtimeUsage.map((usage) => (
+                <article className="ai-run-card" key={usage.id}>
+                  <div className="ai-run-main">
+                    <strong>
+                      {usage.model} - ${(usage.estimatedCostMicroUsd / 1_000_000).toFixed(4)}
+                    </strong>
+                    <span>
+                      {usage.startedAt
+                        ? new Date(usage.startedAt).toLocaleString()
+                        : "No start time"}
+                    </span>
+                  </div>
+                  <dl>
+                    <div>
+                      <dt>Duration</dt>
+                      <dd>{usage.durationSeconds}s</dd>
+                    </div>
+                    <div>
+                      <dt>Estimated audio tokens</dt>
+                      <dd>
+                        {usage.estimatedAudioInputTokens} in /{" "}
+                        {usage.estimatedAudioOutputTokens} out
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Transcript</dt>
+                      <dd>
+                        {usage.transcriptTurns} turns / {usage.userTranscriptCharacters} user
+                        chars / {usage.assistantTranscriptCharacters} Que chars
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>User</dt>
+                      <dd>{usage.userEmail || usage.userId || "Unknown"}</dd>
+                    </div>
+                    <div>
+                      <dt>Prompt</dt>
+                      <dd>
+                        {usage.promptConfigKey
+                          ? `${usage.promptConfigKey} v${usage.promptConfigVersion ?? "--"}`
+                          : "Not recorded"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Method</dt>
+                      <dd>{usage.estimationMethod}</dd>
+                    </div>
+                  </dl>
+                  <p>Session: {usage.sessionId}</p>
+                  {usage.realtimeCallId && <p>Realtime call: {usage.realtimeCallId}</p>}
+                  <p>Pricing: {usage.pricingVersion}</p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p>No realtime sessions have been recorded yet.</p>
           )}
           {error && <p className="form-error">{error}</p>}
         </section>

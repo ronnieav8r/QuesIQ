@@ -45,13 +45,16 @@ Last updated: 2026-05-23
     job, resume, and transcript context
   - Realtime Sessions and Evaluations record the base prompt config version used
 - Admin AI Runs visibility:
-  - Realtime session exchange attempts create AI run records with status,
-    model, prompt config version, provider call id when available, duration, and
-    errors
+  - Admin is now organized into Prompts and AI Usage, with sub-tabs for base
+    prompts, modes, questions, styles, API calls, and Realtime sessions
   - post-session evaluation attempts create AI run records with status, model,
     prompt config version, provider response id, duration, errors, and exact
     token counts when OpenAI returns `usage`
-  - Admin has an AI Runs tab for recent run inspection
+  - Realtime voice sessions create compact usage records from saved artifacts:
+    duration, transcript split, model, voice, prompt version, estimated audio
+    tokens, estimated cost, pricing version, and estimation method
+  - Realtime cost estimates use configurable audio-token-per-minute assumptions
+    and can be audited/adjusted over time
 - Client-side session setup snapshot and focused voice session screen
 - Direct OpenAI Realtime browser voice slice from the session screen:
   - server-side `/api/realtime/session` WebRTC exchange route

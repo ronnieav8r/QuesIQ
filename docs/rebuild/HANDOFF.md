@@ -79,10 +79,11 @@ cost/observability hardening should follow.
   versions, save drafts, and activate versions, practice modes/question
   types/interviewer styles have editable prompt instructions, and
   Realtime/Evaluation calls compose those components with user/session context.
-- Added the first Admin AI Runs visibility slice: Realtime and Evaluation calls
-  create AI run records with status, model, prompt config version, provider id
-  when available, duration, errors, and exact evaluation token counts when
-  OpenAI returns usage.
+- Added the first Admin AI Usage visibility slice: Admin now has Prompts and AI
+  Usage sections, Evaluation calls create exact-token API call records, and
+  Realtime voice sessions create compact estimated usage records with duration,
+  transcript split, model, voice, estimated audio tokens, estimated cost, pricing
+  version, and estimation method.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -164,7 +165,8 @@ cost/observability hardening should follow.
 
 ## Next Best Work
 
-1. Deploy and user-confirm QA for the Admin prompt config panel and AI Runs tab.
+1. Deploy and user-confirm QA for the Admin prompt config panel and AI Usage
+   tabs.
 2. Add `ADMIN_EMAILS` to Render before trying the Admin tab.
 3. Decide whether persisted progression/streak records or cost/observability
    hardening should follow.

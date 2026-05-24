@@ -220,6 +220,14 @@ export function SessionView({
               <dd>{artifactDraft.transcript.length}</dd>
             </div>
             <div>
+              <dt>Duration</dt>
+              <dd>
+                {artifactDraft.durationSeconds !== undefined
+                  ? `${artifactDraft.durationSeconds}s`
+                  : "Waiting"}
+              </dd>
+            </div>
+            <div>
               <dt>Lifecycle events</dt>
               <dd>{artifactDraft.events.length}</dd>
             </div>

@@ -78,6 +78,13 @@
       "when": 1779667200000,
       "tag": "0011_add_ai_runs",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1779670800000,
+      "tag": "0012_add_realtime_session_usage",
+      "breakpoints": true
     }
   ]
 }

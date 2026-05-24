@@ -16,9 +16,11 @@ Last updated: 2026-05-23
   tab for viewing versions, saving drafts, and activating versions.
 - Practice modes, question types, and interviewer styles now have editable
   prompt instructions that are composed into Realtime and evaluation calls.
-- Realtime and evaluation calls now create Admin-visible AI run records with
-  status, model, prompt version, timing, provider id when available, errors, and
-  exact evaluation token counts when OpenAI returns usage.
+- Admin is organized into Prompts and AI Usage. Evaluation calls create
+  Admin-visible exact-token API call records, and Realtime voice sessions create
+  compact estimated usage records with duration, transcript split, model, voice,
+  estimated audio tokens, estimated cost, pricing version, and estimation
+  method.
 - A direct OpenAI Realtime browser voice slice is wired into that session screen
   with client artifact drafting and passed its first manual test.
 - Ended direct voice attempts now save transcript/event artifacts and Realtime
@@ -61,9 +63,10 @@ Last updated: 2026-05-23
 ## Immediate
 
 1. Add `ADMIN_EMAILS` on Render and deploy/user-confirm QA the Admin prompt
-   config panel plus AI Runs tab.
+   config panel plus AI Usage tabs.
 2. Confirm live voice and evaluation still use the active prompt config and
-   mode/style/question prompt components on new Sessions/Evaluations.
+   mode/style/question prompt components, and that new voice sessions create
+   Realtime usage estimates after artifact save.
 3. Decide whether persisted progression/streak records or cost/observability
    hardening should follow.
 4. Note email template polish as a later UX task.

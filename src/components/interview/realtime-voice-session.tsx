@@ -66,8 +66,10 @@ export function RealtimeVoiceSession({
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const queStartedRef = useRef(false);
+  const sessionStartedAtMsRef = useRef<number | undefined>(undefined);
   const [artifactDraft, setArtifactDraft] =
     useState<VoiceSessionArtifactDraft>(emptyArtifactDraft);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string>();
   const [phase, setPhase] = useState<VoiceSessionPhase>("ready");
 
@@ -111,6 +113,8 @@ export function RealtimeVoiceSession({
   }
 
   function beginArtifactDraft() {
+    sessionStartedAtMsRef.current = Date.now();
+    setElapsedSeconds(0);
     setArtifactDraft({
       events: [],
       startedAt: new Date().toISOString(),
@@ -135,8 +139,13 @@ export function RealtimeVoiceSession({
     nextPhase: VoiceSessionPhase,
   ) {
     closeMedia();
+    const durationSeconds = sessionStartedAtMsRef.current
+      ? Math.max(0, Math.round((Date.now() - sessionStartedAtMsRef.current) / 1000))
+      : undefined;
+
     setArtifactDraft((current) => ({
       ...current,
+      durationSeconds: current.durationSeconds ?? durationSeconds,
       endedAt: current.endedAt || new Date().toISOString(),
       endReason,
     }));
@@ -146,6 +155,29 @@ export function RealtimeVoiceSession({
   useEffect(() => {
     onArtifactChange(artifactDraft);
   }, [artifactDraft, onArtifactChange]);
+
+  useEffect(() => {
+    if (
+      phase !== "requesting_microphone" &&
+      phase !== "connecting" &&
+      phase !== "live"
+    ) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      if (!sessionStartedAtMsRef.current) {
+        setElapsedSeconds(0);
+        return;
+      }
+
+      setElapsedSeconds(
+        Math.max(0, Math.round((Date.now() - sessionStartedAtMsRef.current) / 1000)),
+      );
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [phase]);
 
   function startQue(dataChannel: RTCDataChannel) {
     if (queStartedRef.current) {
@@ -276,6 +308,11 @@ export function RealtimeVoiceSession({
   const latestEvents = artifactDraft.events.slice(-6).reverse();
   const canStart = phase === "ready" || phase === "ended" || phase === "error";
   const canEnd = phase === "requesting_microphone" || phase === "connecting" || phase === "live";
+  const displayedDuration = artifactDraft.durationSeconds ?? elapsedSeconds;
+  const minutes = Math.floor(displayedDuration / 60)
+    .toString()
+    .padStart(2, "0");
+  const seconds = (displayedDuration % 60).toString().padStart(2, "0");
 
   return (
     <section className="panel realtime-session" aria-labelledby="realtime-session-title">
@@ -285,6 +322,9 @@ export function RealtimeVoiceSession({
           <h2 id="realtime-session-title">Direct browser voice session</h2>
         </div>
         <span className={`session-status ${phase}`}>{getPhaseLabel(phase, errorMessage)}</span>
+      </div>
+      <div className="session-timer" aria-label="Session duration">
+        {minutes}:{seconds}
       </div>
       <audio autoPlay ref={audioRef} />
       <div className="inline-actions">

@@ -148,6 +148,7 @@ export type VoiceSessionEvent = {
 };
 
 export type VoiceSessionArtifactDraft = {
+  durationSeconds?: number;
   endedAt?: string;
   endReason?: "connection_lost" | "start_failed" | "user_ended";
   events: VoiceSessionEvent[];
@@ -203,4 +204,27 @@ export type AiRunRecord = {
   totalTokens?: number;
   userEmail?: string;
   userId?: string;
+};
+
+export type RealtimeSessionUsageRecord = {
+  assistantTranscriptCharacters: number;
+  durationSeconds: number;
+  endedAt?: string;
+  estimatedAudioInputTokens: number;
+  estimatedAudioOutputTokens: number;
+  estimatedCostMicroUsd: number;
+  estimationMethod: string;
+  id: string;
+  model: string;
+  pricingVersion: string;
+  promptConfigKey?: string;
+  promptConfigVersion?: number;
+  realtimeCallId?: string;
+  sessionId: string;
+  startedAt?: string;
+  transcriptTurns: number;
+  userEmail?: string;
+  userId?: string;
+  userTranscriptCharacters: number;
+  voice?: string;
 };

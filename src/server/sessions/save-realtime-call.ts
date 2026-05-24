@@ -15,17 +15,21 @@ export async function saveRealtimeSessionConfig(
   sessionId: string,
   userId: string,
   config: {
+    model?: string;
     promptConfigKey?: string;
     promptConfigVersion?: number;
     realtimeCallId?: string;
+    voice?: string;
   },
 ) {
   const [session] = await getDb()
     .update(sessions)
     .set({
       realtimeCallId: config.realtimeCallId,
+      realtimeModel: config.model,
       realtimePromptConfigKey: config.promptConfigKey,
       realtimePromptConfigVersion: config.promptConfigVersion,
+      realtimeVoice: config.voice,
       updatedAt: new Date(),
     })
     .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)))
