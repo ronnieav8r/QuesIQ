@@ -44,6 +44,14 @@ Last updated: 2026-05-23
   - Evaluations receive the same mode/style/question prompt context alongside
     job, resume, and transcript context
   - Realtime Sessions and Evaluations record the base prompt config version used
+- Admin AI Runs visibility:
+  - Realtime session exchange attempts create AI run records with status,
+    model, prompt config version, provider call id when available, duration, and
+    errors
+  - post-session evaluation attempts create AI run records with status, model,
+    prompt config version, provider response id, duration, errors, and exact
+    token counts when OpenAI returns `usage`
+  - Admin has an AI Runs tab for recent run inspection
 - Client-side session setup snapshot and focused voice session screen
 - Direct OpenAI Realtime browser voice slice from the session screen:
   - server-side `/api/realtime/session` WebRTC exchange route
@@ -162,7 +170,8 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Deploy and user-confirm QA the admin prompt config slice on `quesiq-web`.
+1. Deploy and user-confirm QA the admin prompt config and AI Runs slices on
+   `quesiq-web`.
 2. Add `ADMIN_EMAILS` in Render before QAing the Admin tab.
 3. Decide whether persisted progression/streak records or cost/observability
    hardening should follow.

@@ -133,6 +133,17 @@ historical base prompt records. Catalog prompt component edits can update the
 current mode/question/style instructions directly while the beta prompt surface
 is still small.
 
+### Track AI Runs In The App Before Exporting
+
+QuesIQ should own AI call observability in Postgres before exporting to external
+ops tools. Realtime and Evaluation calls should create AI run records with
+status, model, prompt config version, provider id where available, duration,
+errors, and token usage when the provider returns it.
+
+Google Sheets can become the daily ops hub through export/sync after the app
+data is reliable. Do not build spreadsheet-like admin functionality inside the
+app before the daily reporting questions are clearer.
+
 ### Persist Profile Context Separately From Session Snapshots
 
 User-owned onboarding/profile context is stored in a Profile record and copied

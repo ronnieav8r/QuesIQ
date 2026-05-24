@@ -205,3 +205,40 @@ export const promptConfigs = pgTable(
     ),
   }),
 );
+
+export const aiRuns = pgTable(
+  "ai_runs",
+  {
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    costSource: text("cost_source")
+      .$type<"estimated" | "exact" | "unavailable">()
+      .default("unavailable")
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    durationMs: integer("duration_ms"),
+    errorMessage: text("error_message"),
+    id: uuid("id").defaultRandom().primaryKey(),
+    inputAudioTokens: integer("input_audio_tokens"),
+    inputTokens: integer("input_tokens"),
+    model: text("model").notNull(),
+    outputAudioTokens: integer("output_audio_tokens"),
+    outputTokens: integer("output_tokens"),
+    promptConfigKey: text("prompt_config_key"),
+    promptConfigVersion: integer("prompt_config_version"),
+    provider: text("provider").default("openai").notNull(),
+    providerRequestId: text("provider_request_id"),
+    runType: text("run_type").$type<"evaluation" | "realtime">().notNull(),
+    sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "set null" }),
+    startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+    status: text("status").$type<"failed" | "started" | "succeeded">().notNull(),
+    totalTokens: integer("total_tokens"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  },
+  (aiRun) => ({
+    createdAtIdx: index("ai_runs_created_at_idx").on(aiRun.createdAt),
+    sessionIdx: index("ai_runs_session_idx").on(aiRun.sessionId),
+    statusIdx: index("ai_runs_status_idx").on(aiRun.status),
+    typeIdx: index("ai_runs_type_idx").on(aiRun.runType),
+  }),
+);

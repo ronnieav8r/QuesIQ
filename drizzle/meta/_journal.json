@@ -71,6 +71,13 @@
       "when": 1779584400000,
       "tag": "0010_add_catalog_prompt_instructions",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1779667200000,
+      "tag": "0011_add_ai_runs",
+      "breakpoints": true
     }
   ]
 }

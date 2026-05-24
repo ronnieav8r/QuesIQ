@@ -6,6 +6,7 @@ import type {
   SessionSetupSnapshot,
   VoiceSessionArtifactDraft,
 } from "@/product/interview-types";
+import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
 import { getDb } from "@/server/db/client";
 import { evaluations, sessions } from "@/server/db/schema";
 import type { SessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
@@ -22,6 +23,7 @@ type ResponsesApiBody = {
   error?: {
     message?: string;
   };
+  id?: string;
   output?: Array<{
     content?: Array<{
       text?: string;
@@ -29,6 +31,11 @@ type ResponsesApiBody = {
     }>;
   }>;
   output_text?: string;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    total_tokens?: number;
+  };
 };
 
 const evaluationSchema = {
@@ -159,22 +166,51 @@ async function requestEvaluation(
   const body = (await response.json()) as ResponsesApiBody;
 
   if (!response.ok) {
-    throw new Error(body.error?.message || "OpenAI evaluation request failed.");
+    throw Object.assign(
+      new Error(body.error?.message || "OpenAI evaluation request failed."),
+      { providerRequestId: body.id, usage: body.usage },
+    );
   }
 
   const text = extractResponseText(body);
 
   if (!text) {
-    throw new Error("OpenAI evaluation response did not include text.");
+    throw Object.assign(new Error("OpenAI evaluation response did not include text."), {
+      providerRequestId: body.id,
+      usage: body.usage,
+    });
   }
 
   const evaluation = parseSessionEvaluation(JSON.parse(text));
 
   if (!evaluation) {
-    throw new Error("OpenAI evaluation response did not match the expected shape.");
+    throw Object.assign(
+      new Error("OpenAI evaluation response did not match the expected shape."),
+      { providerRequestId: body.id, usage: body.usage },
+    );
   }
 
-  return evaluation;
+  return {
+    evaluation,
+    providerRequestId: body.id,
+    usage: body.usage,
+  };
+}
+
+function getUsage(error: unknown): ResponsesApiBody["usage"] {
+  if (!error || typeof error !== "object" || !("usage" in error)) {
+    return undefined;
+  }
+
+  return (error as { usage?: ResponsesApiBody["usage"] }).usage;
+}
+
+function getProviderRequestId(error: unknown): string | undefined {
+  if (!error || typeof error !== "object" || !("providerRequestId" in error)) {
+    return undefined;
+  }
+
+  return (error as { providerRequestId?: string }).providerRequestId;
 }
 
 export async function createSessionEvaluation(
@@ -248,16 +284,44 @@ export async function createSessionEvaluation(
     .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
 
   let result: SessionEvaluationResult;
+  const aiRun = await startAiRun({
+    model,
+    promptConfigKey: promptConfig.key,
+    promptConfigVersion: promptConfig.version,
+    runType: "evaluation",
+    sessionId,
+    userId,
+  });
 
   try {
-    result = await requestEvaluation(
+    const evaluationResponse = await requestEvaluation(
       session.contextSnapshot,
       session.voiceArtifact,
       promptComponents,
       promptConfig.instructions,
       model,
     );
+    result = evaluationResponse.evaluation;
+    await completeAiRun(aiRun.id, {
+      costSource: "exact",
+      inputTokens: evaluationResponse.usage?.input_tokens,
+      outputTokens: evaluationResponse.usage?.output_tokens,
+      providerRequestId: evaluationResponse.providerRequestId,
+      status: "succeeded",
+      totalTokens: evaluationResponse.usage?.total_tokens,
+    });
   } catch (error) {
+    const usage = getUsage(error);
+    await completeAiRun(aiRun.id, {
+      costSource: usage ? "exact" : "unavailable",
+      errorMessage:
+        error instanceof Error ? error.message : "Practice review could not be created.",
+      inputTokens: usage?.input_tokens,
+      outputTokens: usage?.output_tokens,
+      providerRequestId: getProviderRequestId(error),
+      status: "failed",
+      totalTokens: usage?.total_tokens,
+    });
     await getDb()
       .update(sessions)
       .set({

@@ -16,6 +16,9 @@ Last updated: 2026-05-23
   tab for viewing versions, saving drafts, and activating versions.
 - Practice modes, question types, and interviewer styles now have editable
   prompt instructions that are composed into Realtime and evaluation calls.
+- Realtime and evaluation calls now create Admin-visible AI run records with
+  status, model, prompt version, timing, provider id when available, errors, and
+  exact evaluation token counts when OpenAI returns usage.
 - A direct OpenAI Realtime browser voice slice is wired into that session screen
   with client artifact drafting and passed its first manual test.
 - Ended direct voice attempts now save transcript/event artifacts and Realtime
@@ -58,7 +61,7 @@ Last updated: 2026-05-23
 ## Immediate
 
 1. Add `ADMIN_EMAILS` on Render and deploy/user-confirm QA the Admin prompt
-   config panel.
+   config panel plus AI Runs tab.
 2. Confirm live voice and evaluation still use the active prompt config and
    mode/style/question prompt components on new Sessions/Evaluations.
 3. Decide whether persisted progression/streak records or cost/observability
@@ -74,7 +77,8 @@ Last updated: 2026-05-23
 - Add richer owned session history filters if the 50-session list becomes too
   noisy
 - Persist progression/streak records if derived XP/level is not enough
-- Add cost/error observability around prompt-configured AI calls
+- Add daily Google Sheets export for AI run rows once the Admin run data is
+  confirmed useful
 - Polish the Brevo magic-link email template/HTML once auth behavior is stable
 - Keep Session artifact storage transcript/event-first until audio retention is
   intentionally revisited

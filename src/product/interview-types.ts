@@ -180,3 +180,27 @@ export type PromptComponentRecord = {
   promptInstructions: string;
   type: "mode" | "question_type" | "style";
 };
+
+export type AiRunRecord = {
+  completedAt?: string;
+  costSource: "estimated" | "exact" | "unavailable";
+  durationMs?: number;
+  errorMessage?: string;
+  id: string;
+  inputAudioTokens?: number;
+  inputTokens?: number;
+  model: string;
+  outputAudioTokens?: number;
+  outputTokens?: number;
+  promptConfigKey?: string;
+  promptConfigVersion?: number;
+  provider: "openai";
+  providerRequestId?: string;
+  runType: "evaluation" | "realtime";
+  sessionId?: string;
+  startedAt: string;
+  status: "failed" | "started" | "succeeded";
+  totalTokens?: number;
+  userEmail?: string;
+  userId?: string;
+};

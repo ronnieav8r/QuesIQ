@@ -82,6 +82,10 @@ The Admin tab also edits prompt components for practice modes, question types,
 and interviewer styles. Those components are composed into the live voice prompt
 and the post-session evaluation input with the user's session context.
 
+Admin also includes an AI Runs view for recent Realtime and Evaluation calls,
+including status, model, prompt config version, provider id, duration, errors,
+and exact token counts for evaluation calls when OpenAI returns usage.
+
 Set this server environment variable before using the admin panel:
 
 - `ADMIN_EMAILS` - comma-separated signed-in email addresses with admin access

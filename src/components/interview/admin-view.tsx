@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type {
+  AiRunRecord,
   PromptComponentRecord,
   PromptConfigKey,
   PromptConfigRecord,
@@ -49,10 +50,12 @@ function emptyDraft(): PromptDraft {
 export function AdminView() {
   const [configs, setConfigs] = useState<PromptConfigRecord[]>([]);
   const [components, setComponents] = useState<PromptComponentRecord[]>([]);
+  const [aiRuns, setAiRuns] = useState<AiRunRecord[]>([]);
   const [componentDraft, setComponentDraft] = useState("");
   const [draft, setDraft] = useState<PromptDraft>(emptyDraft);
   const [error, setError] = useState<string>();
-  const [adminSection, setAdminSection] = useState<"components" | "prompts">("components");
+  const [adminSection, setAdminSection] =
+    useState<"ai_runs" | "components" | "prompts">("components");
   const [componentType, setComponentType] =
     useState<PromptComponentRecord["type"]>("mode");
   const [pending, setPending] = useState(false);
@@ -173,15 +176,36 @@ export function AdminView() {
     }
   }
 
+  async function loadAiRuns() {
+    try {
+      setError(undefined);
+      const response = await fetch("/api/admin/ai-runs");
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        runs?: AiRunRecord[];
+      };
+
+      if (!response.ok) {
+        throw new Error(body.detail || body.error || "AI runs could not be loaded.");
+      }
+
+      setAiRuns(body.runs ?? []);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "AI runs could not be loaded.");
+    }
+  }
+
   useEffect(() => {
     let ignore = false;
 
     async function loadInitialConfigs() {
       try {
         setError(undefined);
-        const [configResponse, componentResponse] = await Promise.all([
+        const [configResponse, componentResponse, aiRunsResponse] = await Promise.all([
           fetch("/api/admin/prompt-configs"),
           fetch("/api/admin/prompt-components"),
+          fetch("/api/admin/ai-runs"),
         ]);
         const configBody = (await configResponse.json()) as {
           configs?: PromptConfigRecord[];
@@ -192,6 +216,10 @@ export function AdminView() {
           components?: PromptComponentRecord[];
           detail?: string;
           error?: string;
+        };
+        const aiRunsBody = (await aiRunsResponse.json()) as {
+          error?: string;
+          runs?: AiRunRecord[];
         };
 
         if (!configResponse.ok) {
@@ -208,6 +236,10 @@ export function AdminView() {
           );
         }
 
+        if (!aiRunsResponse.ok) {
+          throw new Error(aiRunsBody.error || "AI runs could not be loaded.");
+        }
+
         if (!ignore) {
           const nextConfigs = configBody.configs ?? [];
           const nextSelected = nextConfigs.find((config) => config.active);
@@ -216,6 +248,7 @@ export function AdminView() {
 
           setConfigs(nextConfigs);
           setComponents(nextComponents);
+          setAiRuns(aiRunsBody.runs ?? []);
           applySelectedConfig(nextSelected);
           applySelectedComponent(nextSelectedComponent);
         }
@@ -365,6 +398,20 @@ export function AdminView() {
     applySelectedComponent(components.find((component) => component.type === type));
   }
 
+  function refreshAdminSection() {
+    if (adminSection === "ai_runs") {
+      void loadAiRuns();
+      return;
+    }
+
+    if (adminSection === "components") {
+      void loadComponents();
+      return;
+    }
+
+    void loadConfigs();
+  }
+
   return (
     <section className="screen admin-screen" aria-labelledby="admin-title">
       <div className="screen-toolbar">
@@ -372,7 +419,7 @@ export function AdminView() {
           <p className="eyebrow">Admin</p>
           <h1 id="admin-title">Prompt configs</h1>
         </div>
-        <button className="secondary" onClick={() => void loadConfigs()} type="button">
+        <button className="secondary" onClick={refreshAdminSection} type="button">
           Refresh
         </button>
       </div>
@@ -395,6 +442,13 @@ export function AdminView() {
               type="button"
             >
               Base Prompts
+            </button>
+            <button
+              className={adminSection === "ai_runs" ? "active" : ""}
+              onClick={() => setAdminSection("ai_runs")}
+              type="button"
+            >
+              AI Runs
             </button>
           </div>
 
@@ -599,6 +653,68 @@ export function AdminView() {
             )}
           </div>
         </>
+      )}
+
+      {adminSection === "ai_runs" && status === "ready" && (
+        <section className="ai-runs-panel" aria-labelledby="ai-runs-title">
+          <div className="section-head">
+            <h2 id="ai-runs-title">Recent AI runs</h2>
+            <span>{aiRuns.length} shown</span>
+          </div>
+          {aiRuns.length > 0 ? (
+            <div className="ai-runs-list">
+              {aiRuns.map((run) => (
+                <article className="ai-run-card" key={run.id}>
+                  <div className="ai-run-main">
+                    <strong>
+                      {run.runType} · {run.status}
+                    </strong>
+                    <span>{new Date(run.startedAt).toLocaleString()}</span>
+                  </div>
+                  <dl>
+                    <div>
+                      <dt>Model</dt>
+                      <dd>{run.model}</dd>
+                    </div>
+                    <div>
+                      <dt>User</dt>
+                      <dd>{run.userEmail || run.userId || "Unknown"}</dd>
+                    </div>
+                    <div>
+                      <dt>Prompt</dt>
+                      <dd>
+                        {run.promptConfigKey
+                          ? `${run.promptConfigKey} v${run.promptConfigVersion ?? "--"}`
+                          : "Not recorded"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Tokens</dt>
+                      <dd>
+                        {run.totalTokens !== undefined
+                          ? `${run.inputTokens ?? 0} in / ${run.outputTokens ?? 0} out / ${run.totalTokens} total`
+                          : "Unavailable"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Duration</dt>
+                      <dd>{run.durationMs ? `${run.durationMs} ms` : "Open"}</dd>
+                    </div>
+                    <div>
+                      <dt>Provider id</dt>
+                      <dd>{run.providerRequestId || "Unavailable"}</dd>
+                    </div>
+                  </dl>
+                  {run.sessionId && <p>Session: {run.sessionId}</p>}
+                  {run.errorMessage && <p className="form-error">{run.errorMessage}</p>}
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p>No AI runs have been recorded yet.</p>
+          )}
+          {error && <p className="form-error">{error}</p>}
+        </section>
       )}
     </section>
   );
