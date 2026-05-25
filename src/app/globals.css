@@ -1015,6 +1015,12 @@ textarea::placeholder {
   word-break: normal;
 }
 
+.usage-table th.narrow-column,
+.usage-table td.narrow-column {
+  max-width: 7.5rem;
+  width: 1%;
+}
+
 .usage-table th {
   background: var(--surface-raised);
   color: var(--muted);
@@ -1029,10 +1035,8 @@ textarea::placeholder {
   background: transparent;
   border: 0;
   color: inherit;
-  display: flex;
+  display: block;
   font-size: inherit;
-  gap: 0.45rem;
-  justify-content: space-between;
   min-height: 0;
   overflow: visible;
   padding: 0;
@@ -1046,12 +1050,6 @@ textarea::placeholder {
 .usage-table th button.active {
   background: transparent;
   color: var(--text);
-}
-
-.usage-table th button span {
-  color: var(--focus);
-  font-size: 0.68rem;
-  text-transform: none;
 }
 
 .usage-table tr:last-child td {

@@ -168,11 +168,13 @@ function nextSort<T extends string>(current: SortState<T>, key: T): SortState<T>
 }
 
 function SortHeader<T extends string>({
+  className,
   label,
   onSort,
   sort,
   sortKey,
 }: {
+  className?: string;
   label: string;
   onSort: (key: T) => void;
   sort: SortState<T>;
@@ -181,10 +183,13 @@ function SortHeader<T extends string>({
   const active = sort.key === sortKey;
 
   return (
-    <th aria-sort={active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
+    <th
+      aria-sort={active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
+      className={className}
+    >
       <button className={active ? "active" : ""} onClick={() => onSort(sortKey)} type="button">
         {label}
-        <span>{active ? (sort.direction === "asc" ? "Asc" : "Desc") : "Sort"}</span>
+        {active ? ` ${sort.direction === "asc" ? "^" : "v"}` : ""}
       </button>
     </th>
   );
@@ -1123,6 +1128,7 @@ export function AdminView() {
                           sortKey="screen"
                         />
                         <SortHeader
+                          className="narrow-column"
                           label="Session"
                           onSort={(key) => setFeedbackSort(nextSort(feedbackSort, key))}
                           sort={feedbackSort}
@@ -1141,6 +1147,7 @@ export function AdminView() {
                           sortKey="message"
                         />
                         <SortHeader
+                          className="narrow-column"
                           label="Screenshot"
                           onSort={(key) => setFeedbackSort(nextSort(feedbackSort, key))}
                           sort={feedbackSort}
@@ -1163,7 +1170,7 @@ export function AdminView() {
                             <ExpandableCell value={item.userEmail || item.userId} />
                           </td>
                           <td>{item.screen}</td>
-                          <td>
+                          <td className="narrow-column">
                             <ExpandableCell className="mono-cell" value={item.sessionId} />
                           </td>
                           <td>
@@ -1172,7 +1179,7 @@ export function AdminView() {
                           <td>
                             <ExpandableCell value={item.message} />
                           </td>
-                          <td>
+                          <td className="narrow-column">
                             {item.screenshotDataUrl ? (
                               <ExpandableCell value={item.screenshotName || "Open screenshot"}>
                                 <a
@@ -1446,6 +1453,7 @@ export function AdminView() {
                       sortKey="duration"
                     />
                     <SortHeader
+                      className="narrow-column"
                       label="Session"
                       onSort={(key) => setAiRunSort(nextSort(aiRunSort, key))}
                       sort={aiRunSort}
@@ -1478,7 +1486,7 @@ export function AdminView() {
                       </td>
                       <td>{formatUsd(run.estimatedCostMicroUsd)}</td>
                       <td>{formatDuration(run.durationMs)}</td>
-                      <td>
+                      <td className="narrow-column">
                         <ExpandableCell className="mono-cell" value={run.sessionId} />
                       </td>
                       <td>
@@ -1556,6 +1564,7 @@ export function AdminView() {
                       sortKey="transcript"
                     />
                     <SortHeader
+                      className="narrow-column"
                       label="Session"
                       onSort={(key) => setRealtimeSort(nextSort(realtimeSort, key))}
                       sort={realtimeSort}
@@ -1594,7 +1603,7 @@ export function AdminView() {
                         {usage.transcriptTurns} turns / {usage.userTranscriptCharacters} user
                         / {usage.assistantTranscriptCharacters} Que
                       </td>
-                      <td>
+                      <td className="narrow-column">
                         <ExpandableCell className="mono-cell" value={usage.sessionId} />
                       </td>
                       <td>
