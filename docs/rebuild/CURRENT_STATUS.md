@@ -57,12 +57,10 @@ Last updated: 2026-05-23
     and can be audited/adjusted over time
   - AI pricing records are editable in Admin under AI Usage > Pricing, and cost
     calculations now read active pricing records instead of hardcoded rates
-  - pricing checks can compare the official OpenAI pricing page hash against the
-    last successful check through Admin or the scheduled-check endpoint
   - monthly AI pricing review is triggerable from Admin and through
     `/api/pricing/review`; it uses OpenAI web search plus structured JSON to
     compare current app pricing with official OpenAI sources and stores a
-    candidate report without auto-applying changes
+    candidate report that admins can accept into new active pricing records
 - Client-side session setup snapshot and focused voice session screen
 - Direct OpenAI Realtime browser voice slice from the session screen:
   - server-side `/api/realtime/session` WebRTC exchange route

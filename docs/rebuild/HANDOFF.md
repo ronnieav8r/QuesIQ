@@ -84,14 +84,15 @@ cost/observability hardening should follow.
   Realtime voice sessions create compact estimated usage records with duration,
   transcript split, model, voice, estimated audio tokens, estimated cost, pricing
   version, and estimation method.
-- Added editable Admin AI pricing records and pricing checks: API and Realtime
+- Added editable Admin AI pricing records and pricing reviews: API and Realtime
   cost calculations now read active pricing rows, admins can edit/add pricing
-  under AI Usage > Pricing, and `/api/pricing/check` supports scheduled checks
-  against the official OpenAI pricing page using `PRICING_CHECK_SECRET`.
+  under AI Usage > Pricing, and AI pricing reviews can compare app pricing
+  against official OpenAI sources using `PRICING_CHECK_SECRET` for scheduled
+  runs.
 - Added monthly AI pricing review support: Admin can trigger a structured
-  OpenAI web-search review, and `/api/pricing/review` can be called by a monthly
-  scheduler with `PRICING_CHECK_SECRET`; reviews store candidate pricing,
-  changes, source URLs, and a report without auto-applying updates.
+  OpenAI web-search review, accept candidate pricing changes into new active
+  records, and `/api/pricing/review` can be called by a monthly scheduler with
+  `PRICING_CHECK_SECRET`.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,

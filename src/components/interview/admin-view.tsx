@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import type {
   AiRunRecord,
   AiPricingRecord,
-  PricingCheckRecord,
   PricingReviewRecord,
   PromptComponentRecord,
   PromptConfigKey,
@@ -110,7 +109,6 @@ export function AdminView() {
   const [components, setComponents] = useState<PromptComponentRecord[]>([]);
   const [aiRuns, setAiRuns] = useState<AiRunRecord[]>([]);
   const [pricing, setPricing] = useState<AiPricingRecord[]>([]);
-  const [pricingChecks, setPricingChecks] = useState<PricingCheckRecord[]>([]);
   const [pricingReviews, setPricingReviews] = useState<PricingReviewRecord[]>([]);
   const [pricingDraft, setPricingDraft] = useState<PricingDraft>(pricingToDraft());
   const [realtimeUsage, setRealtimeUsage] = useState<RealtimeSessionUsageRecord[]>([]);
@@ -307,7 +305,6 @@ export function AdminView() {
       setError(undefined);
       const response = await fetch("/api/admin/pricing");
       const body = (await response.json()) as {
-        checks?: PricingCheckRecord[];
         error?: string;
         pricing?: AiPricingRecord[];
         reviews?: PricingReviewRecord[];
@@ -324,7 +321,6 @@ export function AdminView() {
         nextPricing[0];
 
       setPricing(nextPricing);
-      setPricingChecks(body.checks ?? []);
       setPricingReviews(body.reviews ?? []);
       applySelectedPricing(nextSelected);
     } catch (loadError) {
@@ -370,7 +366,6 @@ export function AdminView() {
           usage?: RealtimeSessionUsageRecord[];
         };
         const pricingBody = (await pricingResponse.json()) as {
-          checks?: PricingCheckRecord[];
           error?: string;
           pricing?: AiPricingRecord[];
           reviews?: PricingReviewRecord[];
@@ -415,7 +410,6 @@ export function AdminView() {
           setAiRuns(aiRunsBody.runs ?? []);
           setRealtimeUsage(realtimeUsageBody.usage ?? []);
           setPricing(pricingBody.pricing ?? []);
-          setPricingChecks(pricingBody.checks ?? []);
           setPricingReviews(pricingBody.reviews ?? []);
           applySelectedConfig(nextSelected);
           applySelectedComponent(nextSelectedComponent);
@@ -637,31 +631,6 @@ export function AdminView() {
     }
   }
 
-  async function runPricingCheckNow() {
-    try {
-      setPending(true);
-      setError(undefined);
-      const response = await fetch("/api/admin/pricing", {
-        body: JSON.stringify({ action: "check" }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-      });
-      const body = (await response.json()) as { error?: string };
-
-      if (!response.ok) {
-        throw new Error(body.error || "Pricing check failed.");
-      }
-
-      await loadPricing();
-    } catch (checkError) {
-      setError(checkError instanceof Error ? checkError.message : "Pricing check failed.");
-    } finally {
-      setPending(false);
-    }
-  }
-
   async function runPricingReviewNow() {
     try {
       setPending(true);
@@ -682,6 +651,38 @@ export function AdminView() {
       await loadPricing();
     } catch (reviewError) {
       setError(reviewError instanceof Error ? reviewError.message : "Pricing review failed.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function acceptPricingReviewNow() {
+    try {
+      setPending(true);
+      setError(undefined);
+      const response = await fetch("/api/admin/pricing", {
+        body: JSON.stringify({ action: "accept_review" }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const body = (await response.json()) as { applied?: number; error?: string };
+
+      if (!response.ok) {
+        throw new Error(body.error || "Pricing review changes could not be accepted.");
+      }
+
+      await loadPricing();
+      if (!body.applied) {
+        setError("No pricing changes were applied.");
+      }
+    } catch (acceptError) {
+      setError(
+        acceptError instanceof Error
+          ? acceptError.message
+          : "Pricing review changes could not be accepted.",
+      );
     } finally {
       setPending(false);
     }
@@ -1219,26 +1220,12 @@ export function AdminView() {
                 <button
                   className="secondary"
                   disabled={pending}
-                  onClick={runPricingCheckNow}
-                  type="button"
-                >
-                  Check Official Page
-                </button>
-                <button
-                  className="secondary"
-                  disabled={pending}
                   onClick={runPricingReviewNow}
                   type="button"
                 >
                   Review With AI
                 </button>
               </div>
-              {pricingChecks[0] && (
-                <p>
-                  Last check: {new Date(pricingChecks[0].checkedAt).toLocaleString()} -{" "}
-                  {pricingChecks[0].summary}
-                </p>
-              )}
               {pricingReviews[0] && (
                 <section className="runtime-context-panel">
                   <h3>Latest AI Pricing Review</h3>
@@ -1253,6 +1240,23 @@ export function AdminView() {
                         Status: {pricingReviews[0].result.status}. Changes:{" "}
                         {pricingReviews[0].result.changes.length}
                       </p>
+                      {pricingReviews[0].acceptedAt ? (
+                        <p>
+                          Accepted {pricingReviews[0].appliedPricingUpdates} pricing update
+                          {pricingReviews[0].appliedPricingUpdates === 1 ? "" : "s"} on{" "}
+                          {new Date(pricingReviews[0].acceptedAt).toLocaleString()}.
+                        </p>
+                      ) : null}
+                      {pricingReviews[0].result.status === "changes_detected" &&
+                        !pricingReviews[0].acceptedAt && (
+                        <button
+                          disabled={pending}
+                          onClick={acceptPricingReviewNow}
+                          type="button"
+                        >
+                          Accept Review Changes
+                        </button>
+                      )}
                       {pricingReviews[0].result.sourceUrls.length > 0 && (
                         <ul>
                           {pricingReviews[0].result.sourceUrls.map((url) => (

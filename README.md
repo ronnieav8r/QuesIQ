@@ -94,8 +94,8 @@ Set this server environment variable before using the admin panel:
   estimate override, defaults to `5000`
 - `REALTIME_ESTIMATED_AUDIO_OUTPUT_TOKENS_PER_MINUTE` - optional Realtime cost
   estimate override, defaults to `5000`
-- `PRICING_CHECK_SECRET` - optional shared secret for scheduled pricing checks
-  against `/api/pricing/check`
+- `PRICING_CHECK_SECRET` - optional shared secret for scheduled pricing reviews
+  against `/api/pricing/review`
 - `PRICING_REVIEW_MODEL` - optional model for monthly AI pricing reviews,
   defaults to `gpt-5.4-mini`
 
@@ -104,6 +104,9 @@ Monthly pricing reviews are scheduled through the Render Cron Job in
 on the monthly run:
 
 - `PRICING_CHECK_SECRET` - same value as the deployed web service environment
+
+Admin can also run a pricing review manually and accept candidate changes into
+new active pricing records after review.
 
 ## Practice Review
 

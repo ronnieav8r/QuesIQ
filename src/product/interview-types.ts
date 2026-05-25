@@ -278,6 +278,8 @@ export type PricingReviewResult = {
 };
 
 export type PricingReviewRecord = {
+  acceptedAt?: string;
+  appliedPricingUpdates: number;
   completedAt?: string;
   createdAt: string;
   errorMessage?: string;

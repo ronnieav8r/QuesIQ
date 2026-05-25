@@ -54,6 +54,8 @@ function toCheckRecord(row: typeof pricingChecks.$inferSelect): PricingCheckReco
 
 function toReviewRecord(row: typeof pricingReviews.$inferSelect): PricingReviewRecord {
   return {
+    acceptedAt: row.acceptedAt?.toISOString(),
+    appliedPricingUpdates: row.appliedPricingUpdates,
     completedAt: row.completedAt?.toISOString(),
     createdAt: row.createdAt.toISOString(),
     errorMessage: row.errorMessage ?? undefined,
@@ -274,6 +276,100 @@ export async function listPricingReviews(limit = 20) {
     .limit(limit);
 
   return rows.map(toReviewRecord);
+}
+
+function usdToMicroUsd(value?: number | null) {
+  return value === undefined || value === null ? undefined : Math.round(value * 1_000_000);
+}
+
+export async function acceptLatestPricingReview() {
+  const [review] = await getDb()
+    .select()
+    .from(pricingReviews)
+    .where(eq(pricingReviews.status, "succeeded"))
+    .orderBy(desc(pricingReviews.createdAt))
+    .limit(1);
+
+  const result = review?.result;
+
+  if (!review || !result || result.status === "source_unavailable" || review.acceptedAt) {
+    return { applied: 0, review: review ? toReviewRecord(review) : undefined };
+  }
+
+  const versionDate = (review.completedAt ?? review.createdAt).toISOString().slice(0, 10);
+  let applied = 0;
+
+  for (const candidate of result.pricing) {
+    const inputMicroUsdPerMillion = usdToMicroUsd(candidate.inputUsdPerMillion);
+    const cachedInputMicroUsdPerMillion = usdToMicroUsd(
+      candidate.cachedInputUsdPerMillion,
+    );
+    const outputMicroUsdPerMillion = usdToMicroUsd(candidate.outputUsdPerMillion);
+
+    if (inputMicroUsdPerMillion === undefined) {
+      continue;
+    }
+
+    const [activeRecord] = await getDb()
+      .select()
+      .from(aiPricing)
+      .where(
+        and(
+          eq(aiPricing.provider, "openai"),
+          eq(aiPricing.model, candidate.model),
+          eq(aiPricing.modality, candidate.modality),
+          eq(aiPricing.active, true),
+        ),
+      )
+      .orderBy(desc(aiPricing.updatedAt))
+      .limit(1);
+
+    const alreadyCurrent =
+      activeRecord?.inputMicroUsdPerMillion === inputMicroUsdPerMillion &&
+      (activeRecord.cachedInputMicroUsdPerMillion ?? undefined) ===
+        cachedInputMicroUsdPerMillion &&
+      (activeRecord.outputMicroUsdPerMillion ?? undefined) === outputMicroUsdPerMillion;
+
+    if (alreadyCurrent) {
+      continue;
+    }
+
+    await getDb()
+      .update(aiPricing)
+      .set({ active: false, updatedAt: new Date() })
+      .where(
+        and(
+          eq(aiPricing.provider, "openai"),
+          eq(aiPricing.model, candidate.model),
+          eq(aiPricing.modality, candidate.modality),
+          eq(aiPricing.active, true),
+        ),
+      );
+
+    await saveAiPricing({
+      active: true,
+      cachedInputMicroUsdPerMillion,
+      inputMicroUsdPerMillion,
+      model: candidate.model,
+      modality: candidate.modality,
+      outputMicroUsdPerMillion,
+      sourceUrl: candidate.sourceUrl || sourceUrl,
+      version: `ai-review-${versionDate}`,
+    });
+    applied += 1;
+  }
+
+  const [updatedReview] = await getDb()
+    .update(pricingReviews)
+    .set({
+      acceptedAt: new Date(),
+      appliedPricingUpdates: applied,
+      updatedAt: new Date(),
+    })
+    .where(eq(pricingReviews.id, review.id))
+    .returning();
+
+  return { applied, review: toReviewRecord(updatedReview) };
 }
 
 export async function runPricingReview() {

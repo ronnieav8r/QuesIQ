@@ -156,14 +156,10 @@ AI pricing belongs in editable app-owned pricing records. Cost calculations
 should read active pricing records and store the pricing version used on derived
 usage rows where practical.
 
-Pricing checks should compare the official OpenAI pricing page and surface a
-detected change for admin review. Do not silently mutate active pricing from a
-scraped page because pricing pages can change format, include footnotes, or
-carry temporary announcements.
-
 A monthly AI pricing review can use OpenAI web search and structured JSON to
 compare current app pricing against official OpenAI sources. Treat that output
-as a candidate report for admin approval, not as an automatic pricing update.
+as a candidate report for admin approval. After review, an admin can accept the
+candidate changes into new active pricing records.
 
 ### Persist Profile Context Separately From Session Snapshots
 

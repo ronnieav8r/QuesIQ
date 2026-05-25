@@ -3,10 +3,9 @@ import { NextResponse } from "next/server";
 import type { AiPricingRecord } from "@/product/interview-types";
 import { requireAdminSession } from "@/server/admin";
 import {
+  acceptLatestPricingReview,
   listAiPricing,
-  listPricingChecks,
   listPricingReviews,
-  runPricingCheck,
   runPricingReview,
   saveAiPricing,
   updateAiPricing,
@@ -55,13 +54,12 @@ export async function GET() {
     return NextResponse.json({ error: "Admin access is required." }, { status: 403 });
   }
 
-  const [pricing, checks, reviews] = await Promise.all([
+  const [pricing, reviews] = await Promise.all([
     listAiPricing(),
-    listPricingChecks(),
     listPricingReviews(),
   ]);
 
-  return NextResponse.json({ checks, pricing, reviews });
+  return NextResponse.json({ pricing, reviews });
 }
 
 export async function POST(request: Request) {
@@ -72,24 +70,8 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json()) as PricingBody & {
-    action?: "check" | "review";
+    action?: "accept_review" | "review";
   };
-
-  if (body.action === "check") {
-    try {
-      const check = await runPricingCheck();
-
-      return NextResponse.json({ check });
-    } catch (error) {
-      return NextResponse.json(
-        {
-          detail: error instanceof Error ? error.message : "Pricing check failed.",
-          error: "Pricing check failed.",
-        },
-        { status: 503 },
-      );
-    }
-  }
 
   if (body.action === "review") {
     if (!process.env.OPENAI_API_KEY) {
@@ -105,6 +87,12 @@ export async function POST(request: Request) {
     const review = await runPricingReview();
 
     return NextResponse.json({ review });
+  }
+
+  if (body.action === "accept_review") {
+    const result = await acceptLatestPricingReview();
+
+    return NextResponse.json(result);
   }
 
   const pricingInput = parsePricingBody(body);

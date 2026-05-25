@@ -334,6 +334,8 @@ export const pricingChecks = pgTable(
 export const pricingReviews = pgTable(
   "pricing_reviews",
   {
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    appliedPricingUpdates: integer("applied_pricing_updates").default(0).notNull(),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     errorMessage: text("error_message"),
