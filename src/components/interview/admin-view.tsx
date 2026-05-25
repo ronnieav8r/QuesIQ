@@ -6,6 +6,7 @@ import type {
   AiRunRecord,
   AiPricingRecord,
   PricingCheckRecord,
+  PricingReviewRecord,
   PromptComponentRecord,
   PromptConfigKey,
   PromptConfigRecord,
@@ -110,6 +111,7 @@ export function AdminView() {
   const [aiRuns, setAiRuns] = useState<AiRunRecord[]>([]);
   const [pricing, setPricing] = useState<AiPricingRecord[]>([]);
   const [pricingChecks, setPricingChecks] = useState<PricingCheckRecord[]>([]);
+  const [pricingReviews, setPricingReviews] = useState<PricingReviewRecord[]>([]);
   const [pricingDraft, setPricingDraft] = useState<PricingDraft>(pricingToDraft());
   const [realtimeUsage, setRealtimeUsage] = useState<RealtimeSessionUsageRecord[]>([]);
   const [componentDraft, setComponentDraft] = useState("");
@@ -308,6 +310,7 @@ export function AdminView() {
         checks?: PricingCheckRecord[];
         error?: string;
         pricing?: AiPricingRecord[];
+        reviews?: PricingReviewRecord[];
       };
 
       if (!response.ok) {
@@ -322,6 +325,7 @@ export function AdminView() {
 
       setPricing(nextPricing);
       setPricingChecks(body.checks ?? []);
+      setPricingReviews(body.reviews ?? []);
       applySelectedPricing(nextSelected);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Pricing could not be loaded.");
@@ -369,6 +373,7 @@ export function AdminView() {
           checks?: PricingCheckRecord[];
           error?: string;
           pricing?: AiPricingRecord[];
+          reviews?: PricingReviewRecord[];
         };
 
         if (!configResponse.ok) {
@@ -411,6 +416,7 @@ export function AdminView() {
           setRealtimeUsage(realtimeUsageBody.usage ?? []);
           setPricing(pricingBody.pricing ?? []);
           setPricingChecks(pricingBody.checks ?? []);
+          setPricingReviews(pricingBody.reviews ?? []);
           applySelectedConfig(nextSelected);
           applySelectedComponent(nextSelectedComponent);
           applySelectedPricing(pricingBody.pricing?.[0]);
@@ -569,12 +575,12 @@ export function AdminView() {
         return;
       }
 
-      void loadRealtimeUsage();
-      return;
-    }
+      if (usageSection === "pricing") {
+        void loadPricing();
+        return;
+      }
 
-    if (usageSection === "pricing") {
-      void loadPricing();
+      void loadRealtimeUsage();
       return;
     }
 
@@ -651,6 +657,31 @@ export function AdminView() {
       await loadPricing();
     } catch (checkError) {
       setError(checkError instanceof Error ? checkError.message : "Pricing check failed.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function runPricingReviewNow() {
+    try {
+      setPending(true);
+      setError(undefined);
+      const response = await fetch("/api/admin/pricing", {
+        body: JSON.stringify({ action: "review" }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const body = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(body.error || "Pricing review failed.");
+      }
+
+      await loadPricing();
+    } catch (reviewError) {
+      setError(reviewError instanceof Error ? reviewError.message : "Pricing review failed.");
     } finally {
       setPending(false);
     }
@@ -1193,12 +1224,47 @@ export function AdminView() {
                 >
                   Check Official Page
                 </button>
+                <button
+                  className="secondary"
+                  disabled={pending}
+                  onClick={runPricingReviewNow}
+                  type="button"
+                >
+                  Review With AI
+                </button>
               </div>
               {pricingChecks[0] && (
                 <p>
                   Last check: {new Date(pricingChecks[0].checkedAt).toLocaleString()} -{" "}
                   {pricingChecks[0].summary}
                 </p>
+              )}
+              {pricingReviews[0] && (
+                <section className="runtime-context-panel">
+                  <h3>Latest AI Pricing Review</h3>
+                  <p>
+                    {new Date(pricingReviews[0].createdAt).toLocaleString()} -{" "}
+                    {pricingReviews[0].status}
+                  </p>
+                  {pricingReviews[0].result ? (
+                    <>
+                      <p>{pricingReviews[0].result.report}</p>
+                      <p>
+                        Status: {pricingReviews[0].result.status}. Changes:{" "}
+                        {pricingReviews[0].result.changes.length}
+                      </p>
+                      {pricingReviews[0].result.sourceUrls.length > 0 && (
+                        <ul>
+                          {pricingReviews[0].result.sourceUrls.map((url) => (
+                            <li key={url}>{url}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  ) : (
+                    <p>{pricingReviews[0].errorMessage || "Review result unavailable."}</p>
+                  )}
+                </section>
               )}
               {error && <p className="form-error">{error}</p>}
             </form>

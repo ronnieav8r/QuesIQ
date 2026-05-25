@@ -59,6 +59,10 @@ Last updated: 2026-05-23
     calculations now read active pricing records instead of hardcoded rates
   - pricing checks can compare the official OpenAI pricing page hash against the
     last successful check through Admin or the scheduled-check endpoint
+  - monthly AI pricing review is triggerable from Admin and through
+    `/api/pricing/review`; it uses OpenAI web search plus structured JSON to
+    compare current app pricing with official OpenAI sources and stores a
+    candidate report without auto-applying changes
 - Client-side session setup snapshot and focused voice session screen
 - Direct OpenAI Realtime browser voice slice from the session screen:
   - server-side `/api/realtime/session` WebRTC exchange route
@@ -126,8 +130,7 @@ The current coded app has passed:
 - ESLint
 - TypeScript check
 - Next production build
-- Latest local checks were run through the bundled Node runtime because local
-  `npm`/`git` were not available on PATH in this shell.
+- Latest local checks passed with local `npm` available on PATH.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran

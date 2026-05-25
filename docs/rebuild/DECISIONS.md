@@ -161,6 +161,10 @@ detected change for admin review. Do not silently mutate active pricing from a
 scraped page because pricing pages can change format, include footnotes, or
 carry temporary announcements.
 
+A monthly AI pricing review can use OpenAI web search and structured JSON to
+compare current app pricing against official OpenAI sources. Treat that output
+as a candidate report for admin approval, not as an automatic pricing update.
+
 ### Persist Profile Context Separately From Session Snapshots
 
 User-owned onboarding/profile context is stored in a Profile record and copied

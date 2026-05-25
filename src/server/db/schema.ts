@@ -12,6 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import type {
+  PricingReviewResult,
   SessionEvaluationResult,
   SessionSetupSnapshot,
   SessionStatus,
@@ -230,7 +231,9 @@ export const aiRuns = pgTable(
     promptConfigVersion: integer("prompt_config_version"),
     provider: text("provider").default("openai").notNull(),
     providerRequestId: text("provider_request_id"),
-    runType: text("run_type").$type<"evaluation" | "realtime">().notNull(),
+    runType: text("run_type")
+      .$type<"evaluation" | "pricing_review" | "realtime">()
+      .notNull(),
     sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "set null" }),
     startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
     status: text("status").$type<"failed" | "started" | "succeeded">().notNull(),
@@ -325,5 +328,23 @@ export const pricingChecks = pgTable(
   },
   (check) => ({
     checkedAtIdx: index("pricing_checks_checked_at_idx").on(check.checkedAt),
+  }),
+);
+
+export const pricingReviews = pgTable(
+  "pricing_reviews",
+  {
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    errorMessage: text("error_message"),
+    id: uuid("id").defaultRandom().primaryKey(),
+    model: text("model").notNull(),
+    providerRequestId: text("provider_request_id"),
+    result: jsonb("result").$type<PricingReviewResult>(),
+    status: text("status").$type<"failed" | "processing" | "succeeded">().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (review) => ({
+    createdAtIdx: index("pricing_reviews_created_at_idx").on(review.createdAt),
   }),
 );

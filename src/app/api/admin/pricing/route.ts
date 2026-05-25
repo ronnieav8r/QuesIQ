@@ -5,7 +5,9 @@ import { requireAdminSession } from "@/server/admin";
 import {
   listAiPricing,
   listPricingChecks,
+  listPricingReviews,
   runPricingCheck,
+  runPricingReview,
   saveAiPricing,
   updateAiPricing,
 } from "@/server/pricing/ai-pricing";
@@ -53,9 +55,13 @@ export async function GET() {
     return NextResponse.json({ error: "Admin access is required." }, { status: 403 });
   }
 
-  const [pricing, checks] = await Promise.all([listAiPricing(), listPricingChecks()]);
+  const [pricing, checks, reviews] = await Promise.all([
+    listAiPricing(),
+    listPricingChecks(),
+    listPricingReviews(),
+  ]);
 
-  return NextResponse.json({ checks, pricing });
+  return NextResponse.json({ checks, pricing, reviews });
 }
 
 export async function POST(request: Request) {
@@ -65,7 +71,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Admin access is required." }, { status: 403 });
   }
 
-  const body = (await request.json()) as PricingBody & { action?: "check" };
+  const body = (await request.json()) as PricingBody & {
+    action?: "check" | "review";
+  };
 
   if (body.action === "check") {
     try {
@@ -81,6 +89,22 @@ export async function POST(request: Request) {
         { status: 503 },
       );
     }
+  }
+
+  if (body.action === "review") {
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        {
+          detail: "OPENAI_API_KEY is required for pricing reviews.",
+          error: "Pricing review failed.",
+        },
+        { status: 503 },
+      );
+    }
+
+    const review = await runPricingReview();
+
+    return NextResponse.json({ review });
   }
 
   const pricingInput = parsePricingBody(body);

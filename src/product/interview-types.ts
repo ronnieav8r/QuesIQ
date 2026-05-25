@@ -198,7 +198,7 @@ export type AiRunRecord = {
   promptConfigVersion?: number;
   provider: "openai";
   providerRequestId?: string;
-  runType: "evaluation" | "realtime";
+  runType: "evaluation" | "pricing_review" | "realtime";
   sessionId?: string;
   startedAt: string;
   status: "failed" | "started" | "succeeded";
@@ -254,4 +254,36 @@ export type PricingCheckRecord = {
   sourceUrl: string;
   status: "failed" | "succeeded";
   summary: string;
+};
+
+export type PricingReviewResult = {
+  changes: Array<{
+    field: string;
+    model: string;
+    modality: "audio" | "text";
+    newValue?: number;
+    oldValue?: number;
+  }>;
+  pricing: Array<{
+    cachedInputUsdPerMillion?: number;
+    inputUsdPerMillion: number;
+    model: string;
+    modality: "audio" | "text";
+    outputUsdPerMillion?: number;
+    sourceUrl: string;
+  }>;
+  report: string;
+  sourceUrls: string[];
+  status: "changes_detected" | "no_changes" | "source_unavailable";
+};
+
+export type PricingReviewRecord = {
+  completedAt?: string;
+  createdAt: string;
+  errorMessage?: string;
+  id: string;
+  model: string;
+  providerRequestId?: string;
+  result?: PricingReviewResult;
+  status: "failed" | "processing" | "succeeded";
 };

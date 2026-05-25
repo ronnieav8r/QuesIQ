@@ -25,3 +25,15 @@ services:
         sync: false
       - key: AUTH_TRUST_HOST
         value: "true"
+  - type: cron
+    name: quesiq-monthly-pricing-review
+    runtime: node
+    plan: starter
+    schedule: "0 15 1 * *"
+    buildCommand: npm ci
+    startCommand: node scripts/run-pricing-review.mjs
+    envVars:
+      - key: QUESIQ_APP_URL
+        value: https://quesiq.com
+      - key: PRICING_CHECK_SECRET
+        sync: false

@@ -88,6 +88,10 @@ cost/observability hardening should follow.
   cost calculations now read active pricing rows, admins can edit/add pricing
   under AI Usage > Pricing, and `/api/pricing/check` supports scheduled checks
   against the official OpenAI pricing page using `PRICING_CHECK_SECRET`.
+- Added monthly AI pricing review support: Admin can trigger a structured
+  OpenAI web-search review, and `/api/pricing/review` can be called by a monthly
+  scheduler with `PRICING_CHECK_SECRET`; reviews store candidate pricing,
+  changes, source URLs, and a report without auto-applying updates.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -104,8 +108,7 @@ cost/observability hardening should follow.
 - ESLint passed.
 - TypeScript check passed.
 - Next production build passed.
-- Local checks for the latest slices passed using the bundled Node runtime
-  because local `npm`/`git` were not available on PATH in this shell.
+- Local checks for the latest slices passed with local `npm` available on PATH.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
   succeeded, Drizzle migrations applied successfully, and Next started.
 - Live `quesiq.com` QA passed across the owned practice loop and tonight's

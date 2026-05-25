@@ -99,6 +99,13 @@
       "when": 1779678000000,
       "tag": "0014_add_ai_pricing",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1779681600000,
+      "tag": "0015_add_pricing_reviews",
+      "breakpoints": true
     }
   ]
 }
