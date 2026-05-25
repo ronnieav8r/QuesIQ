@@ -65,6 +65,13 @@ Last updated: 2026-05-25
     manual for now because live AI review results were inconsistent
   - Render monthly cron `quesiq-monthly-pricing-review` can call the protected
     review endpoint; it requires `PRICING_CHECK_SECRET`
+- First global beta feedback slice:
+  - signed-in users can open a Feedback button from any screen
+  - the lightweight dialog supports bug or feedback, 1-5 rating, and an
+    optional short note
+  - submissions store user ownership, current screen, optional session id,
+    browser language, viewport, and user agent in Postgres
+  - Admin has a Feedback table for recent submissions
 - Client-side session setup snapshot and focused voice session screen
 - Direct OpenAI Realtime browser voice slice from the session screen:
   - server-side `/api/realtime/session` WebRTC exchange route
@@ -131,6 +138,7 @@ The current coded app has passed:
 
 - ESLint
 - TypeScript check
+- Latest local feedback slice checks passed with ESLint and TypeScript.
 - Next production build
 - Latest local checks passed with local `npm` available on PATH.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
@@ -182,17 +190,20 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Deploy and user-confirm QA the Admin prompt config and AI Usage slices on
-   `quesiq-web`.
+1. Deploy and user-confirm QA the Admin prompt config, AI Usage, and feedback
+   slices on `quesiq-web`.
 2. Add/confirm `ADMIN_EMAILS` and `PRICING_CHECK_SECRET` in Render before QAing
    the Admin tab and monthly pricing-review cron.
 3. Manually fix any bad pricing rows from the earlier AI accept experiment,
    especially `gpt-realtime-mini audio` if it shows text-token prices.
 4. Keep pricing updates manual until candidate preview/writeback or a
    deterministic pricing parser is built.
-5. Decide whether persisted progression/streak records or Interview V1
+5. Add prompted post-session micro-feedback after review readiness, rotating
+   specific questions about session usefulness, AI voice realism, transcript
+   accuracy, and scoring fairness.
+6. Decide whether persisted progression/streak records or Interview V1
    prompt/config hardening should follow.
-6. Continue deploy-based QA on `quesiq-web` while localhost preview is
+7. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 
 ## Reference Inputs

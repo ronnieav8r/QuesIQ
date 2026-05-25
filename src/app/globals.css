@@ -1182,6 +1182,91 @@ textarea::placeholder {
 .transcript-review-list p {
   margin-bottom: 0;
 }
+
+.feedback-launcher {
+  bottom: 1.1rem;
+  box-shadow: 0 0.75rem 1.8rem rgba(0, 0, 0, 0.26);
+  min-height: 2.7rem;
+  position: fixed;
+  right: 1.1rem;
+  z-index: 20;
+}
+
+.feedback-overlay {
+  align-items: end;
+  background: rgba(16, 21, 33, 0.62);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 1rem;
+  position: fixed;
+  z-index: 30;
+}
+
+.feedback-dialog {
+  background: var(--surface-band);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 1.4rem 3rem rgba(0, 0, 0, 0.35);
+  display: grid;
+  gap: 0.85rem;
+  max-width: 31rem;
+  padding: 1rem;
+  width: 100%;
+}
+
+.feedback-dialog p {
+  margin-bottom: 0;
+}
+
+.feedback-kind {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 0.4rem;
+}
+
+.feedback-kind button {
+  background: transparent;
+  border-color: transparent;
+  min-height: 2.6rem;
+}
+
+.feedback-kind button.active,
+.feedback-kind button:hover {
+  background: var(--focus-soft);
+  border-color: var(--focus);
+}
+
+.feedback-stars {
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: repeat(5, minmax(2.4rem, 1fr));
+}
+
+.feedback-stars button {
+  background: var(--surface-raised);
+  border-color: var(--border);
+  color: var(--muted);
+  font-size: 1.35rem;
+  min-height: 3rem;
+  padding: 0.35rem;
+}
+
+.feedback-stars button.active,
+.feedback-stars button:hover {
+  background: rgba(232, 114, 26, 0.18);
+  border-color: var(--action);
+  color: var(--action);
+}
+
+.feedback-context {
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
 .context-checklist span {
   background: var(--surface-raised);
   border: 1px solid var(--border);
@@ -1316,6 +1401,10 @@ textarea::placeholder {
   .onboarding-layout {
     align-items: start;
     grid-template-columns: minmax(0, 1.35fr) minmax(16rem, 0.75fr);
+  }
+
+  .feedback-overlay {
+    align-items: center;
   }
 }
 

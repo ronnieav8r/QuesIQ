@@ -9,7 +9,8 @@ email magic-link plus OAuth sign-in, Session-before-voice launch, direct
 OpenAI Realtime voice,
 voice artifact persistence, a structured post-session practice review, saved
 review revisit, profile persistence, history, score summaries, and first derived
-progression.
+progression. A local first-pass global feedback/bug-reporting slice now exists
+and needs deploy QA.
 
 The next useful product slice is deploying and QAing the Admin prompt/AI Usage
 work, then deciding whether persisted progression/streak records or Interview
@@ -97,6 +98,10 @@ V1 hardening should follow.
 - Added Admin AI Usage organization with spreadsheet-style API call and
   Realtime session tables, per-row estimated costs, editable pricing records,
   and a Render cron runner script for monthly advisory pricing reviews.
+- Added a local global feedback/bug-reporting slice: signed-in users can open a
+  Feedback button from any screen, send a 1-5 rating and/or short bug/feedback
+  note, and submissions store user, screen, optional session id, browser
+  language, viewport, and user agent in Postgres with Admin visibility.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -112,6 +117,7 @@ V1 hardening should follow.
 
 - ESLint passed.
 - TypeScript check passed.
+- Latest local feedback slice checks passed: ESLint and TypeScript.
 - Next production build passed.
 - Local `npm` is now available on PATH, and latest checks passed with it.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
@@ -177,19 +183,22 @@ V1 hardening should follow.
 
 ## Next Best Work
 
-1. Deploy latest Admin prompt/AI Usage/pricing-review changes and run
-   migrations through `quesiq-web`.
+1. Deploy latest Admin prompt/AI Usage/pricing-review plus feedback changes and
+   run migrations through `quesiq-web`.
 2. User-confirm QA the Admin tab: Prompts, Modes, Questions, Styles, API Calls,
-   Realtime Sessions, Pricing, and manual AI pricing review.
+   Realtime Sessions, Pricing, Feedback, and manual AI pricing review.
 3. Manually correct any bad pricing rows from the earlier AI accept experiment,
    especially `gpt-realtime-mini audio` if it was changed to text pricing.
 4. Keep pricing updates manual until a candidate preview table or deterministic
    pricing-page parser is built.
-5. Decide whether persisted progression/streak records or Interview V1
+5. Add prompted post-session micro-feedback after review readiness, rotating
+   specific questions about usefulness, realism, transcript accuracy, and
+   scoring fairness.
+6. Decide whether persisted progression/streak records or Interview V1
    prompt/config hardening should follow.
-6. Add deploy/user-confirmed QA for any changes because localhost preview is
+7. Add deploy/user-confirmed QA for any changes because localhost preview is
    deprecated in this environment.
-7. Keep verifying that `Launch Voice Session` creates a Session id before direct
+8. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
 
 ## Watch Outs

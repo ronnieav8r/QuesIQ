@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AuthControl, AuthView, useAuthSession } from "@/components/auth-control";
 import { AdminView } from "@/components/interview/admin-view";
 import { Dashboard } from "@/components/interview/dashboard";
+import { FeedbackButton } from "@/components/interview/feedback-button";
 import { HistoryView } from "@/components/interview/history-view";
 import { useInterviewCatalog } from "@/components/interview/interview-catalog";
 import { MeView } from "@/components/interview/me-view";
@@ -69,6 +70,12 @@ export default function Home() {
   const visibleTabs = adminAccess
     ? [...appTabs, { key: "admin" as const, label: "Admin" }]
     : appTabs;
+  const feedbackSessionId =
+    activeView === "session"
+      ? sessionLaunchRecord?.id
+      : activeView === "review"
+        ? selectedReview?.id
+        : undefined;
 
   useEffect(() => {
     let ignore = false;
@@ -416,6 +423,7 @@ export default function Home() {
             ))}
           </nav>
         )}
+        {signedIn && <FeedbackButton screen={activeView} sessionId={feedbackSessionId} />}
       </section>
     </main>
   );

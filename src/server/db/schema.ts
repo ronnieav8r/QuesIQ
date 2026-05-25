@@ -12,6 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import type {
+  FeedbackKind,
   PricingReviewResult,
   SessionEvaluationResult,
   SessionSetupSnapshot,
@@ -348,5 +349,33 @@ export const pricingReviews = pgTable(
   },
   (review) => ({
     createdAtIdx: index("pricing_reviews_created_at_idx").on(review.createdAt),
+  }),
+);
+
+export const userFeedback = pgTable(
+  "user_feedback",
+  {
+    browserLanguage: text("browser_language"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    kind: text("kind").$type<FeedbackKind>().notNull(),
+    message: text("message"),
+    rating: integer("rating"),
+    screen: text("screen").notNull(),
+    sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "set null" }),
+    status: text("status")
+      .$type<"new" | "reviewed" | "resolved">()
+      .default("new")
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userAgent: text("user_agent"),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    viewport: text("viewport"),
+  },
+  (feedback) => ({
+    createdAtIdx: index("user_feedback_created_at_idx").on(feedback.createdAt),
+    sessionIdx: index("user_feedback_session_idx").on(feedback.sessionId),
+    statusIdx: index("user_feedback_status_idx").on(feedback.status),
+    userIdx: index("user_feedback_user_idx").on(feedback.userId),
   }),
 );

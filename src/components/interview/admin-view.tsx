@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import type {
   AiRunRecord,
   AiPricingRecord,
+  FeedbackRecord,
   PricingReviewRecord,
   PromptComponentRecord,
   PromptConfigKey,
@@ -108,6 +109,7 @@ export function AdminView() {
   const [configs, setConfigs] = useState<PromptConfigRecord[]>([]);
   const [components, setComponents] = useState<PromptComponentRecord[]>([]);
   const [aiRuns, setAiRuns] = useState<AiRunRecord[]>([]);
+  const [feedback, setFeedback] = useState<FeedbackRecord[]>([]);
   const [pricing, setPricing] = useState<AiPricingRecord[]>([]);
   const [pricingReviews, setPricingReviews] = useState<PricingReviewRecord[]>([]);
   const [pricingDraft, setPricingDraft] = useState<PricingDraft>(pricingToDraft());
@@ -115,7 +117,8 @@ export function AdminView() {
   const [componentDraft, setComponentDraft] = useState("");
   const [draft, setDraft] = useState<PromptDraft>(emptyDraft);
   const [error, setError] = useState<string>();
-  const [adminSection, setAdminSection] = useState<"ai_usage" | "prompts">("prompts");
+  const [adminSection, setAdminSection] =
+    useState<"ai_usage" | "feedback" | "prompts">("prompts");
   const [componentType, setComponentType] =
     useState<PromptComponentRecord["type"]>("mode");
   const [promptSection, setPromptSection] =
@@ -289,6 +292,28 @@ export function AdminView() {
     }
   }
 
+  async function loadFeedback() {
+    try {
+      setError(undefined);
+      const response = await fetch("/api/admin/feedback");
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        feedback?: FeedbackRecord[];
+      };
+
+      if (!response.ok) {
+        throw new Error(body.detail || body.error || "Feedback could not be loaded.");
+      }
+
+      setFeedback(body.feedback ?? []);
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error ? loadError.message : "Feedback could not be loaded.",
+      );
+    }
+  }
+
   function applySelectedPricing(record?: AiPricingRecord) {
     if (!record) {
       setSelectedPricingId(undefined);
@@ -338,12 +363,14 @@ export function AdminView() {
           configResponse,
           componentResponse,
           aiRunsResponse,
+          feedbackResponse,
           realtimeUsageResponse,
           pricingResponse,
         ] = await Promise.all([
           fetch("/api/admin/prompt-configs"),
           fetch("/api/admin/prompt-components"),
           fetch("/api/admin/ai-runs"),
+          fetch("/api/admin/feedback"),
           fetch("/api/admin/realtime-usage"),
           fetch("/api/admin/pricing"),
         ]);
@@ -360,6 +387,10 @@ export function AdminView() {
         const aiRunsBody = (await aiRunsResponse.json()) as {
           error?: string;
           runs?: AiRunRecord[];
+        };
+        const feedbackBody = (await feedbackResponse.json()) as {
+          error?: string;
+          feedback?: FeedbackRecord[];
         };
         const realtimeUsageBody = (await realtimeUsageResponse.json()) as {
           error?: string;
@@ -389,6 +420,10 @@ export function AdminView() {
           throw new Error(aiRunsBody.error || "AI runs could not be loaded.");
         }
 
+        if (!feedbackResponse.ok) {
+          throw new Error(feedbackBody.error || "Feedback could not be loaded.");
+        }
+
         if (!realtimeUsageResponse.ok) {
           throw new Error(
             realtimeUsageBody.error || "Realtime usage could not be loaded.",
@@ -408,6 +443,7 @@ export function AdminView() {
           setConfigs(nextConfigs);
           setComponents(nextComponents);
           setAiRuns(aiRunsBody.runs ?? []);
+          setFeedback(feedbackBody.feedback ?? []);
           setRealtimeUsage(realtimeUsageBody.usage ?? []);
           setPricing(pricingBody.pricing ?? []);
           setPricingReviews(pricingBody.reviews ?? []);
@@ -563,6 +599,11 @@ export function AdminView() {
   }
 
   function refreshAdminSection() {
+    if (adminSection === "feedback") {
+      void loadFeedback();
+      return;
+    }
+
     if (adminSection === "ai_usage") {
       if (usageSection === "api_calls") {
         void loadAiRuns();
@@ -719,6 +760,13 @@ export function AdminView() {
             >
               AI Usage
             </button>
+            <button
+              className={adminSection === "feedback" ? "active" : ""}
+              onClick={() => setAdminSection("feedback")}
+              type="button"
+            >
+              Feedback
+            </button>
           </div>
 
           {adminSection === "prompts" && (
@@ -778,6 +826,53 @@ export function AdminView() {
                 Pricing
               </button>
             </div>
+          )}
+
+          {adminSection === "feedback" && (
+            <section className="ai-runs-panel" aria-labelledby="feedback-admin-title">
+              <div className="section-head">
+                <h2 id="feedback-admin-title">User Feedback</h2>
+                <span>{feedback.length} shown</span>
+              </div>
+              {feedback.length > 0 ? (
+                <div className="usage-table-wrap">
+                  <table className="usage-table">
+                    <thead>
+                      <tr>
+                        <th>Created</th>
+                        <th>Kind</th>
+                        <th>Rating</th>
+                        <th>User</th>
+                        <th>Screen</th>
+                        <th>Session</th>
+                        <th>Message</th>
+                        <th>Device</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {feedback.map((item) => (
+                        <tr key={item.id}>
+                          <td>{new Date(item.createdAt).toLocaleString()}</td>
+                          <td>{item.kind}</td>
+                          <td>{item.rating ? `${item.rating}/5` : "--"}</td>
+                          <td>{item.userEmail || item.userId || "--"}</td>
+                          <td>{item.screen}</td>
+                          <td>{item.sessionId || "--"}</td>
+                          <td>{item.message || "--"}</td>
+                          <td>
+                            {item.viewport || "--"}
+                            {item.browserLanguage ? ` / ${item.browserLanguage}` : ""}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p>No feedback has been recorded yet.</p>
+              )}
+              {error && <p className="form-error">{error}</p>}
+            </section>
           )}
 
           {adminSection === "prompts" && promptSection === "base" && (

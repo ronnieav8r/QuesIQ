@@ -9,6 +9,24 @@ export type AppView =
   | "onboarding"
   | "session";
 
+export type FeedbackKind = "bug" | "feedback";
+
+export type FeedbackRecord = {
+  browserLanguage?: string;
+  createdAt: string;
+  id: string;
+  kind: FeedbackKind;
+  message?: string;
+  rating?: number;
+  screen: AppView | string;
+  sessionId?: string;
+  status: "new" | "reviewed" | "resolved";
+  userAgent?: string;
+  userEmail?: string;
+  userId?: string;
+  viewport?: string;
+};
+
 export type InterviewContext = {
   jobDescription: string;
   preferredName: string;
