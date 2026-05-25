@@ -98,8 +98,9 @@ const pricingReviewSchema = {
           modality: { enum: ["audio", "text"], type: "string" },
           newValue: { type: ["number", "null"] },
           oldValue: { type: ["number", "null"] },
+          verified: { type: "boolean" },
         },
-        required: ["model", "modality", "field", "oldValue", "newValue"],
+        required: ["model", "modality", "field", "oldValue", "newValue", "verified"],
         type: "object",
       },
       type: "array",
@@ -114,6 +115,7 @@ const pricingReviewSchema = {
           modality: { enum: ["audio", "text"], type: "string" },
           outputUsdPerMillion: { type: ["number", "null"] },
           sourceUrl: { type: "string" },
+          verified: { type: "boolean" },
         },
         required: [
           "model",
@@ -122,6 +124,7 @@ const pricingReviewSchema = {
           "cachedInputUsdPerMillion",
           "outputUsdPerMillion",
           "sourceUrl",
+          "verified",
         ],
         type: "object",
       },
@@ -282,6 +285,10 @@ function usdToMicroUsd(value?: number | null) {
   return value === undefined || value === null ? undefined : Math.round(value * 1_000_000);
 }
 
+function pricingKey(model: string, modality: AiPricingRecord["modality"]) {
+  return `${model.trim().toLowerCase()}::${modality}`;
+}
+
 export async function acceptLatestPricingReview() {
   const [review] = await getDb()
     .select()
@@ -297,9 +304,22 @@ export async function acceptLatestPricingReview() {
   }
 
   const versionDate = (review.completedAt ?? review.createdAt).toISOString().slice(0, 10);
+  const existingPricing = await listAiPricing();
+  const allowedKeys = new Set(
+    existingPricing
+      .filter((record) => record.active)
+      .map((record) => pricingKey(record.model, record.modality)),
+  );
   let applied = 0;
 
   for (const candidate of result.pricing) {
+    if (
+      !candidate.verified ||
+      !allowedKeys.has(pricingKey(candidate.model, candidate.modality))
+    ) {
+      continue;
+    }
+
     const inputMicroUsdPerMillion = usdToMicroUsd(candidate.inputUsdPerMillion);
     const cachedInputMicroUsdPerMillion = usdToMicroUsd(
       candidate.cachedInputUsdPerMillion,
@@ -391,7 +411,7 @@ export async function runPricingReview() {
         input: [
           {
             content:
-              "You review OpenAI pricing for QuesIQ. Use official OpenAI sources only. Compare the current app pricing JSON to current official pricing for the listed models/modalities. Return only the required structured JSON. Do not apply changes.",
+              "You review OpenAI pricing for QuesIQ. Use official OpenAI sources only. Compare the current app pricing JSON to current official pricing for the listed exact model and modality pairs. Return only the required structured JSON. Do not apply changes.",
             role: "system",
           },
           {
@@ -403,6 +423,14 @@ export async function runPricingReview() {
                 "gpt-realtime-1.5 audio",
                 "gpt-realtime-2 audio",
                 "gpt-realtime-mini audio",
+              ],
+              rules: [
+                "Only return pricing candidates for exact model and modality pairs from currentPricing.",
+                "For audio records, use audio-token prices only. Do not substitute text-token prices.",
+                "For text records, use text-token prices only. Do not substitute audio-token prices.",
+                "If an exact model and modality pair is not visible in official OpenAI sources, include no pricing candidate for that pair and mention it in report.",
+                "Set verified to true only when the official source explicitly supports that exact model and modality pair.",
+                "Set verified to false for uncertain candidates; the app will not accept unverified candidates.",
               ],
               sourcePreference: [
                 "https://openai.com/api/pricing/",

@@ -263,6 +263,7 @@ export type PricingReviewResult = {
     modality: "audio" | "text";
     newValue?: number;
     oldValue?: number;
+    verified: boolean;
   }>;
   pricing: Array<{
     cachedInputUsdPerMillion?: number;
@@ -271,6 +272,7 @@ export type PricingReviewResult = {
     modality: "audio" | "text";
     outputUsdPerMillion?: number;
     sourceUrl: string;
+    verified: boolean;
   }>;
   report: string;
   sourceUrls: string[];
