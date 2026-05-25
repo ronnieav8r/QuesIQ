@@ -157,11 +157,13 @@ should read active pricing records and store the pricing version used on derived
 usage rows where practical.
 
 A monthly AI pricing review can use OpenAI web search and structured JSON to
-compare current app pricing against official OpenAI sources. Treat that output
-as a candidate report for admin approval. After review, an admin can accept the
-candidate changes into new active pricing records. Acceptance must only apply
-verified candidates for exact existing model and modality pairs; audio pricing
-must never be replaced by text-token pricing for the same model name.
+compare current app pricing against
+`https://developers.openai.com/api/docs/pricing`, which is the source of truth
+for pricing review. Treat that output as a candidate report for admin approval.
+After review, an admin can accept the candidate changes into new active pricing
+records. Acceptance must only apply verified candidates for exact existing model
+and modality pairs; audio pricing must never be replaced by text-token pricing
+for the same model name.
 
 ### Persist Profile Context Separately From Session Snapshots
 

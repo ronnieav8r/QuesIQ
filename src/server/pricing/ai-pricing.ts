@@ -9,7 +9,7 @@ import type {
 import { getDb } from "@/server/db/client";
 import { aiPricing, pricingChecks, pricingReviews } from "@/server/db/schema";
 
-const sourceUrl = "https://openai.com/api/pricing/";
+const sourceUrl = "https://developers.openai.com/api/docs/pricing";
 
 type PricingInput = {
   active: boolean;
@@ -411,7 +411,7 @@ export async function runPricingReview() {
         input: [
           {
             content:
-              "You review OpenAI pricing for QuesIQ. Use official OpenAI sources only. Compare the current app pricing JSON to current official pricing for the listed exact model and modality pairs. Return only the required structured JSON. Do not apply changes.",
+              "You review OpenAI pricing for QuesIQ. Use only https://developers.openai.com/api/docs/pricing as the source of truth. Compare the current app pricing JSON to that page for the listed exact model and modality pairs. Return only the required structured JSON. Do not apply changes.",
             role: "system",
           },
           {
@@ -431,11 +431,9 @@ export async function runPricingReview() {
                 "If an exact model and modality pair is not visible in official OpenAI sources, include no pricing candidate for that pair and mention it in report.",
                 "Set verified to true only when the official source explicitly supports that exact model and modality pair.",
                 "Set verified to false for uncertain candidates; the app will not accept unverified candidates.",
+                "Every sourceUrl must be https://developers.openai.com/api/docs/pricing.",
               ],
-              sourcePreference: [
-                "https://openai.com/api/pricing/",
-                "https://platform.openai.com/docs/",
-              ],
+              sourcePreference: [sourceUrl],
             }),
             role: "user",
           },
@@ -453,7 +451,7 @@ export async function runPricingReview() {
         tools: [
           {
             filters: {
-              allowed_domains: ["openai.com", "platform.openai.com"],
+              allowed_domains: ["developers.openai.com"],
             },
             type: "web_search",
           },

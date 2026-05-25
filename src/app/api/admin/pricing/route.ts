@@ -42,7 +42,7 @@ function parsePricingBody(body: PricingBody) {
     model: body.model,
     modality: body.modality,
     outputMicroUsdPerMillion: body.outputMicroUsdPerMillion,
-    sourceUrl: body.sourceUrl || "https://openai.com/api/pricing/",
+    sourceUrl: body.sourceUrl || "https://developers.openai.com/api/docs/pricing",
     version: body.version,
   };
 }

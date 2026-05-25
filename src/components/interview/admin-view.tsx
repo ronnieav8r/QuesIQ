@@ -99,7 +99,7 @@ function pricingToDraft(pricing?: AiPricingRecord): PricingDraft {
     model: pricing?.model ?? "",
     modality: pricing?.modality ?? "text",
     outputUsd: microUsdToDollars(pricing?.outputMicroUsdPerMillion),
-    sourceUrl: pricing?.sourceUrl ?? "https://openai.com/api/pricing/",
+    sourceUrl: pricing?.sourceUrl ?? "https://developers.openai.com/api/docs/pricing",
     version: pricing?.version ?? "manual-v1",
   };
 }
