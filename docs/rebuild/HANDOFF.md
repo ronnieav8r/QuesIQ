@@ -9,8 +9,8 @@ email magic-link plus OAuth sign-in, Session-before-voice launch, direct
 OpenAI Realtime voice,
 voice artifact persistence, a structured post-session practice review, saved
 review revisit, profile persistence, history, score summaries, and first derived
-progression. A local first-pass global feedback/bug-reporting slice now exists
-and needs deploy QA.
+progression. A local feedback/bug-reporting slice now exists with global access,
+optional screenshots, and first prompted review feedback; it needs deploy QA.
 
 The next useful product slice is deploying and QAing the Admin prompt/AI Usage
 work, then deciding whether persisted progression/streak records or Interview
@@ -102,6 +102,9 @@ V1 hardening should follow.
   Feedback button from any screen, send a 1-5 rating and/or short bug/feedback
   note, and submissions store user, screen, optional session id, browser
   language, viewport, and user agent in Postgres with Admin visibility.
+- Added feedback screenshot support for bugs/feedback, a visible rating prompt
+  label so users know what the stars mean, and a one-time post-review popup that
+  asks users to rate the usefulness of a newly generated practice review.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -117,7 +120,8 @@ V1 hardening should follow.
 
 - ESLint passed.
 - TypeScript check passed.
-- Latest local feedback slice checks passed: ESLint and TypeScript.
+- Latest local feedback slice checks passed: ESLint, TypeScript, and production
+  build.
 - Next production build passed.
 - Local `npm` is now available on PATH, and latest checks passed with it.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
@@ -191,8 +195,8 @@ V1 hardening should follow.
    especially `gpt-realtime-mini audio` if it was changed to text pricing.
 4. Keep pricing updates manual until a candidate preview table or deterministic
    pricing-page parser is built.
-5. Add prompted post-session micro-feedback after review readiness, rotating
-   specific questions about usefulness, realism, transcript accuracy, and
+5. Expand prompted micro-feedback beyond the first review-usefulness popup by
+   rotating specific questions about voice realism, transcript accuracy, and
    scoring fairness.
 6. Decide whether persisted progression/streak records or Interview V1
    prompt/config hardening should follow.

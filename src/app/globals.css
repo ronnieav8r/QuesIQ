@@ -1219,6 +1219,10 @@ textarea::placeholder {
   margin-bottom: 0;
 }
 
+.feedback-dialog a {
+  color: var(--focus);
+}
+
 .feedback-kind {
   background: var(--surface-raised);
   border: 1px solid var(--border);
@@ -1245,6 +1249,16 @@ textarea::placeholder {
   display: grid;
   gap: 0.4rem;
   grid-template-columns: repeat(5, minmax(2.4rem, 1fr));
+}
+
+.feedback-rating {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.feedback-rating p {
+  color: var(--text);
+  font-weight: 800;
 }
 
 .feedback-stars button {

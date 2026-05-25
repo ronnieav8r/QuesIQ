@@ -69,8 +69,15 @@ Last updated: 2026-05-25
   - signed-in users can open a Feedback button from any screen
   - the lightweight dialog supports bug or feedback, 1-5 rating, and an
     optional short note
+  - users can attach an optional screenshot for bug/feedback reports during the
+    beta while object storage is not yet in place
+  - the rating prompt is shown above the stars so each submission preserves what
+    the user was asked to rate
+  - a one-time popup now appears when a newly completed practice review is ready
+    and asks the user to rate review usefulness
   - submissions store user ownership, current screen, optional session id,
-    browser language, viewport, and user agent in Postgres
+    browser language, viewport, user agent, rating prompt, and screenshot
+    metadata/data in Postgres
   - Admin has a Feedback table for recent submissions
 - Client-side session setup snapshot and focused voice session screen
 - Direct OpenAI Realtime browser voice slice from the session screen:
@@ -138,7 +145,8 @@ The current coded app has passed:
 
 - ESLint
 - TypeScript check
-- Latest local feedback slice checks passed with ESLint and TypeScript.
+- Latest local feedback slice checks passed with ESLint, TypeScript, and
+  production build.
 - Next production build
 - Latest local checks passed with local `npm` available on PATH.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
@@ -198,9 +206,9 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
    especially `gpt-realtime-mini audio` if it shows text-token prices.
 4. Keep pricing updates manual until candidate preview/writeback or a
    deterministic pricing parser is built.
-5. Add prompted post-session micro-feedback after review readiness, rotating
-   specific questions about session usefulness, AI voice realism, transcript
-   accuracy, and scoring fairness.
+5. Expand prompted micro-feedback beyond the first review-usefulness popup by
+   rotating specific questions about AI voice realism, transcript accuracy, and
+   scoring fairness.
 6. Decide whether persisted progression/streak records or Interview V1
    prompt/config hardening should follow.
 7. Continue deploy-based QA on `quesiq-web` while localhost preview is

@@ -845,7 +845,9 @@ export function AdminView() {
                         <th>User</th>
                         <th>Screen</th>
                         <th>Session</th>
+                        <th>Question</th>
                         <th>Message</th>
+                        <th>Screenshot</th>
                         <th>Device</th>
                       </tr>
                     </thead>
@@ -858,7 +860,21 @@ export function AdminView() {
                           <td>{item.userEmail || item.userId || "--"}</td>
                           <td>{item.screen}</td>
                           <td>{item.sessionId || "--"}</td>
+                          <td>{item.ratingPrompt || "--"}</td>
                           <td>{item.message || "--"}</td>
+                          <td>
+                            {item.screenshotDataUrl ? (
+                              <a
+                                href={item.screenshotDataUrl}
+                                rel="noreferrer"
+                                target="_blank"
+                              >
+                                {item.screenshotName || "Open screenshot"}
+                              </a>
+                            ) : (
+                              "--"
+                            )}
+                          </td>
                           <td>
                             {item.viewport || "--"}
                             {item.browserLanguage ? ` / ${item.browserLanguage}` : ""}

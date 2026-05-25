@@ -361,7 +361,12 @@ export const userFeedback = pgTable(
     kind: text("kind").$type<FeedbackKind>().notNull(),
     message: text("message"),
     rating: integer("rating"),
+    ratingPrompt: text("rating_prompt"),
     screen: text("screen").notNull(),
+    screenshotDataUrl: text("screenshot_data_url"),
+    screenshotMimeType: text("screenshot_mime_type"),
+    screenshotName: text("screenshot_name"),
+    screenshotSize: integer("screenshot_size"),
     sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "set null" }),
     status: text("status")
       .$type<"new" | "reviewed" | "resolved">()

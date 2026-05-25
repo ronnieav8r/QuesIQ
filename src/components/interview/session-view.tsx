@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { FeedbackButton } from "@/components/interview/feedback-button";
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import type {
   InterviewCatalog,
@@ -165,6 +166,17 @@ export function SessionView({
       />
 
       <div className="session-grid">
+        {evaluationStatus === "ready" && (
+          <FeedbackButton
+            autoOpenKey={`review-ready:${session.id}`}
+            hideLauncher
+            ratingPrompt="Rate this practice review."
+            screen="session"
+            sessionId={session.id}
+            title="How useful was this review?"
+          />
+        )}
+
         <section className="panel session-config" aria-labelledby="session-config-title">
           <div className="section-head">
             <h2 id="session-config-title">Launch Snapshot</h2>

@@ -17,8 +17,13 @@ export type FeedbackRecord = {
   id: string;
   kind: FeedbackKind;
   message?: string;
+  ratingPrompt?: string;
   rating?: number;
   screen: AppView | string;
+  screenshotDataUrl?: string;
+  screenshotMimeType?: string;
+  screenshotName?: string;
+  screenshotSize?: number;
   sessionId?: string;
   status: "new" | "reviewed" | "resolved";
   userAgent?: string;

@@ -120,6 +120,13 @@
       "when": 1779771600000,
       "tag": "0017_add_user_feedback",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1779775200000,
+      "tag": "0018_add_feedback_screenshots",
+      "breakpoints": true
     }
   ]
 }

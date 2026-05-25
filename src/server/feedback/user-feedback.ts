@@ -8,8 +8,13 @@ type CreateFeedbackInput = {
   browserLanguage?: string;
   kind: FeedbackKind;
   message?: string;
+  ratingPrompt?: string;
   rating?: number;
   screen: string;
+  screenshotDataUrl?: string;
+  screenshotMimeType?: string;
+  screenshotName?: string;
+  screenshotSize?: number;
   sessionId?: string;
   userAgent?: string;
   userId: string;
@@ -42,8 +47,16 @@ export function parseFeedbackInput(body: unknown): Omit<CreateFeedbackInput, "us
       : undefined;
   const message = cleanText(candidate.message, 2000);
   const screen = cleanText(candidate.screen, 80);
+  const screenshotDataUrl = cleanText(candidate.screenshotDataUrl, 2_100_000);
+  const screenshotSize =
+    typeof candidate.screenshotSize === "number" &&
+    Number.isInteger(candidate.screenshotSize) &&
+    candidate.screenshotSize > 0 &&
+    candidate.screenshotSize <= 1_500_000
+      ? candidate.screenshotSize
+      : undefined;
 
-  if (!kind || !screen || (!message && rating === undefined)) {
+  if (!kind || !screen || (!message && rating === undefined && !screenshotDataUrl)) {
     return undefined;
   }
 
@@ -51,8 +64,13 @@ export function parseFeedbackInput(body: unknown): Omit<CreateFeedbackInput, "us
     browserLanguage: cleanText(candidate.browserLanguage, 80),
     kind,
     message,
+    ratingPrompt: cleanText(candidate.ratingPrompt, 160),
     rating,
     screen,
+    screenshotDataUrl,
+    screenshotMimeType: cleanText(candidate.screenshotMimeType, 80),
+    screenshotName: cleanText(candidate.screenshotName, 180),
+    screenshotSize,
     sessionId: cleanText(candidate.sessionId, 80),
     userAgent: cleanText(candidate.userAgent, 500),
     viewport: cleanText(candidate.viewport, 80),
@@ -65,8 +83,13 @@ function toRecord(row: {
   id: string;
   kind: FeedbackKind;
   message: string | null;
+  ratingPrompt: string | null;
   rating: number | null;
   screen: string;
+  screenshotDataUrl: string | null;
+  screenshotMimeType: string | null;
+  screenshotName: string | null;
+  screenshotSize: number | null;
   sessionId: string | null;
   status: FeedbackRecord["status"];
   userAgent: string | null;
@@ -80,8 +103,13 @@ function toRecord(row: {
     id: row.id,
     kind: row.kind,
     message: row.message ?? undefined,
+    ratingPrompt: row.ratingPrompt ?? undefined,
     rating: row.rating ?? undefined,
     screen: row.screen,
+    screenshotDataUrl: row.screenshotDataUrl ?? undefined,
+    screenshotMimeType: row.screenshotMimeType ?? undefined,
+    screenshotName: row.screenshotName ?? undefined,
+    screenshotSize: row.screenshotSize ?? undefined,
     sessionId: row.sessionId ?? undefined,
     status: row.status,
     userAgent: row.userAgent ?? undefined,
@@ -99,7 +127,12 @@ export async function createFeedback(input: CreateFeedbackInput) {
       kind: input.kind,
       message: input.message,
       rating: input.rating,
+      ratingPrompt: input.ratingPrompt,
       screen: input.screen,
+      screenshotDataUrl: input.screenshotDataUrl,
+      screenshotMimeType: input.screenshotMimeType,
+      screenshotName: input.screenshotName,
+      screenshotSize: input.screenshotSize,
       sessionId: input.sessionId,
       userAgent: input.userAgent,
       userId: input.userId,
@@ -111,7 +144,12 @@ export async function createFeedback(input: CreateFeedbackInput) {
       kind: userFeedback.kind,
       message: userFeedback.message,
       rating: userFeedback.rating,
+      ratingPrompt: userFeedback.ratingPrompt,
       screen: userFeedback.screen,
+      screenshotDataUrl: userFeedback.screenshotDataUrl,
+      screenshotMimeType: userFeedback.screenshotMimeType,
+      screenshotName: userFeedback.screenshotName,
+      screenshotSize: userFeedback.screenshotSize,
       sessionId: userFeedback.sessionId,
       status: userFeedback.status,
     });
@@ -128,7 +166,12 @@ export async function listFeedback(limit = 100): Promise<FeedbackRecord[]> {
       kind: userFeedback.kind,
       message: userFeedback.message,
       rating: userFeedback.rating,
+      ratingPrompt: userFeedback.ratingPrompt,
       screen: userFeedback.screen,
+      screenshotDataUrl: userFeedback.screenshotDataUrl,
+      screenshotMimeType: userFeedback.screenshotMimeType,
+      screenshotName: userFeedback.screenshotName,
+      screenshotSize: userFeedback.screenshotSize,
       sessionId: userFeedback.sessionId,
       status: userFeedback.status,
       userAgent: userFeedback.userAgent,
