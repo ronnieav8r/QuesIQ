@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 
 import type {
   AiRunRecord,
   AiPricingRecord,
+  FeedbackKind,
   FeedbackRecord,
   PricingReviewRecord,
   PromptComponentRecord,
@@ -30,6 +32,48 @@ type PricingDraft = {
   sourceUrl: string;
   version: string;
 };
+
+type SortDirection = "asc" | "desc";
+
+type SortState<T extends string> = {
+  direction: SortDirection;
+  key: T;
+};
+
+type AiRunSortKey =
+  | "cost"
+  | "duration"
+  | "error"
+  | "model"
+  | "session"
+  | "started"
+  | "status"
+  | "tokens"
+  | "type"
+  | "user";
+
+type FeedbackSortKey =
+  | "created"
+  | "device"
+  | "message"
+  | "question"
+  | "rating"
+  | "screen"
+  | "screenshot"
+  | "session"
+  | "user";
+
+type RealtimeSortKey =
+  | "audioTokens"
+  | "cost"
+  | "duration"
+  | "method"
+  | "model"
+  | "session"
+  | "started"
+  | "transcript"
+  | "user"
+  | "voice";
 
 const promptLabels: Record<PromptConfigKey, string> = {
   realtime_interviewer: "Live Voice Interviewer",
@@ -92,6 +136,168 @@ function microUsdToDollars(value?: number) {
   return value === undefined ? "" : (value / 1_000_000).toString();
 }
 
+function compareSortValues(left: number | string, right: number | string) {
+  if (typeof left === "number" && typeof right === "number") {
+    return left - right;
+  }
+
+  return String(left).localeCompare(String(right), undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
+
+function sortBy<T, K extends string>(
+  rows: T[],
+  sort: SortState<K>,
+  getValue: (row: T, key: K) => number | string,
+) {
+  return [...rows].sort((left, right) => {
+    const result = compareSortValues(getValue(left, sort.key), getValue(right, sort.key));
+
+    return sort.direction === "asc" ? result : -result;
+  });
+}
+
+function nextSort<T extends string>(current: SortState<T>, key: T): SortState<T> {
+  if (current.key !== key) {
+    return { direction: "asc", key };
+  }
+
+  return { direction: current.direction === "asc" ? "desc" : "asc", key };
+}
+
+function SortHeader<T extends string>({
+  label,
+  onSort,
+  sort,
+  sortKey,
+}: {
+  label: string;
+  onSort: (key: T) => void;
+  sort: SortState<T>;
+  sortKey: T;
+}) {
+  const active = sort.key === sortKey;
+
+  return (
+    <th aria-sort={active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
+      <button className={active ? "active" : ""} onClick={() => onSort(sortKey)} type="button">
+        {label}
+        <span>{active ? (sort.direction === "asc" ? "Asc" : "Desc") : "Sort"}</span>
+      </button>
+    </th>
+  );
+}
+
+function compactValue(value?: number | string) {
+  if (value === undefined || value === null || value === "") {
+    return "--";
+  }
+
+  return String(value);
+}
+
+function ExpandableCell({
+  children,
+  className,
+  value,
+}: {
+  children?: ReactNode;
+  className?: string;
+  value?: number | string;
+}) {
+  const text = compactValue(value);
+
+  if (children) {
+    return (
+      <div className={`table-cell-truncate ${className ?? ""}`.trim()} title={text}>
+        {children}
+      </div>
+    );
+  }
+
+  return (
+    <details className={`expandable-cell ${className ?? ""}`.trim()}>
+      <summary title={text}>{text}</summary>
+      <p>{text}</p>
+    </details>
+  );
+}
+
+function getAiRunSortValue(run: AiRunRecord, key: AiRunSortKey) {
+  switch (key) {
+    case "cost":
+      return run.estimatedCostMicroUsd ?? -1;
+    case "duration":
+      return run.durationMs ?? -1;
+    case "error":
+      return run.errorMessage || "";
+    case "model":
+      return run.model;
+    case "session":
+      return run.sessionId || "";
+    case "started":
+      return new Date(run.startedAt).getTime();
+    case "status":
+      return run.status;
+    case "tokens":
+      return run.totalTokens ?? -1;
+    case "type":
+      return run.runType;
+    case "user":
+      return run.userEmail || run.userId || "";
+  }
+}
+
+function getFeedbackSortValue(item: FeedbackRecord, key: FeedbackSortKey) {
+  switch (key) {
+    case "created":
+      return new Date(item.createdAt).getTime();
+    case "device":
+      return `${item.viewport || ""} ${item.browserLanguage || ""}`;
+    case "message":
+      return item.message || "";
+    case "question":
+      return item.ratingPrompt || "";
+    case "rating":
+      return item.rating ?? -1;
+    case "screen":
+      return item.screen;
+    case "screenshot":
+      return item.screenshotName || "";
+    case "session":
+      return item.sessionId || "";
+    case "user":
+      return item.userEmail || item.userId || "";
+  }
+}
+
+function getRealtimeSortValue(usage: RealtimeSessionUsageRecord, key: RealtimeSortKey) {
+  switch (key) {
+    case "audioTokens":
+      return usage.estimatedAudioInputTokens + usage.estimatedAudioOutputTokens;
+    case "cost":
+      return usage.estimatedCostMicroUsd;
+    case "duration":
+      return usage.durationSeconds;
+    case "method":
+      return usage.estimationMethod;
+    case "model":
+      return usage.model;
+    case "session":
+      return usage.sessionId;
+    case "started":
+      return usage.startedAt ? new Date(usage.startedAt).getTime() : -1;
+    case "transcript":
+      return usage.transcriptTurns;
+    case "user":
+      return usage.userEmail || usage.userId || "";
+    case "voice":
+      return usage.voice || "";
+  }
+}
+
 function pricingToDraft(pricing?: AiPricingRecord): PricingDraft {
   return {
     active: pricing?.active ?? true,
@@ -117,6 +323,10 @@ export function AdminView() {
   const [componentDraft, setComponentDraft] = useState("");
   const [draft, setDraft] = useState<PromptDraft>(emptyDraft);
   const [error, setError] = useState<string>();
+  const [aiRunSort, setAiRunSort] = useState<SortState<AiRunSortKey>>({
+    direction: "desc",
+    key: "started",
+  });
   const [adminSection, setAdminSection] =
     useState<"ai_usage" | "feedback" | "prompts">("prompts");
   const [componentType, setComponentType] =
@@ -124,6 +334,16 @@ export function AdminView() {
   const [promptSection, setPromptSection] =
     useState<"base" | PromptComponentRecord["type"]>("mode");
   const [pending, setPending] = useState(false);
+  const [feedbackKindFilter, setFeedbackKindFilter] =
+    useState<FeedbackKind>("feedback");
+  const [feedbackSort, setFeedbackSort] = useState<SortState<FeedbackSortKey>>({
+    direction: "desc",
+    key: "created",
+  });
+  const [realtimeSort, setRealtimeSort] = useState<SortState<RealtimeSortKey>>({
+    direction: "desc",
+    key: "started",
+  });
   const [selectedComponentKey, setSelectedComponentKey] = useState<string>();
   const [selectedId, setSelectedId] = useState<string>();
   const [status, setStatus] = useState<"loading" | "ready">("loading");
@@ -154,6 +374,29 @@ export function AdminView() {
   const selectedPricing = useMemo(
     () => pricing.find((record) => record.id === selectedPricingId),
     [pricing, selectedPricingId],
+  );
+  const sortedAiRuns = useMemo(
+    () => sortBy(aiRuns, aiRunSort, getAiRunSortValue),
+    [aiRuns, aiRunSort],
+  );
+  const visibleFeedback = useMemo(
+    () => feedback.filter((item) => item.kind === feedbackKindFilter),
+    [feedback, feedbackKindFilter],
+  );
+  const sortedFeedback = useMemo(
+    () => sortBy(visibleFeedback, feedbackSort, getFeedbackSortValue),
+    [visibleFeedback, feedbackSort],
+  );
+  const sortedRealtimeUsage = useMemo(
+    () => sortBy(realtimeUsage, realtimeSort, getRealtimeSortValue),
+    [realtimeUsage, realtimeSort],
+  );
+  const feedbackCounts = useMemo(
+    () => ({
+      bug: feedback.filter((item) => item.kind === "bug").length,
+      feedback: feedback.filter((item) => item.kind === "feedback").length,
+    }),
+    [feedback],
   );
 
   function applySelectedConfig(config?: PromptConfigRecord) {
@@ -832,52 +1075,124 @@ export function AdminView() {
             <section className="ai-runs-panel" aria-labelledby="feedback-admin-title">
               <div className="section-head">
                 <h2 id="feedback-admin-title">User Feedback</h2>
-                <span>{feedback.length} shown</span>
+                <span>{sortedFeedback.length} shown</span>
               </div>
-              {feedback.length > 0 ? (
+              <div className="component-tabs" aria-label="Feedback type">
+                <button
+                  className={feedbackKindFilter === "feedback" ? "active" : ""}
+                  onClick={() => setFeedbackKindFilter("feedback")}
+                  type="button"
+                >
+                  Feedback ({feedbackCounts.feedback})
+                </button>
+                <button
+                  className={feedbackKindFilter === "bug" ? "active" : ""}
+                  onClick={() => setFeedbackKindFilter("bug")}
+                  type="button"
+                >
+                  Bugs ({feedbackCounts.bug})
+                </button>
+              </div>
+              {sortedFeedback.length > 0 ? (
                 <div className="usage-table-wrap">
                   <table className="usage-table">
                     <thead>
                       <tr>
-                        <th>Created</th>
-                        <th>Kind</th>
-                        <th>Rating</th>
-                        <th>User</th>
-                        <th>Screen</th>
-                        <th>Session</th>
-                        <th>Question</th>
-                        <th>Message</th>
-                        <th>Screenshot</th>
-                        <th>Device</th>
+                        <SortHeader
+                          label="Created"
+                          onSort={(key) => setFeedbackSort(nextSort(feedbackSort, key))}
+                          sort={feedbackSort}
+                          sortKey="created"
+                        />
+                        <SortHeader
+                          label="Rating"
+                          onSort={(key) => setFeedbackSort(nextSort(feedbackSort, key))}
+                          sort={feedbackSort}
+                          sortKey="rating"
+                        />
+                        <SortHeader
+                          label="User"
+                          onSort={(key) => setFeedbackSort(nextSort(feedbackSort, key))}
+                          sort={feedbackSort}
+                          sortKey="user"
+                        />
+                        <SortHeader
+                          label="Screen"
+                          onSort={(key) => setFeedbackSort(nextSort(feedbackSort, key))}
+                          sort={feedbackSort}
+                          sortKey="screen"
+                        />
+                        <SortHeader
+                          label="Session"
+                          onSort={(key) => setFeedbackSort(nextSort(feedbackSort, key))}
+                          sort={feedbackSort}
+                          sortKey="session"
+                        />
+                        <SortHeader
+                          label="Question"
+                          onSort={(key) => setFeedbackSort(nextSort(feedbackSort, key))}
+                          sort={feedbackSort}
+                          sortKey="question"
+                        />
+                        <SortHeader
+                          label="Message"
+                          onSort={(key) => setFeedbackSort(nextSort(feedbackSort, key))}
+                          sort={feedbackSort}
+                          sortKey="message"
+                        />
+                        <SortHeader
+                          label="Screenshot"
+                          onSort={(key) => setFeedbackSort(nextSort(feedbackSort, key))}
+                          sort={feedbackSort}
+                          sortKey="screenshot"
+                        />
+                        <SortHeader
+                          label="Device"
+                          onSort={(key) => setFeedbackSort(nextSort(feedbackSort, key))}
+                          sort={feedbackSort}
+                          sortKey="device"
+                        />
                       </tr>
                     </thead>
                     <tbody>
-                      {feedback.map((item) => (
+                      {sortedFeedback.map((item) => (
                         <tr key={item.id}>
                           <td>{new Date(item.createdAt).toLocaleString()}</td>
-                          <td>{item.kind}</td>
                           <td>{item.rating ? `${item.rating}/5` : "--"}</td>
-                          <td>{item.userEmail || item.userId || "--"}</td>
+                          <td>
+                            <ExpandableCell value={item.userEmail || item.userId} />
+                          </td>
                           <td>{item.screen}</td>
-                          <td>{item.sessionId || "--"}</td>
-                          <td>{item.ratingPrompt || "--"}</td>
-                          <td>{item.message || "--"}</td>
+                          <td>
+                            <ExpandableCell className="mono-cell" value={item.sessionId} />
+                          </td>
+                          <td>
+                            <ExpandableCell value={item.ratingPrompt} />
+                          </td>
+                          <td>
+                            <ExpandableCell value={item.message} />
+                          </td>
                           <td>
                             {item.screenshotDataUrl ? (
-                              <a
-                                href={item.screenshotDataUrl}
-                                rel="noreferrer"
-                                target="_blank"
-                              >
-                                {item.screenshotName || "Open screenshot"}
-                              </a>
+                              <ExpandableCell value={item.screenshotName || "Open screenshot"}>
+                                <a
+                                  href={item.screenshotDataUrl}
+                                  rel="noreferrer"
+                                  target="_blank"
+                                >
+                                  {item.screenshotName || "Open screenshot"}
+                                </a>
+                              </ExpandableCell>
                             ) : (
                               "--"
                             )}
                           </td>
                           <td>
-                            {item.viewport || "--"}
-                            {item.browserLanguage ? ` / ${item.browserLanguage}` : ""}
+                            <ExpandableCell
+                              value={`${item.viewport || "--"}${
+                                item.browserLanguage ? ` / ${item.browserLanguage}` : ""
+                              }`}
+                            />
                           </td>
                         </tr>
                       ))}
@@ -1082,26 +1397,80 @@ export function AdminView() {
               <table className="usage-table">
                 <thead>
                   <tr>
-                    <th>Started</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>User</th>
-                    <th>Model</th>
-                    <th>Tokens</th>
-                    <th>Cost</th>
-                    <th>Duration</th>
-                    <th>Session</th>
-                    <th>Error</th>
+                    <SortHeader
+                      label="Started"
+                      onSort={(key) => setAiRunSort(nextSort(aiRunSort, key))}
+                      sort={aiRunSort}
+                      sortKey="started"
+                    />
+                    <SortHeader
+                      label="Type"
+                      onSort={(key) => setAiRunSort(nextSort(aiRunSort, key))}
+                      sort={aiRunSort}
+                      sortKey="type"
+                    />
+                    <SortHeader
+                      label="Status"
+                      onSort={(key) => setAiRunSort(nextSort(aiRunSort, key))}
+                      sort={aiRunSort}
+                      sortKey="status"
+                    />
+                    <SortHeader
+                      label="User"
+                      onSort={(key) => setAiRunSort(nextSort(aiRunSort, key))}
+                      sort={aiRunSort}
+                      sortKey="user"
+                    />
+                    <SortHeader
+                      label="Model"
+                      onSort={(key) => setAiRunSort(nextSort(aiRunSort, key))}
+                      sort={aiRunSort}
+                      sortKey="model"
+                    />
+                    <SortHeader
+                      label="Tokens"
+                      onSort={(key) => setAiRunSort(nextSort(aiRunSort, key))}
+                      sort={aiRunSort}
+                      sortKey="tokens"
+                    />
+                    <SortHeader
+                      label="Cost"
+                      onSort={(key) => setAiRunSort(nextSort(aiRunSort, key))}
+                      sort={aiRunSort}
+                      sortKey="cost"
+                    />
+                    <SortHeader
+                      label="Duration"
+                      onSort={(key) => setAiRunSort(nextSort(aiRunSort, key))}
+                      sort={aiRunSort}
+                      sortKey="duration"
+                    />
+                    <SortHeader
+                      label="Session"
+                      onSort={(key) => setAiRunSort(nextSort(aiRunSort, key))}
+                      sort={aiRunSort}
+                      sortKey="session"
+                    />
+                    <SortHeader
+                      label="Error"
+                      onSort={(key) => setAiRunSort(nextSort(aiRunSort, key))}
+                      sort={aiRunSort}
+                      sortKey="error"
+                    />
                   </tr>
                 </thead>
                 <tbody>
-                  {aiRuns.map((run) => (
+                  {sortedAiRuns.map((run) => (
                     <tr key={run.id}>
                       <td>{new Date(run.startedAt).toLocaleString()}</td>
                       <td>{run.runType}</td>
                       <td>{run.status}</td>
-                      <td>{run.userEmail || run.userId || "--"}</td>
-                      <td>{run.model}</td>
+                      <td>
+                        <ExpandableCell value={run.userEmail || run.userId} />
+                      </td>
+                      <td>
+                        <ExpandableCell value={run.model} />
+                      </td>
                       <td>
                         {run.totalTokens !== undefined
                           ? `${run.inputTokens ?? 0} / ${run.outputTokens ?? 0} / ${run.totalTokens}`
@@ -1109,8 +1478,12 @@ export function AdminView() {
                       </td>
                       <td>{formatUsd(run.estimatedCostMicroUsd)}</td>
                       <td>{formatDuration(run.durationMs)}</td>
-                      <td>{run.sessionId || "--"}</td>
-                      <td>{run.errorMessage || "--"}</td>
+                      <td>
+                        <ExpandableCell className="mono-cell" value={run.sessionId} />
+                      </td>
+                      <td>
+                        <ExpandableCell value={run.errorMessage} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1134,28 +1507,82 @@ export function AdminView() {
               <table className="usage-table">
                 <thead>
                   <tr>
-                    <th>Started</th>
-                    <th>User</th>
-                    <th>Model</th>
-                    <th>Voice</th>
-                    <th>Duration</th>
-                    <th>Audio Tokens</th>
-                    <th>Cost</th>
-                    <th>Transcript</th>
-                    <th>Session</th>
-                    <th>Method</th>
+                    <SortHeader
+                      label="Started"
+                      onSort={(key) => setRealtimeSort(nextSort(realtimeSort, key))}
+                      sort={realtimeSort}
+                      sortKey="started"
+                    />
+                    <SortHeader
+                      label="User"
+                      onSort={(key) => setRealtimeSort(nextSort(realtimeSort, key))}
+                      sort={realtimeSort}
+                      sortKey="user"
+                    />
+                    <SortHeader
+                      label="Model"
+                      onSort={(key) => setRealtimeSort(nextSort(realtimeSort, key))}
+                      sort={realtimeSort}
+                      sortKey="model"
+                    />
+                    <SortHeader
+                      label="Voice"
+                      onSort={(key) => setRealtimeSort(nextSort(realtimeSort, key))}
+                      sort={realtimeSort}
+                      sortKey="voice"
+                    />
+                    <SortHeader
+                      label="Duration"
+                      onSort={(key) => setRealtimeSort(nextSort(realtimeSort, key))}
+                      sort={realtimeSort}
+                      sortKey="duration"
+                    />
+                    <SortHeader
+                      label="Audio Tokens"
+                      onSort={(key) => setRealtimeSort(nextSort(realtimeSort, key))}
+                      sort={realtimeSort}
+                      sortKey="audioTokens"
+                    />
+                    <SortHeader
+                      label="Cost"
+                      onSort={(key) => setRealtimeSort(nextSort(realtimeSort, key))}
+                      sort={realtimeSort}
+                      sortKey="cost"
+                    />
+                    <SortHeader
+                      label="Transcript"
+                      onSort={(key) => setRealtimeSort(nextSort(realtimeSort, key))}
+                      sort={realtimeSort}
+                      sortKey="transcript"
+                    />
+                    <SortHeader
+                      label="Session"
+                      onSort={(key) => setRealtimeSort(nextSort(realtimeSort, key))}
+                      sort={realtimeSort}
+                      sortKey="session"
+                    />
+                    <SortHeader
+                      label="Method"
+                      onSort={(key) => setRealtimeSort(nextSort(realtimeSort, key))}
+                      sort={realtimeSort}
+                      sortKey="method"
+                    />
                   </tr>
                 </thead>
                 <tbody>
-                  {realtimeUsage.map((usage) => (
+                  {sortedRealtimeUsage.map((usage) => (
                     <tr key={usage.id}>
                       <td>
                         {usage.startedAt
                           ? new Date(usage.startedAt).toLocaleString()
                           : "--"}
                       </td>
-                      <td>{usage.userEmail || usage.userId || "--"}</td>
-                      <td>{usage.model}</td>
+                      <td>
+                        <ExpandableCell value={usage.userEmail || usage.userId} />
+                      </td>
+                      <td>
+                        <ExpandableCell value={usage.model} />
+                      </td>
                       <td>{usage.voice || "--"}</td>
                       <td>{usage.durationSeconds}s</td>
                       <td>
@@ -1167,8 +1594,12 @@ export function AdminView() {
                         {usage.transcriptTurns} turns / {usage.userTranscriptCharacters} user
                         / {usage.assistantTranscriptCharacters} Que
                       </td>
-                      <td>{usage.sessionId}</td>
-                      <td>{usage.estimationMethod}</td>
+                      <td>
+                        <ExpandableCell className="mono-cell" value={usage.sessionId} />
+                      </td>
+                      <td>
+                        <ExpandableCell value={usage.estimationMethod} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>

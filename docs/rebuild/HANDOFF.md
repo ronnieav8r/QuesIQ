@@ -105,6 +105,10 @@ V1 hardening should follow.
 - Added feedback screenshot support for bugs/feedback, a visible rating prompt
   label so users know what the stars mean, and a one-time post-review popup that
   asks users to rate the usefulness of a newly generated practice review.
+- Added sortable Admin table headers for Feedback, API Calls, and Realtime
+  Sessions, and split Admin Feedback into Feedback and Bugs subtabs.
+- Tightened Admin spreadsheet-style tables so headers stay on one line and long
+  values truncate by default but can expand inline when clicked.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,

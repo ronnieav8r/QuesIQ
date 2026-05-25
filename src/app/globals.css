@@ -1008,21 +1008,110 @@ textarea::placeholder {
 .usage-table td {
   border-bottom: 1px solid var(--border);
   max-width: 18rem;
-  overflow-wrap: anywhere;
+  overflow: hidden;
   padding: 0.65rem 0.75rem;
   text-align: left;
   vertical-align: top;
+  word-break: normal;
 }
 
 .usage-table th {
   background: var(--surface-raised);
   color: var(--muted);
   font-size: 0.78rem;
+  min-width: max-content;
   text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.usage-table th button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  display: flex;
+  font-size: inherit;
+  gap: 0.45rem;
+  justify-content: space-between;
+  min-height: 0;
+  overflow: visible;
+  padding: 0;
+  text-align: left;
+  text-transform: inherit;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.usage-table th button:hover,
+.usage-table th button.active {
+  background: transparent;
+  color: var(--text);
+}
+
+.usage-table th button span {
+  color: var(--focus);
+  font-size: 0.68rem;
+  text-transform: none;
 }
 
 .usage-table tr:last-child td {
   border-bottom: 0;
+}
+
+.table-cell-truncate,
+.expandable-cell summary {
+  cursor: pointer;
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table-cell-truncate a {
+  color: var(--focus);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expandable-cell {
+  max-width: 100%;
+}
+
+.expandable-cell summary {
+  color: var(--text);
+  list-style: none;
+}
+
+.expandable-cell summary::-webkit-details-marker {
+  display: none;
+}
+
+.expandable-cell[open] summary {
+  color: var(--focus);
+  margin-bottom: 0.45rem;
+}
+
+.expandable-cell p {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  margin-bottom: 0;
+  max-height: 10rem;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  padding: 0.55rem;
+  white-space: normal;
+}
+
+.mono-cell summary,
+.mono-cell p {
+  font-family:
+    "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.78rem;
 }
 
 .ai-run-card {

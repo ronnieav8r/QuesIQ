@@ -78,7 +78,10 @@ Last updated: 2026-05-25
   - submissions store user ownership, current screen, optional session id,
     browser language, viewport, user agent, rating prompt, and screenshot
     metadata/data in Postgres
-  - Admin has a Feedback table for recent submissions
+  - Admin has Feedback and Bugs subtabs for recent submissions, and the
+    Feedback, API Calls, and Realtime Sessions tables have sortable headers
+  - Admin spreadsheet-style tables keep headers on one line, truncate long
+    fields by default, and let admins click truncated cells to expand full text
 - Client-side session setup snapshot and focused voice session screen
 - Direct OpenAI Realtime browser voice slice from the session screen:
   - server-side `/api/realtime/session` WebRTC exchange route
