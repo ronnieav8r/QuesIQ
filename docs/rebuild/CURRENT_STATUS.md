@@ -1,6 +1,6 @@
 # Current Status
 
-Last updated: 2026-05-23
+Last updated: 2026-05-25
 
 ## Rebuild Location
 
@@ -59,8 +59,12 @@ Last updated: 2026-05-23
     calculations now read active pricing records instead of hardcoded rates
   - monthly AI pricing review is triggerable from Admin and through
     `/api/pricing/review`; it uses OpenAI web search plus structured JSON to
-    compare current app pricing with official OpenAI sources and stores a
-    candidate report that admins can accept into new active pricing records
+    compare current app pricing against
+    `https://developers.openai.com/api/docs/pricing`
+  - pricing review writeback was explored, but pricing updates should remain
+    manual for now because live AI review results were inconsistent
+  - Render monthly cron `quesiq-monthly-pricing-review` can call the protected
+    review endpoint; it requires `PRICING_CHECK_SECRET`
 - Client-side session setup snapshot and focused voice session screen
 - Direct OpenAI Realtime browser voice slice from the session screen:
   - server-side `/api/realtime/session` WebRTC exchange route
@@ -178,12 +182,17 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Deploy and user-confirm QA the admin prompt config and AI Runs slices on
+1. Deploy and user-confirm QA the Admin prompt config and AI Usage slices on
    `quesiq-web`.
-2. Add `ADMIN_EMAILS` in Render before QAing the Admin tab.
-3. Decide whether persisted progression/streak records or cost/observability
-   hardening should follow.
-4. Continue deploy-based QA on `quesiq-web` while localhost preview is
+2. Add/confirm `ADMIN_EMAILS` and `PRICING_CHECK_SECRET` in Render before QAing
+   the Admin tab and monthly pricing-review cron.
+3. Manually fix any bad pricing rows from the earlier AI accept experiment,
+   especially `gpt-realtime-mini audio` if it shows text-token prices.
+4. Keep pricing updates manual until candidate preview/writeback or a
+   deterministic pricing parser is built.
+5. Decide whether persisted progression/streak records or Interview V1
+   prompt/config hardening should follow.
+6. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 
 ## Reference Inputs

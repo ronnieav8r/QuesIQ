@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-05-23
+Last updated: 2026-05-25
 
 ## Current State
 
@@ -24,7 +24,8 @@ Last updated: 2026-05-23
 - AI pricing records are editable in Admin, and both exact-token API call costs
   and estimated Realtime costs use active pricing records.
 - Monthly AI pricing reviews are triggerable from Admin and schedulable through
-  `/api/pricing/review` with `PRICING_CHECK_SECRET`.
+  `/api/pricing/review` with `PRICING_CHECK_SECRET`. They should be treated as
+  advisory only for now; pricing edits stay manual.
 - A direct OpenAI Realtime browser voice slice is wired into that session screen
   with client artifact drafting and passed its first manual test.
 - Ended direct voice attempts now save transcript/event artifacts and Realtime
@@ -66,17 +67,21 @@ Last updated: 2026-05-23
 
 ## Immediate
 
-1. Add `ADMIN_EMAILS` and `PRICING_CHECK_SECRET` on the Render web service, add
-   `PRICING_CHECK_SECRET` on the Render monthly pricing-review cron service,
-   then deploy and user-confirm QA the Admin prompt config panel plus AI Usage
-   tabs.
-2. Confirm live voice and evaluation still use the active prompt config and
+1. Add/confirm `ADMIN_EMAILS` and `PRICING_CHECK_SECRET` on the Render web
+   service, add/confirm `PRICING_CHECK_SECRET` on the Render monthly
+   pricing-review cron service, then deploy and user-confirm QA the Admin prompt
+   config panel plus AI Usage tabs.
+2. Manually correct any bad pricing rows from the earlier AI accept experiment,
+   especially `gpt-realtime-mini audio` if it shows text-token prices.
+3. Confirm live voice and evaluation still use the active prompt config and
    mode/style/question prompt components, and that new voice sessions create
    Realtime usage estimates after artifact save.
-3. Decide whether persisted progression/streak records or cost/observability
-   hardening should follow.
-4. Note email template polish as a later UX task.
-5. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
+4. Keep pricing updates manual until candidate preview/writeback or a
+   deterministic pricing parser is built.
+5. Decide whether persisted progression/streak records or Interview V1
+   prompt/config hardening should follow.
+6. Note email template polish as a later UX task.
+7. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
    any port until we intentionally invest time to fix it.
 
 ## First Implementation Backlog
@@ -90,6 +95,9 @@ Last updated: 2026-05-23
   confirmed useful
 - Confirm the Render monthly pricing-review cron reaches `/api/pricing/review`
   using `PRICING_CHECK_SECRET`
+- Add candidate preview/checkboxes before allowing AI pricing-review writeback,
+  or replace the AI review with a deterministic parser for the developer pricing
+  page
 - Polish the Brevo magic-link email template/HTML once auth behavior is stable
 - Keep Session artifact storage transcript/event-first until audio retention is
   intentionally revisited

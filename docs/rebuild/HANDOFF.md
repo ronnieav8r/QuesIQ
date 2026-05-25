@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-05-23
+Last updated: 2026-05-25
 
 ## Current Focus
 
@@ -11,9 +11,9 @@ voice artifact persistence, a structured post-session practice review, saved
 review revisit, profile persistence, history, score summaries, and first derived
 progression.
 
-The next useful product slice is deploying and QAing the admin prompt config
-panel, then deciding whether persisted progression/streak records or
-cost/observability hardening should follow.
+The next useful product slice is deploying and QAing the Admin prompt/AI Usage
+work, then deciding whether persisted progression/streak records or Interview
+V1 hardening should follow.
 
 ## Done Since Last Handoff
 
@@ -84,15 +84,19 @@ cost/observability hardening should follow.
   Realtime voice sessions create compact estimated usage records with duration,
   transcript split, model, voice, estimated audio tokens, estimated cost, pricing
   version, and estimation method.
-- Added editable Admin AI pricing records and pricing reviews: API and Realtime
-  cost calculations now read active pricing rows, admins can edit/add pricing
-  under AI Usage > Pricing, and AI pricing reviews can compare app pricing
-  against official OpenAI sources using `PRICING_CHECK_SECRET` for scheduled
-  runs.
+- Added editable Admin AI pricing records and advisory pricing reviews: API and
+  Realtime cost calculations now read active pricing rows, admins can edit/add
+  pricing under AI Usage > Pricing, and AI pricing reviews compare app pricing
+  against `https://developers.openai.com/api/docs/pricing` using
+  `PRICING_CHECK_SECRET` for scheduled runs.
 - Added monthly AI pricing review support: Admin can trigger a structured
-  OpenAI web-search review, accept candidate pricing changes into new active
-  records, and `/api/pricing/review` can be called by a monthly scheduler with
-  `PRICING_CHECK_SECRET`.
+  OpenAI web-search review, and `/api/pricing/review` can be called by the
+  Render monthly cron with `PRICING_CHECK_SECRET`. Leave pricing updates manual
+  for now; AI acceptance/writeback was explored but is not trusted enough for
+  cost accounting without a candidate preview or deterministic parser.
+- Added Admin AI Usage organization with spreadsheet-style API call and
+  Realtime session tables, per-row estimated costs, editable pricing records,
+  and a Render cron runner script for monthly advisory pricing reviews.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -109,7 +113,7 @@ cost/observability hardening should follow.
 - ESLint passed.
 - TypeScript check passed.
 - Next production build passed.
-- Local checks for the latest slices passed with local `npm` available on PATH.
+- Local `npm` is now available on PATH, and latest checks passed with it.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
   succeeded, Drizzle migrations applied successfully, and Next started.
 - Live `quesiq.com` QA passed across the owned practice loop and tonight's
@@ -173,14 +177,19 @@ cost/observability hardening should follow.
 
 ## Next Best Work
 
-1. Deploy and user-confirm QA for the Admin prompt config panel and AI Usage
-   tabs.
-2. Add `ADMIN_EMAILS` to Render before trying the Admin tab.
-3. Decide whether persisted progression/streak records or cost/observability
-   hardening should follow.
-4. Add deploy/user-confirmed QA for any changes because localhost preview is
+1. Deploy latest Admin prompt/AI Usage/pricing-review changes and run
+   migrations through `quesiq-web`.
+2. User-confirm QA the Admin tab: Prompts, Modes, Questions, Styles, API Calls,
+   Realtime Sessions, Pricing, and manual AI pricing review.
+3. Manually correct any bad pricing rows from the earlier AI accept experiment,
+   especially `gpt-realtime-mini audio` if it was changed to text pricing.
+4. Keep pricing updates manual until a candidate preview table or deterministic
+   pricing-page parser is built.
+5. Decide whether persisted progression/streak records or Interview V1
+   prompt/config hardening should follow.
+6. Add deploy/user-confirmed QA for any changes because localhost preview is
    deprecated in this environment.
-5. Keep verifying that `Launch Voice Session` creates a Session id before direct
+7. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
 
 ## Watch Outs
@@ -196,4 +205,10 @@ cost/observability hardening should follow.
 - Render currently also has a separate free `quesiq-interview-rebuild` web
   service. Decide whether to keep, suspend, or remove it after `quesiq-web` is
   confirmed as the active rebuild service.
+- Git works but still warns that it cannot access
+  `C:\Users\weeks\.config\git\ignore`; this can interfere with clean status
+  reporting in PowerShell even though previous status/diff commands worked.
+- Pricing review AI output was inconsistent across live tests. Treat it as an
+  advisory signal only. Do not rely on AI acceptance/writeback for pricing until
+  candidate-row preview or deterministic parsing is implemented.
 - `tsconfig.tsbuildinfo` is generated TypeScript cache and intentionally ignored.
