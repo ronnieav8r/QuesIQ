@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { withOverallScore } from "@/product/scoring";
 import type {
   InterviewCatalog,
   SessionEvaluationResult,
@@ -34,7 +35,9 @@ export function ReviewDetail({ catalog, onBack, onPractice, session }: ReviewDet
         ? "Reviewing"
         : currentSession.evaluationStatus === "pending"
           ? "Pending"
-          : "Not ready";
+          : currentSession.evaluationStatus === "too_short"
+            ? "Too short to score"
+            : "Not ready";
 
   async function retryReview() {
     try {
@@ -72,12 +75,15 @@ export function ReviewDetail({ catalog, onBack, onPractice, session }: ReviewDet
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Practice review could not be created.";
+      const status = message === "This practice session was too short to score."
+        ? "too_short"
+        : "failed";
 
       setRetryError(message);
       setCurrentSession((current) => ({
         ...current,
         evaluationError: message,
-        evaluationStatus: "failed",
+        evaluationStatus: status,
       }));
     } finally {
       setRetryPending(false);
@@ -140,10 +146,13 @@ export function ReviewDetail({ catalog, onBack, onPractice, session }: ReviewDet
           <div className="review-body">
             <p>{currentSession.evaluation.summary}</p>
             <div className="score-strip review-scores">
-              {currentSession.evaluation.scores.map((score) => (
-                <span key={score.key}>
+              {withOverallScore(currentSession.evaluation).map((score) => (
+                <span
+                  className={score.key === "overall" ? "score-overall" : undefined}
+                  key={score.key}
+                >
                   <strong>{score.label}</strong>
-                  <b>{score.score}/5</b>
+                  <b>{score.score.toFixed(1)}/5</b>
                   <small>{score.summary}</small>
                 </span>
               ))}
@@ -162,12 +171,15 @@ export function ReviewDetail({ catalog, onBack, onPractice, session }: ReviewDet
             <p>
               {currentSession.evaluationStatus === "failed"
                 ? "This session has a saved transcript, but the review did not complete."
+                : currentSession.evaluationStatus === "too_short"
+                  ? "This session is saved in your history, but it was too short to score."
                 : "This session has a saved transcript and is waiting for a completed review."}
             </p>
             {(currentSession.evaluationError || retryError) && (
               <p className="form-error">{retryError || currentSession.evaluationError}</p>
             )}
-            {currentSession.transcript.length > 0 && (
+            {currentSession.transcript.length > 0 &&
+              currentSession.evaluationStatus !== "too_short" && (
               <button disabled={retryPending} onClick={retryReview} type="button">
                 {retryPending ? "Creating Review" : "Retry Review"}
               </button>

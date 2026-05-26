@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { FeedbackButton } from "@/components/interview/feedback-button";
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
+import { withOverallScore } from "@/product/scoring";
 import type {
   InterviewCatalog,
   SessionEvaluationResult,
@@ -9,6 +10,8 @@ import type {
   SessionSetupSnapshot,
   VoiceSessionArtifactDraft,
 } from "@/product/interview-types";
+
+const minimumReviewDurationSeconds = 120;
 
 type SessionViewProps = {
   catalog: InterviewCatalog;
@@ -100,6 +103,15 @@ export function SessionView({
 
     async function createEvaluation() {
       try {
+        if (
+          artifactDraft.durationSeconds !== undefined &&
+          artifactDraft.durationSeconds < minimumReviewDurationSeconds
+        ) {
+          setEvaluationError("This practice session was too short to score.");
+          setEvaluationStatus("unavailable");
+          return;
+        }
+
         const response = await fetch(`/api/sessions/${session.id}/evaluation`, {
           method: "POST",
         });
@@ -127,7 +139,7 @@ export function SessionView({
     }
 
     void createEvaluation();
-  }, [artifactSaveStatus, session.id]);
+  }, [artifactDraft.durationSeconds, artifactSaveStatus, session.id]);
 
   return (
     <section className="screen session-screen" aria-labelledby="session-title">
@@ -276,17 +288,23 @@ export function SessionView({
               {evaluationStatus === "idle" && "Waiting for save"}
               {evaluationStatus === "reviewing" && "Reviewing"}
               {evaluationStatus === "ready" && "Ready"}
-              {evaluationStatus === "unavailable" && "Try again"}
+              {evaluationStatus === "unavailable" &&
+                (evaluationError === "This practice session was too short to score."
+                  ? "Too short to score"
+                  : "Try again")}
             </span>
           </div>
           {evaluation ? (
             <div className="review-body">
               <p>{evaluation.summary}</p>
               <div className="score-strip review-scores">
-                {evaluation.scores.map((score) => (
-                  <span key={score.key}>
+                {withOverallScore(evaluation).map((score) => (
+                  <span
+                    className={score.key === "overall" ? "score-overall" : undefined}
+                    key={score.key}
+                  >
                     <strong>{score.label}</strong>
-                    <b>{score.score}/5</b>
+                    <b>{score.score.toFixed(1)}/5</b>
                     <small>{score.summary}</small>
                   </span>
                 ))}
@@ -302,8 +320,9 @@ export function SessionView({
             </div>
           ) : (
             <p>
-              After the voice artifact is saved, Que will review the transcript
-              and prepare your practice feedback here.
+              {evaluationError === "This practice session was too short to score."
+                ? "This session is saved in your history, but it was under 120 seconds so it will not be scored."
+                : "After the voice artifact is saved, Que will review the transcript and prepare your practice feedback here."}
             </p>
           )}
           {evaluationError && <p className="form-error">{evaluationError}</p>}

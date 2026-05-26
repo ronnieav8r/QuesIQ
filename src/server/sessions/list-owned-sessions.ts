@@ -31,6 +31,7 @@ export async function listOwnedSessions(
 
   return rows.map((row) => ({
     createdAt: row.createdAt.toISOString(),
+    durationSeconds: row.voiceArtifact?.durationSeconds,
     endedAt: row.endedAt?.toISOString(),
     evaluation: row.evaluationResult ?? undefined,
     evaluationError: row.evaluationError ?? undefined,

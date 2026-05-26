@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { useSessionHistory } from "@/components/interview/session-history";
+import { getOverallScore } from "@/product/scoring";
 import type { InterviewContext } from "@/product/interview-types";
 import type {
   ProgressionSummaryRecord,
@@ -74,6 +75,7 @@ export function Dashboard({
     (session) =>
       !session.hasEvaluation &&
       session.transcript.length > 0 &&
+      session.evaluationStatus !== "too_short" &&
       ["failed", "pending", "processing"].includes(session.evaluationStatus),
   );
   const scoreAverages = [
@@ -82,20 +84,46 @@ export function Dashboard({
     "relevance",
     "impact",
     "authenticity",
-  ].map((key) => {
-    const scores = completedReviews
-      .flatMap((session) => session.evaluation?.scores ?? [])
-      .filter((score) => score.key === key);
-    const average =
-      scores.length > 0
-        ? scores.reduce((sum, score) => sum + score.score, 0) / scores.length
+  ];
+  function getScoreAverages(sessions: SessionHistoryItem[]) {
+    const dimensionAverages = scoreAverages.map((key) => {
+      const scores = sessions
+        .flatMap((session) => session.evaluation?.scores ?? [])
+        .filter((score) => score.key === key);
+      const average =
+        scores.length > 0
+          ? scores.reduce((sum, score) => sum + score.score, 0) / scores.length
+          : undefined;
+
+      return {
+        average,
+        key,
+        label: scores[0]?.label || key[0].toUpperCase() + key.slice(1),
+      };
+    });
+    const sessionOverallScores = sessions
+      .map((session) =>
+        session.evaluation ? getOverallScore(session.evaluation.scores) : undefined,
+      )
+      .filter((score): score is number => score !== undefined);
+    const overallAverage =
+      sessionOverallScores.length > 0
+        ? sessionOverallScores.reduce((sum, score) => sum + score, 0) /
+          sessionOverallScores.length
         : undefined;
 
-    return {
-      average,
-      label: scores[0]?.label || key[0].toUpperCase() + key.slice(1),
-    };
-  });
+    return [
+      {
+        average: overallAverage,
+        key: "overall",
+        label: "Overall",
+      },
+      ...dimensionAverages,
+    ];
+  }
+  const allTimeScoreAverages = getScoreAverages(completedReviews);
+  const recentCompletedReviews = completedReviews.slice(0, 10);
+  const recentScoreAverages = getScoreAverages(recentCompletedReviews);
   const derivedCompletedCount = completedReviews.length;
   const derivedXp = derivedCompletedCount * 100;
   const derivedLevel = Math.floor(derivedXp / 300) + 1;
@@ -115,8 +143,9 @@ export function Dashboard({
   const lastPracticed = history.sessions.find(
     (session) => session.hasEvaluation || session.transcript.length > 0,
   );
-  const derivedWeakestScore = scoreAverages
+  const derivedWeakestScore = allTimeScoreAverages
     .filter((score) => score.average !== undefined)
+    .filter((score) => score.key !== "overall")
     .sort((a, b) => (a.average ?? 0) - (b.average ?? 0))[0];
   const weakestScore = progression?.weakestScoreLabel
     ? {
@@ -339,19 +368,45 @@ export function Dashboard({
 
         <section aria-labelledby="stats-title" className="panel score-panel">
           <div className="section-head">
-            <h2 id="stats-title">Skill Scores</h2>
+            <h2 id="stats-title">Recent Scores</h2>
             <span>
-              {completedReviews.length > 0
-                ? `${completedReviews.length} reviews`
+              {recentCompletedReviews.length > 0
+                ? `Last ${recentCompletedReviews.length} reviews`
                 : "Waiting for feedback"}
             </span>
           </div>
           <div className="score-strip">
-            {scoreAverages.map((score) => (
-              <span key={score.label}>
+            {recentScoreAverages.map((score) => (
+              <span
+                className={score.key === "overall" ? "score-overall" : undefined}
+                key={score.key}
+              >
                 <strong>{score.label}</strong>
                 <b>{score.average ? score.average.toFixed(1) : "--"}</b>
-                <small>{score.average ? "Average score" : "No reviews yet"}</small>
+                <small>{score.average ? "Recent average" : "No reviews yet"}</small>
+              </span>
+            ))}
+          </div>
+        </section>
+
+        <section aria-labelledby="all-time-stats-title" className="panel score-panel">
+          <div className="section-head">
+            <h2 id="all-time-stats-title">Skill Scores</h2>
+            <span>
+              {completedReviews.length > 0
+                ? `${completedReviews.length} all-time reviews`
+                : "Waiting for feedback"}
+            </span>
+          </div>
+          <div className="score-strip">
+            {allTimeScoreAverages.map((score) => (
+              <span
+                className={score.key === "overall" ? "score-overall" : undefined}
+                key={score.key}
+              >
+                <strong>{score.label}</strong>
+                <b>{score.average ? score.average.toFixed(1) : "--"}</b>
+                <small>{score.average ? "All-time average" : "No reviews yet"}</small>
               </span>
             ))}
           </div>

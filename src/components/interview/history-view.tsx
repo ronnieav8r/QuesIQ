@@ -73,7 +73,7 @@ export function HistoryView({ catalog, onPractice, onReview }: HistoryViewProps)
                 (session) =>
                   !session.hasEvaluation &&
                   session.transcript.length > 0 &&
-                  session.evaluationStatus !== "not_started",
+                  !["not_started", "too_short"].includes(session.evaluationStatus),
               ).length
             }
           </strong>
@@ -114,7 +114,11 @@ export function HistoryView({ catalog, onPractice, onReview }: HistoryViewProps)
                 onClick={() => onReview(session)}
                 type="button"
               >
-                {session.hasEvaluation ? "Open Review" : "Open Session"}
+                {session.hasEvaluation
+                  ? "Open Review"
+                  : session.evaluationStatus === "too_short"
+                    ? "View Session"
+                    : "Open Session"}
               </button>
             </article>
           );

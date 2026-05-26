@@ -103,6 +103,7 @@ export type SessionLaunchRecord = {
 
 export type SessionHistoryItem = {
   createdAt: string;
+  durationSeconds?: number;
   endedAt?: string;
   evaluation?: SessionEvaluationResult;
   evaluationError?: string;
@@ -125,7 +126,8 @@ export type EvaluationStatus =
   | "failed"
   | "not_started"
   | "pending"
-  | "processing";
+  | "processing"
+  | "too_short";
 
 export type EvaluationScoreKey =
   | "confidence"

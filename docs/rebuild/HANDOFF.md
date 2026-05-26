@@ -158,6 +158,13 @@ path until Phase 2 navigation is completed unless the product direction changes.
   quest keys, titles, descriptions, check rules, thresholds, display order,
   active state, and XP rewards. Admin levels already support adding/editing
   arbitrary level thresholds.
+- Added scoring polish: Home now separates recent score averages for the latest
+  10 reviewed sessions from all-time skill averages, and both sections include a
+  highlighted calculated Overall score while keeping the five AI-scored
+  dimensions unchanged.
+- Added a 120-second minimum for scored reviews. Shorter saved sessions remain
+  visible in History as "Too short to score" but do not create evaluations,
+  scores, review XP, or score averages.
 - Added the first embedded Quira support baseline inside QuesIQ: the global
   feedback launcher is now a small Quira entry point with Help, Feedback, and
   Bug paths, curated product guidance, optional screenshots, and the same
@@ -268,15 +275,18 @@ path until Phase 2 navigation is completed unless the product direction changes.
    new completed reviews award XP once, Home shows saved streak/level/latest
    next action, level thresholds load from Admin, and retry/reopen does not
    double-count.
-6. Expand prompted micro-feedback beyond the first review-usefulness popup by
+6. QA scoring polish: Recent Scores reflects the latest 10 reviewed sessions,
+   Skill Scores remains all-time, Overall is highlighted, and sub-120-second
+   sessions appear in History without scoring or XP.
+7. Expand prompted micro-feedback beyond the first review-usefulness popup by
    rotating specific questions about voice realism, transcript accuracy, and
    scoring fairness.
-7. Later Quira work: replace the curated Help panel with an AI chat assistant
+8. Later Quira work: replace the curated Help panel with an AI chat assistant
    that uses a maintained QuesIQ knowledge base and can submit structured bugs,
    feedback, screenshots, and current screen/session context.
-8. Continue deploy/user-confirmed QA for changes because localhost preview is
+9. Continue deploy/user-confirmed QA for changes because localhost preview is
    deprecated in this environment.
-9. Keep verifying that `Launch Voice Session` creates a Session id before direct
+10. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
 
 ## Watch Outs

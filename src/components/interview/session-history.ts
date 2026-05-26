@@ -91,6 +91,10 @@ export function getSessionReviewLabel(session: SessionHistoryItem) {
     return "Pending";
   }
 
+  if (session.evaluationStatus === "too_short") {
+    return "Too short to score";
+  }
+
   return "Not started";
 }
 

@@ -87,6 +87,8 @@ const evaluationSchema = {
   type: "object",
 };
 
+const minimumReviewDurationSeconds = 120;
+
 function extractResponseText(body: ResponsesApiBody) {
   if (body.output_text) {
     return body.output_text;
@@ -273,6 +275,22 @@ export async function createSessionEvaluation(
       .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
 
     throw new Error("This practice session does not have a saved transcript yet.");
+  }
+
+  if (
+    session.voiceArtifact.durationSeconds !== undefined &&
+    session.voiceArtifact.durationSeconds < minimumReviewDurationSeconds
+  ) {
+    await getDb()
+      .update(sessions)
+      .set({
+        evaluationError: "This practice session was too short to score.",
+        evaluationStatus: "too_short",
+        updatedAt: now,
+      })
+      .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
+
+    throw new Error("This practice session was too short to score.");
   }
 
   const [promptConfig, promptComponents] = await Promise.all([

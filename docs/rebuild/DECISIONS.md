@@ -115,6 +115,12 @@ Clarity, Relevance, Impact, and Authenticity.
 Evaluation is stored as derived feedback on the app-owned Session path. This
 keeps the beta review loop useful without expanding retention to raw audio.
 
+Overall score is a calculated app-side average of those five dimensions, not a
+sixth AI-scored rubric dimension. Home separates recent score averages for the
+latest 10 reviewed sessions from all-time skill averages. Saved sessions under
+120 seconds stay visible in History but are marked too short to score and do not
+produce evaluations or review XP.
+
 The seeded live beta prompt configs are:
 
 - Interview voice model: `gpt-realtime`

@@ -453,6 +453,15 @@ label span {
   gap: var(--space-1);
 }
 
+.score-strip .score-overall {
+  background: var(--focus-soft);
+  border-color: var(--focus);
+}
+
+.score-strip .score-overall b {
+  color: var(--text);
+}
+
 .score-strip b {
   color: var(--focus);
   font-size: 1.35rem;

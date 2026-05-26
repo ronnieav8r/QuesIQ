@@ -195,6 +195,14 @@ Last updated: 2026-05-25
   - Home now shows quest progress, and Admin > Progression includes quest
     visibility
   - Admin can add/edit both level thresholds and quest definitions
+- Scoring polish:
+  - Home now shows Recent Scores for the latest 10 reviewed sessions separately
+    from all-time Skill Scores
+  - both score sections include a highlighted calculated Overall score
+  - the underlying AI review rubric remains the same five dimensions
+  - sessions under 120 seconds are saved and shown in History as too short to
+    score, but do not generate evaluations, score averages, review XP, or review
+    retry prompts
 - Embedded Quira support baseline:
   - global support now uses a small Quira launcher instead of a plain Feedback
     button
@@ -294,12 +302,15 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
    new completed reviews award XP once, Home shows saved streak/level/latest
    next action, level thresholds load from Admin, and retry/reopen does not
    double-count.
-6. Expand prompted micro-feedback beyond the first review-usefulness popup by
+6. QA scoring polish: Recent Scores uses the latest 10 reviews, Skill Scores is
+   all-time, Overall is highlighted, and sub-120-second sessions appear in
+   History without scoring or XP.
+7. Expand prompted micro-feedback beyond the first review-usefulness popup by
    rotating specific questions about AI voice realism, transcript accuracy, and
    scoring fairness.
-7. Later Quira work: replace the curated Help panel with an AI chat bot backed
+8. Later Quira work: replace the curated Help panel with an AI chat bot backed
    by a maintained QuesIQ product knowledge base.
-8. Continue deploy-based QA on `quesiq-web` while localhost preview is
+9. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 
 ## Reference Inputs

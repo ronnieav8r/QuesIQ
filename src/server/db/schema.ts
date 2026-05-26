@@ -85,7 +85,7 @@ export const sessions = pgTable("sessions", {
   endedAt: timestamp("ended_at", { withTimezone: true }),
   evaluationError: text("evaluation_error"),
   evaluationStatus: text("evaluation_status")
-    .$type<"completed" | "failed" | "not_started" | "pending" | "processing">()
+    .$type<"completed" | "failed" | "not_started" | "pending" | "processing" | "too_short">()
     .default("not_started")
     .notNull(),
   id: uuid("id").defaultRandom().primaryKey(),
