@@ -13,7 +13,7 @@ type SpeechRecognitionInstance = {
   interimResults: boolean;
   lang: string;
   onend: (() => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((event: { error?: string }) => void) | null;
   onresult: ((event: SpeechRecognitionEventShape) => void) | null;
   start: () => void;
   stop: () => void;
@@ -48,6 +48,10 @@ function getSpeechRecognition() {
 
 export function StoriesView() {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const recordingWantedRef = useRef(false);
+  const draftTextRef = useRef("");
+  const restartTimeoutRef = useRef<number | undefined>(undefined);
+  const speechTranscriptRef = useRef("");
   const [draftText, setDraftText] = useState("");
   const [error, setError] = useState<string>();
   const [listStatus, setListStatus] = useState<"idle" | "loaded" | "loading">("idle");
@@ -69,6 +73,10 @@ export function StoriesView() {
 
     return Boolean(getSpeechRecognition());
   }, []);
+
+  useEffect(() => {
+    draftTextRef.current = draftText;
+  }, [draftText]);
   const canAskFollowUp = userTurns.length > 0 && !pendingAction;
   const canSave = userTurns.length > 0 && !pendingAction;
 
@@ -105,6 +113,8 @@ export function StoriesView() {
 
     return () => {
       ignore = true;
+      recordingWantedRef.current = false;
+      window.clearTimeout(restartTimeoutRef.current);
       recognitionRef.current?.stop();
     };
   }, []);
@@ -120,10 +130,29 @@ export function StoriesView() {
     setDraftText("");
   }
 
+  function commitSpeechTranscript() {
+    const finalTranscript = speechTranscriptRef.current.trim();
+    const visibleTranscript = draftTextRef.current.trim();
+    const transcript =
+      visibleTranscript.length > finalTranscript.length ? visibleTranscript : finalTranscript;
+
+    if (transcript) {
+      addUserTurn(transcript);
+      speechTranscriptRef.current = "";
+    }
+  }
+
+  function stopRecording() {
+    recordingWantedRef.current = false;
+    window.clearTimeout(restartTimeoutRef.current);
+    setRecording(false);
+    recognitionRef.current?.stop();
+    commitSpeechTranscript();
+  }
+
   function toggleRecording() {
     if (recording) {
-      recognitionRef.current?.stop();
-      setRecording(false);
+      stopRecording();
       return;
     }
 
@@ -135,8 +164,8 @@ export function StoriesView() {
     }
 
     const recognition = new Recognition();
-    let finalTranscript = "";
 
+    speechTranscriptRef.current = "";
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
@@ -148,26 +177,42 @@ export function StoriesView() {
         const transcript = result[0].transcript;
 
         if (result.isFinal) {
-          finalTranscript += transcript;
+          speechTranscriptRef.current += transcript;
         } else {
           interimTranscript += transcript;
         }
       }
 
-      setDraftText(`${finalTranscript} ${interimTranscript}`.trim());
+      setDraftText(`${speechTranscriptRef.current} ${interimTranscript}`.trim());
     };
-    recognition.onerror = () => {
+    recognition.onerror = (event) => {
+      if (recordingWantedRef.current && event.error === "no-speech") {
+        return;
+      }
+
+      recordingWantedRef.current = false;
       setError("Voice capture stopped. You can try again or type the note.");
       setRecording(false);
     };
     recognition.onend = () => {
-      setRecording(false);
-      if (finalTranscript.trim()) {
-        addUserTurn(finalTranscript);
+      if (recordingWantedRef.current) {
+        restartTimeoutRef.current = window.setTimeout(() => {
+          try {
+            recognition.start();
+          } catch {
+            recordingWantedRef.current = false;
+            setRecording(false);
+            setError("Voice capture paused. Tap Speak Notes to continue.");
+          }
+        }, 250);
+        return;
       }
+
+      setRecording(false);
     };
     recognitionRef.current = recognition;
     setError(undefined);
+    recordingWantedRef.current = true;
     setRecording(true);
     recognition.start();
   }
