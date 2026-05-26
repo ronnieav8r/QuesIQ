@@ -152,6 +152,10 @@ Last updated: 2026-05-25
     evaluations so earlier reviewed sessions count
   - Admin has a Progression section with Users and XP Events subtabs for
     visibility into saved summaries and event ledger updates
+  - Admin Progression now includes editable level thresholds, and level math
+    reads the threshold table instead of fixed hardcoded thresholds
+  - Admin has a Data section for inspecting Users, Profiles, Sessions, and
+    Evaluations without direct database access
 
 ## Verification
 

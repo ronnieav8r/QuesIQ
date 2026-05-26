@@ -168,6 +168,59 @@ export type ProgressionEventRecord = {
   xp: number;
 };
 
+export type ProgressionLevelThresholdRecord = {
+  createdAt: string;
+  level: number;
+  minTotalXp: number;
+  name: string;
+  updatedAt: string;
+};
+
+export type AdminUserRecord = {
+  email?: string;
+  emailVerified?: string;
+  id: string;
+  image?: string;
+  name?: string;
+};
+
+export type AdminProfileRecord = {
+  preferredName: string;
+  resumeName?: string;
+  targetCompany: string;
+  targetRole: string;
+  updatedAt: string;
+  userEmail?: string;
+  userId: string;
+};
+
+export type AdminSessionRecord = {
+  createdAt: string;
+  evaluationStatus: EvaluationStatus;
+  id: string;
+  modeKey: string;
+  questionTypeKey?: string;
+  status: SessionStatus;
+  styleKey: string;
+  targetRole: string;
+  transcriptTurns: number;
+  userEmail?: string;
+  userId?: string;
+};
+
+export type AdminEvaluationRecord = {
+  averageScore: number;
+  createdAt: string;
+  id: string;
+  model: string;
+  sessionId: string;
+  status: string;
+  summary: string;
+  targetRole: string;
+  userEmail?: string;
+  userId?: string;
+};
+
 export type EvaluationScore = {
   key: EvaluationScoreKey;
   label: string;

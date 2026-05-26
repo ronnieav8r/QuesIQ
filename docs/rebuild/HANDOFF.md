@@ -117,6 +117,10 @@ progression milestones should follow.
 - Added Admin > Progression visibility with Users and XP Events subtabs so
   progression summaries and event ledger updates can be checked without direct
   database access.
+- Added editable progression level thresholds in Admin > Progression > Levels;
+  level math now reads the threshold table instead of hardcoded fixed levels.
+- Added Admin > Data visibility for Users, Profiles, Sessions, and Evaluations
+  so core hidden tables can be inspected without database access.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,

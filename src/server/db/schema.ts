@@ -437,3 +437,11 @@ export const userProgression = pgTable(
     userIdIdx: uniqueIndex("user_progression_user_id_idx").on(progression.userId),
   }),
 );
+
+export const progressionLevelThresholds = pgTable("progression_level_thresholds", {
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  level: integer("level").primaryKey(),
+  minTotalXp: integer("min_total_xp").notNull(),
+  name: text("name").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});

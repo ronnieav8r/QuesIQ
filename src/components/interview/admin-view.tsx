@@ -4,12 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import type {
+  AdminEvaluationRecord,
+  AdminProfileRecord,
+  AdminSessionRecord,
+  AdminUserRecord,
   AdminProgressionSummaryRecord,
   AiRunRecord,
   AiPricingRecord,
   FeedbackKind,
   FeedbackRecord,
   ProgressionEventRecord,
+  ProgressionLevelThresholdRecord,
   PricingReviewRecord,
   PromptComponentRecord,
   PromptConfigKey,
@@ -33,6 +38,12 @@ type PricingDraft = {
   outputUsd: string;
   sourceUrl: string;
   version: string;
+};
+
+type LevelDraft = {
+  level: string;
+  minTotalXp: string;
+  name: string;
 };
 
 type SortDirection = "asc" | "desc";
@@ -377,8 +388,24 @@ export function AdminView() {
   const [components, setComponents] = useState<PromptComponentRecord[]>([]);
   const [aiRuns, setAiRuns] = useState<AiRunRecord[]>([]);
   const [feedback, setFeedback] = useState<FeedbackRecord[]>([]);
+  const [adminData, setAdminData] = useState<{
+    evaluations: AdminEvaluationRecord[];
+    profiles: AdminProfileRecord[];
+    sessions: AdminSessionRecord[];
+    users: AdminUserRecord[];
+  }>({ evaluations: [], profiles: [], sessions: [], users: [] });
+  const [dataSection, setDataSection] =
+    useState<"evaluations" | "profiles" | "sessions" | "users">("users");
   const [pricing, setPricing] = useState<AiPricingRecord[]>([]);
   const [pricingReviews, setPricingReviews] = useState<PricingReviewRecord[]>([]);
+  const [progressionLevels, setProgressionLevels] = useState<
+    ProgressionLevelThresholdRecord[]
+  >([]);
+  const [levelDraft, setLevelDraft] = useState<LevelDraft>({
+    level: "1",
+    minTotalXp: "0",
+    name: "Level 1",
+  });
   const [progressionEvents, setProgressionEvents] = useState<ProgressionEventRecord[]>([]);
   const [progressionSummaries, setProgressionSummaries] = useState<
     AdminProgressionSummaryRecord[]
@@ -393,7 +420,7 @@ export function AdminView() {
     key: "started",
   });
   const [adminSection, setAdminSection] =
-    useState<"ai_usage" | "feedback" | "progression" | "prompts">("prompts");
+    useState<"ai_usage" | "data" | "feedback" | "progression" | "prompts">("prompts");
   const [componentType, setComponentType] =
     useState<PromptComponentRecord["type"]>("mode");
   const [promptSection, setPromptSection] =
@@ -410,7 +437,7 @@ export function AdminView() {
     key: "started",
   });
   const [progressionSection, setProgressionSection] =
-    useState<"events" | "summaries">("summaries");
+    useState<"events" | "levels" | "summaries">("summaries");
   const [progressionEventSort, setProgressionEventSort] =
     useState<SortState<ProgressionEventSortKey>>({
       direction: "desc",
@@ -648,6 +675,36 @@ export function AdminView() {
     }
   }
 
+  async function loadAdminData() {
+    try {
+      setError(undefined);
+      const response = await fetch("/api/admin/data");
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        evaluations?: AdminEvaluationRecord[];
+        profiles?: AdminProfileRecord[];
+        sessions?: AdminSessionRecord[];
+        users?: AdminUserRecord[];
+      };
+
+      if (!response.ok) {
+        throw new Error(body.detail || body.error || "Admin data could not be loaded.");
+      }
+
+      setAdminData({
+        evaluations: body.evaluations ?? [],
+        profiles: body.profiles ?? [],
+        sessions: body.sessions ?? [],
+        users: body.users ?? [],
+      });
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error ? loadError.message : "Admin data could not be loaded.",
+      );
+    }
+  }
+
   async function loadProgression() {
     try {
       setError(undefined);
@@ -656,6 +713,7 @@ export function AdminView() {
         detail?: string;
         error?: string;
         events?: ProgressionEventRecord[];
+        levels?: ProgressionLevelThresholdRecord[];
         summaries?: AdminProgressionSummaryRecord[];
       };
 
@@ -664,11 +722,53 @@ export function AdminView() {
       }
 
       setProgressionEvents(body.events ?? []);
+      setProgressionLevels(body.levels ?? []);
       setProgressionSummaries(body.summaries ?? []);
     } catch (loadError) {
       setError(
         loadError instanceof Error ? loadError.message : "Progression could not be loaded.",
       );
+    }
+  }
+
+  async function saveLevelThreshold() {
+    const level = Number(levelDraft.level);
+    const minTotalXp = Number(levelDraft.minTotalXp);
+
+    if (!Number.isInteger(level) || !Number.isInteger(minTotalXp) || !levelDraft.name.trim()) {
+      setError("Level, name, and minimum XP are required.");
+      return;
+    }
+
+    try {
+      setPending(true);
+      setError(undefined);
+      const response = await fetch("/api/admin/progression", {
+        body: JSON.stringify({
+          level,
+          minTotalXp,
+          name: levelDraft.name,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "PATCH",
+      });
+      const body = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(body.error || "Progression level could not be saved.");
+      }
+
+      await loadProgression();
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Progression level could not be saved.",
+      );
+    } finally {
+      setPending(false);
     }
   }
 
@@ -722,6 +822,7 @@ export function AdminView() {
           componentResponse,
           aiRunsResponse,
           feedbackResponse,
+          dataResponse,
           progressionResponse,
           realtimeUsageResponse,
           pricingResponse,
@@ -729,6 +830,7 @@ export function AdminView() {
           fetch("/api/admin/prompt-configs"),
           fetch("/api/admin/prompt-components"),
           fetch("/api/admin/ai-runs"),
+          fetch("/api/admin/data"),
           fetch("/api/admin/feedback"),
           fetch("/api/admin/progression"),
           fetch("/api/admin/realtime-usage"),
@@ -752,9 +854,17 @@ export function AdminView() {
           error?: string;
           feedback?: FeedbackRecord[];
         };
+        const dataBody = (await dataResponse.json()) as {
+          error?: string;
+          evaluations?: AdminEvaluationRecord[];
+          profiles?: AdminProfileRecord[];
+          sessions?: AdminSessionRecord[];
+          users?: AdminUserRecord[];
+        };
         const progressionBody = (await progressionResponse.json()) as {
           error?: string;
           events?: ProgressionEventRecord[];
+          levels?: ProgressionLevelThresholdRecord[];
           summaries?: AdminProgressionSummaryRecord[];
         };
         const realtimeUsageBody = (await realtimeUsageResponse.json()) as {
@@ -789,6 +899,10 @@ export function AdminView() {
           throw new Error(feedbackBody.error || "Feedback could not be loaded.");
         }
 
+        if (!dataResponse.ok) {
+          throw new Error(dataBody.error || "Admin data could not be loaded.");
+        }
+
         if (!progressionResponse.ok) {
           throw new Error(progressionBody.error || "Progression could not be loaded.");
         }
@@ -812,8 +926,15 @@ export function AdminView() {
           setConfigs(nextConfigs);
           setComponents(nextComponents);
           setAiRuns(aiRunsBody.runs ?? []);
+          setAdminData({
+            evaluations: dataBody.evaluations ?? [],
+            profiles: dataBody.profiles ?? [],
+            sessions: dataBody.sessions ?? [],
+            users: dataBody.users ?? [],
+          });
           setFeedback(feedbackBody.feedback ?? []);
           setProgressionEvents(progressionBody.events ?? []);
+          setProgressionLevels(progressionBody.levels ?? []);
           setProgressionSummaries(progressionBody.summaries ?? []);
           setRealtimeUsage(realtimeUsageBody.usage ?? []);
           setPricing(pricingBody.pricing ?? []);
@@ -970,6 +1091,11 @@ export function AdminView() {
   }
 
   function refreshAdminSection() {
+    if (adminSection === "data") {
+      void loadAdminData();
+      return;
+    }
+
     if (adminSection === "progression") {
       void loadProgression();
       return;
@@ -1149,6 +1275,13 @@ export function AdminView() {
               type="button"
             >
               Progression
+            </button>
+            <button
+              className={adminSection === "data" ? "active" : ""}
+              onClick={() => setAdminSection("data")}
+              type="button"
+            >
+              Data
             </button>
           </div>
 
@@ -1373,6 +1506,13 @@ export function AdminView() {
                 >
                   XP Events ({progressionEvents.length})
                 </button>
+                <button
+                  className={progressionSection === "levels" ? "active" : ""}
+                  onClick={() => setProgressionSection("levels")}
+                  type="button"
+                >
+                  Levels ({progressionLevels.length})
+                </button>
               </div>
 
               {progressionSection === "summaries" &&
@@ -1565,6 +1705,220 @@ export function AdminView() {
                 ) : (
                   <p>No progression events have been recorded yet.</p>
                 ))}
+              {progressionSection === "levels" && (
+                <div className="admin-layout component-admin-layout">
+                  <aside className="prompt-version-list" aria-label="Progression levels">
+                    <section>
+                      <h2>Levels</h2>
+                      {progressionLevels.map((level) => (
+                        <button
+                          key={level.level}
+                          onClick={() =>
+                            setLevelDraft({
+                              level: level.level.toString(),
+                              minTotalXp: level.minTotalXp.toString(),
+                              name: level.name,
+                            })
+                          }
+                          type="button"
+                        >
+                          <span>
+                            {level.name} / {level.minTotalXp} XP
+                          </span>
+                          <small>Level {level.level}</small>
+                        </button>
+                      ))}
+                    </section>
+                  </aside>
+                  <form className="prompt-editor" onSubmit={(event) => event.preventDefault()}>
+                    <div className="section-head">
+                      <h2>Edit Level Threshold</h2>
+                      <span>Total XP minimum</span>
+                    </div>
+                    <label>
+                      <span>Level</span>
+                      <input
+                        onChange={(event) =>
+                          setLevelDraft((current) => ({
+                            ...current,
+                            level: event.target.value,
+                          }))
+                        }
+                        type="number"
+                        value={levelDraft.level}
+                      />
+                    </label>
+                    <label>
+                      <span>Name</span>
+                      <input
+                        onChange={(event) =>
+                          setLevelDraft((current) => ({
+                            ...current,
+                            name: event.target.value,
+                          }))
+                        }
+                        value={levelDraft.name}
+                      />
+                    </label>
+                    <label>
+                      <span>Minimum total XP</span>
+                      <input
+                        onChange={(event) =>
+                          setLevelDraft((current) => ({
+                            ...current,
+                            minTotalXp: event.target.value,
+                          }))
+                        }
+                        type="number"
+                        value={levelDraft.minTotalXp}
+                      />
+                    </label>
+                    <div className="inline-actions">
+                      <button disabled={pending} onClick={saveLevelThreshold} type="button">
+                        Save Level
+                      </button>
+                    </div>
+                    <p>
+                      These thresholds decide which level a total XP value maps to.
+                      Saved user summaries recalculate when progression is rebuilt by
+                      new events or first-load backfill.
+                    </p>
+                    {error && <p className="form-error">{error}</p>}
+                  </form>
+                </div>
+              )}
+              {error && <p className="form-error">{error}</p>}
+            </section>
+          )}
+
+          {adminSection === "data" && (
+            <section className="ai-runs-panel" aria-labelledby="data-admin-title">
+              <div className="section-head">
+                <h2 id="data-admin-title">Data</h2>
+                <span>Core app tables</span>
+              </div>
+              <div className="component-tabs" aria-label="Data section">
+                {(["users", "profiles", "sessions", "evaluations"] as const).map((section) => (
+                  <button
+                    className={dataSection === section ? "active" : ""}
+                    key={section}
+                    onClick={() => setDataSection(section)}
+                    type="button"
+                  >
+                    {section[0].toUpperCase() + section.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <div className="usage-table-wrap">
+                <table className="usage-table">
+                  {dataSection === "users" && (
+                    <>
+                      <thead>
+                        <tr>
+                          <th>Email</th>
+                          <th>Name</th>
+                          <th>Verified</th>
+                          <th>User ID</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {adminData.users.map((user) => (
+                          <tr key={user.id}>
+                            <td><ExpandableCell value={user.email} /></td>
+                            <td><ExpandableCell value={user.name} /></td>
+                            <td>{user.emailVerified ? new Date(user.emailVerified).toLocaleString() : "--"}</td>
+                            <td className="narrow-column"><ExpandableCell className="mono-cell" value={user.id} /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </>
+                  )}
+                  {dataSection === "profiles" && (
+                    <>
+                      <thead>
+                        <tr>
+                          <th>User</th>
+                          <th>Name</th>
+                          <th>Role</th>
+                          <th>Company</th>
+                          <th>Resume</th>
+                          <th>Updated</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {adminData.profiles.map((profile) => (
+                          <tr key={profile.userId}>
+                            <td><ExpandableCell value={profile.userEmail || profile.userId} /></td>
+                            <td>{profile.preferredName || "--"}</td>
+                            <td><ExpandableCell value={profile.targetRole} /></td>
+                            <td><ExpandableCell value={profile.targetCompany} /></td>
+                            <td><ExpandableCell value={profile.resumeName} /></td>
+                            <td>{new Date(profile.updatedAt).toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </>
+                  )}
+                  {dataSection === "sessions" && (
+                    <>
+                      <thead>
+                        <tr>
+                          <th>Created</th>
+                          <th>User</th>
+                          <th>Role</th>
+                          <th>Mode</th>
+                          <th>Status</th>
+                          <th>Review</th>
+                          <th>Turns</th>
+                          <th>Session</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {adminData.sessions.map((session) => (
+                          <tr key={session.id}>
+                            <td>{new Date(session.createdAt).toLocaleString()}</td>
+                            <td><ExpandableCell value={session.userEmail || session.userId} /></td>
+                            <td><ExpandableCell value={session.targetRole} /></td>
+                            <td>{session.modeKey}</td>
+                            <td>{session.status}</td>
+                            <td>{session.evaluationStatus}</td>
+                            <td>{session.transcriptTurns}</td>
+                            <td className="narrow-column"><ExpandableCell className="mono-cell" value={session.id} /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </>
+                  )}
+                  {dataSection === "evaluations" && (
+                    <>
+                      <thead>
+                        <tr>
+                          <th>Created</th>
+                          <th>User</th>
+                          <th>Role</th>
+                          <th>Avg</th>
+                          <th>Model</th>
+                          <th>Summary</th>
+                          <th>Session</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {adminData.evaluations.map((evaluation) => (
+                          <tr key={evaluation.id}>
+                            <td>{new Date(evaluation.createdAt).toLocaleString()}</td>
+                            <td><ExpandableCell value={evaluation.userEmail || evaluation.userId} /></td>
+                            <td><ExpandableCell value={evaluation.targetRole} /></td>
+                            <td>{evaluation.averageScore.toFixed(1)}</td>
+                            <td><ExpandableCell value={evaluation.model} /></td>
+                            <td><ExpandableCell value={evaluation.summary} /></td>
+                            <td className="narrow-column"><ExpandableCell className="mono-cell" value={evaluation.sessionId} /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </>
+                  )}
+                </table>
+              </div>
               {error && <p className="form-error">{error}</p>}
             </section>
           )}

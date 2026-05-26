@@ -4,6 +4,7 @@ import type {
   AdminProgressionSummaryRecord,
   EvaluationScoreKey,
   ProgressionEventRecord,
+  ProgressionLevelThresholdRecord,
   ProgressionSummaryRecord,
   SessionEvaluationResult,
 } from "@/product/interview-types";
@@ -11,6 +12,7 @@ import { getDb } from "@/server/db/client";
 import {
   evaluations,
   progressionEvents,
+  progressionLevelThresholds,
   sessions,
   userProgression,
   users,
@@ -18,6 +20,12 @@ import {
 
 const reviewCompletedXp = 100;
 const xpPerLevel = 300;
+
+const defaultThresholds = Array.from({ length: 10 }, (_value, index) => ({
+  level: index + 1,
+  minTotalXp: index * xpPerLevel,
+  name: `Level ${index + 1}`,
+}));
 
 function toPracticeDate(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -71,6 +79,40 @@ function calculateStreak(dates: string[]) {
   return {
     longestStreakDays: longestStreak,
     streakDays: currentStreak,
+  };
+}
+
+async function getLevelThresholdRows() {
+  const rows = await getDb()
+    .select({
+      createdAt: progressionLevelThresholds.createdAt,
+      level: progressionLevelThresholds.level,
+      minTotalXp: progressionLevelThresholds.minTotalXp,
+      name: progressionLevelThresholds.name,
+      updatedAt: progressionLevelThresholds.updatedAt,
+    })
+    .from(progressionLevelThresholds)
+    .orderBy(progressionLevelThresholds.level);
+
+  return rows.length > 0 ? rows : defaultThresholds.map((threshold) => ({
+    ...threshold,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }));
+}
+
+function calculateLevel(totalXp: number, thresholds: Array<{ level: number; minTotalXp: number }>) {
+  const sorted = [...thresholds].sort((left, right) => left.minTotalXp - right.minTotalXp);
+  const current =
+    sorted.filter((threshold) => threshold.minTotalXp <= totalXp).at(-1) ?? sorted[0];
+  const next = sorted.find((threshold) => threshold.minTotalXp > totalXp);
+  const currentMin = current?.minTotalXp ?? 0;
+  const nextMin = next?.minTotalXp ?? currentMin + xpPerLevel;
+
+  return {
+    currentLevelXp: Math.max(0, totalXp - currentMin),
+    level: current?.level ?? 1,
+    nextLevelXp: Math.max(1, nextMin - currentMin),
   };
 }
 
@@ -220,7 +262,7 @@ export async function recordReviewProgression(
 }
 
 export async function rebuildProgressionSummary(userId: string) {
-  const [eventRows, evaluationRows] = await Promise.all([
+  const [eventRows, evaluationRows, thresholds] = await Promise.all([
     getDb()
       .select({
         occurredAt: progressionEvents.occurredAt,
@@ -239,11 +281,11 @@ export async function rebuildProgressionSummary(userId: string) {
       .leftJoin(sessions, eq(sessions.id, evaluations.sessionId))
       .where(eq(evaluations.userId, userId))
       .orderBy(desc(evaluations.createdAt)),
+    getLevelThresholdRows(),
   ]);
 
   const totalXp = eventRows.reduce((sum, event) => sum + event.xp, 0);
-  const level = Math.floor(totalXp / xpPerLevel) + 1;
-  const currentLevelXp = totalXp % xpPerLevel;
+  const { currentLevelXp, level, nextLevelXp } = calculateLevel(totalXp, thresholds);
   const practiceDates = eventRows.map((event) => toPracticeDate(event.occurredAt));
   const { longestStreakDays, streakDays } = calculateStreak(practiceDates);
   const scoreGroups = new Map<
@@ -282,7 +324,7 @@ export async function rebuildProgressionSummary(userId: string) {
     latestNextAction: latestEvaluation?.result.nextAction,
     level,
     longestStreakDays,
-    nextLevelXp: xpPerLevel,
+    nextLevelXp,
     streakDays,
     totalXp,
     updatedAt: new Date(),
@@ -381,4 +423,57 @@ export async function listProgressionEvents(
     userId: row.userId,
     xp: row.xp,
   }));
+}
+
+export async function listProgressionLevelThresholds(): Promise<
+  ProgressionLevelThresholdRecord[]
+> {
+  const rows = await getLevelThresholdRows();
+
+  return rows.map((row) => ({
+    createdAt: row.createdAt.toISOString(),
+    level: row.level,
+    minTotalXp: row.minTotalXp,
+    name: row.name,
+    updatedAt: row.updatedAt.toISOString(),
+  }));
+}
+
+export async function saveProgressionLevelThreshold(input: {
+  level: number;
+  minTotalXp: number;
+  name: string;
+}): Promise<ProgressionLevelThresholdRecord> {
+  const now = new Date();
+  const [threshold] = await getDb()
+    .insert(progressionLevelThresholds)
+    .values({
+      level: input.level,
+      minTotalXp: input.minTotalXp,
+      name: input.name,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      set: {
+        minTotalXp: input.minTotalXp,
+        name: input.name,
+        updatedAt: now,
+      },
+      target: progressionLevelThresholds.level,
+    })
+    .returning({
+      createdAt: progressionLevelThresholds.createdAt,
+      level: progressionLevelThresholds.level,
+      minTotalXp: progressionLevelThresholds.minTotalXp,
+      name: progressionLevelThresholds.name,
+      updatedAt: progressionLevelThresholds.updatedAt,
+    });
+
+  return {
+    createdAt: threshold.createdAt.toISOString(),
+    level: threshold.level,
+    minTotalXp: threshold.minTotalXp,
+    name: threshold.name,
+    updatedAt: threshold.updatedAt.toISOString(),
+  };
 }
