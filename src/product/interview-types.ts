@@ -152,6 +152,22 @@ export type ProgressionSummaryRecord = {
   weakestScoreLabel?: string;
 };
 
+export type AdminProgressionSummaryRecord = ProgressionSummaryRecord & {
+  userEmail?: string;
+  userId: string;
+};
+
+export type ProgressionEventRecord = {
+  createdAt: string;
+  eventType: ProgressionEventType;
+  id: string;
+  occurredAt: string;
+  sessionId?: string;
+  userEmail?: string;
+  userId: string;
+  xp: number;
+};
+
 export type EvaluationScore = {
   key: EvaluationScoreKey;
   label: string;

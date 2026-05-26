@@ -150,6 +150,8 @@ Last updated: 2026-05-25
     fallback while loading
   - first progression load can backfill events from existing completed
     evaluations so earlier reviewed sessions count
+  - Admin has a Progression section with Users and XP Events subtabs for
+    visibility into saved summaries and event ledger updates
 
 ## Verification
 

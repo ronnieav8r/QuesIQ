@@ -1,12 +1,20 @@
 import { desc, eq } from "drizzle-orm";
 
 import type {
+  AdminProgressionSummaryRecord,
   EvaluationScoreKey,
+  ProgressionEventRecord,
   ProgressionSummaryRecord,
   SessionEvaluationResult,
 } from "@/product/interview-types";
 import { getDb } from "@/server/db/client";
-import { evaluations, progressionEvents, sessions, userProgression } from "@/server/db/schema";
+import {
+  evaluations,
+  progressionEvents,
+  sessions,
+  userProgression,
+  users,
+} from "@/server/db/schema";
 
 const reviewCompletedXp = 100;
 const xpPerLevel = 300;
@@ -309,4 +317,68 @@ export async function rebuildProgressionSummary(userId: string) {
     });
 
   return toSummaryRecord(summary);
+}
+
+export async function listAdminProgressionSummaries(
+  limit = 100,
+): Promise<AdminProgressionSummaryRecord[]> {
+  const rows = await getDb()
+    .select({
+      completedReviews: userProgression.completedReviews,
+      currentLevelXp: userProgression.currentLevelXp,
+      lastPracticedAt: userProgression.lastPracticedAt,
+      latestNextAction: userProgression.latestNextAction,
+      level: userProgression.level,
+      longestStreakDays: userProgression.longestStreakDays,
+      nextLevelXp: userProgression.nextLevelXp,
+      streakDays: userProgression.streakDays,
+      totalXp: userProgression.totalXp,
+      updatedAt: userProgression.updatedAt,
+      userEmail: users.email,
+      userId: userProgression.userId,
+      weakestScoreAverageTenths: userProgression.weakestScoreAverageTenths,
+      weakestScoreKey: userProgression.weakestScoreKey,
+      weakestScoreLabel: userProgression.weakestScoreLabel,
+    })
+    .from(userProgression)
+    .leftJoin(users, eq(users.id, userProgression.userId))
+    .orderBy(desc(userProgression.updatedAt))
+    .limit(limit);
+
+  return rows.map((row) => ({
+    ...toSummaryRecord(row),
+    userEmail: row.userEmail ?? undefined,
+    userId: row.userId,
+  }));
+}
+
+export async function listProgressionEvents(
+  limit = 100,
+): Promise<ProgressionEventRecord[]> {
+  const rows = await getDb()
+    .select({
+      createdAt: progressionEvents.createdAt,
+      eventType: progressionEvents.eventType,
+      id: progressionEvents.id,
+      occurredAt: progressionEvents.occurredAt,
+      sessionId: progressionEvents.sessionId,
+      userEmail: users.email,
+      userId: progressionEvents.userId,
+      xp: progressionEvents.xp,
+    })
+    .from(progressionEvents)
+    .leftJoin(users, eq(users.id, progressionEvents.userId))
+    .orderBy(desc(progressionEvents.occurredAt))
+    .limit(limit);
+
+  return rows.map((row) => ({
+    createdAt: row.createdAt.toISOString(),
+    eventType: row.eventType,
+    id: row.id,
+    occurredAt: row.occurredAt.toISOString(),
+    sessionId: row.sessionId ?? undefined,
+    userEmail: row.userEmail ?? undefined,
+    userId: row.userId,
+    xp: row.xp,
+  }));
 }

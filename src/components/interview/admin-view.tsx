@@ -4,10 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import type {
+  AdminProgressionSummaryRecord,
   AiRunRecord,
   AiPricingRecord,
   FeedbackKind,
   FeedbackRecord,
+  ProgressionEventRecord,
   PricingReviewRecord,
   PromptComponentRecord,
   PromptConfigKey,
@@ -74,6 +76,18 @@ type RealtimeSortKey =
   | "transcript"
   | "user"
   | "voice";
+
+type ProgressionSummarySortKey =
+  | "completed"
+  | "level"
+  | "longestStreak"
+  | "streak"
+  | "updated"
+  | "user"
+  | "weakest"
+  | "xp";
+
+type ProgressionEventSortKey = "event" | "occurred" | "session" | "user" | "xp";
 
 const promptLabels: Record<PromptConfigKey, string> = {
   realtime_interviewer: "Live Voice Interviewer",
@@ -303,6 +317,48 @@ function getRealtimeSortValue(usage: RealtimeSessionUsageRecord, key: RealtimeSo
   }
 }
 
+function getProgressionSummarySortValue(
+  summary: AdminProgressionSummaryRecord,
+  key: ProgressionSummarySortKey,
+) {
+  switch (key) {
+    case "completed":
+      return summary.completedReviews;
+    case "level":
+      return summary.level;
+    case "longestStreak":
+      return summary.longestStreakDays;
+    case "streak":
+      return summary.streakDays;
+    case "updated":
+      return new Date(summary.updatedAt).getTime();
+    case "user":
+      return summary.userEmail || summary.userId;
+    case "weakest":
+      return summary.weakestScoreLabel || "";
+    case "xp":
+      return summary.totalXp;
+  }
+}
+
+function getProgressionEventSortValue(
+  event: ProgressionEventRecord,
+  key: ProgressionEventSortKey,
+) {
+  switch (key) {
+    case "event":
+      return event.eventType;
+    case "occurred":
+      return new Date(event.occurredAt).getTime();
+    case "session":
+      return event.sessionId || "";
+    case "user":
+      return event.userEmail || event.userId;
+    case "xp":
+      return event.xp;
+  }
+}
+
 function pricingToDraft(pricing?: AiPricingRecord): PricingDraft {
   return {
     active: pricing?.active ?? true,
@@ -323,6 +379,10 @@ export function AdminView() {
   const [feedback, setFeedback] = useState<FeedbackRecord[]>([]);
   const [pricing, setPricing] = useState<AiPricingRecord[]>([]);
   const [pricingReviews, setPricingReviews] = useState<PricingReviewRecord[]>([]);
+  const [progressionEvents, setProgressionEvents] = useState<ProgressionEventRecord[]>([]);
+  const [progressionSummaries, setProgressionSummaries] = useState<
+    AdminProgressionSummaryRecord[]
+  >([]);
   const [pricingDraft, setPricingDraft] = useState<PricingDraft>(pricingToDraft());
   const [realtimeUsage, setRealtimeUsage] = useState<RealtimeSessionUsageRecord[]>([]);
   const [componentDraft, setComponentDraft] = useState("");
@@ -333,7 +393,7 @@ export function AdminView() {
     key: "started",
   });
   const [adminSection, setAdminSection] =
-    useState<"ai_usage" | "feedback" | "prompts">("prompts");
+    useState<"ai_usage" | "feedback" | "progression" | "prompts">("prompts");
   const [componentType, setComponentType] =
     useState<PromptComponentRecord["type"]>("mode");
   const [promptSection, setPromptSection] =
@@ -349,6 +409,18 @@ export function AdminView() {
     direction: "desc",
     key: "started",
   });
+  const [progressionSection, setProgressionSection] =
+    useState<"events" | "summaries">("summaries");
+  const [progressionEventSort, setProgressionEventSort] =
+    useState<SortState<ProgressionEventSortKey>>({
+      direction: "desc",
+      key: "occurred",
+    });
+  const [progressionSummarySort, setProgressionSummarySort] =
+    useState<SortState<ProgressionSummarySortKey>>({
+      direction: "desc",
+      key: "updated",
+    });
   const [selectedComponentKey, setSelectedComponentKey] = useState<string>();
   const [selectedId, setSelectedId] = useState<string>();
   const [status, setStatus] = useState<"loading" | "ready">("loading");
@@ -395,6 +467,20 @@ export function AdminView() {
   const sortedRealtimeUsage = useMemo(
     () => sortBy(realtimeUsage, realtimeSort, getRealtimeSortValue),
     [realtimeUsage, realtimeSort],
+  );
+  const sortedProgressionEvents = useMemo(
+    () =>
+      sortBy(progressionEvents, progressionEventSort, getProgressionEventSortValue),
+    [progressionEvents, progressionEventSort],
+  );
+  const sortedProgressionSummaries = useMemo(
+    () =>
+      sortBy(
+        progressionSummaries,
+        progressionSummarySort,
+        getProgressionSummarySortValue,
+      ),
+    [progressionSummaries, progressionSummarySort],
   );
   const feedbackCounts = useMemo(
     () => ({
@@ -562,6 +648,30 @@ export function AdminView() {
     }
   }
 
+  async function loadProgression() {
+    try {
+      setError(undefined);
+      const response = await fetch("/api/admin/progression");
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        events?: ProgressionEventRecord[];
+        summaries?: AdminProgressionSummaryRecord[];
+      };
+
+      if (!response.ok) {
+        throw new Error(body.detail || body.error || "Progression could not be loaded.");
+      }
+
+      setProgressionEvents(body.events ?? []);
+      setProgressionSummaries(body.summaries ?? []);
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error ? loadError.message : "Progression could not be loaded.",
+      );
+    }
+  }
+
   function applySelectedPricing(record?: AiPricingRecord) {
     if (!record) {
       setSelectedPricingId(undefined);
@@ -612,6 +722,7 @@ export function AdminView() {
           componentResponse,
           aiRunsResponse,
           feedbackResponse,
+          progressionResponse,
           realtimeUsageResponse,
           pricingResponse,
         ] = await Promise.all([
@@ -619,6 +730,7 @@ export function AdminView() {
           fetch("/api/admin/prompt-components"),
           fetch("/api/admin/ai-runs"),
           fetch("/api/admin/feedback"),
+          fetch("/api/admin/progression"),
           fetch("/api/admin/realtime-usage"),
           fetch("/api/admin/pricing"),
         ]);
@@ -639,6 +751,11 @@ export function AdminView() {
         const feedbackBody = (await feedbackResponse.json()) as {
           error?: string;
           feedback?: FeedbackRecord[];
+        };
+        const progressionBody = (await progressionResponse.json()) as {
+          error?: string;
+          events?: ProgressionEventRecord[];
+          summaries?: AdminProgressionSummaryRecord[];
         };
         const realtimeUsageBody = (await realtimeUsageResponse.json()) as {
           error?: string;
@@ -672,6 +789,10 @@ export function AdminView() {
           throw new Error(feedbackBody.error || "Feedback could not be loaded.");
         }
 
+        if (!progressionResponse.ok) {
+          throw new Error(progressionBody.error || "Progression could not be loaded.");
+        }
+
         if (!realtimeUsageResponse.ok) {
           throw new Error(
             realtimeUsageBody.error || "Realtime usage could not be loaded.",
@@ -692,6 +813,8 @@ export function AdminView() {
           setComponents(nextComponents);
           setAiRuns(aiRunsBody.runs ?? []);
           setFeedback(feedbackBody.feedback ?? []);
+          setProgressionEvents(progressionBody.events ?? []);
+          setProgressionSummaries(progressionBody.summaries ?? []);
           setRealtimeUsage(realtimeUsageBody.usage ?? []);
           setPricing(pricingBody.pricing ?? []);
           setPricingReviews(pricingBody.reviews ?? []);
@@ -847,6 +970,11 @@ export function AdminView() {
   }
 
   function refreshAdminSection() {
+    if (adminSection === "progression") {
+      void loadProgression();
+      return;
+    }
+
     if (adminSection === "feedback") {
       void loadFeedback();
       return;
@@ -1014,6 +1142,13 @@ export function AdminView() {
               type="button"
             >
               Feedback
+            </button>
+            <button
+              className={adminSection === "progression" ? "active" : ""}
+              onClick={() => setAdminSection("progression")}
+              type="button"
+            >
+              Progression
             </button>
           </div>
 
@@ -1209,6 +1344,227 @@ export function AdminView() {
               ) : (
                 <p>No feedback has been recorded yet.</p>
               )}
+              {error && <p className="form-error">{error}</p>}
+            </section>
+          )}
+
+          {adminSection === "progression" && (
+            <section className="ai-runs-panel" aria-labelledby="progression-admin-title">
+              <div className="section-head">
+                <h2 id="progression-admin-title">Progression</h2>
+                <span>
+                  {progressionSection === "summaries"
+                    ? `${sortedProgressionSummaries.length} users`
+                    : `${sortedProgressionEvents.length} events`}
+                </span>
+              </div>
+              <div className="component-tabs" aria-label="Progression section">
+                <button
+                  className={progressionSection === "summaries" ? "active" : ""}
+                  onClick={() => setProgressionSection("summaries")}
+                  type="button"
+                >
+                  Users ({progressionSummaries.length})
+                </button>
+                <button
+                  className={progressionSection === "events" ? "active" : ""}
+                  onClick={() => setProgressionSection("events")}
+                  type="button"
+                >
+                  XP Events ({progressionEvents.length})
+                </button>
+              </div>
+
+              {progressionSection === "summaries" &&
+                (sortedProgressionSummaries.length > 0 ? (
+                  <div className="usage-table-wrap">
+                    <table className="usage-table">
+                      <thead>
+                        <tr>
+                          <SortHeader
+                            label="User"
+                            onSort={(key) =>
+                              setProgressionSummarySort(
+                                nextSort(progressionSummarySort, key),
+                              )
+                            }
+                            sort={progressionSummarySort}
+                            sortKey="user"
+                          />
+                          <SortHeader
+                            label="XP"
+                            onSort={(key) =>
+                              setProgressionSummarySort(
+                                nextSort(progressionSummarySort, key),
+                              )
+                            }
+                            sort={progressionSummarySort}
+                            sortKey="xp"
+                          />
+                          <SortHeader
+                            label="Level"
+                            onSort={(key) =>
+                              setProgressionSummarySort(
+                                nextSort(progressionSummarySort, key),
+                              )
+                            }
+                            sort={progressionSummarySort}
+                            sortKey="level"
+                          />
+                          <SortHeader
+                            label="Streak"
+                            onSort={(key) =>
+                              setProgressionSummarySort(
+                                nextSort(progressionSummarySort, key),
+                              )
+                            }
+                            sort={progressionSummarySort}
+                            sortKey="streak"
+                          />
+                          <SortHeader
+                            label="Best Streak"
+                            onSort={(key) =>
+                              setProgressionSummarySort(
+                                nextSort(progressionSummarySort, key),
+                              )
+                            }
+                            sort={progressionSummarySort}
+                            sortKey="longestStreak"
+                          />
+                          <SortHeader
+                            label="Reviews"
+                            onSort={(key) =>
+                              setProgressionSummarySort(
+                                nextSort(progressionSummarySort, key),
+                              )
+                            }
+                            sort={progressionSummarySort}
+                            sortKey="completed"
+                          />
+                          <SortHeader
+                            label="Weakest"
+                            onSort={(key) =>
+                              setProgressionSummarySort(
+                                nextSort(progressionSummarySort, key),
+                              )
+                            }
+                            sort={progressionSummarySort}
+                            sortKey="weakest"
+                          />
+                          <SortHeader
+                            label="Updated"
+                            onSort={(key) =>
+                              setProgressionSummarySort(
+                                nextSort(progressionSummarySort, key),
+                              )
+                            }
+                            sort={progressionSummarySort}
+                            sortKey="updated"
+                          />
+                          <th>Next Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedProgressionSummaries.map((summary) => (
+                          <tr key={summary.userId}>
+                            <td>
+                              <ExpandableCell value={summary.userEmail || summary.userId} />
+                            </td>
+                            <td>{summary.totalXp}</td>
+                            <td>
+                              {summary.level} ({summary.currentLevelXp}/
+                              {summary.nextLevelXp})
+                            </td>
+                            <td>{summary.streakDays}</td>
+                            <td>{summary.longestStreakDays}</td>
+                            <td>{summary.completedReviews}</td>
+                            <td>
+                              {summary.weakestScoreLabel
+                                ? `${summary.weakestScoreLabel} ${summary.weakestScoreAverage?.toFixed(1)}`
+                                : "--"}
+                            </td>
+                            <td>{new Date(summary.updatedAt).toLocaleString()}</td>
+                            <td>
+                              <ExpandableCell value={summary.latestNextAction} />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p>No progression summaries have been recorded yet.</p>
+                ))}
+
+              {progressionSection === "events" &&
+                (sortedProgressionEvents.length > 0 ? (
+                  <div className="usage-table-wrap">
+                    <table className="usage-table">
+                      <thead>
+                        <tr>
+                          <SortHeader
+                            label="Occurred"
+                            onSort={(key) =>
+                              setProgressionEventSort(nextSort(progressionEventSort, key))
+                            }
+                            sort={progressionEventSort}
+                            sortKey="occurred"
+                          />
+                          <SortHeader
+                            label="User"
+                            onSort={(key) =>
+                              setProgressionEventSort(nextSort(progressionEventSort, key))
+                            }
+                            sort={progressionEventSort}
+                            sortKey="user"
+                          />
+                          <SortHeader
+                            label="Event"
+                            onSort={(key) =>
+                              setProgressionEventSort(nextSort(progressionEventSort, key))
+                            }
+                            sort={progressionEventSort}
+                            sortKey="event"
+                          />
+                          <SortHeader
+                            label="XP"
+                            onSort={(key) =>
+                              setProgressionEventSort(nextSort(progressionEventSort, key))
+                            }
+                            sort={progressionEventSort}
+                            sortKey="xp"
+                          />
+                          <SortHeader
+                            className="narrow-column"
+                            label="Session"
+                            onSort={(key) =>
+                              setProgressionEventSort(nextSort(progressionEventSort, key))
+                            }
+                            sort={progressionEventSort}
+                            sortKey="session"
+                          />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedProgressionEvents.map((event) => (
+                          <tr key={event.id}>
+                            <td>{new Date(event.occurredAt).toLocaleString()}</td>
+                            <td>
+                              <ExpandableCell value={event.userEmail || event.userId} />
+                            </td>
+                            <td>{event.eventType}</td>
+                            <td>{event.xp}</td>
+                            <td className="narrow-column">
+                              <ExpandableCell className="mono-cell" value={event.sessionId} />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p>No progression events have been recorded yet.</p>
+                ))}
               {error && <p className="form-error">{error}</p>}
             </section>
           )}

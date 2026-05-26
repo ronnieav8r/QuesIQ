@@ -114,6 +114,9 @@ progression milestones should follow.
   progression events, update a user progression summary with XP, level, streak,
   longest streak, completed reviews, latest next action, and weakest score, and
   Home reads that saved summary with a backfill path for existing evaluations.
+- Added Admin > Progression visibility with Users and XP Events subtabs so
+  progression summaries and event ledger updates can be checked without direct
+  database access.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
