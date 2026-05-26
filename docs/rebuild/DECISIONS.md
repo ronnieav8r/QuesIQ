@@ -245,6 +245,11 @@ These are strong defaults until we decide otherwise:
 - App chrome should stay minimal on mobile. The header keeps brand/account
   affordances, but screen-specific titles belong in the scrollable screen body
   instead of persistent header copy.
+- Keep primary navigation visible by default on mobile, but let users collapse
+  the bottom nav into a small persistent Menu handle. This is the compromise
+  between bottom-nav discoverability and reclaiming vertical space for Story Lab,
+  reviews, and other long work surfaces. Story Lab is now a primary destination;
+  Admin remains gated behind Me/Admin access.
 - Use the QuesIQ Interview logo assets from
   `D:\Altitude Pro Media\QuestIQ\Logo\Finished` for this app, not the unrelated
   ANN/Altitude branding.

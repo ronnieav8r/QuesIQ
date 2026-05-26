@@ -1,11 +1,18 @@
 # Next Steps
 
-Last updated: 2026-05-25
+Last updated: 2026-05-26
 
 ## Current State
 
 - The rebuild lives in `C:\Users\weeks\Documents\GitHub\QuesIQ`.
 - Responsive dashboard, onboarding/context UI, and practice setup are in code.
+- Story Lab now supports voice-first messy capture, AI follow-ups, AI-generated
+  STARR-style outlines, saved story library/detail/editing, and a first
+  Practice Story voice hook.
+- Story Lab, story generation, and story-practice prompts are Admin-visible as
+  versioned prompt configs.
+- Mobile navigation is hideable: Story Lab is a primary destination, the bottom
+  nav can collapse into a small Menu handle, and desktop keeps the left rail.
 - Practice setup creates a client-side session setup snapshot, persists the first
   app-owned Session launch record, and opens a focused voice session screen.
 - Practice modes, question types, and interviewer styles now live in seeded

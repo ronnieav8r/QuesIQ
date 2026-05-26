@@ -1877,11 +1877,21 @@ textarea::placeholder {
   display: grid;
   gap: var(--space-1);
   grid-area: tabs;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  padding: var(--space-2);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 1.05rem var(--space-2) var(--space-2);
   position: sticky;
   bottom: 0;
   z-index: 10;
+}
+
+.tab-bar.collapsed {
+  grid-template-columns: 1fr;
+  min-height: 2rem;
+  padding: 0.35rem var(--space-2);
+}
+
+.tab-bar.collapsed .tab {
+  display: none;
 }
 
 .tab {
@@ -1921,6 +1931,34 @@ textarea::placeholder {
   color: var(--text);
 }
 
+.nav-collapse-toggle {
+  align-items: center;
+  background: var(--surface-raised);
+  border-color: var(--border);
+  border-radius: var(--radius-full);
+  color: var(--muted);
+  display: inline-flex;
+  font-size: var(--font-size-xs);
+  gap: 0.2rem;
+  justify-content: center;
+  justify-self: center;
+  min-height: 1.8rem;
+  min-width: 4.7rem;
+  padding: 0.25rem 0.65rem;
+  position: absolute;
+  top: -0.9rem;
+}
+
+.nav-collapse-toggle:hover {
+  background: var(--surface-hover);
+  border-color: var(--focus);
+  color: var(--text);
+}
+
+.tab-bar.collapsed .nav-collapse-toggle {
+  position: static;
+}
+
 @media (min-width: 48rem) {
   h1 {
     font-size: var(--font-size-2xl);
@@ -1957,6 +1995,19 @@ textarea::placeholder {
     grid-template-columns: 1fr;
     padding: 1.25rem 0.75rem;
     position: static;
+  }
+
+  .tab-bar.collapsed {
+    grid-template-columns: 1fr;
+    padding: 1.25rem 0.75rem;
+  }
+
+  .tab-bar.collapsed .tab {
+    display: inline-flex;
+  }
+
+  .nav-collapse-toggle {
+    display: none;
   }
 
   .tab {

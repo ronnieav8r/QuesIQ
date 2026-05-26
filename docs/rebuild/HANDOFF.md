@@ -196,6 +196,9 @@ path until Phase 2 navigation is completed unless the product direction changes.
   now versioned prompt configs under Admin > Prompts > Base.
 - Tightened mobile app chrome by removing the header readiness text and
   signed-in account name while keeping the logo and sign-out action.
+- Added hideable mobile navigation: Story Lab is a primary nav item, the bottom
+  nav can collapse into a small chevron Menu handle, the preference is stored
+  locally, and desktop keeps the left navigation rail.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -307,8 +310,9 @@ path until Phase 2 navigation is completed unless the product direction changes.
    rotating specific questions about voice realism, transcript accuracy, and
    scoring fairness.
 8. Continue Story Lab after the first Phase 3 hook: deploy/user-confirm QA the
-   Practice Story voice flow, then consider saving story-practice feedback back
-   onto the Story record as durable story coaching history.
+   Practice Story voice flow and hideable navigation, then consider saving
+   story-practice feedback back onto the Story record as durable story coaching
+   history.
 9. Work the remaining highest-value Bubble reference gaps into upcoming phases:
    saved job targets, debrief mode, evolving coaching memory, richer Up Next
    routing, refined XP rewards, and AI-backed Quira support.

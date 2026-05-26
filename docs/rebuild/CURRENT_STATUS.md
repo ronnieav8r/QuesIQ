@@ -253,6 +253,13 @@ Last updated: 2026-05-26
   - removed the app-header readiness line
   - removed signed-in account name from the header action area
   - reduced header height while keeping brand and sign-out available
+- Navigation shell update:
+  - Story Lab is now a primary navigation destination instead of only living
+    behind Me
+  - the mobile bottom nav can be collapsed by the user into a small Menu handle
+    and expanded again with a chevron
+  - the collapsed/expanded nav preference is remembered locally
+  - desktop keeps the persistent left navigation rail
 
 ## Verification
 
@@ -328,7 +335,7 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 ## Next Work
 
 1. Deploy and user-confirm QA the Admin, feedback/bug, progression, UI Phase 2,
-   and Quira baseline slices on `quesiq-web`.
+   Story Lab, hideable navigation, and Quira baseline slices on `quesiq-web`.
 2. Run/user-confirm migration QA for Bubble levels and quests: Admin >
    Progression > Levels shows Rookie through Master, Admin > Progression >
    Quests shows 37 active definitions, Admin level/quest edits save, and Home
@@ -351,9 +358,9 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 8. Later Quira work: replace the curated Help panel with an AI chat bot backed
    by a maintained QuesIQ product knowledge base.
 9. Product gap backlog from the Bubble reference, ordered by current user value:
-   connect Story Lab practice hooks, saved job targets, debrief mode, evolving
-   coaching memory, richer Up Next routing, refined XP rewards, and AI-backed
-   Quira support.
+   persist story-practice coaching history back onto Story records, saved job
+   targets, debrief mode, evolving coaching memory, richer Up Next routing,
+   refined XP rewards, and AI-backed Quira support.
 10. Treat standalone anonymous bug reports, in-app marketing/blog pages,
    payments, industry packs, mascot work, and VAPI parity as lower-priority
    until the core practice loop and retention features are stronger.

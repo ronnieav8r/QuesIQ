@@ -3,10 +3,13 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import {
+  BookOpenText,
   History as HistoryIcon,
   Home as HomeIcon,
   Mic,
   UserRound,
+  ChevronDown,
+  ChevronUp,
   type LucideIcon,
 } from "lucide-react";
 
@@ -38,6 +41,7 @@ import type {
 const appTabs: { Icon: LucideIcon; key: AppView; label: string }[] = [
   { Icon: HomeIcon, key: "home", label: "Home" },
   { Icon: Mic, key: "practice", label: "Practice" },
+  { Icon: BookOpenText, key: "stories", label: "Story Lab" },
   { Icon: HistoryIcon, key: "history", label: "History" },
   { Icon: UserRound, key: "me", label: "Me" },
 ];
@@ -57,6 +61,13 @@ export default function Home() {
   const [profileSaveError, setProfileSaveError] = useState<string>();
   const [profileSavePending, setProfileSavePending] = useState(false);
   const [adminAccess, setAdminAccess] = useState(false);
+  const [navCollapsed, setNavCollapsed] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return window.localStorage.getItem("quesiq:nav-collapsed") === "true";
+  });
   const authSession = useAuthSession();
   const signedIn = Boolean(authSession?.user);
   const interviewCatalog = useInterviewCatalog();
@@ -81,7 +92,7 @@ export default function Home() {
       : activeView === "review"
         ? selectedReview?.id
         : undefined;
-  const secondaryMeViews: AppView[] = ["admin", "stories"];
+  const secondaryMeViews: AppView[] = ["admin"];
 
   function isPrimaryTabCurrent(tabKey: AppView) {
     return activeView === tabKey || (tabKey === "me" && secondaryMeViews.includes(activeView));
@@ -129,6 +140,15 @@ export default function Home() {
       ignore = true;
     };
   }, [signedIn]);
+
+  function toggleNavCollapsed() {
+    setNavCollapsed((current) => {
+      const next = !current;
+
+      window.localStorage.setItem("quesiq:nav-collapsed", String(next));
+      return next;
+    });
+  }
 
   useEffect(() => {
     let ignore = false;
@@ -473,7 +493,24 @@ export default function Home() {
         </div>
 
         {signedIn && activeView !== "session" && (
-          <nav aria-label="Primary" className="tab-bar">
+          <nav
+            aria-label="Primary"
+            className={navCollapsed ? "tab-bar collapsed" : "tab-bar"}
+          >
+            <button
+              aria-expanded={!navCollapsed}
+              aria-label={navCollapsed ? "Show navigation" : "Hide navigation"}
+              className="nav-collapse-toggle"
+              onClick={toggleNavCollapsed}
+              type="button"
+            >
+              {navCollapsed ? (
+                <ChevronUp aria-hidden="true" className="tab-icon" strokeWidth={2.4} />
+              ) : (
+                <ChevronDown aria-hidden="true" className="tab-icon" strokeWidth={2.4} />
+              )}
+              <span>{navCollapsed ? "Menu" : "Hide"}</span>
+            </button>
             {appTabs.map((tab) => (
               <button
                 aria-current={isPrimaryTabCurrent(tab.key) ? "page" : undefined}
