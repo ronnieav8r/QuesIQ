@@ -10,8 +10,9 @@ OpenAI Realtime voice,
 voice artifact persistence, a structured post-session practice review, saved
 review revisit, profile persistence, history, score summaries, durable
 progression, Admin data visibility, and beta feedback/bug reporting. UI
-modernization Phase 1A and 1B are complete, and the next planned UI slice is
-Phase 2 navigation refinement.
+modernization Phase 1A, 1B, and Phase 2A text-first navigation refinement are
+complete. The next planned UI slice is optional Phase 2B icon polish, if we
+choose to add a real icon strategy.
 
 Quira now has only a baseline embedded support launcher in QuesIQ. The desired
 future Quira experience is a true AI chat assistant that can hold a
@@ -136,6 +137,10 @@ path until Phase 2 navigation is completed unless the product direction changes.
   stacking, feedback button placement above bottom nav, and removed
   implementation-flavored copy from the live session surface without changing
   product flow.
+- Completed UI modernization Phase 2A text-first navigation refinement: the
+  primary nav is now Home, Practice, History, and Me; Stories/Admin moved behind
+  Me; Admin remains gated by admin access; secondary views keep Me highlighted;
+  and the Quira launcher clears the mobile bottom nav across small viewports.
 - Added the first embedded Quira support baseline inside QuesIQ: the global
   feedback launcher is now a small Quira entry point with Help, Feedback, and
   Bug paths, curated product guidance, optional screenshots, and the same
@@ -232,15 +237,12 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 ## Next Best Work
 
-1. Complete UI modernization Phase 2 navigation refinement:
-   - mobile-first bottom nav with short labels that fit at 320px
-   - icons if/when an icon strategy is chosen
-   - no multi-row nav
-   - keep primary items to Home, Practice, History, and Me/Profile
-   - move secondary access such as Admin/Stories behind Me or a future More
-     surface rather than crowding the bottom nav
-   - keep the Quira launcher from colliding with the bottom nav and avoid making
-     support visually noisy
+1. Optional UI modernization Phase 2B icon polish:
+   - choose a real icon strategy before adding icons
+   - keep the primary nav to Home, Practice, History, and Me/Profile
+   - preserve the single-row mobile bottom nav at 320px
+   - keep secondary access such as Admin/Stories behind Me or a future More
+     surface
 2. Deploy/user-confirm QA the latest Admin, feedback, progression, UI Phase 1,
    and Quira baseline changes on `quesiq-web`.
 3. User-confirm QA the Admin tab: Prompts, Modes, Questions, Styles, API Calls,

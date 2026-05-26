@@ -216,8 +216,9 @@ These are strong defaults until we decide otherwise:
 - Use Render/GitHub for the first coded deployment path.
 - Keep core session/evaluation/progression logic in the backend, not Make.
 - Keep the app responsive with first-class mobile and desktop layouts.
-- Finish UI modernization Phase 2 navigation refinement before going deeper on
-  Quira's AI-chat implementation.
+- UI modernization Phase 2A text-first navigation refinement is complete; keep
+  any optional Phase 2B icon polish scoped and avoid going deeper on Quira's
+  AI-chat implementation until the navigation is user-confirmed.
 
 ## Open Decisions Before The Next Large Slice
 

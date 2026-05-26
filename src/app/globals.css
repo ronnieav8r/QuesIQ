@@ -530,10 +530,15 @@ label span {
 }
 
 .selection-summary,
-.inline-actions {
+.inline-actions,
+.destination-list {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.destination-list button {
+  min-width: 7rem;
 }
 
 .selection-summary span {
@@ -1514,9 +1519,9 @@ textarea::placeholder {
   background: var(--surface-band);
   border-top: 1px solid var(--border);
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-1);
   grid-area: tabs;
-  grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   padding: var(--space-2);
 }
 
@@ -1524,8 +1529,12 @@ textarea::placeholder {
   background: transparent;
   border-color: transparent;
   color: var(--muted);
+  font-size: var(--font-size-sm);
   min-height: 3.15rem;
-  padding-inline: 0.35rem;
+  overflow: hidden;
+  padding-inline: 0.2rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tab:hover,
@@ -1571,6 +1580,7 @@ textarea::placeholder {
   }
 
   .tab {
+    font-size: var(--font-size-base);
     justify-content: start;
     padding-inline: 0.9rem;
     text-align: left;
@@ -1643,6 +1653,13 @@ textarea::placeholder {
   }
 }
 
+@media (max-width: 47.9375rem) {
+  .quira-launcher {
+    bottom: 5rem;
+    right: var(--space-3);
+  }
+}
+
 @media (max-width: 31rem) {
   h1 {
     font-size: 1.7rem;
@@ -1694,7 +1711,7 @@ textarea::placeholder {
   }
 
   .quira-launcher {
-    bottom: 4.75rem;
+    bottom: 5.1rem;
     right: var(--space-3);
   }
 

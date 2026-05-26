@@ -28,9 +28,8 @@ import type {
 
 const appTabs: { key: AppView; label: string }[] = [
   { key: "home", label: "Home" },
-  { key: "history", label: "History" },
   { key: "practice", label: "Practice" },
-  { key: "stories", label: "Stories" },
+  { key: "history", label: "History" },
   { key: "me", label: "Me" },
 ];
 
@@ -67,15 +66,17 @@ export default function Home() {
   const contextReady = Boolean(
     interviewContext.preferredName.trim() && interviewContext.targetRole.trim(),
   );
-  const visibleTabs = adminAccess
-    ? [...appTabs, { key: "admin" as const, label: "Admin" }]
-    : appTabs;
   const feedbackSessionId =
     activeView === "session"
       ? sessionLaunchRecord?.id
       : activeView === "review"
         ? selectedReview?.id
         : undefined;
+  const secondaryMeViews: AppView[] = ["admin", "stories"];
+
+  function isPrimaryTabCurrent(tabKey: AppView) {
+    return activeView === tabKey || (tabKey === "me" && secondaryMeViews.includes(activeView));
+  }
 
   useEffect(() => {
     let ignore = false;
@@ -297,13 +298,6 @@ export default function Home() {
           {activeView !== "session" && (
             <div className="header-actions">
               <AuthControl authSession={authSession} />
-              <button
-                className="quiet-button"
-                onClick={() => setActiveView("me")}
-                type="button"
-              >
-                Me
-              </button>
             </div>
           )}
         </header>
@@ -380,10 +374,13 @@ export default function Home() {
           )}
           {signedIn && activeView === "me" && (
             <MeView
+              adminAccess={adminAccess}
               contextReady={contextReady}
               interviewContext={interviewContext}
+              onAdmin={() => setActiveView("admin")}
               onOnboarding={() => setActiveView("onboarding")}
               onPractice={openPractice}
+              onStories={() => setActiveView("stories")}
             />
           )}
           {signedIn && activeView === "admin" && adminAccess && <AdminView />}
@@ -408,10 +405,10 @@ export default function Home() {
 
         {signedIn && activeView !== "session" && (
           <nav aria-label="Primary" className="tab-bar">
-            {visibleTabs.map((tab) => (
+            {appTabs.map((tab) => (
               <button
-                aria-current={activeView === tab.key ? "page" : undefined}
-                className={activeView === tab.key ? "tab active" : "tab"}
+                aria-current={isPrimaryTabCurrent(tab.key) ? "page" : undefined}
+                className={isPrimaryTabCurrent(tab.key) ? "tab active" : "tab"}
                 key={tab.key}
                 onClick={() =>
                   tab.key === "practice" ? openPractice() : setActiveView(tab.key)

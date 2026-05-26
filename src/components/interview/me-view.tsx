@@ -1,17 +1,23 @@
 import type { InterviewContext } from "@/product/interview-types";
 
 type MeViewProps = {
+  adminAccess: boolean;
   contextReady: boolean;
   interviewContext: InterviewContext;
+  onAdmin: () => void;
   onOnboarding: () => void;
   onPractice: () => void;
+  onStories: () => void;
 };
 
 export function MeView({
+  adminAccess,
   contextReady,
   interviewContext,
+  onAdmin,
   onOnboarding,
   onPractice,
+  onStories,
 }: MeViewProps) {
   return (
     <section className="screen me-screen" aria-labelledby="me-title">
@@ -51,6 +57,24 @@ export function MeView({
           Practice Now
         </button>
       </div>
+      <section className="panel secondary-destinations" aria-labelledby="more-title">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">More</p>
+            <h2 id="more-title">Extra tools</h2>
+          </div>
+        </div>
+        <div className="destination-list">
+          <button className="secondary" onClick={onStories} type="button">
+            Stories
+          </button>
+          {adminAccess && (
+            <button className="secondary" onClick={onAdmin} type="button">
+              Admin
+            </button>
+          )}
+        </div>
+      </section>
     </section>
   );
 }

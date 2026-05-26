@@ -171,6 +171,11 @@ Last updated: 2026-05-25
   - session headings and readiness panels stack more cleanly on narrow phones
   - feedback launcher moves above bottom navigation on narrow phones
   - live session copy is more user-facing and less implementation-oriented
+- UI modernization Phase 2A text-first navigation refinement:
+  - primary navigation is now Home, Practice, History, and Me
+  - Stories and Admin moved behind Me, with Admin still gated by admin access
+  - secondary views keep Me highlighted in the primary nav
+  - the Quira launcher clears the bottom nav on mobile-sized viewports
 - Embedded Quira support baseline:
   - global support now uses a small Quira launcher instead of a plain Feedback
     button
@@ -240,8 +245,9 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
   later if multiple products need her.
 - UI modernization is active and incremental. Phase 1A established global
   design tokens/base styling. Phase 1B cleaned up core user-screen rhythm,
-  small-screen behavior, and user-facing copy. Phase 2 navigation refinement is
-  next and should be finished before deeper Quira work.
+  small-screen behavior, and user-facing copy. Phase 2A completed text-first
+  navigation refinement. Optional Phase 2B icon polish should wait until a real
+  icon strategy is chosen.
 - Keep QuesIQ-owned session snapshots, transcripts/artifacts, evaluations,
   history, and progression in the app backend/data layer.
 - Resume files are uploaded through signed-in onboarding and parsed into profile
@@ -252,15 +258,13 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Complete UI modernization Phase 2 navigation refinement:
-   - mobile-first bottom nav that fits cleanly at 320px
-   - short labels, no multi-row nav
-   - primary items should remain Home, Practice, History, and Me/Profile
-   - decide icon strategy before adding icons; prefer a real icon library if
+1. Optional UI modernization Phase 2B icon polish:
+   - choose an icon strategy before adding icons; prefer a real icon library if
      one is adopted rather than improvised symbols
-   - move secondary surfaces such as Admin/Stories behind Me or a future More
+   - keep the primary nav to Home, Practice, History, and Me/Profile
+   - preserve the single-row mobile bottom nav at 320px
+   - keep secondary surfaces such as Admin/Stories behind Me or a future More
      surface
-   - keep the Quira launcher visually quiet and clear of the bottom nav
 2. Deploy and user-confirm QA the Admin, feedback/bug, progression, UI Phase 1,
    and Quira baseline slices on `quesiq-web`.
 3. Add/confirm `ADMIN_EMAILS` in Render before QAing Admin; monthly pricing
