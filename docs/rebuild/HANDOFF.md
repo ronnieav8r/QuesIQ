@@ -154,6 +154,10 @@ path until Phase 2 navigation is completed unless the product direction changes.
 - Added the first quest system from the revised Bubble quest export: 37 seeded
   progression quests, per-user quest completion records, idempotent quest XP
   ledger events, Home quest progress, and Admin quest visibility.
+- Added Admin editing for progression quests so admins can create or update
+  quest keys, titles, descriptions, check rules, thresholds, display order,
+  active state, and XP rewards. Admin levels already support adding/editing
+  arbitrary level thresholds.
 - Added the first embedded Quira support baseline inside QuesIQ: the global
   feedback launcher is now a small Quira entry point with Help, Feedback, and
   Bug paths, curated product guidance, optional screenshots, and the same
@@ -254,7 +258,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
    and Quira baseline changes on `quesiq-web`.
 2. Run/user-confirm database migration QA for the imported levels and quests:
    Progression > Levels shows Rookie through Master, Progression > Quests shows
-   37 active quest definitions, and Home awards quest XP only once per quest.
+   37 active quest definitions, level/quest edits save from Admin, and Home
+   awards quest XP only once per quest.
 3. User-confirm QA the Admin tab: Prompts, Modes, Questions, Styles, API Calls,
    Realtime Sessions, Pricing, Feedback/Bugs, Progression, Levels, and Data.
 4. Keep monthly/scheduled pricing checks paused; use manual Admin pricing review

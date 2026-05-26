@@ -194,6 +194,7 @@ Last updated: 2026-05-25
     existing progression event ledger with `quest_completed` events
   - Home now shows quest progress, and Admin > Progression includes quest
     visibility
+  - Admin can add/edit both level thresholds and quest definitions
 - Embedded Quira support baseline:
   - global support now uses a small Quira launcher instead of a plain Feedback
     button
@@ -282,7 +283,8 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
    and Quira baseline slices on `quesiq-web`.
 2. Run/user-confirm migration QA for Bubble levels and quests: Admin >
    Progression > Levels shows Rookie through Master, Admin > Progression >
-   Quests shows 37 active definitions, and Home awards quest XP once per quest.
+   Quests shows 37 active definitions, Admin level/quest edits save, and Home
+   awards quest XP once per quest.
 3. Add/confirm `ADMIN_EMAILS` in Render before QAing Admin; monthly pricing
    checks are suspended/deprecated, so `PRICING_CHECK_SECRET` is not an active
    QA blocker unless manual pricing-review endpoint testing resumes.

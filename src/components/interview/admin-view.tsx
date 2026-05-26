@@ -21,6 +21,7 @@ import type {
   PromptConfigKey,
   PromptConfigRecord,
   RealtimeSessionUsageRecord,
+  QuestCheckType,
 } from "@/product/interview-types";
 
 type PromptDraft = {
@@ -45,6 +46,19 @@ type LevelDraft = {
   level: string;
   minTotalXp: string;
   name: string;
+};
+
+type QuestDraft = {
+  category: string;
+  checkDimension: string;
+  checkThreshold: string;
+  checkType: QuestCheckType;
+  description: string;
+  displayOrder: string;
+  enabled: boolean;
+  questKey: string;
+  title: string;
+  xpReward: string;
 };
 
 type SortDirection = "asc" | "desc";
@@ -105,6 +119,22 @@ const promptLabels: Record<PromptConfigKey, string> = {
   realtime_interviewer: "Live Voice Interviewer",
   session_evaluation: "Post-Session Evaluation",
 };
+
+const questCheckTypes: QuestCheckType[] = [
+  "session_count",
+  "mode_used",
+  "all_modes_used",
+  "debrief_count",
+  "resume_uploaded",
+  "job_target_set",
+  "streak_count",
+  "question_type_used",
+  "all_question_types_used",
+  "single_score_min",
+  "all_scores_min",
+  "avg_score_min",
+  "level_reached",
+];
 
 const runtimeContextByTarget = {
   evaluation: [
@@ -384,6 +414,21 @@ function pricingToDraft(pricing?: AiPricingRecord): PricingDraft {
   };
 }
 
+function questToDraft(quest?: ProgressionQuestRecord): QuestDraft {
+  return {
+    category: quest?.category ?? "milestone",
+    checkDimension: quest?.checkDimension ?? "",
+    checkThreshold: quest?.checkThreshold.toString() ?? "1",
+    checkType: quest?.checkType ?? "session_count",
+    description: quest?.description ?? "",
+    displayOrder: quest?.displayOrder.toString() ?? "1",
+    enabled: quest?.enabled ?? true,
+    questKey: quest?.questKey ?? "",
+    title: quest?.title ?? "",
+    xpReward: quest?.xpReward.toString() ?? "25",
+  };
+}
+
 export function AdminView() {
   const [configs, setConfigs] = useState<PromptConfigRecord[]>([]);
   const [components, setComponents] = useState<PromptComponentRecord[]>([]);
@@ -414,6 +459,7 @@ export function AdminView() {
     AdminProgressionSummaryRecord[]
   >([]);
   const [progressionQuests, setProgressionQuests] = useState<ProgressionQuestRecord[]>([]);
+  const [questDraft, setQuestDraft] = useState<QuestDraft>(questToDraft());
   const [pricingDraft, setPricingDraft] = useState<PricingDraft>(pricingToDraft());
   const [realtimeUsage, setRealtimeUsage] = useState<RealtimeSessionUsageRecord[]>([]);
   const [componentDraft, setComponentDraft] = useState("");
@@ -782,6 +828,56 @@ export function AdminView() {
           ? saveError.message
           : "Progression level could not be saved.",
       );
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function saveQuest() {
+    const checkThreshold = Number(questDraft.checkThreshold);
+    const displayOrder = Number(questDraft.displayOrder);
+    const xpReward = Number(questDraft.xpReward);
+
+    if (
+      !questDraft.questKey.trim() ||
+      !questDraft.title.trim() ||
+      !questDraft.description.trim() ||
+      !Number.isInteger(checkThreshold) ||
+      checkThreshold < 1 ||
+      !Number.isInteger(displayOrder) ||
+      !Number.isInteger(xpReward) ||
+      xpReward < 0
+    ) {
+      setError("Quest key, title, description, threshold, order, and XP reward are required.");
+      return;
+    }
+
+    try {
+      setPending(true);
+      setError(undefined);
+      const response = await fetch("/api/admin/progression", {
+        body: JSON.stringify({
+          kind: "quest",
+          ...questDraft,
+          checkDimension: questDraft.checkDimension.trim() || undefined,
+          checkThreshold,
+          displayOrder,
+          xpReward,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "PATCH",
+      });
+      const body = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(body.error || "Quest could not be saved.");
+      }
+
+      await loadProgression();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Quest could not be saved.");
     } finally {
       setPending(false);
     }
@@ -1810,42 +1906,180 @@ export function AdminView() {
               )}
               {progressionSection === "quests" &&
                 (progressionQuests.length > 0 ? (
-                  <div className="usage-table-wrap">
-                    <table className="usage-table">
-                      <thead>
-                        <tr>
-                          <th>Order</th>
-                          <th>Quest</th>
-                          <th>Check</th>
-                          <th>Threshold</th>
-                          <th>XP</th>
-                          <th>Status</th>
-                          <th>Description</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                  <div className="admin-layout component-admin-layout">
+                    <aside className="prompt-version-list" aria-label="Progression quests">
+                      <section>
+                        <div className="section-head">
+                          <h2>Quests</h2>
+                          <button
+                            className="secondary"
+                            onClick={() => setQuestDraft(questToDraft())}
+                            type="button"
+                          >
+                            New
+                          </button>
+                        </div>
                         {progressionQuests.map((quest) => (
-                          <tr key={quest.questKey}>
-                            <td>{quest.displayOrder}</td>
-                            <td>
-                              <strong>{quest.title}</strong>
-                              <br />
-                              <span className="mono-cell">{quest.questKey}</span>
-                            </td>
-                            <td>
-                              {quest.checkType}
-                              {quest.checkDimension ? ` / ${quest.checkDimension}` : ""}
-                            </td>
-                            <td>{quest.checkThreshold}</td>
-                            <td>{quest.xpReward}</td>
-                            <td>{quest.enabled ? "Active" : "Off"}</td>
-                            <td>
-                              <ExpandableCell value={quest.description} />
-                            </td>
-                          </tr>
+                          <button
+                            key={quest.questKey}
+                            onClick={() => setQuestDraft(questToDraft(quest))}
+                            type="button"
+                          >
+                            <span>
+                              {quest.displayOrder}. {quest.title}
+                            </span>
+                            <small>
+                              {quest.checkType} / {quest.xpReward} XP
+                            </small>
+                          </button>
                         ))}
-                      </tbody>
-                    </table>
+                      </section>
+                    </aside>
+                    <form className="prompt-editor" onSubmit={(event) => event.preventDefault()}>
+                      <div className="section-head">
+                        <h2>{questDraft.questKey ? "Edit Quest" : "Add Quest"}</h2>
+                        <span>{questDraft.enabled ? "Active" : "Off"}</span>
+                      </div>
+                      <div className="field-grid">
+                        <label>
+                          <span>Quest key</span>
+                          <input
+                            onChange={(event) =>
+                              setQuestDraft((current) => ({
+                                ...current,
+                                questKey: event.target.value,
+                              }))
+                            }
+                            placeholder="example_quest"
+                            value={questDraft.questKey}
+                          />
+                        </label>
+                        <label>
+                          <span>Title</span>
+                          <input
+                            onChange={(event) =>
+                              setQuestDraft((current) => ({
+                                ...current,
+                                title: event.target.value,
+                              }))
+                            }
+                            value={questDraft.title}
+                          />
+                        </label>
+                        <label>
+                          <span>Description</span>
+                          <input
+                            onChange={(event) =>
+                              setQuestDraft((current) => ({
+                                ...current,
+                                description: event.target.value,
+                              }))
+                            }
+                            value={questDraft.description}
+                          />
+                        </label>
+                        <label>
+                          <span>Check type</span>
+                          <select
+                            onChange={(event) =>
+                              setQuestDraft((current) => ({
+                                ...current,
+                                checkType: event.target.value as QuestCheckType,
+                              }))
+                            }
+                            value={questDraft.checkType}
+                          >
+                            {questCheckTypes.map((checkType) => (
+                              <option key={checkType} value={checkType}>
+                                {checkType}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          <span>Check dimension</span>
+                          <input
+                            onChange={(event) =>
+                              setQuestDraft((current) => ({
+                                ...current,
+                                checkDimension: event.target.value,
+                              }))
+                            }
+                            placeholder="Optional, e.g. coaching or confidence"
+                            value={questDraft.checkDimension}
+                          />
+                        </label>
+                        <label>
+                          <span>Threshold</span>
+                          <input
+                            onChange={(event) =>
+                              setQuestDraft((current) => ({
+                                ...current,
+                                checkThreshold: event.target.value,
+                              }))
+                            }
+                            type="number"
+                            value={questDraft.checkThreshold}
+                          />
+                        </label>
+                        <label>
+                          <span>XP reward</span>
+                          <input
+                            onChange={(event) =>
+                              setQuestDraft((current) => ({
+                                ...current,
+                                xpReward: event.target.value,
+                              }))
+                            }
+                            type="number"
+                            value={questDraft.xpReward}
+                          />
+                        </label>
+                        <label>
+                          <span>Display order</span>
+                          <input
+                            onChange={(event) =>
+                              setQuestDraft((current) => ({
+                                ...current,
+                                displayOrder: event.target.value,
+                              }))
+                            }
+                            type="number"
+                            value={questDraft.displayOrder}
+                          />
+                        </label>
+                        <label>
+                          <span>Category</span>
+                          <input
+                            onChange={(event) =>
+                              setQuestDraft((current) => ({
+                                ...current,
+                                category: event.target.value,
+                              }))
+                            }
+                            value={questDraft.category}
+                          />
+                        </label>
+                      </div>
+                      <label className="checkbox-row">
+                        <input
+                          checked={questDraft.enabled}
+                          onChange={(event) =>
+                            setQuestDraft((current) => ({
+                              ...current,
+                              enabled: event.target.checked,
+                            }))
+                          }
+                          type="checkbox"
+                        />
+                        <span>Quest is active</span>
+                      </label>
+                      <div className="inline-actions">
+                        <button disabled={pending} onClick={saveQuest} type="button">
+                          Save Quest
+                        </button>
+                      </div>
+                    </form>
                   </div>
                 ) : (
                   <p>No quests have been seeded yet.</p>

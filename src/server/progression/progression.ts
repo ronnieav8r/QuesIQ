@@ -797,3 +797,63 @@ export async function saveProgressionLevelThreshold(input: {
     updatedAt: threshold.updatedAt.toISOString(),
   };
 }
+
+export async function saveProgressionQuest(input: {
+  category: string;
+  checkDimension?: string;
+  checkThreshold: number;
+  checkType: QuestCheckType;
+  description: string;
+  displayOrder: number;
+  enabled: boolean;
+  questKey: string;
+  title: string;
+  xpReward: number;
+}): Promise<ProgressionQuestRecord> {
+  const now = new Date();
+  const values = {
+    category: input.category,
+    checkDimension: input.checkDimension || null,
+    checkThreshold: input.checkThreshold,
+    checkType: input.checkType,
+    description: input.description,
+    displayOrder: input.displayOrder,
+    enabled: input.enabled,
+    key: input.questKey,
+    title: input.title,
+    updatedAt: now,
+    xpReward: input.xpReward,
+  };
+  const [quest] = await getDb()
+    .insert(progressionQuests)
+    .values(values)
+    .onConflictDoUpdate({
+      set: values,
+      target: progressionQuests.key,
+    })
+    .returning({
+      category: progressionQuests.category,
+      checkDimension: progressionQuests.checkDimension,
+      checkThreshold: progressionQuests.checkThreshold,
+      checkType: progressionQuests.checkType,
+      description: progressionQuests.description,
+      displayOrder: progressionQuests.displayOrder,
+      enabled: progressionQuests.enabled,
+      key: progressionQuests.key,
+      title: progressionQuests.title,
+      xpReward: progressionQuests.xpReward,
+    });
+
+  return {
+    category: quest.category,
+    checkDimension: quest.checkDimension ?? undefined,
+    checkThreshold: quest.checkThreshold,
+    checkType: quest.checkType,
+    description: quest.description,
+    displayOrder: quest.displayOrder,
+    enabled: quest.enabled,
+    questKey: quest.key,
+    title: quest.title,
+    xpReward: quest.xpReward,
+  };
+}

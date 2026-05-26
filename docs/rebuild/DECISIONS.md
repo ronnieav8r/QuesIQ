@@ -224,7 +224,9 @@ These are strong defaults until we decide otherwise:
   ANN/Altitude branding.
 - Use the imported Bubble level titles and quest definitions as owned app data.
   Keep quest completions user-owned in this app and award quest XP through the
-  same progression ledger used for reviewed-session XP.
+  same progression ledger used for reviewed-session XP. Let admins extend level
+  thresholds and quest definitions from Admin rather than requiring a CSV import
+  for every future adjustment.
 
 ## Open Decisions Before The Next Large Slice
 
