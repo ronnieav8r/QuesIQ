@@ -193,11 +193,52 @@ Deliverables:
 - Story editing/practice hooks
 - Saved job targets
 - Use job context in setup where it reduces friction
+- Debrief mode for revisiting an existing completed session
+- Evolving coaching memory/context summary that improves recommendations
 
 Exit test:
 
 - Users can prepare reusable interview stories and practice against saved job
-  context.
+  context, then get better follow-up practice based on their recent sessions.
+
+## Bubble Gap Backlog
+
+The Bubble app remains useful as product reference, but parity is not the goal.
+Prioritize the gaps that make practice more personal, easier to repeat, or more
+useful after a session.
+
+High-value gaps to carry forward:
+
+- Story library: reusable STARR-style stories with coach notes, last-practiced
+  state, and practice hooks.
+- Saved job targets: multiple roles/companies/job descriptions a user can pick
+  from when starting mock interviews or first-impression sessions.
+- Debrief mode: a follow-up conversation tied to an existing session, with its
+  own transcript or notes, without creating a scored new practice session.
+- Coaching memory: an AI-generated user context summary that evolves from
+  resume, job targets, reviewed sessions, stories, and repeated coaching themes.
+- Richer Up Next logic: a clearer recommendation waterfall that can route users
+  into pending reviews, weak-skill drills, job-target practice, story work, or
+  debrief.
+- XP/reward refinement: consider restoring a more nuanced session XP breakdown
+  based on review completion, duration, quality, streak, and quest completion.
+- Quira AI support: replace the curated help panel with a real product-support
+  assistant only after the core QuesIQ practice loop is stable.
+
+Lower-priority or likely-not-now gaps:
+
+- Standalone anonymous bug-report page. Useful later, but signed-in contextual
+  feedback is better for beta debugging.
+- Marketing/blog pages inside this app. Keep app focus on signed-in practice
+  unless the domain strategy changes.
+- Payments/subscriptions. Important for launch planning, but not needed before
+  the beta practice loop proves retention.
+- Industry packs. Potentially useful, but less important than saved job targets
+  and coaching memory.
+- Mascot/visual explorations. Nice for brand personality, not a core product
+  blocker.
+- VAPI parity. Keep VAPI as fallback, but direct OpenAI Realtime remains the
+  preferred browser voice path unless QA shows a material blocker.
 
 ### Milestone 8: Beta Hardening And Cutover
 

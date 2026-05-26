@@ -1,6 +1,6 @@
 # Current Status
 
-Last updated: 2026-05-25
+Last updated: 2026-05-26
 
 ## Rebuild Location
 
@@ -312,7 +312,13 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
    scoring fairness.
 8. Later Quira work: replace the curated Help panel with an AI chat bot backed
    by a maintained QuesIQ product knowledge base.
-9. Continue deploy-based QA on `quesiq-web` while localhost preview is
+9. Product gap backlog from the Bubble reference, ordered by current user value:
+   Story library, saved job targets, debrief mode, evolving coaching memory,
+   richer Up Next routing, refined XP rewards, and AI-backed Quira support.
+10. Treat standalone anonymous bug reports, in-app marketing/blog pages,
+   payments, industry packs, mascot work, and VAPI parity as lower-priority
+   until the core practice loop and retention features are stronger.
+11. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 
 ## Reference Inputs

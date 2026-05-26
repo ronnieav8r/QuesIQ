@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-05-25
+Last updated: 2026-05-26
 
 ## Current Focus
 
@@ -14,6 +14,13 @@ modernization Phase 1A, 1B, Phase 2A text-first navigation refinement, and
 Phase 2B icon polish are complete. The QuesIQ Interview brand logo is now wired
 into the app shell, Bubble level thresholds have been imported, and the first
 backend-owned quest system is in code.
+
+The latest Bubble-reference comparison identified the next highest-value product
+gap as Stories + saved Job Targets, because those make practice more personal
+and unlock stronger recommendations. Debrief mode and evolving coaching memory
+should follow that foundation. Avoid treating Bubble parity as the goal; carry
+forward only features that improve practice, feedback, retention, or beta
+learning.
 
 Quira now has only a baseline embedded support launcher in QuesIQ. The desired
 future Quira experience is a true AI chat assistant that can hold a
@@ -283,12 +290,18 @@ path until Phase 2 navigation is completed unless the product direction changes.
 7. Expand prompted micro-feedback beyond the first review-usefulness popup by
    rotating specific questions about voice realism, transcript accuracy, and
    scoring fairness.
-8. Later Quira work: replace the curated Help panel with an AI chat assistant
+8. Work the highest-value Bubble reference gaps into upcoming phases: Story
+   library, saved job targets, debrief mode, evolving coaching memory, richer Up
+   Next routing, refined XP rewards, and AI-backed Quira support.
+9. Defer or avoid lower-value parity work until the beta needs it: standalone
+   anonymous bug-report page, in-app marketing/blog pages, payments, industry
+   packs, mascot work, and VAPI parity.
+10. Later Quira work: replace the curated Help panel with an AI chat assistant
    that uses a maintained QuesIQ knowledge base and can submit structured bugs,
    feedback, screenshots, and current screen/session context.
-9. Continue deploy/user-confirmed QA for changes because localhost preview is
+11. Continue deploy/user-confirmed QA for changes because localhost preview is
    deprecated in this environment.
-10. Keep verifying that `Launch Voice Session` creates a Session id before direct
+12. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
 
 ## Watch Outs
