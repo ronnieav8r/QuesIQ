@@ -1526,15 +1526,33 @@ textarea::placeholder {
 }
 
 .tab {
+  align-items: center;
   background: transparent;
   border-color: transparent;
   color: var(--muted);
+  display: inline-flex;
+  flex-direction: column;
   font-size: var(--font-size-sm);
+  gap: 0.22rem;
+  justify-content: center;
   min-height: 3.15rem;
   overflow: hidden;
   padding-inline: 0.2rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.tab-icon {
+  flex: 0 0 auto;
+  height: 1.1rem;
+  width: 1.1rem;
+}
+
+.tab span {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tab:hover,
@@ -1580,10 +1598,17 @@ textarea::placeholder {
   }
 
   .tab {
+    flex-direction: row;
     font-size: var(--font-size-base);
+    gap: var(--space-2);
     justify-content: start;
     padding-inline: 0.9rem;
     text-align: left;
+  }
+
+  .tab-icon {
+    height: 1.15rem;
+    width: 1.15rem;
   }
 
   .auth-layout {

@@ -1,6 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  History as HistoryIcon,
+  Home as HomeIcon,
+  Mic,
+  UserRound,
+  type LucideIcon,
+} from "lucide-react";
 
 import { AuthControl, AuthView, useAuthSession } from "@/components/auth-control";
 import { AdminView } from "@/components/interview/admin-view";
@@ -26,11 +33,11 @@ import type {
   SessionSetupSnapshot,
 } from "@/product/interview-types";
 
-const appTabs: { key: AppView; label: string }[] = [
-  { key: "home", label: "Home" },
-  { key: "practice", label: "Practice" },
-  { key: "history", label: "History" },
-  { key: "me", label: "Me" },
+const appTabs: { Icon: LucideIcon; key: AppView; label: string }[] = [
+  { Icon: HomeIcon, key: "home", label: "Home" },
+  { Icon: Mic, key: "practice", label: "Practice" },
+  { Icon: HistoryIcon, key: "history", label: "History" },
+  { Icon: UserRound, key: "me", label: "Me" },
 ];
 
 export default function Home() {
@@ -415,7 +422,8 @@ export default function Home() {
                 }
                 type="button"
               >
-                {tab.label}
+                <tab.Icon aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                <span>{tab.label}</span>
               </button>
             ))}
           </nav>

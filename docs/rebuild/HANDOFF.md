@@ -10,9 +10,8 @@ OpenAI Realtime voice,
 voice artifact persistence, a structured post-session practice review, saved
 review revisit, profile persistence, history, score summaries, durable
 progression, Admin data visibility, and beta feedback/bug reporting. UI
-modernization Phase 1A, 1B, and Phase 2A text-first navigation refinement are
-complete. The next planned UI slice is optional Phase 2B icon polish, if we
-choose to add a real icon strategy.
+modernization Phase 1A, 1B, Phase 2A text-first navigation refinement, and
+Phase 2B icon polish are complete.
 
 Quira now has only a baseline embedded support launcher in QuesIQ. The desired
 future Quira experience is a true AI chat assistant that can hold a
@@ -141,6 +140,10 @@ path until Phase 2 navigation is completed unless the product direction changes.
   primary nav is now Home, Practice, History, and Me; Stories/Admin moved behind
   Me; Admin remains gated by admin access; secondary views keep Me highlighted;
   and the Quira launcher clears the mobile bottom nav across small viewports.
+- Completed UI modernization Phase 2B icon polish: added `lucide-react`, wired
+  Home, Practice, History, and Me icons into the primary nav, kept labels
+  visible on mobile and desktop, and preserved the four-item single-row mobile
+  nav.
 - Added the first embedded Quira support baseline inside QuesIQ: the global
   feedback launcher is now a small Quira entry point with Help, Feedback, and
   Bug paths, curated product guidance, optional screenshots, and the same
@@ -237,31 +240,25 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 ## Next Best Work
 
-1. Optional UI modernization Phase 2B icon polish:
-   - choose a real icon strategy before adding icons
-   - keep the primary nav to Home, Practice, History, and Me/Profile
-   - preserve the single-row mobile bottom nav at 320px
-   - keep secondary access such as Admin/Stories behind Me or a future More
-     surface
-2. Deploy/user-confirm QA the latest Admin, feedback, progression, UI Phase 1,
+1. Deploy/user-confirm QA the latest Admin, feedback, progression, UI Phase 2,
    and Quira baseline changes on `quesiq-web`.
-3. User-confirm QA the Admin tab: Prompts, Modes, Questions, Styles, API Calls,
+2. User-confirm QA the Admin tab: Prompts, Modes, Questions, Styles, API Calls,
    Realtime Sessions, Pricing, Feedback/Bugs, Progression, Levels, and Data.
-4. Keep monthly/scheduled pricing checks paused; use manual Admin pricing review
+3. Keep monthly/scheduled pricing checks paused; use manual Admin pricing review
    only if needed.
-5. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
+4. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
    new completed reviews award XP once, Home shows saved streak/level/latest
    next action, level thresholds load from Admin, and retry/reopen does not
    double-count.
-6. Expand prompted micro-feedback beyond the first review-usefulness popup by
+5. Expand prompted micro-feedback beyond the first review-usefulness popup by
    rotating specific questions about voice realism, transcript accuracy, and
    scoring fairness.
-7. Later Quira work: replace the curated Help panel with an AI chat assistant
+6. Later Quira work: replace the curated Help panel with an AI chat assistant
    that uses a maintained QuesIQ knowledge base and can submit structured bugs,
    feedback, screenshots, and current screen/session context.
-8. Continue deploy/user-confirmed QA for changes because localhost preview is
+7. Continue deploy/user-confirmed QA for changes because localhost preview is
    deprecated in this environment.
-9. Keep verifying that `Launch Voice Session` creates a Session id before direct
+8. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
 
 ## Watch Outs

@@ -176,6 +176,11 @@ Last updated: 2026-05-25
   - Stories and Admin moved behind Me, with Admin still gated by admin access
   - secondary views keep Me highlighted in the primary nav
   - the Quira launcher clears the bottom nav on mobile-sized viewports
+- UI modernization Phase 2B icon polish:
+  - added `lucide-react`
+  - wired Home, Practice, History, and Me icons into the primary nav
+  - kept labels visible on mobile and desktop
+  - preserved the four-item single-row mobile bottom nav
 - Embedded Quira support baseline:
   - global support now uses a small Quira launcher instead of a plain Feedback
     button
@@ -246,8 +251,7 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 - UI modernization is active and incremental. Phase 1A established global
   design tokens/base styling. Phase 1B cleaned up core user-screen rhythm,
   small-screen behavior, and user-facing copy. Phase 2A completed text-first
-  navigation refinement. Optional Phase 2B icon polish should wait until a real
-  icon strategy is chosen.
+  navigation refinement, and Phase 2B added lucide icons to the primary nav.
 - Keep QuesIQ-owned session snapshots, transcripts/artifacts, evaluations,
   history, and progression in the app backend/data layer.
 - Resume files are uploaded through signed-in onboarding and parsed into profile
@@ -258,30 +262,23 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Optional UI modernization Phase 2B icon polish:
-   - choose an icon strategy before adding icons; prefer a real icon library if
-     one is adopted rather than improvised symbols
-   - keep the primary nav to Home, Practice, History, and Me/Profile
-   - preserve the single-row mobile bottom nav at 320px
-   - keep secondary surfaces such as Admin/Stories behind Me or a future More
-     surface
-2. Deploy and user-confirm QA the Admin, feedback/bug, progression, UI Phase 1,
+1. Deploy and user-confirm QA the Admin, feedback/bug, progression, UI Phase 2,
    and Quira baseline slices on `quesiq-web`.
-3. Add/confirm `ADMIN_EMAILS` in Render before QAing Admin; monthly pricing
+2. Add/confirm `ADMIN_EMAILS` in Render before QAing Admin; monthly pricing
    checks are suspended/deprecated, so `PRICING_CHECK_SECRET` is not an active
    QA blocker unless manual pricing-review endpoint testing resumes.
-4. Keep pricing updates manual until candidate preview/writeback or a
+3. Keep pricing updates manual until candidate preview/writeback or a
    deterministic pricing parser is built.
-5. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
+4. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
    new completed reviews award XP once, Home shows saved streak/level/latest
    next action, level thresholds load from Admin, and retry/reopen does not
    double-count.
-6. Expand prompted micro-feedback beyond the first review-usefulness popup by
+5. Expand prompted micro-feedback beyond the first review-usefulness popup by
    rotating specific questions about AI voice realism, transcript accuracy, and
    scoring fairness.
-7. Later Quira work: replace the curated Help panel with an AI chat bot backed
+6. Later Quira work: replace the curated Help panel with an AI chat bot backed
    by a maintained QuesIQ product knowledge base.
-8. Continue deploy-based QA on `quesiq-web` while localhost preview is
+7. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 
 ## Reference Inputs
