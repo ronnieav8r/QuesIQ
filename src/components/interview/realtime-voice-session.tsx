@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Mic } from "lucide-react";
 
 import type {
   SessionSetupSnapshot,
@@ -308,6 +309,7 @@ export function RealtimeVoiceSession({
   const latestEvents = artifactDraft.events.slice(-6).reverse();
   const canStart = phase === "ready" || phase === "ended" || phase === "error";
   const canEnd = phase === "requesting_microphone" || phase === "connecting" || phase === "live";
+  const recordingActive = canEnd;
   const displayedDuration = artifactDraft.durationSeconds ?? elapsedSeconds;
   const minutes = Math.floor(displayedDuration / 60)
     .toString()
@@ -321,7 +323,15 @@ export function RealtimeVoiceSession({
           <p className="eyebrow">Live Voice</p>
           <h2 id="realtime-session-title">Direct browser voice session</h2>
         </div>
-        <span className={`session-status ${phase}`}>{getPhaseLabel(phase, errorMessage)}</span>
+        <div className="recording-status-row">
+          {recordingActive && (
+            <span className="recording-indicator active">
+              <Mic aria-hidden="true" className="recording-indicator-icon" />
+              Recording
+            </span>
+          )}
+          <span className={`session-status ${phase}`}>{getPhaseLabel(phase, errorMessage)}</span>
+        </div>
       </div>
       <div className="session-timer" aria-label="Session duration">
         {minutes}:{seconds}

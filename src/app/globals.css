@@ -889,6 +889,70 @@ textarea::placeholder {
   color: var(--text);
 }
 
+.recording-status-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: end;
+}
+
+.recording-indicator {
+  align-items: center;
+  background: rgba(232, 114, 26, 0.16);
+  border: 1px solid var(--action);
+  border-radius: var(--radius-full);
+  color: var(--text);
+  display: inline-flex;
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  gap: var(--space-2);
+  min-height: 2.35rem;
+  padding: var(--space-2) var(--space-3);
+  white-space: nowrap;
+}
+
+.section-head .recording-indicator {
+  color: var(--text);
+  font-size: var(--font-size-sm);
+}
+
+.recording-indicator.active,
+.recording-button.active {
+  animation: recording-glow 1.35s ease-in-out infinite;
+  box-shadow:
+    0 0 0 0 rgba(232, 114, 26, 0.38),
+    0 0 1.2rem rgba(232, 114, 26, 0.42);
+}
+
+.recording-indicator-icon {
+  color: var(--action);
+  height: 1rem;
+  width: 1rem;
+}
+
+.recording-button.active,
+.recording-button.active:hover {
+  background: rgba(232, 114, 26, 0.24);
+  border-color: var(--action);
+  color: var(--text);
+}
+
+@keyframes recording-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(232, 114, 26, 0.36),
+      0 0 1.1rem rgba(232, 114, 26, 0.36);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 0.38rem rgba(232, 114, 26, 0),
+      0 0 1.55rem rgba(232, 114, 26, 0.62);
+  }
+}
+
 .session-timer {
   background: var(--surface-raised);
   border: 1px solid var(--border);

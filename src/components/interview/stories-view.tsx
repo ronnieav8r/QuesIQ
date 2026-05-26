@@ -298,7 +298,14 @@ export function StoriesView() {
               <p className="eyebrow">Build a Story</p>
               <h2 id="story-builder-title">Talk it through with Que.</h2>
             </div>
-            <span>{canUseSpeech ? "Voice ready" : "Type fallback"}</span>
+            {recording ? (
+              <span className="recording-indicator active">
+                <Mic aria-hidden="true" className="recording-indicator-icon" />
+                Recording
+              </span>
+            ) : (
+              <span>{canUseSpeech ? "Voice ready" : "Type fallback"}</span>
+            )}
           </div>
 
           <div className="story-chat" aria-label="Story Lab conversation">
@@ -321,7 +328,7 @@ export function StoriesView() {
 
           <div className="inline-actions">
             <button
-              className={recording ? "secondary" : undefined}
+              className={recording ? "recording-button active" : undefined}
               onClick={toggleRecording}
               type="button"
             >
