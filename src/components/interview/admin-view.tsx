@@ -117,6 +117,7 @@ type ProgressionEventSortKey = "event" | "occurred" | "session" | "user" | "xp";
 
 const promptLabels: Record<PromptConfigKey, string> = {
   realtime_interviewer: "Live Voice Interviewer",
+  session_debrief: "Session Debrief",
   session_evaluation: "Post-Session Evaluation",
   story_follow_up: "Story Lab Follow-Up",
   story_outline: "Story Lab Outline",
@@ -141,6 +142,13 @@ const questCheckTypes: QuestCheckType[] = [
 ];
 
 const runtimeContextByTarget = {
+  debrief: [
+    "Completed session: target role, target company, mode, question focus, and interviewer style",
+    "Saved practice review: summary, coaching insight, next action, and score summaries when available",
+    "Transcript: speaker and text for each saved turn",
+    "Candidate debrief note or question",
+    "Response format: required JSON with summary, strengths, focus areas, practice plan, and one follow-up question",
+  ],
   evaluation: [
     "Session: mode, question focus, interviewer style, target role, target company",
     "Candidate context: job description, resume name, capped resume excerpt",

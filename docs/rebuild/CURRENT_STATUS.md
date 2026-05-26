@@ -260,6 +260,17 @@ Last updated: 2026-05-26
     and expanded again with a chevron
   - the collapsed/expanded nav preference is remembered locally
   - desktop keeps the persistent left navigation rail
+- Debrief mode started:
+  - Debrief is available from the hamburger menu
+  - users can choose a saved transcript-backed session, add a question or note,
+    and have Que generate a saved structured debrief
+  - debriefs are tied to the original session and do not create a new scored
+    practice session
+  - the Session Debrief prompt is seeded into Admin > Prompts for viewing,
+    drafting, and activation
+  - debrief-count quest progress now counts saved debrief records
+- Admin navigation moved out of Me and into the hamburger menu while staying
+  visible only to admins.
 
 ## Verification
 
@@ -359,7 +370,7 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
    by a maintained QuesIQ product knowledge base.
 9. Product gap backlog from the Bubble reference, ordered by current user value:
    persist story-practice coaching history back onto Story records, saved job
-   targets, debrief mode, evolving coaching memory, richer Up Next routing,
+   targets, deeper Debrief conversation UX, evolving coaching memory, richer Up Next routing,
    refined XP rewards, and AI-backed Quira support.
 10. Treat standalone anonymous bug reports, in-app marketing/blog pages,
    payments, industry packs, mascot work, and VAPI parity as lower-priority

@@ -1,5 +1,6 @@
 export type AppView =
   | "admin"
+  | "debrief"
   | "home"
   | "history"
   | "practice"
@@ -327,6 +328,26 @@ export type SessionEvaluationResult = {
   summary: string;
 };
 
+export type SessionDebriefResult = {
+  followUpQuestion: string;
+  focusAreas: string[];
+  practicePlan: string[];
+  strengths: string[];
+  summary: string;
+};
+
+export type SessionDebriefRecord = {
+  createdAt: string;
+  id: string;
+  model: string;
+  result: SessionDebriefResult;
+  sessionId: string;
+  targetCompany: string;
+  targetRole: string;
+  updatedAt: string;
+  userNote: string;
+};
+
 export type VoiceSessionPhase =
   | "ready"
   | "requesting_microphone"
@@ -359,6 +380,7 @@ export type VoiceSessionArtifactDraft = {
 };
 
 export type PromptConfigKey =
+  | "session_debrief"
   | "realtime_interviewer"
   | "session_evaluation"
   | "story_follow_up"
@@ -366,7 +388,7 @@ export type PromptConfigKey =
   | "story_practice_evaluation"
   | "story_practice_realtime";
 
-export type PromptConfigTarget = "evaluation" | "realtime" | "story";
+export type PromptConfigTarget = "debrief" | "evaluation" | "realtime" | "story";
 
 export type PromptConfigRecord = {
   active: boolean;
@@ -406,7 +428,7 @@ export type AiRunRecord = {
   promptConfigVersion?: number;
   provider: "openai";
   providerRequestId?: string;
-  runType: "evaluation" | "pricing_review" | "realtime";
+  runType: "debrief" | "evaluation" | "pricing_review" | "realtime";
   sessionId?: string;
   startedAt: string;
   status: "failed" | "started" | "succeeded";

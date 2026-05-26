@@ -7,7 +7,9 @@ import {
   History as HistoryIcon,
   Home as HomeIcon,
   Menu,
+  MessageSquareText,
   Mic,
+  ShieldCheck,
   UserRound,
   ChevronDown,
   ChevronUp,
@@ -17,6 +19,7 @@ import {
 import { AuthControl, AuthView, useAuthSession } from "@/components/auth-control";
 import { AdminView } from "@/components/interview/admin-view";
 import { Dashboard } from "@/components/interview/dashboard";
+import { DebriefView } from "@/components/interview/debrief-view";
 import { HistoryView } from "@/components/interview/history-view";
 import { useInterviewCatalog } from "@/components/interview/interview-catalog";
 import { MeView } from "@/components/interview/me-view";
@@ -93,7 +96,7 @@ export default function Home() {
       : activeView === "review"
         ? selectedReview?.id
         : undefined;
-  const secondaryMeViews: AppView[] = ["admin"];
+  const secondaryMeViews: AppView[] = [];
 
   function isPrimaryTabCurrent(tabKey: AppView) {
     return activeView === tabKey || (tabKey === "me" && secondaryMeViews.includes(activeView));
@@ -385,7 +388,7 @@ export default function Home() {
                 aria-expanded={appMenuOpen}
                 aria-label={appMenuOpen ? "Close menu" : "Open menu"}
                 className={
-                  activeView === "me" || secondaryMeViews.includes(activeView)
+                  activeView === "me" || activeView === "debrief" || activeView === "admin"
                     ? "app-menu-button active"
                     : "app-menu-button"
                 }
@@ -405,6 +408,34 @@ export default function Home() {
                     <UserRound aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
                     <span>Me</span>
                   </button>
+                  <button
+                    className={activeView === "debrief" ? "active" : undefined}
+                    onClick={() => openView("debrief")}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <MessageSquareText
+                      aria-hidden="true"
+                      className="tab-icon"
+                      strokeWidth={2.2}
+                    />
+                    <span>Debrief</span>
+                  </button>
+                  {adminAccess && (
+                    <button
+                      className={activeView === "admin" ? "active" : undefined}
+                      onClick={() => openView("admin")}
+                      role="menuitem"
+                      type="button"
+                    >
+                      <ShieldCheck
+                        aria-hidden="true"
+                        className="tab-icon"
+                        strokeWidth={2.2}
+                      />
+                      <span>Admin</span>
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -478,6 +509,7 @@ export default function Home() {
           {signedIn && activeView === "stories" && (
             <StoriesView onPracticeStory={launchStoryPractice} />
           )}
+          {signedIn && activeView === "debrief" && <DebriefView />}
           {signedIn && activeView === "session" && sessionSnapshot && sessionLaunchRecord && (
             <SessionView
               catalog={interviewCatalog.catalog}
@@ -500,10 +532,8 @@ export default function Home() {
           )}
           {signedIn && activeView === "me" && (
             <MeView
-              adminAccess={adminAccess}
               contextReady={contextReady}
               interviewContext={interviewContext}
-              onAdmin={() => setActiveView("admin")}
               onOnboarding={() => setActiveView("onboarding")}
               onPractice={openPractice}
               onStories={() => setActiveView("stories")}

@@ -1,20 +1,16 @@
 import type { InterviewContext } from "@/product/interview-types";
 
 type MeViewProps = {
-  adminAccess: boolean;
   contextReady: boolean;
   interviewContext: InterviewContext;
-  onAdmin: () => void;
   onOnboarding: () => void;
   onPractice: () => void;
   onStories: () => void;
 };
 
 export function MeView({
-  adminAccess,
   contextReady,
   interviewContext,
-  onAdmin,
   onOnboarding,
   onPractice,
   onStories,
@@ -68,11 +64,6 @@ export function MeView({
           <button className="secondary" onClick={onStories} type="button">
             Story Lab
           </button>
-          {adminAccess && (
-            <button className="secondary" onClick={onAdmin} type="button">
-              Admin
-            </button>
-          )}
         </div>
       </section>
     </section>

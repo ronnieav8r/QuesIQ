@@ -13,6 +13,7 @@ import type {
 } from "@/product/interview-types";
 import { getDb } from "@/server/db/client";
 import {
+  debriefs,
   evaluations,
   profiles,
   progressionEvents,
@@ -448,7 +449,7 @@ async function getQuestProgress(
     checkType: QuestCheckType;
   },
 ) {
-  const [sessionRows, evaluationRows, profileRows] = await Promise.all([
+  const [sessionRows, evaluationRows, profileRows, debriefRows] = await Promise.all([
     getDb()
       .select({
         modeKey: sessions.modeKey,
@@ -473,6 +474,12 @@ async function getQuestProgress(
       .from(profiles)
       .where(eq(profiles.userId, userId))
       .limit(1),
+    getDb()
+      .select({
+        id: debriefs.id,
+      })
+      .from(debriefs)
+      .where(eq(debriefs.userId, userId)),
   ]);
   const completedSessions = sessionRows.filter((session) => session.status !== "created");
   const modeKeys = completedSessions.map((session) => session.modeKey);
@@ -499,7 +506,7 @@ async function getQuestProgress(
         ? threshold
         : 0;
     case "debrief_count":
-      return evaluationRows.length;
+      return debriefRows.length;
     case "job_target_set":
       return profile?.targetCompany?.trim() && profile.targetRole.trim() ? 1 : 0;
     case "level_reached":

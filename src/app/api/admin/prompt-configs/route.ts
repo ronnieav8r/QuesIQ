@@ -26,6 +26,10 @@ type ActivateBody = {
 };
 
 function targetForKey(key: PromptConfigKey): PromptConfigTarget {
+  if (key === "session_debrief") {
+    return "debrief";
+  }
+
   if (key === "realtime_interviewer" || key === "story_practice_realtime") {
     return "realtime";
   }

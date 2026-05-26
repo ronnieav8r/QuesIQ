@@ -17,6 +17,9 @@ export const realtimeInterviewerInstructions = [
 export const sessionEvaluationInstructions =
   "You are Que, QuesIQ Interview's interview coach. Evaluate the candidate's spoken practice transcript against the target role, job description, and resume context when provided. Be specific, kind, and useful. Score each dimension from 1 to 5 where 5 is strongest. Do not mention APIs or implementation details.";
 
+export const sessionDebriefInstructions =
+  "You are Que, QuesIQ Interview's interview coach. Debrief a completed practice session with the candidate. Use the saved transcript, session review, and the candidate's debrief note or question. Do not rescore the session. Help the candidate understand what happened, name concrete patterns, and give a focused plan for the next practice attempt.";
+
 export const storyFollowUpInstructions =
   "You are Que, helping a job seeker turn a raw experience into a reusable interview story. Ask exactly one warm, specific follow-up question. Prefer missing stakes, personal action, measurable result, or reflection. Do not outline the story yet.";
 
@@ -30,6 +33,15 @@ export const storyPracticeEvaluationInstructions =
   "This was a Story Lab practice session. In the summary, coaching insight, score summaries, and next action, explicitly evaluate how well the candidate used the saved story, whether the story answered the question, whether the personal action and result were clear, and what to change before practicing this same story again.";
 
 export const promptConfigFallbacks = {
+  session_debrief: {
+    active: true,
+    instructions: sessionDebriefInstructions,
+    key: "session_debrief",
+    model: process.env.OPENAI_DEBRIEF_MODEL || process.env.OPENAI_EVALUATION_MODEL || "gpt-5.4-mini",
+    name: "Session Debrief",
+    target: "debrief",
+    version: 0,
+  },
   realtime_interviewer: {
     active: true,
     instructions: realtimeInterviewerInstructions,
@@ -91,6 +103,7 @@ export const promptConfigFallbacks = {
 export function isPromptConfigKey(value: unknown): value is PromptConfigKey {
   return (
     value === "realtime_interviewer" ||
+    value === "session_debrief" ||
     value === "session_evaluation" ||
     value === "story_follow_up" ||
     value === "story_outline" ||

@@ -20,6 +20,7 @@ import type {
   StoryCategory,
   StoryOutline,
   SessionEvaluationResult,
+  SessionDebriefResult,
   SessionSetupSnapshot,
   SessionStatus,
   VoiceSessionArtifactDraft,
@@ -215,6 +216,29 @@ export const evaluations = pgTable(
   }),
 );
 
+export const debriefs = pgTable(
+  "debriefs",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    model: text("model").notNull(),
+    promptConfigKey: text("prompt_config_key"),
+    promptConfigVersion: integer("prompt_config_version"),
+    result: jsonb("result").$type<SessionDebriefResult>().notNull(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    userNote: text("user_note").default("").notNull(),
+  },
+  (debrief) => ({
+    createdAtIdx: index("debriefs_created_at_idx").on(debrief.createdAt),
+    sessionIdx: index("debriefs_session_idx").on(debrief.sessionId),
+    userIdx: index("debriefs_user_idx").on(debrief.userId),
+  }),
+);
+
 export const promptConfigs = pgTable(
   "prompt_configs",
   {
@@ -228,7 +252,7 @@ export const promptConfigs = pgTable(
     key: text("key").notNull(),
     model: text("model").notNull(),
     name: text("name").notNull(),
-    target: text("target").$type<"evaluation" | "realtime" | "story">().notNull(),
+    target: text("target").$type<"debrief" | "evaluation" | "realtime" | "story">().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     version: integer("version").notNull(),
     voice: text("voice"),
@@ -268,7 +292,7 @@ export const aiRuns = pgTable(
     provider: text("provider").default("openai").notNull(),
     providerRequestId: text("provider_request_id"),
     runType: text("run_type")
-      .$type<"evaluation" | "pricing_review" | "realtime">()
+      .$type<"debrief" | "evaluation" | "pricing_review" | "realtime">()
       .notNull(),
     sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "set null" }),
     startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),

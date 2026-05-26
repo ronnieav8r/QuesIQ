@@ -199,6 +199,13 @@ path until Phase 2 navigation is completed unless the product direction changes.
 - Added hideable mobile navigation: Story Lab is a primary nav item, the bottom
   nav can collapse into a small chevron Menu handle, the preference is stored
   locally, and desktop keeps the left navigation rail.
+- Started Debrief mode: signed-in users can open Debrief from the hamburger
+  menu, choose a saved transcript-backed session, ask Que a debrief question,
+  and save a structured debrief tied to the original session without creating a
+  new scored practice session. Admins can view and edit the Session Debrief
+  prompt under Admin > Prompts.
+- Moved Admin out of Me and into the hamburger menu while keeping it visible
+  only for admin users.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
