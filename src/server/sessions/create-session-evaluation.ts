@@ -2,11 +2,16 @@ import { and, eq } from "drizzle-orm";
 
 import { parseSessionEvaluation } from "@/product/session-evaluation";
 import type {
+  CoachingMemoryRecord,
   SessionEvaluationResult,
   SessionSetupSnapshot,
   VoiceSessionArtifactDraft,
 } from "@/product/interview-types";
 import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
+import {
+  getCoachingMemory,
+  saveCoachingMemory,
+} from "@/server/coaching-memory/coaching-memory";
 import { getDb } from "@/server/db/client";
 import { evaluations, sessions } from "@/server/db/schema";
 import type { SessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
@@ -46,6 +51,45 @@ type ResponsesApiBody = {
 const evaluationSchema = {
   additionalProperties: false,
   properties: {
+    coachingMemory: {
+      additionalProperties: false,
+      properties: {
+        evidenceCount: {
+          minimum: 1,
+          type: "integer",
+        },
+        growthAreas: {
+          items: { type: "string" },
+          maxItems: 5,
+          type: "array",
+        },
+        latestRecommendation: {
+          type: "string",
+        },
+        recurringPatterns: {
+          items: { type: "string" },
+          maxItems: 5,
+          type: "array",
+        },
+        strengths: {
+          items: { type: "string" },
+          maxItems: 5,
+          type: "array",
+        },
+        summary: {
+          type: "string",
+        },
+      },
+      required: [
+        "summary",
+        "strengths",
+        "growthAreas",
+        "recurringPatterns",
+        "latestRecommendation",
+        "evidenceCount",
+      ],
+      type: "object",
+    },
     coachingInsight: {
       type: "string",
     },
@@ -83,7 +127,7 @@ const evaluationSchema = {
       type: "string",
     },
   },
-  required: ["summary", "coachingInsight", "nextAction", "scores"],
+  required: ["summary", "coachingInsight", "nextAction", "scores", "coachingMemory"],
   type: "object",
 };
 
@@ -105,8 +149,19 @@ function buildEvaluationInput(
   snapshot: SessionSetupSnapshot,
   artifact: VoiceSessionArtifactDraft,
   promptComponents: SessionPromptComponents,
+  memory?: CoachingMemoryRecord,
 ) {
   return {
+    coachingMemory: memory
+      ? {
+          evidenceCount: memory.evidenceCount,
+          growthAreas: memory.growthAreas,
+          latestRecommendation: memory.latestRecommendation,
+          recurringPatterns: memory.recurringPatterns,
+          strengths: memory.strengths,
+          summary: memory.summary,
+        }
+      : "No prior coaching memory. Create a concise first memory from this session.",
     session: {
       mode: promptComponents.mode?.name || snapshot.modeKey,
       modeInstructions: promptComponents.mode?.promptInstructions || "Not provided",
@@ -151,6 +206,7 @@ async function requestEvaluation(
   promptComponents: SessionPromptComponents,
   instructions: string,
   model: string,
+  memory?: CoachingMemoryRecord,
 ) {
   const storyEvaluationConfig = snapshot.storyContext
     ? await getActivePromptConfig("story_practice_evaluation")
@@ -166,12 +222,12 @@ async function requestEvaluation(
         },
         {
           content: JSON.stringify(
-            buildEvaluationInput(snapshot, artifact, promptComponents),
+            buildEvaluationInput(snapshot, artifact, promptComponents, memory),
           ),
           role: "user",
         },
       ],
-      max_output_tokens: 1200,
+      max_output_tokens: 1500,
       model,
       text: {
         format: {
@@ -315,6 +371,7 @@ export async function createSessionEvaluation(
     getActivePromptConfig("session_evaluation"),
     getSessionPromptComponents(session.contextSnapshot),
   ]);
+  const memory = await getCoachingMemory(userId);
   const model = promptConfig.model;
   await getDb()
     .update(sessions)
@@ -343,8 +400,16 @@ export async function createSessionEvaluation(
       promptComponents,
       promptConfig.instructions,
       model,
+      memory,
     );
     result = evaluationResponse.evaluation;
+    if (result.coachingMemory) {
+      await saveCoachingMemory({
+        lastSessionId: sessionId,
+        memory: result.coachingMemory,
+        userId,
+      });
+    }
     await completeAiRun(aiRun.id, {
       costSource: "exact",
       estimatedCostMicroUsd: estimateTokenCostMicroUsd(

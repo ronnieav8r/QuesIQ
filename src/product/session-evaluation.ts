@@ -1,4 +1,5 @@
 import type {
+  CoachingMemorySnapshot,
   EvaluationScore,
   EvaluationScoreKey,
   SessionEvaluationResult,
@@ -39,6 +40,29 @@ function isEvaluationScore(value: unknown): value is EvaluationScore {
   );
 }
 
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every(isString);
+}
+
+function isCoachingMemorySnapshot(value: unknown): value is CoachingMemorySnapshot {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<CoachingMemorySnapshot>;
+
+  return (
+    typeof candidate.evidenceCount === "number" &&
+    Number.isInteger(candidate.evidenceCount) &&
+    candidate.evidenceCount >= 1 &&
+    isStringArray(candidate.growthAreas) &&
+    isString(candidate.latestRecommendation) &&
+    isStringArray(candidate.recurringPatterns) &&
+    isStringArray(candidate.strengths) &&
+    isString(candidate.summary)
+  );
+}
+
 export function parseSessionEvaluation(
   value: unknown,
 ): SessionEvaluationResult | undefined {
@@ -50,6 +74,7 @@ export function parseSessionEvaluation(
 
   if (
     !isString(candidate.summary) ||
+    !isCoachingMemorySnapshot(candidate.coachingMemory) ||
     !isString(candidate.coachingInsight) ||
     !isString(candidate.nextAction) ||
     !Array.isArray(candidate.scores) ||
@@ -66,6 +91,7 @@ export function parseSessionEvaluation(
   }
 
   return {
+    coachingMemory: candidate.coachingMemory,
     coachingInsight: candidate.coachingInsight,
     nextAction: candidate.nextAction,
     scores: candidate.scores,

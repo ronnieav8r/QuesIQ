@@ -17,6 +17,7 @@ import type {
   PricingReviewResult,
   ProgressionEventType,
   QuestCheckType,
+  CoachingMemorySnapshot,
   StoryCategory,
   StoryOutline,
   SessionEvaluationResult,
@@ -213,6 +214,31 @@ export const evaluations = pgTable(
   },
   (evaluation) => ({
     sessionIdIdx: uniqueIndex("evaluations_session_id_idx").on(evaluation.sessionId),
+  }),
+);
+
+export const coachingMemory = pgTable(
+  "coaching_memory",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    evidenceCount: integer("evidence_count").default(0).notNull(),
+    growthAreas: jsonb("growth_areas").$type<string[]>().default([]).notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    lastSessionId: uuid("last_session_id").references(() => sessions.id, {
+      onDelete: "set null",
+    }),
+    latestRecommendation: text("latest_recommendation").default("").notNull(),
+    memory: jsonb("memory").$type<CoachingMemorySnapshot>(),
+    recurringPatterns: jsonb("recurring_patterns").$type<string[]>().default([]).notNull(),
+    strengths: jsonb("strengths").$type<string[]>().default([]).notNull(),
+    summary: text("summary").default("").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (memory) => ({
+    userIdIdx: uniqueIndex("coaching_memory_user_id_idx").on(memory.userId),
   }),
 );
 

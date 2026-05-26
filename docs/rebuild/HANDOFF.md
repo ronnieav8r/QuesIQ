@@ -206,6 +206,12 @@ path until Phase 2 navigation is completed unless the product direction changes.
   under Admin > Prompts.
 - Moved Admin out of Me and into the hamburger menu while keeping it visible
   only for admin users.
+- Added the first coaching memory slice without a second memory API call:
+  post-session evaluation now receives prior coaching memory and returns an
+  updated compact memory object, QuesIQ stores one coaching memory row per user,
+  Home shows "What Que Is Learning," and future Realtime voice sessions and
+  Debriefs receive the saved memory as quiet coaching context. Admin > Prompts
+  shows the updated Session Evaluation and Session Debrief prompt versions.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,

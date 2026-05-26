@@ -169,6 +169,13 @@
       "when": 1779883200000,
       "tag": "0024_add_debriefs",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1779886800000,
+      "tag": "0025_add_coaching_memory",
+      "breakpoints": true
     }
   ]
 }

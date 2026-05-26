@@ -1,4 +1,5 @@
 import type {
+  CoachingMemoryRecord,
   SessionDebriefResult,
   SessionEvaluationResult,
   SessionHistoryItem,
@@ -83,7 +84,9 @@ export async function generateSessionDebrief({
   promptConfig,
   session,
   userNote,
+  memory,
 }: {
+  memory?: CoachingMemoryRecord;
   promptConfig: PromptConfigRecord;
   session: SessionHistoryItem;
   userNote: string;
@@ -103,6 +106,18 @@ export async function generateSessionDebrief({
             `Question focus: ${session.questionTypeKey || "Not provided"}`,
             `Style: ${session.styleKey}`,
             `Candidate debrief note or question: ${userNote || "Help me understand this session and what to practice next."}`,
+            "",
+            "Coaching memory:",
+            memory
+              ? JSON.stringify({
+                  evidenceCount: memory.evidenceCount,
+                  growthAreas: memory.growthAreas,
+                  latestRecommendation: memory.latestRecommendation,
+                  recurringPatterns: memory.recurringPatterns,
+                  strengths: memory.strengths,
+                  summary: memory.summary,
+                })
+              : "No prior coaching memory.",
             "",
             "Saved practice review:",
             formatEvaluation(session.evaluation),

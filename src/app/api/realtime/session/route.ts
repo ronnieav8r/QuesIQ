@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import type { CoachingMemoryRecord } from "@/product/interview-types";
 import type { SessionSetupSnapshot } from "@/product/interview-types";
 import type { PromptConfigRecord } from "@/product/interview-types";
 import type { SessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
 import { getSessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
+import { getCoachingMemory } from "@/server/coaching-memory/coaching-memory";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 import { getOwnedSession } from "@/server/sessions/get-owned-session";
 import { saveRealtimeSessionConfig } from "@/server/sessions/save-realtime-call";
@@ -26,6 +28,7 @@ function buildQueInstructions(
   snapshot?: SessionSetupSnapshot,
   promptComponents?: SessionPromptComponents,
   storyPracticeConfig?: PromptConfigRecord,
+  memory?: CoachingMemoryRecord,
 ) {
   const role = snapshot?.interviewContext.targetRole || "the user's target role";
   const company = snapshot?.interviewContext.targetCompany || "an unspecified company";
@@ -72,6 +75,9 @@ function buildQueInstructions(
     storyContext,
     `Target role: ${role}.`,
     `Target company: ${company}.`,
+    memory
+      ? `Coaching memory: ${memory.summary} Latest focus: ${memory.latestRecommendation}. Recurring patterns: ${memory.recurringPatterns.join(" | ") || "None yet"}. Use this quietly to tailor coaching and question choice. Do not mention stored memory unless the candidate asks.`
+      : "No prior coaching memory was provided.",
     resumeContext
       ? `Resume context: ${resumeContext}. Use it quietly to ask role-relevant questions. If the candidate asks whether you have their resume, say you have the context they provided for this practice session and can tailor questions from it. Do not say you have a file, a private file, or a resume summary in front of you. Do not read resume text aloud unless the candidate asks about a specific detail.`
       : "No parsed resume context was provided.",
@@ -110,12 +116,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Session was not found." }, { status: 404 });
   }
 
-  const [promptConfig, storyPracticeConfig, promptComponents] = await Promise.all([
+  const [promptConfig, storyPracticeConfig, promptComponents, memory] = await Promise.all([
     getActivePromptConfig("realtime_interviewer"),
     body.snapshot?.storyContext
       ? getActivePromptConfig("story_practice_realtime")
       : Promise.resolve(undefined),
     body.snapshot ? getSessionPromptComponents(body.snapshot) : Promise.resolve({}),
+    getCoachingMemory(appSession.user.id),
   ]);
   const activeRealtimeConfig = storyPracticeConfig ?? promptConfig;
   const sessionConfig = {
@@ -126,6 +133,7 @@ export async function POST(request: Request) {
       body.snapshot,
       promptComponents,
       storyPracticeConfig,
+      memory,
     ),
     audio: {
       input: {

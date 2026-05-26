@@ -322,10 +322,26 @@ export type EvaluationScore = {
 };
 
 export type SessionEvaluationResult = {
+  coachingMemory?: CoachingMemorySnapshot;
   coachingInsight: string;
   nextAction: string;
   scores: EvaluationScore[];
   summary: string;
+};
+
+export type CoachingMemorySnapshot = {
+  evidenceCount: number;
+  growthAreas: string[];
+  latestRecommendation: string;
+  recurringPatterns: string[];
+  strengths: string[];
+  summary: string;
+};
+
+export type CoachingMemoryRecord = CoachingMemorySnapshot & {
+  createdAt: string;
+  lastSessionId?: string;
+  updatedAt: string;
 };
 
 export type SessionDebriefResult = {

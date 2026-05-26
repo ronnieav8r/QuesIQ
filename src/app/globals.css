@@ -495,6 +495,36 @@ label span {
   margin-bottom: 0;
 }
 
+.coaching-memory-body {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.coaching-memory-body p {
+  margin-bottom: 0;
+}
+
+.coaching-memory-body div {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+}
+
+.coaching-memory-body span {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+}
+
+.coaching-memory-body ul {
+  color: var(--muted);
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
 .quest-list article {
   background: var(--surface-raised);
   border: 1px solid var(--border);

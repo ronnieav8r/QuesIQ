@@ -1,6 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 
 import type { SessionDebriefRecord, SessionHistoryItem } from "@/product/interview-types";
+import { getCoachingMemory } from "@/server/coaching-memory/coaching-memory";
 import { getDb } from "@/server/db/client";
 import { debriefs, evaluations, sessions } from "@/server/db/schema";
 import { generateSessionDebrief } from "@/server/debriefs/debrief-ai";
@@ -119,8 +120,12 @@ export async function createSessionDebrief({
     throw new Error("Debrief needs a saved transcript first.");
   }
 
-  const promptConfig = await getActivePromptConfig("session_debrief");
+  const [promptConfig, memory] = await Promise.all([
+    getActivePromptConfig("session_debrief"),
+    getCoachingMemory(userId),
+  ]);
   const result = await generateSessionDebrief({
+    memory,
     promptConfig,
     session,
     userNote,

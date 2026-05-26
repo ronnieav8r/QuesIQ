@@ -272,6 +272,17 @@ Last updated: 2026-05-26
   - debrief-count quest progress now counts saved debrief records
 - Admin navigation moved out of Me and into the hamburger menu while staying
   visible only to admins.
+- Coaching memory started:
+  - QuesIQ stores one compact coaching memory row per user
+  - post-session evaluation receives prior memory and returns the updated
+    memory in the same AI call as the review
+  - memory tracks a concise summary, strengths, growth areas, recurring
+    patterns, latest recommendation, and evidence count
+  - Home shows a "What Que Is Learning" panel after memory exists
+  - Realtime voice sessions and Debriefs receive saved memory as quiet coaching
+    context
+  - Admin > Prompts includes updated Session Evaluation and Session Debrief
+    prompt versions that describe the memory behavior
 
 ## Verification
 
@@ -371,7 +382,7 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
    by a maintained QuesIQ product knowledge base.
 9. Product gap backlog from the Bubble reference, ordered by current user value:
    persist story-practice coaching history back onto Story records, saved job
-   targets, deeper Debrief conversation UX, evolving coaching memory, richer Up Next routing,
+   targets, deeper Debrief conversation UX, richer coaching memory controls, richer Up Next routing,
    refined XP rewards, and AI-backed Quira support.
 10. Treat standalone anonymous bug reports, in-app marketing/blog pages,
    payments, industry packs, mascot work, and VAPI parity as lower-priority

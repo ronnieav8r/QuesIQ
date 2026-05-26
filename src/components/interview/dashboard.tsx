@@ -5,6 +5,7 @@ import { useSessionHistory } from "@/components/interview/session-history";
 import { getOverallScore } from "@/product/scoring";
 import type { InterviewContext } from "@/product/interview-types";
 import type {
+  CoachingMemoryRecord,
   ProgressionSummaryRecord,
   SessionHistoryItem,
 } from "@/product/interview-types";
@@ -25,6 +26,8 @@ export function Dashboard({
   onReview,
 }: DashboardProps) {
   const history = useSessionHistory();
+  const [coachingMemory, setCoachingMemory] = useState<CoachingMemoryRecord>();
+  const [coachingMemoryError, setCoachingMemoryError] = useState<string>();
   const [progression, setProgression] = useState<ProgressionSummaryRecord>();
   const [progressionError, setProgressionError] = useState<string>();
   const [progressionStatus, setProgressionStatus] = useState<"idle" | "loaded" | "loading">(
@@ -65,6 +68,46 @@ export function Dashboard({
     }
 
     void loadProgression();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadCoachingMemory() {
+      try {
+        setCoachingMemoryError(undefined);
+        const response = await fetch("/api/coaching-memory");
+        const body = (await response.json()) as {
+          detail?: string;
+          error?: string;
+          memory?: CoachingMemoryRecord;
+        };
+
+        if (!response.ok) {
+          throw new Error(
+            body.detail || body.error || "Coaching memory could not be loaded.",
+          );
+        }
+
+        if (!ignore) {
+          setCoachingMemory(body.memory);
+        }
+      } catch (error) {
+        if (!ignore) {
+          setCoachingMemoryError(
+            error instanceof Error
+              ? error.message
+              : "Coaching memory could not be loaded.",
+          );
+        }
+      }
+    }
+
+    void loadCoachingMemory();
 
     return () => {
       ignore = true;
@@ -338,6 +381,35 @@ export function Dashboard({
             </div>
           )}
           {progressionError && <p className="form-error">{progressionError}</p>}
+        </section>
+
+        <section aria-labelledby="memory-title" className="panel coaching-memory-panel">
+          <div className="section-head">
+            <h2 id="memory-title">What Que Is Learning</h2>
+            <span>{coachingMemory ? `${coachingMemory.evidenceCount} reviews` : "New"}</span>
+          </div>
+          {coachingMemory ? (
+            <div className="coaching-memory-body">
+              <p>{coachingMemory.summary}</p>
+              <div>
+                <span>Latest focus</span>
+                <p>{coachingMemory.latestRecommendation}</p>
+              </div>
+              {coachingMemory.recurringPatterns.length > 0 && (
+                <ul>
+                  {coachingMemory.recurringPatterns.slice(0, 3).map((pattern) => (
+                    <li key={pattern}>{pattern}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : (
+            <p>
+              Que will start building coaching memory after your next scored
+              practice review.
+            </p>
+          )}
+          {coachingMemoryError && <p className="form-error">{coachingMemoryError}</p>}
         </section>
 
         <section aria-labelledby="quests-title" className="panel quests-panel">
