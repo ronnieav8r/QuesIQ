@@ -1109,8 +1109,10 @@ textarea::placeholder {
 .story-chat,
 .story-card-list,
 .story-card,
+.story-detail,
 .story-card details,
 .story-card dl,
+.story-spin-list,
 .story-spins,
 .story-tags {
   display: grid;
@@ -1128,11 +1130,17 @@ textarea::placeholder {
 }
 
 .story-turn,
-.story-card {
+.story-card,
+.story-detail,
+.story-spin-list article {
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: var(--space-3);
+}
+
+.story-card.active {
+  border-color: var(--focus);
 }
 
 .story-turn {
@@ -1223,6 +1231,67 @@ textarea::placeholder {
   color: var(--muted);
   margin: 0;
   padding-left: 1.2rem;
+}
+
+.story-detail {
+  background: var(--surface-band);
+}
+
+.story-detail dl {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.story-detail dl div {
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  gap: var(--space-1);
+  padding-bottom: var(--space-3);
+}
+
+.story-detail dt {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}
+
+.story-detail dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.story-detail section {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.story-detail ul {
+  color: var(--muted);
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.story-category-picker {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  padding: var(--space-3);
+}
+
+.story-spin-list article {
+  background: var(--surface-raised);
+}
+
+.story-spin-list p,
+.story-spin-list small {
+  margin-bottom: 0;
+}
+
+.story-spin-list small {
+  color: var(--muted);
 }
 
 .admin-screen {

@@ -4,7 +4,7 @@ import type {
   StoryOutline,
 } from "@/product/interview-types";
 
-const storyCategories: StoryCategory[] = [
+export const storyCategories: StoryCategory[] = [
   "adaptability",
   "ambiguity",
   "communication",
@@ -123,6 +123,29 @@ export function parseStoryOutline(value: unknown): StoryOutline | undefined {
     summary: candidate.summary.trim(),
     task: candidate.task.trim(),
     title: candidate.title.trim(),
+  };
+}
+
+export function parseStoryUpdate(value: unknown):
+  | {
+      outline: StoryOutline;
+      rawNotes: string;
+    }
+  | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const candidate = value as { outline?: unknown; rawNotes?: unknown };
+  const outline = parseStoryOutline(candidate.outline);
+
+  if (!outline || !isString(candidate.rawNotes)) {
+    return undefined;
+  }
+
+  return {
+    outline,
+    rawNotes: candidate.rawNotes.trim(),
   };
 }
 

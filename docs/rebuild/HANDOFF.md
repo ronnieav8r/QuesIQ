@@ -184,6 +184,9 @@ path until Phase 2 navigation is completed unless the product direction changes.
   Story Lab where users can speak raw notes, type as a fallback, ask Que for a
   follow-up question, and generate/save a reusable STARR-style story outline
   with categories, alternate spins, coach notes, and a practice prompt.
+- Started Story Lab Phase 2 library polish: saved stories can be selected into
+  a detail panel and edited after generation, with owner-scoped updates through
+  `/api/stories/[storyId]`.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -199,7 +202,7 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 - ESLint passed.
 - TypeScript check passed.
-- Latest local feedback/progression/UI/Quira baseline and Story Lab Phase 1
+- Latest local feedback/progression/UI/Quira baseline and Story Lab Phase 1/2
   checks passed: ESLint, TypeScript, and production build.
 - Next production build passed.
 - Local `npm` is now available on PATH, and latest checks passed with it.
@@ -294,9 +297,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
 7. Expand prompted micro-feedback beyond the first review-usefulness popup by
    rotating specific questions about voice realism, transcript accuracy, and
    scoring fairness.
-8. Continue Story Lab after Phase 1: add story detail/editing polish, then
-   connect saved stories into a dedicated voice practice mode with
-   story-specific feedback.
+8. Continue Story Lab after Phase 2: connect saved stories into a dedicated
+   voice practice mode with story-specific feedback.
 9. Work the remaining highest-value Bubble reference gaps into upcoming phases:
    saved job targets, debrief mode, evolving coaching memory, richer Up Next
    routing, refined XP rewards, and AI-backed Quira support.

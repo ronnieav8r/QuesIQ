@@ -226,6 +226,13 @@ Last updated: 2026-05-26
     summary, situation, task, actions, result, categories, alternate spins,
     coach notes, and a practice prompt
   - saved story outlines are stored in Postgres and listed in Story Lab
+- Story Lab Phase 2 library polish started:
+  - saved story cards can be selected into a detail panel
+  - saved outlines can be edited after generation, including title, summary,
+    STARR fields, action bullets, coach notes, raw notes, practice prompt, and
+    categories
+  - story updates are owner-scoped through a protected `/api/stories/[storyId]`
+    route
 
 ## Verification
 
@@ -237,8 +244,8 @@ The current coded app has passed:
   baseline checks passed with ESLint, TypeScript, and production build.
 - Next production build
 - Latest local checks passed with local `npm` available on PATH.
-- Story Lab Phase 1 local checks passed: ESLint, TypeScript, and production
-  build.
+- Story Lab Phase 1 and Phase 2 local checks passed: ESLint, TypeScript, and
+  production build.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran
@@ -324,7 +331,7 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 8. Later Quira work: replace the curated Help panel with an AI chat bot backed
    by a maintained QuesIQ product knowledge base.
 9. Product gap backlog from the Bubble reference, ordered by current user value:
-   finish Story Lab practice hooks, saved job targets, debrief mode, evolving
+   connect Story Lab practice hooks, saved job targets, debrief mode, evolving
    coaching memory, richer Up Next routing, refined XP rewards, and AI-backed
    Quira support.
 10. Treat standalone anonymous bug reports, in-app marketing/blog pages,

@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
 import type { StoryOutline, StoryRecord } from "@/product/interview-types";
 import { getDb } from "@/server/db/client";
@@ -60,4 +60,33 @@ export async function saveStory(
     .returning();
 
   return toStoryRecord(story);
+}
+
+export async function updateStory(
+  userId: string,
+  storyId: string,
+  rawNotes: string,
+  outline: StoryOutline,
+): Promise<StoryRecord | undefined> {
+  const now = new Date();
+  const [story] = await getDb()
+    .update(stories)
+    .set({
+      actions: outline.actions,
+      alternateSpins: outline.alternateSpins,
+      categories: outline.categories,
+      coachNotes: outline.coachNotes,
+      practicePrompt: outline.practicePrompt,
+      rawNotes,
+      result: outline.result,
+      situation: outline.situation,
+      summary: outline.summary,
+      task: outline.task,
+      title: outline.title,
+      updatedAt: now,
+    })
+    .where(and(eq(stories.id, storyId), eq(stories.userId, userId)))
+    .returning();
+
+  return story ? toStoryRecord(story) : undefined;
 }

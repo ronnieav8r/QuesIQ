@@ -3,8 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Mic, Square } from "lucide-react";
 
-import type { StoryBuilderTurn, StoryRecord } from "@/product/interview-types";
-import { storyCategoryLabel } from "@/product/story-lab";
+import type {
+  StoryBuilderTurn,
+  StoryCategory,
+  StoryOutline,
+  StoryRecord,
+} from "@/product/interview-types";
+import { storyCategories, storyCategoryLabel } from "@/product/story-lab";
 
 type SpeechRecognitionConstructor = new () => SpeechRecognitionInstance;
 
@@ -29,6 +34,19 @@ type SpeechRecognitionEventShape = {
   }>;
 };
 
+type StoryEditDraft = {
+  actions: string;
+  categories: StoryCategory[];
+  coachNotes: string;
+  practicePrompt: string;
+  rawNotes: string;
+  result: string;
+  situation: string;
+  summary: string;
+  task: string;
+  title: string;
+};
+
 function createTurn(role: StoryBuilderTurn["role"], text: string): StoryBuilderTurn {
   return {
     id: `${role}-${Date.now()}-${crypto.randomUUID()}`,
@@ -46,6 +64,43 @@ function getSpeechRecognition() {
   return browserWindow.SpeechRecognition || browserWindow.webkitSpeechRecognition;
 }
 
+function linesToList(value: string) {
+  return value
+    .split("\n")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function storyToDraft(story: StoryRecord): StoryEditDraft {
+  return {
+    actions: story.actions.join("\n"),
+    categories: story.categories,
+    coachNotes: story.coachNotes.join("\n"),
+    practicePrompt: story.practicePrompt,
+    rawNotes: story.rawNotes,
+    result: story.result,
+    situation: story.situation,
+    summary: story.summary,
+    task: story.task,
+    title: story.title,
+  };
+}
+
+function draftToOutline(story: StoryRecord, draft: StoryEditDraft): StoryOutline {
+  return {
+    actions: linesToList(draft.actions).slice(0, 6),
+    alternateSpins: story.alternateSpins,
+    categories: draft.categories.slice(0, 5),
+    coachNotes: linesToList(draft.coachNotes).slice(0, 6),
+    practicePrompt: draft.practicePrompt.trim(),
+    result: draft.result.trim(),
+    situation: draft.situation.trim(),
+    summary: draft.summary.trim(),
+    task: draft.task.trim(),
+    title: draft.title.trim(),
+  };
+}
+
 export function StoriesView() {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const recordingWantedRef = useRef(false);
@@ -53,10 +108,15 @@ export function StoriesView() {
   const restartTimeoutRef = useRef<number | undefined>(undefined);
   const speechTranscriptRef = useRef("");
   const [draftText, setDraftText] = useState("");
+  const [editDraft, setEditDraft] = useState<StoryEditDraft>();
+  const [editError, setEditError] = useState<string>();
+  const [editingStoryId, setEditingStoryId] = useState<string>();
   const [error, setError] = useState<string>();
   const [listStatus, setListStatus] = useState<"idle" | "loaded" | "loading">("idle");
   const [pendingAction, setPendingAction] = useState<"follow_up" | "save">();
   const [recording, setRecording] = useState(false);
+  const [selectedStoryId, setSelectedStoryId] = useState<string>();
+  const [saveEditPending, setSaveEditPending] = useState(false);
   const [stories, setStories] = useState<StoryRecord[]>([]);
   const [turns, setTurns] = useState<StoryBuilderTurn[]>([
     createTurn(
@@ -79,6 +139,9 @@ export function StoriesView() {
   }, [draftText]);
   const canAskFollowUp = userTurns.length > 0 && !pendingAction;
   const canSave = userTurns.length > 0 && !pendingAction;
+  const selectedStory =
+    stories.find((story) => story.id === selectedStoryId) ?? stories[0];
+  const editingStory = stories.find((story) => story.id === editingStoryId);
 
   useEffect(() => {
     let ignore = false;
@@ -99,6 +162,7 @@ export function StoriesView() {
 
         if (!ignore) {
           setStories(body.stories ?? []);
+          setSelectedStoryId((current) => current ?? body.stories?.[0]?.id);
           setListStatus("loaded");
         }
       } catch (error) {
@@ -268,6 +332,7 @@ export function StoriesView() {
       }
 
       setStories((current) => [body.story as StoryRecord, ...current]);
+      setSelectedStoryId(body.story.id);
       setTurns([
         createTurn(
           "assistant",
@@ -279,6 +344,85 @@ export function StoriesView() {
       setError(error instanceof Error ? error.message : "Story could not be saved.");
     } finally {
       setPendingAction(undefined);
+    }
+  }
+
+  function startEditing(story: StoryRecord) {
+    setEditError(undefined);
+    setEditingStoryId(story.id);
+    setEditDraft(storyToDraft(story));
+    setSelectedStoryId(story.id);
+  }
+
+  function cancelEditing() {
+    setEditError(undefined);
+    setEditingStoryId(undefined);
+    setEditDraft(undefined);
+  }
+
+  function toggleDraftCategory(category: StoryCategory) {
+    setEditDraft((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const selected = current.categories.includes(category);
+
+      return {
+        ...current,
+        categories: selected
+          ? current.categories.filter((item) => item !== category)
+          : [...current.categories, category].slice(0, 5),
+      };
+    });
+  }
+
+  async function saveStoryEdits() {
+    if (!editingStory || !editDraft) {
+      return;
+    }
+
+    const outline = draftToOutline(editingStory, editDraft);
+
+    if (!outline.title || !outline.summary || !outline.situation || !outline.task) {
+      setEditError("Title, summary, situation, and task are required.");
+      return;
+    }
+
+    try {
+      setEditError(undefined);
+      setSaveEditPending(true);
+      const response = await fetch(`/api/stories/${editingStory.id}`, {
+        body: JSON.stringify({
+          story: {
+            outline,
+            rawNotes: editDraft.rawNotes,
+          },
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "PUT",
+      });
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        story?: StoryRecord;
+      };
+
+      if (!response.ok || !body.story) {
+        throw new Error(body.detail || body.error || "Story could not be updated.");
+      }
+
+      setStories((current) =>
+        current.map((story) => (story.id === body.story?.id ? body.story : story)),
+      );
+      setSelectedStoryId(body.story.id);
+      cancelEditing();
+    } catch (error) {
+      setEditError(error instanceof Error ? error.message : "Story could not be updated.");
+    } finally {
+      setSaveEditPending(false);
     }
   }
 
@@ -380,49 +524,239 @@ export function StoriesView() {
               practice prompt.
             </p>
           ) : (
-            <div className="story-card-list">
-              {stories.map((story) => (
-                <article className="story-card" key={story.id}>
-                  <div>
-                    <strong>{story.title}</strong>
-                    <span>{new Date(story.updatedAt).toLocaleDateString()}</span>
-                  </div>
-                  <p>{story.summary}</p>
-                  <div className="story-tags">
-                    {story.categories.slice(0, 4).map((category) => (
-                      <span key={category}>{storyCategoryLabel(category)}</span>
-                    ))}
-                  </div>
-                  <details>
-                    <summary>Outline</summary>
-                    <dl>
-                      <div>
-                        <dt>Situation</dt>
-                        <dd>{story.situation}</dd>
-                      </div>
-                      <div>
-                        <dt>Task</dt>
-                        <dd>{story.task}</dd>
-                      </div>
-                      <div>
-                        <dt>Result</dt>
-                        <dd>{story.result}</dd>
-                      </div>
-                    </dl>
-                    <ul>
-                      {story.actions.map((action) => (
-                        <li key={action}>{action}</li>
+            <>
+              <div className="story-card-list">
+                {stories.map((story) => (
+                  <article
+                    className={
+                      selectedStory?.id === story.id ? "story-card active" : "story-card"
+                    }
+                    key={story.id}
+                  >
+                    <div>
+                      <strong>{story.title}</strong>
+                      <span>{new Date(story.updatedAt).toLocaleDateString()}</span>
+                    </div>
+                    <p>{story.summary}</p>
+                    <div className="story-tags">
+                      {story.categories.slice(0, 4).map((category) => (
+                        <span key={category}>{storyCategoryLabel(category)}</span>
                       ))}
-                    </ul>
-                  </details>
-                  <div className="story-spins">
-                    {story.alternateSpins.slice(0, 3).map((spin) => (
-                      <span key={`${story.id}-${spin.angle}`}>{spin.angle}</span>
-                    ))}
-                  </div>
+                    </div>
+                    <div className="inline-actions">
+                      <button
+                        className="secondary"
+                        onClick={() => setSelectedStoryId(story.id)}
+                        type="button"
+                      >
+                        View
+                      </button>
+                      <button
+                        className="secondary"
+                        onClick={() => startEditing(story)}
+                        type="button"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              {selectedStory && (
+                <article className="story-detail" aria-labelledby="story-detail-title">
+                  {editingStoryId === selectedStory.id && editDraft ? (
+                    <>
+                      <div className="section-head">
+                        <div>
+                          <p className="eyebrow">Edit Story</p>
+                          <h2 id="story-detail-title">{selectedStory.title}</h2>
+                        </div>
+                      </div>
+                      <div className="field-grid">
+                        <label>
+                          <span>Title</span>
+                          <input
+                            onChange={(event) =>
+                              setEditDraft({ ...editDraft, title: event.target.value })
+                            }
+                            value={editDraft.title}
+                          />
+                        </label>
+                        <label>
+                          <span>Practice prompt</span>
+                          <input
+                            onChange={(event) =>
+                              setEditDraft({
+                                ...editDraft,
+                                practicePrompt: event.target.value,
+                              })
+                            }
+                            value={editDraft.practicePrompt}
+                          />
+                        </label>
+                      </div>
+                      <label>
+                        <span>Summary</span>
+                        <textarea
+                          onChange={(event) =>
+                            setEditDraft({ ...editDraft, summary: event.target.value })
+                          }
+                          value={editDraft.summary}
+                        />
+                      </label>
+                      <div className="field-grid">
+                        <label>
+                          <span>Situation</span>
+                          <textarea
+                            onChange={(event) =>
+                              setEditDraft({ ...editDraft, situation: event.target.value })
+                            }
+                            value={editDraft.situation}
+                          />
+                        </label>
+                        <label>
+                          <span>Task</span>
+                          <textarea
+                            onChange={(event) =>
+                              setEditDraft({ ...editDraft, task: event.target.value })
+                            }
+                            value={editDraft.task}
+                          />
+                        </label>
+                      </div>
+                      <label>
+                        <span>Actions</span>
+                        <textarea
+                          onChange={(event) =>
+                            setEditDraft({ ...editDraft, actions: event.target.value })
+                          }
+                          value={editDraft.actions}
+                        />
+                      </label>
+                      <label>
+                        <span>Result</span>
+                        <textarea
+                          onChange={(event) =>
+                            setEditDraft({ ...editDraft, result: event.target.value })
+                          }
+                          value={editDraft.result}
+                        />
+                      </label>
+                      <label>
+                        <span>Coach notes</span>
+                        <textarea
+                          onChange={(event) =>
+                            setEditDraft({ ...editDraft, coachNotes: event.target.value })
+                          }
+                          value={editDraft.coachNotes}
+                        />
+                      </label>
+                      <label>
+                        <span>Raw notes</span>
+                        <textarea
+                          onChange={(event) =>
+                            setEditDraft({ ...editDraft, rawNotes: event.target.value })
+                          }
+                          value={editDraft.rawNotes}
+                        />
+                      </label>
+                      <div className="story-category-picker" aria-label="Story categories">
+                        {storyCategories.map((category) => (
+                          <label className="checkbox-row" key={category}>
+                            <input
+                              checked={editDraft.categories.includes(category)}
+                              onChange={() => toggleDraftCategory(category)}
+                              type="checkbox"
+                            />
+                            <span>{storyCategoryLabel(category)}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="inline-actions">
+                        <button disabled={saveEditPending} onClick={saveStoryEdits} type="button">
+                          {saveEditPending ? "Saving" : "Save Story"}
+                        </button>
+                        <button
+                          className="secondary"
+                          disabled={saveEditPending}
+                          onClick={cancelEditing}
+                          type="button"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      {editError && <p className="form-error">{editError}</p>}
+                    </>
+                  ) : (
+                    <>
+                      <div className="section-head">
+                        <div>
+                          <p className="eyebrow">Story Detail</p>
+                          <h2 id="story-detail-title">{selectedStory.title}</h2>
+                        </div>
+                        <button
+                          className="secondary"
+                          onClick={() => startEditing(selectedStory)}
+                          type="button"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                      <p>{selectedStory.summary}</p>
+                      <dl>
+                        <div>
+                          <dt>Situation</dt>
+                          <dd>{selectedStory.situation}</dd>
+                        </div>
+                        <div>
+                          <dt>Task</dt>
+                          <dd>{selectedStory.task}</dd>
+                        </div>
+                        <div>
+                          <dt>Result</dt>
+                          <dd>{selectedStory.result}</dd>
+                        </div>
+                        <div>
+                          <dt>Practice prompt</dt>
+                          <dd>{selectedStory.practicePrompt}</dd>
+                        </div>
+                      </dl>
+                      <section>
+                        <h3>Actions</h3>
+                        <ul>
+                          {selectedStory.actions.map((action) => (
+                            <li key={action}>{action}</li>
+                          ))}
+                        </ul>
+                      </section>
+                      {selectedStory.coachNotes.length > 0 && (
+                        <section>
+                          <h3>Coach Notes</h3>
+                          <ul>
+                            {selectedStory.coachNotes.map((note) => (
+                              <li key={note}>{note}</li>
+                            ))}
+                          </ul>
+                        </section>
+                      )}
+                      <section>
+                        <h3>Alternate Spins</h3>
+                        <div className="story-spin-list">
+                          {selectedStory.alternateSpins.map((spin) => (
+                            <article key={`${selectedStory.id}-${spin.angle}`}>
+                              <strong>{spin.angle}</strong>
+                              <p>{spin.question}</p>
+                              <small>{spin.whyItWorks}</small>
+                            </article>
+                          ))}
+                        </div>
+                      </section>
+                    </>
+                  )}
                 </article>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </section>
       </div>

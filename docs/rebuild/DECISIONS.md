@@ -230,6 +230,9 @@ These are strong defaults until we decide otherwise:
   server-side AI turns raw story-building conversation into saved STARR-style
   story assets. Dedicated voice practice with story context is the next Story
   Lab phase, not part of the first capture/outline slice.
+- Story Lab generated outlines must stay editable. Users should be able to
+  correct the saved story asset before practicing it, because the AI may miss
+  nuance from messy spoken notes.
 - Use the QuesIQ Interview logo assets from
   `D:\Altitude Pro Media\QuestIQ\Logo\Finished` for this app, not the unrelated
   ANN/Altitude branding.
