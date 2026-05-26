@@ -95,10 +95,14 @@ progression milestones should follow.
   OpenAI web-search review, and `/api/pricing/review` can be called by the
   Render monthly cron with `PRICING_CHECK_SECRET`. Leave pricing updates manual
   for now; AI acceptance/writeback was explored but is not trusted enough for
-  cost accounting without a candidate preview or deterministic parser.
+  cost accounting without a candidate preview or deterministic parser. As of
+  the latest QA, Ronnie suspended the monthly Render pricing-check cron because
+  it was not working cleanly and redeployed after every build; treat scheduled
+  pricing checks as deprecated/paused for now.
 - Added Admin AI Usage organization with spreadsheet-style API call and
   Realtime session tables, per-row estimated costs, editable pricing records,
-  and a Render cron runner script for monthly advisory pricing reviews.
+  and a Render cron runner script for monthly advisory pricing reviews. The
+  runner is reference material while the scheduled cron remains suspended.
 - Added a local global feedback/bug-reporting slice: signed-in users can open a
   Feedback button from any screen, send a 1-5 rating and/or short bug/feedback
   note, and submissions store user, screen, optional session id, browser
@@ -211,17 +215,19 @@ progression milestones should follow.
    run migrations through `quesiq-web`.
 2. User-confirm QA the Admin tab: Prompts, Modes, Questions, Styles, API Calls,
    Realtime Sessions, Pricing, Feedback, and manual AI pricing review.
-3. Manually correct any bad pricing rows from the earlier AI accept experiment,
+3. Keep monthly/scheduled pricing checks paused; use manual Admin pricing review
+   only if needed.
+4. Manually correct any bad pricing rows from the earlier AI accept experiment,
    especially `gpt-realtime-mini audio` if it was changed to text pricing.
-4. Keep pricing updates manual until a candidate preview table or deterministic
+5. Keep pricing updates manual until a candidate preview table or deterministic
    pricing-page parser is built.
-5. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
+6. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
    new completed reviews award XP once, Home shows saved streak/level/latest
    next action, and retry/reopen does not double-count.
-6. Expand prompted micro-feedback beyond the first review-usefulness popup by
+7. Expand prompted micro-feedback beyond the first review-usefulness popup by
    rotating specific questions about voice realism, transcript accuracy, and
    scoring fairness.
-7. Decide whether deeper milestones/quests or Interview V1 hardening should
+8. Decide whether deeper milestones/quests or Interview V1 hardening should
    follow.
 8. Add deploy/user-confirmed QA for any changes because localhost preview is
    deprecated in this environment.

@@ -63,8 +63,9 @@ Last updated: 2026-05-25
     `https://developers.openai.com/api/docs/pricing`
   - pricing review writeback was explored, but pricing updates should remain
     manual for now because live AI review results were inconsistent
-  - Render monthly cron `quesiq-monthly-pricing-review` can call the protected
-    review endpoint; it requires `PRICING_CHECK_SECRET`
+  - Render monthly cron `quesiq-monthly-pricing-review` is suspended/deprecated
+    for now because it was not working cleanly and redeployed after every build;
+    use manual Admin pricing review only if needed
 - First global beta feedback slice:
   - signed-in users can open a Feedback button from any screen
   - the lightweight dialog supports bug or feedback, 1-5 rating, and an
@@ -224,8 +225,9 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 1. Deploy and user-confirm QA the Admin prompt config, AI Usage, and feedback
    slices on `quesiq-web`.
-2. Add/confirm `ADMIN_EMAILS` and `PRICING_CHECK_SECRET` in Render before QAing
-   the Admin tab and monthly pricing-review cron.
+2. Add/confirm `ADMIN_EMAILS` in Render before QAing Admin; monthly pricing
+   checks are suspended/deprecated, so `PRICING_CHECK_SECRET` is not an active
+   QA blocker unless manual pricing-review endpoint testing resumes.
 3. Manually fix any bad pricing rows from the earlier AI accept experiment,
    especially `gpt-realtime-mini audio` if it shows text-token prices.
 4. Keep pricing updates manual until candidate preview/writeback or a

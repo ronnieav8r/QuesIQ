@@ -165,6 +165,11 @@ records. Acceptance must only apply verified candidates for exact existing model
 and modality pairs; audio pricing must never be replaced by text-token pricing
 for the same model name.
 
+As of the latest Render QA, the monthly pricing-check cron is suspended and
+deprecated for now because it was not working cleanly and redeployed after every
+build. Keep pricing review manual until a more reliable parser/preview workflow
+is intentionally rebuilt.
+
 ### Persist Profile Context Separately From Session Snapshots
 
 User-owned onboarding/profile context is stored in a Profile record and copied
