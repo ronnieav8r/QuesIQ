@@ -171,7 +171,7 @@ Last updated: 2026-05-25
   - session headings and readiness panels stack more cleanly on narrow phones
   - feedback launcher moves above bottom navigation on narrow phones
   - live session copy is more user-facing and less implementation-oriented
-- Embedded Quira support layer:
+- Embedded Quira support baseline:
   - global support now uses a small Quira launcher instead of a plain Feedback
     button
   - Quira offers Help, Feedback, and Bug paths from any signed-in screen
@@ -180,6 +180,9 @@ Last updated: 2026-05-25
   - Feedback and Bug paths continue to save rating, note, optional screenshot,
     screen, session id, browser language, viewport, and user agent through the
     existing feedback storage/admin path
+  - this is intentionally only a baseline; the target future Quira experience
+    is an AI chat bot that calls a model, holds a support conversation, walks
+    users through QuesIQ, and handles minor troubleshooting
 
 ## Verification
 
@@ -187,8 +190,8 @@ The current coded app has passed:
 
 - ESLint
 - TypeScript check
-- Latest local feedback/progression/UI foundation and user-screen cleanup checks
-  passed with ESLint, TypeScript, and production build.
+- Latest local feedback/progression/UI foundation/user-screen cleanup/Quira
+  baseline checks passed with ESLint, TypeScript, and production build.
 - Next production build
 - Latest local checks passed with local `npm` available on PATH.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
@@ -231,8 +234,14 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 - Keep Make for automation edges, not the interview session state machine.
 - Que is the in-app interview coach. Quira is the product/support assistant.
 - For V1, Quira is implemented inside QuesIQ rather than deployed as a separate
-  Render service. Keep the UI/data boundaries clean so she can become a shared
-  service later if multiple products need her.
+  Render service. The current Quira surface is only a baseline launcher/support
+  panel; the desired future version is an AI-backed chat bot and QuesIQ product
+  expert. Keep the UI/data boundaries clean so she can become a shared service
+  later if multiple products need her.
+- UI modernization is active and incremental. Phase 1A established global
+  design tokens/base styling. Phase 1B cleaned up core user-screen rhythm,
+  small-screen behavior, and user-facing copy. Phase 2 navigation refinement is
+  next and should be finished before deeper Quira work.
 - Keep QuesIQ-owned session snapshots, transcripts/artifacts, evaluations,
   history, and progression in the app backend/data layer.
 - Resume files are uploaded through signed-in onboarding and parsed into profile
@@ -243,23 +252,31 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Deploy and user-confirm QA the Admin prompt config, AI Usage, and feedback
-   slices on `quesiq-web`.
-2. Add/confirm `ADMIN_EMAILS` in Render before QAing Admin; monthly pricing
+1. Complete UI modernization Phase 2 navigation refinement:
+   - mobile-first bottom nav that fits cleanly at 320px
+   - short labels, no multi-row nav
+   - primary items should remain Home, Practice, History, and Me/Profile
+   - decide icon strategy before adding icons; prefer a real icon library if
+     one is adopted rather than improvised symbols
+   - move secondary surfaces such as Admin/Stories behind Me or a future More
+     surface
+   - keep the Quira launcher visually quiet and clear of the bottom nav
+2. Deploy and user-confirm QA the Admin, feedback/bug, progression, UI Phase 1,
+   and Quira baseline slices on `quesiq-web`.
+3. Add/confirm `ADMIN_EMAILS` in Render before QAing Admin; monthly pricing
    checks are suspended/deprecated, so `PRICING_CHECK_SECRET` is not an active
    QA blocker unless manual pricing-review endpoint testing resumes.
-3. Manually fix any bad pricing rows from the earlier AI accept experiment,
-   especially `gpt-realtime-mini audio` if it shows text-token prices.
 4. Keep pricing updates manual until candidate preview/writeback or a
    deterministic pricing parser is built.
 5. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
    new completed reviews award XP once, Home shows saved streak/level/latest
-   next action, and retry/reopen does not double-count.
+   next action, level thresholds load from Admin, and retry/reopen does not
+   double-count.
 6. Expand prompted micro-feedback beyond the first review-usefulness popup by
    rotating specific questions about AI voice realism, transcript accuracy, and
    scoring fairness.
-7. Decide whether deeper milestones/quests or Interview V1 hardening should
-   follow.
+7. Later Quira work: replace the curated Help panel with an AI chat bot backed
+   by a maintained QuesIQ product knowledge base.
 8. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 

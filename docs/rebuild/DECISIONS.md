@@ -28,7 +28,7 @@ quality, reliability, transcript, provider-flexibility, or tooling gap.
 ### Keep Que And Quira Distinct
 
 - Que: in-app interview coach
-- Quira: public/support text assistant
+- Quira: product/support assistant
 
 They may share brand context later, but they are separate product surfaces.
 
@@ -86,10 +86,15 @@ channels should default to routes/modules inside the same QuesIQ app and shared
 product database. Separate Render services are for real product, deploy,
 security, scaling, or operational boundaries, not every channel.
 
-Que and Quira remain distinct product surfaces. While the older Quira Render
-service path is being repointed to the active QuesIQ rebuild to avoid paying for
-two unused app services now, Quira can return to its own deploy boundary later
-when it needs to be live separately.
+Que and Quira remain distinct product surfaces. For V1, Quira should be embedded
+inside QuesIQ rather than deployed as a separate Render service. The first
+embedded Quira layer is only a baseline launcher/support panel. The intended
+future Quira experience is an AI chat bot that calls a model, holds a
+conversation with the user, acts as a QuesIQ product expert, walks users through
+how to use the app, handles minor troubleshooting, and collects structured bugs
+or feedback with screen/session/screenshot/device context. Quira can return to
+its own deploy boundary later if reuse across multiple products or operational
+scale justifies it.
 
 ### Store Beta Voice Transcript Artifacts Before Audio
 
@@ -211,6 +216,8 @@ These are strong defaults until we decide otherwise:
 - Use Render/GitHub for the first coded deployment path.
 - Keep core session/evaluation/progression logic in the backend, not Make.
 - Keep the app responsive with first-class mobile and desktop layouts.
+- Finish UI modernization Phase 2 navigation refinement before going deeper on
+  Quira's AI-chat implementation.
 
 ## Open Decisions Before The Next Large Slice
 
@@ -231,5 +238,6 @@ These are strong defaults until we decide otherwise:
 
 - Whether direct OpenAI Realtime reveals a reason to fall back to VAPI
 - Whether native mobile apps are warranted
-- Whether Quira and the app backend should share infrastructure
+- Whether Quira needs a separate service boundary after the embedded AI chat
+  version exists
 - Whether stories or job targets become first-launch requirements

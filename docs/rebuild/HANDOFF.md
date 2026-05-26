@@ -8,14 +8,16 @@ QuesIQ Interview now has the first owned practice loop live on `quesiq.com`:
 email magic-link plus OAuth sign-in, Session-before-voice launch, direct
 OpenAI Realtime voice,
 voice artifact persistence, a structured post-session practice review, saved
-review revisit, profile persistence, history, score summaries, and first derived
-progression. A local feedback/bug-reporting slice now exists with global access,
-optional screenshots, and first prompted review feedback. Durable progression
-events/summaries now exist locally and need deploy QA.
+review revisit, profile persistence, history, score summaries, durable
+progression, Admin data visibility, and beta feedback/bug reporting. UI
+modernization Phase 1A and 1B are complete, and the next planned UI slice is
+Phase 2 navigation refinement.
 
-The next useful product slice is deploying and QAing the feedback/Admin and
-progression work, then deciding whether Interview V1 hardening or deeper
-progression milestones should follow.
+Quira now has only a baseline embedded support launcher in QuesIQ. The desired
+future Quira experience is a true AI chat assistant that can hold a
+conversation, answer product/how-to questions, help troubleshoot, and collect
+feedback or bugs with screen/session context. Do not go deeper down the Quira
+path until Phase 2 navigation is completed unless the product direction changes.
 
 ## Done Since Last Handoff
 
@@ -134,12 +136,12 @@ progression milestones should follow.
   stacking, feedback button placement above bottom nav, and removed
   implementation-flavored copy from the live session surface without changing
   product flow.
-- Added the first embedded Quira support layer inside QuesIQ: the global
-  feedback launcher is now a small Quira help entry point with Help, Feedback,
-  and Bug paths, curated product guidance, optional screenshots, and the same
-  screen/session/device context capture behind the scenes. Keep Quira embedded
-  for V1 while naming boundaries cleanly enough to extract later if it becomes a
-  shared service.
+- Added the first embedded Quira support baseline inside QuesIQ: the global
+  feedback launcher is now a small Quira entry point with Help, Feedback, and
+  Bug paths, curated product guidance, optional screenshots, and the same
+  screen/session/device context capture behind the scenes. This is not the final
+  Quira product experience; the intended future version is an AI chat bot that
+  calls an AI model and has a real support conversation with the user.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -155,8 +157,8 @@ progression milestones should follow.
 
 - ESLint passed.
 - TypeScript check passed.
-- Latest local feedback/progression checks passed: ESLint, TypeScript, and
-  production build.
+- Latest local feedback/progression/UI/Quira baseline checks passed: ESLint,
+  TypeScript, and production build.
 - Next production build passed.
 - Local `npm` is now available on PATH, and latest checks passed with it.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
@@ -208,11 +210,14 @@ progression milestones should follow.
   scope.
 - QuesIQ should own durable user context, session snapshots, transcript/artifact
   records, evaluation, history, and progression.
-- Quira should ship first as an embedded QuesIQ support assistant, not a
-  separate Render service. The V1 layer should answer product/how-to questions,
-  capture feedback and bugs, and preserve screen/session context; a true
-  AI-backed product expert can be wired later once the app workflows and help
-  knowledge are stable.
+- Quira should remain embedded in QuesIQ for now, not a separate Render service.
+  The current implementation is only a baseline launcher/support panel. The
+  desired future version is an AI-backed chat bot and product expert that can
+  walk users through QuesIQ, answer questions, do minor troubleshooting, and
+  collect bugs/feedback with screen, session, screenshot, and device context.
+- UI modernization is the active near-term focus. Phase 1A established design
+  tokens/base components, Phase 1B cleaned up core user-screen rhythm and copy,
+  and Phase 2 should refine navigation before deeper Quira work.
 - Practice mode, question type, and interviewer style records are now
   backend-owned seeded catalog data, with checked-in frontend defaults retained
   as a resilience fallback.
@@ -227,25 +232,32 @@ progression milestones should follow.
 
 ## Next Best Work
 
-1. Deploy latest Admin prompt/AI Usage/pricing-review plus feedback changes and
-   run migrations through `quesiq-web`.
-2. User-confirm QA the Admin tab: Prompts, Modes, Questions, Styles, API Calls,
-   Realtime Sessions, Pricing, Feedback, and manual AI pricing review.
-3. Keep monthly/scheduled pricing checks paused; use manual Admin pricing review
+1. Complete UI modernization Phase 2 navigation refinement:
+   - mobile-first bottom nav with short labels that fit at 320px
+   - icons if/when an icon strategy is chosen
+   - no multi-row nav
+   - keep primary items to Home, Practice, History, and Me/Profile
+   - move secondary access such as Admin/Stories behind Me or a future More
+     surface rather than crowding the bottom nav
+   - keep the Quira launcher from colliding with the bottom nav and avoid making
+     support visually noisy
+2. Deploy/user-confirm QA the latest Admin, feedback, progression, UI Phase 1,
+   and Quira baseline changes on `quesiq-web`.
+3. User-confirm QA the Admin tab: Prompts, Modes, Questions, Styles, API Calls,
+   Realtime Sessions, Pricing, Feedback/Bugs, Progression, Levels, and Data.
+4. Keep monthly/scheduled pricing checks paused; use manual Admin pricing review
    only if needed.
-4. Manually correct any bad pricing rows from the earlier AI accept experiment,
-   especially `gpt-realtime-mini audio` if it was changed to text pricing.
-5. Keep pricing updates manual until a candidate preview table or deterministic
-   pricing-page parser is built.
-6. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
+5. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
    new completed reviews award XP once, Home shows saved streak/level/latest
-   next action, and retry/reopen does not double-count.
-7. Expand prompted micro-feedback beyond the first review-usefulness popup by
+   next action, level thresholds load from Admin, and retry/reopen does not
+   double-count.
+6. Expand prompted micro-feedback beyond the first review-usefulness popup by
    rotating specific questions about voice realism, transcript accuracy, and
    scoring fairness.
-8. Decide whether deeper milestones/quests or Interview V1 hardening should
-   follow.
-8. Add deploy/user-confirmed QA for any changes because localhost preview is
+7. Later Quira work: replace the curated Help panel with an AI chat assistant
+   that uses a maintained QuesIQ knowledge base and can submit structured bugs,
+   feedback, screenshots, and current screen/session context.
+8. Continue deploy/user-confirmed QA for changes because localhost preview is
    deprecated in this environment.
 9. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
