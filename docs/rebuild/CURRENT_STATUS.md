@@ -243,6 +243,16 @@ Last updated: 2026-05-26
     behavioral practice question without reading the outline back to the user
   - post-session evaluation receives the saved story context and is instructed
     to give story-specific feedback
+- Story Lab prompts are now Admin-visible:
+  - Story Lab follow-up, story outline generation, Story Practice Realtime
+    guidance, and Story Practice Evaluation guidance are versioned prompt
+    configs alongside the existing Realtime interviewer and session evaluation
+    prompts
+  - Admin > Prompts > Base can view, draft, and activate these prompts
+- Mobile chrome was tightened:
+  - removed the app-header readiness line
+  - removed signed-in account name from the header action area
+  - reduced header height while keeping brand and sign-out available
 
 ## Verification
 

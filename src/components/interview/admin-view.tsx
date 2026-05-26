@@ -118,6 +118,10 @@ type ProgressionEventSortKey = "event" | "occurred" | "session" | "user" | "xp";
 const promptLabels: Record<PromptConfigKey, string> = {
   realtime_interviewer: "Live Voice Interviewer",
   session_evaluation: "Post-Session Evaluation",
+  story_follow_up: "Story Lab Follow-Up",
+  story_outline: "Story Lab Outline",
+  story_practice_evaluation: "Story Practice Evaluation",
+  story_practice_realtime: "Story Practice Realtime",
 };
 
 const questCheckTypes: QuestCheckType[] = [
@@ -150,6 +154,11 @@ const runtimeContextByTarget = {
     "Target role",
     "Target company",
     "Capped resume context when available",
+  ],
+  story: [
+    "Story-building conversation turns",
+    "Response format when needed: strict JSON story outline with categories, spins, coach notes, and practice prompt",
+    "User-authenticated Story Lab ownership is enforced by the API route",
   ],
 };
 

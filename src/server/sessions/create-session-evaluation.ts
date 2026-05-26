@@ -152,14 +152,16 @@ async function requestEvaluation(
   instructions: string,
   model: string,
 ) {
-  const storyEvaluationInstructions = snapshot.storyContext
-    ? "This was a Story Lab practice session. In the summary, coaching insight, score summaries, and next action, explicitly evaluate how well the candidate used the saved story, whether the story answered the question, whether the personal action and result were clear, and what to change before practicing this same story again."
-    : "";
+  const storyEvaluationConfig = snapshot.storyContext
+    ? await getActivePromptConfig("story_practice_evaluation")
+    : undefined;
   const response = await fetch("https://api.openai.com/v1/responses", {
     body: JSON.stringify({
       input: [
         {
-          content: [instructions, storyEvaluationInstructions].filter(Boolean).join(" "),
+          content: [instructions, storyEvaluationConfig?.instructions]
+            .filter(Boolean)
+            .join(" "),
           role: "system",
         },
         {

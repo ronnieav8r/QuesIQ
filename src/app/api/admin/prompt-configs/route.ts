@@ -26,7 +26,15 @@ type ActivateBody = {
 };
 
 function targetForKey(key: PromptConfigKey): PromptConfigTarget {
-  return key === "realtime_interviewer" ? "realtime" : "evaluation";
+  if (key === "realtime_interviewer" || key === "story_practice_realtime") {
+    return "realtime";
+  }
+
+  if (key === "story_follow_up" || key === "story_outline") {
+    return "story";
+  }
+
+  return "evaluation";
 }
 
 export async function GET() {

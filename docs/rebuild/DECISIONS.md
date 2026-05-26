@@ -238,6 +238,13 @@ These are strong defaults until we decide otherwise:
   a fitting behavioral question and the post-session review can judge the
   answer against the intended story before we add a separate story-practice
   artifact model.
+- New AI prompt surfaces should be represented in Admin prompt configs unless
+  they are truly static validation/schema text. Story Lab follow-up, outline,
+  Story Practice Realtime, and Story Practice Evaluation prompts are admin
+  versioned configs.
+- App chrome should stay minimal on mobile. The header keeps brand/account
+  affordances, but screen-specific titles belong in the scrollable screen body
+  instead of persistent header copy.
 - Use the QuesIQ Interview logo assets from
   `D:\Altitude Pro Media\QuestIQ\Logo\Finished` for this app, not the unrelated
   ANN/Altitude branding.

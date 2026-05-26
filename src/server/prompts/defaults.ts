@@ -17,6 +17,18 @@ export const realtimeInterviewerInstructions = [
 export const sessionEvaluationInstructions =
   "You are Que, QuesIQ Interview's interview coach. Evaluate the candidate's spoken practice transcript against the target role, job description, and resume context when provided. Be specific, kind, and useful. Score each dimension from 1 to 5 where 5 is strongest. Do not mention APIs or implementation details.";
 
+export const storyFollowUpInstructions =
+  "You are Que, helping a job seeker turn a raw experience into a reusable interview story. Ask exactly one warm, specific follow-up question. Prefer missing stakes, personal action, measurable result, or reflection. Do not outline the story yet.";
+
+export const storyOutlineInstructions =
+  "You are Que, an interview coach. Convert this raw story-building conversation into a reusable behavioral interview story asset. Preserve the user's authentic facts. Do not invent metrics; say the result plainly if no metric was provided. Make the outline practical for spoken practice.";
+
+export const storyPracticeRealtimeInstructions =
+  "This is a Story Lab practice session. Ask one behavioral question that lets the candidate practice the saved story. Do not read the outline back to them. Let them answer naturally, then coach whether the story was clear, relevant, specific, and strong enough for the question.";
+
+export const storyPracticeEvaluationInstructions =
+  "This was a Story Lab practice session. In the summary, coaching insight, score summaries, and next action, explicitly evaluate how well the candidate used the saved story, whether the story answered the question, whether the personal action and result were clear, and what to change before practicing this same story again.";
+
 export const promptConfigFallbacks = {
   realtime_interviewer: {
     active: true,
@@ -37,8 +49,52 @@ export const promptConfigFallbacks = {
     target: "evaluation",
     version: 0,
   },
+  story_follow_up: {
+    active: true,
+    instructions: storyFollowUpInstructions,
+    key: "story_follow_up",
+    model: process.env.OPENAI_STORY_MODEL || process.env.OPENAI_EVALUATION_MODEL || "gpt-5.4-mini",
+    name: "Story Follow-Up",
+    target: "story",
+    version: 0,
+  },
+  story_outline: {
+    active: true,
+    instructions: storyOutlineInstructions,
+    key: "story_outline",
+    model: process.env.OPENAI_STORY_MODEL || process.env.OPENAI_EVALUATION_MODEL || "gpt-5.4-mini",
+    name: "Story Outline",
+    target: "story",
+    version: 0,
+  },
+  story_practice_evaluation: {
+    active: true,
+    instructions: storyPracticeEvaluationInstructions,
+    key: "story_practice_evaluation",
+    model: process.env.OPENAI_EVALUATION_MODEL || "gpt-5.4-mini",
+    name: "Story Practice Evaluation",
+    target: "evaluation",
+    version: 0,
+  },
+  story_practice_realtime: {
+    active: true,
+    instructions: storyPracticeRealtimeInstructions,
+    key: "story_practice_realtime",
+    model: process.env.OPENAI_REALTIME_MODEL || "gpt-realtime",
+    name: "Story Practice Realtime",
+    target: "realtime",
+    version: 0,
+    voice: process.env.OPENAI_REALTIME_VOICE || "marin",
+  },
 } satisfies Record<PromptConfigKey, PromptConfigFallback>;
 
 export function isPromptConfigKey(value: unknown): value is PromptConfigKey {
-  return value === "realtime_interviewer" || value === "session_evaluation";
+  return (
+    value === "realtime_interviewer" ||
+    value === "session_evaluation" ||
+    value === "story_follow_up" ||
+    value === "story_outline" ||
+    value === "story_practice_evaluation" ||
+    value === "story_practice_realtime"
+  );
 }

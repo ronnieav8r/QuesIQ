@@ -361,11 +361,6 @@ export default function Home() {
               priority
               width={360}
             />
-            <strong>
-              {contextReady
-                ? `Que is ready for ${interviewContext.targetRole} practice.`
-                : "Que is ready for practice."}
-            </strong>
           </div>
           {activeView !== "session" && (
             <div className="header-actions">

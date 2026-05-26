@@ -358,9 +358,15 @@ export type VoiceSessionArtifactDraft = {
   transcript: VoiceTranscriptTurn[];
 };
 
-export type PromptConfigKey = "realtime_interviewer" | "session_evaluation";
+export type PromptConfigKey =
+  | "realtime_interviewer"
+  | "session_evaluation"
+  | "story_follow_up"
+  | "story_outline"
+  | "story_practice_evaluation"
+  | "story_practice_realtime";
 
-export type PromptConfigTarget = "evaluation" | "realtime";
+export type PromptConfigTarget = "evaluation" | "realtime" | "story";
 
 export type PromptConfigRecord = {
   active: boolean;

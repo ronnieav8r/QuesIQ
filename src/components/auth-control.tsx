@@ -41,7 +41,6 @@ export function AuthControl({ authSession }: { authSession: AppAuthSession }) {
   if (authSession?.user) {
     return (
       <div className="auth-control">
-        <span>{authSession.user.name || authSession.user.email || "Signed in"}</span>
         <button
           className="quiet-button"
           onClick={() => signOut({ redirectTo: "/" })}

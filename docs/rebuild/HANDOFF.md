@@ -191,6 +191,11 @@ path until Phase 2 navigation is completed unless the product direction changes.
   the explicit action is now Edit Story, and saved story details can launch a
   Practice Story voice session with the story outline included in Que's Realtime
   prompt context and the post-session evaluation input.
+- Added Story Lab prompt visibility in Admin: follow-up, outline generation,
+  Story Practice Realtime guidance, and Story Practice Evaluation guidance are
+  now versioned prompt configs under Admin > Prompts > Base.
+- Tightened mobile app chrome by removing the header readiness text and
+  signed-in account name while keeping the logo and sign-out action.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,

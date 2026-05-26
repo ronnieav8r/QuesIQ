@@ -1,5 +1,6 @@
 import type { StoryBuilderTurn, StoryOutline } from "@/product/interview-types";
 import { parseStoryOutline } from "@/product/story-lab";
+import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 
 type ResponsesApiBody = {
   error?: {
@@ -95,21 +96,17 @@ function extractResponseText(body: ResponsesApiBody) {
     .join("\n");
 }
 
-function model() {
-  return process.env.OPENAI_STORY_MODEL || process.env.OPENAI_EVALUATION_MODEL || "gpt-5.4-mini";
-}
-
 function transcript(turns: StoryBuilderTurn[]) {
   return turns.map((turn) => `${turn.role === "assistant" ? "Que" : "User"}: ${turn.text}`).join("\n");
 }
 
 export async function generateStoryFollowUp(turns: StoryBuilderTurn[]) {
+  const promptConfig = await getActivePromptConfig("story_follow_up");
   const response = await fetch("https://api.openai.com/v1/responses", {
     body: JSON.stringify({
       input: [
         {
-          content:
-            "You are Que, helping a job seeker turn a raw experience into a reusable interview story. Ask exactly one warm, specific follow-up question. Prefer missing stakes, personal action, measurable result, or reflection. Do not outline the story yet.",
+          content: promptConfig.instructions,
           role: "system",
         },
         {
@@ -118,7 +115,7 @@ export async function generateStoryFollowUp(turns: StoryBuilderTurn[]) {
         },
       ],
       max_output_tokens: 120,
-      model: model(),
+      model: promptConfig.model,
     }),
     headers: {
       Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
@@ -142,12 +139,12 @@ export async function generateStoryFollowUp(turns: StoryBuilderTurn[]) {
 }
 
 export async function generateStoryOutline(turns: StoryBuilderTurn[]): Promise<StoryOutline> {
+  const promptConfig = await getActivePromptConfig("story_outline");
   const response = await fetch("https://api.openai.com/v1/responses", {
     body: JSON.stringify({
       input: [
         {
-          content:
-            "You are Que, an interview coach. Convert this raw story-building conversation into a reusable behavioral interview story asset. Preserve the user's authentic facts. Do not invent metrics; say the result plainly if no metric was provided. Make the outline practical for spoken practice.",
+          content: promptConfig.instructions,
           role: "system",
         },
         {
@@ -156,7 +153,7 @@ export async function generateStoryOutline(turns: StoryBuilderTurn[]): Promise<S
         },
       ],
       max_output_tokens: 1200,
-      model: model(),
+      model: promptConfig.model,
       text: {
         format: {
           name: "quesiq_story_outline",

@@ -25,6 +25,7 @@ function buildQueInstructions(
   promptConfig: PromptConfigRecord,
   snapshot?: SessionSetupSnapshot,
   promptComponents?: SessionPromptComponents,
+  storyPracticeConfig?: PromptConfigRecord,
 ) {
   const role = snapshot?.interviewContext.targetRole || "the user's target role";
   const company = snapshot?.interviewContext.targetCompany || "an unspecified company";
@@ -37,7 +38,8 @@ function buildQueInstructions(
     : "Question focus: choose questions appropriate for this mode.";
   const storyContext = snapshot?.storyContext
     ? [
-        "This is a Story Lab practice session.",
+        storyPracticeConfig?.instructions ||
+          "This is a Story Lab practice session. Ask one behavioral question that lets the candidate practice this saved story. Do not read the outline back to them. Let them answer naturally, then coach whether the story was clear, relevant, specific, and strong enough for the question.",
         `Saved story title: ${snapshot.storyContext.title}.`,
         `Story summary: ${snapshot.storyContext.summary}.`,
         `Situation: ${snapshot.storyContext.situation}.`,
@@ -50,7 +52,6 @@ function buildQueInstructions(
             .map((spin) => `${spin.angle}: ${spin.question}`)
             .join(" | ") || "Not provided"
         }.`,
-        "Ask one behavioral question that lets the candidate practice this saved story. Do not read the outline back to them. Let them answer naturally, then coach whether the story was clear, relevant, specific, and strong enough for the question.",
       ].join(" ")
     : undefined;
 
@@ -109,14 +110,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Session was not found." }, { status: 404 });
   }
 
-  const [promptConfig, promptComponents] = await Promise.all([
+  const [promptConfig, storyPracticeConfig, promptComponents] = await Promise.all([
     getActivePromptConfig("realtime_interviewer"),
+    body.snapshot?.storyContext
+      ? getActivePromptConfig("story_practice_realtime")
+      : Promise.resolve(undefined),
     body.snapshot ? getSessionPromptComponents(body.snapshot) : Promise.resolve({}),
   ]);
+  const activeRealtimeConfig = storyPracticeConfig ?? promptConfig;
   const sessionConfig = {
     type: "realtime",
-    model: promptConfig.model,
-    instructions: buildQueInstructions(promptConfig, body.snapshot, promptComponents),
+    model: activeRealtimeConfig.model,
+    instructions: buildQueInstructions(
+      promptConfig,
+      body.snapshot,
+      promptComponents,
+      storyPracticeConfig,
+    ),
     audio: {
       input: {
         transcription: {
@@ -124,7 +134,7 @@ export async function POST(request: Request) {
         },
       },
       output: {
-        voice: promptConfig.voice || process.env.OPENAI_REALTIME_VOICE || "marin",
+        voice: activeRealtimeConfig.voice || process.env.OPENAI_REALTIME_VOICE || "marin",
       },
     },
   };
@@ -159,9 +169,9 @@ export async function POST(request: Request) {
     if (realtimeCallId) {
       try {
         await saveRealtimeSessionConfig(body.sessionId, appSession.user.id, {
-          model: promptConfig.model,
-          promptConfigKey: promptConfig.key,
-          promptConfigVersion: promptConfig.version,
+          model: activeRealtimeConfig.model,
+          promptConfigKey: activeRealtimeConfig.key,
+          promptConfigVersion: activeRealtimeConfig.version,
           realtimeCallId,
           voice: sessionConfig.audio.output.voice,
         });
@@ -171,9 +181,9 @@ export async function POST(request: Request) {
     } else {
       try {
         await saveRealtimeSessionConfig(body.sessionId, appSession.user.id, {
-          model: promptConfig.model,
-          promptConfigKey: promptConfig.key,
-          promptConfigVersion: promptConfig.version,
+          model: activeRealtimeConfig.model,
+          promptConfigKey: activeRealtimeConfig.key,
+          promptConfigVersion: activeRealtimeConfig.version,
           voice: sessionConfig.audio.output.voice,
         });
       } catch (error) {

@@ -228,7 +228,7 @@ export const promptConfigs = pgTable(
     key: text("key").notNull(),
     model: text("model").notNull(),
     name: text("name").notNull(),
-    target: text("target").$type<"evaluation" | "realtime">().notNull(),
+    target: text("target").$type<"evaluation" | "realtime" | "story">().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     version: integer("version").notNull(),
     voice: text("voice"),
