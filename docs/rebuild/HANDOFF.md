@@ -162,6 +162,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
   10 reviewed sessions from all-time skill averages, and both sections include a
   highlighted calculated Overall score while keeping the five AI-scored
   dimensions unchanged.
+- Split Home progression into separate Level/XP and streak chips, with the
+  streak shown as its own flame-icon stat instead of being combined with level.
 - Added a 120-second minimum for scored reviews. Shorter saved sessions remain
   visible in History as "Too short to score" but do not create evaluations,
   scores, review XP, or score averages.

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Flame } from "lucide-react";
 
 import { useSessionHistory } from "@/components/interview/session-history";
 import { getOverallScore } from "@/product/scoring";
@@ -177,13 +178,24 @@ export function Dashboard({
           <p className="eyebrow">Home</p>
           <h1 id="home-title">Practice interviews out loud.</h1>
         </div>
-        <div className="level-chip">
+        <div className="home-stat-row" aria-label="Progress snapshot">
+          <div className="level-chip">
             <span>
               Level {level}
               {levelName ? `: ${levelName}` : ""}
-              {progression?.streakDays ? ` / ${progression.streakDays} day streak` : ""}
             </span>
-          <strong>{xp} XP</strong>
+            <strong>{xp} XP</strong>
+          </div>
+          <div className="streak-chip">
+            <Flame aria-hidden="true" className="streak-icon" strokeWidth={2.4} />
+            <div>
+              <span>Streak</span>
+              <strong>
+                {progression?.streakDays ?? 0}{" "}
+                {(progression?.streakDays ?? 0) === 1 ? "day" : "days"}
+              </strong>
+            </div>
+          </div>
         </div>
       </div>
 

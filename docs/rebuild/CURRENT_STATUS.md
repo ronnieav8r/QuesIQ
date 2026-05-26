@@ -200,6 +200,8 @@ Last updated: 2026-05-25
     from all-time Skill Scores
   - both score sections include a highlighted calculated Overall score
   - the underlying AI review rubric remains the same five dimensions
+  - Home progression now separates Level/XP from streak, with a flame icon for
+    the streak stat
   - sessions under 120 seconds are saved and shown in History as too short to
     score, but do not generate evaluations, score averages, review XP, or review
     retry prompts

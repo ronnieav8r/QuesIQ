@@ -266,18 +266,46 @@ p {
   align-items: end;
 }
 
-.level-chip {
+.home-stat-row {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: end;
+}
+
+.level-chip,
+.streak-chip {
   background: var(--focus-soft);
   border: 1px solid var(--focus);
   border-radius: var(--radius-sm);
-  display: grid;
+  display: flex;
+  align-items: center;
   flex: 0 0 auto;
   gap: var(--space-1);
-  min-width: 6.2rem;
+  min-width: 7.2rem;
   padding: var(--space-3);
 }
 
+.level-chip {
+  display: grid;
+}
+
+.streak-chip {
+  background: rgba(232, 114, 26, 0.15);
+  border-color: var(--action);
+  gap: var(--space-2);
+}
+
+.streak-icon {
+  color: var(--action);
+  flex: 0 0 auto;
+  height: 1.35rem;
+  width: 1.35rem;
+}
+
 .level-chip span,
+.streak-chip span,
 .section-head span,
 .selection-summary span,
 .profile-grid span,
@@ -1755,6 +1783,11 @@ textarea::placeholder {
   }
 
   .level-chip {
+    flex: 1 1 auto;
+  }
+
+  .home-stat-row,
+  .streak-chip {
     width: 100%;
   }
 
