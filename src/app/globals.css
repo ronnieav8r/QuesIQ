@@ -1801,13 +1801,14 @@ textarea::placeholder {
     flex-direction: column;
   }
 
-  .level-chip {
-    flex: 1 1 auto;
+  .home-stat-row {
+    width: 100%;
   }
 
-  .home-stat-row,
+  .level-chip,
   .streak-chip {
-    width: 100%;
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   .screen-toolbar .back-button,
