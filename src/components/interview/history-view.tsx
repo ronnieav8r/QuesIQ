@@ -7,6 +7,7 @@ import type { InterviewCatalog, SessionHistoryItem } from "@/product/interview-t
 
 type HistoryViewProps = {
   catalog: InterviewCatalog;
+  onDebrief: (session: SessionHistoryItem) => void;
   onPractice: () => void;
   onReview: (session: SessionHistoryItem) => void;
 };
@@ -37,7 +38,12 @@ function getStyleLabel(session: SessionHistoryItem, catalog: InterviewCatalog) {
   );
 }
 
-export function HistoryView({ catalog, onPractice, onReview }: HistoryViewProps) {
+export function HistoryView({
+  catalog,
+  onDebrief,
+  onPractice,
+  onReview,
+}: HistoryViewProps) {
   const history = useSessionHistory();
   const visibleSessions = history.sessions.filter(
     (session) => session.hasEvaluation || session.transcript.length > 0,
@@ -108,18 +114,28 @@ export function HistoryView({ catalog, onPractice, onReview }: HistoryViewProps)
                 <span>{getSessionReviewLabel(session)}</span>
                 <strong>{average ? average.toFixed(1) : "--"}</strong>
               </div>
-              <button
-                className="secondary"
-                disabled={!session.hasEvaluation && session.transcript.length === 0}
-                onClick={() => onReview(session)}
-                type="button"
-              >
-                {session.hasEvaluation
-                  ? "Open Review"
-                  : session.evaluationStatus === "too_short"
-                    ? "View Session"
-                    : "Open Session"}
-              </button>
+              <div className="history-card-actions">
+                <button
+                  className="secondary"
+                  disabled={!session.hasEvaluation && session.transcript.length === 0}
+                  onClick={() => onReview(session)}
+                  type="button"
+                >
+                  {session.hasEvaluation
+                    ? "Open Review"
+                    : session.evaluationStatus === "too_short"
+                      ? "View Session"
+                      : "Open Session"}
+                </button>
+                <button
+                  className="secondary"
+                  disabled={session.transcript.length === 0}
+                  onClick={() => onDebrief(session)}
+                  type="button"
+                >
+                  Debrief
+                </button>
+              </div>
             </article>
           );
         })}

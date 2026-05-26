@@ -261,9 +261,10 @@ Last updated: 2026-05-26
   - the collapsed/expanded nav preference is remembered locally
   - desktop keeps the persistent left navigation rail
 - Debrief mode started:
-  - Debrief is available from the hamburger menu
-  - users can choose a saved transcript-backed session, add a question or note,
-    and have Que generate a saved structured debrief
+  - Debrief is available as an action on each transcript-backed History item
+  - tapping Debrief opens the debrief screen with that session preselected
+  - users can add a question or note and have Que generate a saved structured
+    debrief
   - debriefs are tied to the original session and do not create a new scored
     practice session
   - the Session Debrief prompt is seeded into Admin > Prompts for viewing,

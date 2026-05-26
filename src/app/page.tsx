@@ -7,7 +7,6 @@ import {
   History as HistoryIcon,
   Home as HomeIcon,
   Menu,
-  MessageSquareText,
   Mic,
   ShieldCheck,
   UserRound,
@@ -60,6 +59,7 @@ export default function Home() {
   const [sessionLaunchPending, setSessionLaunchPending] = useState(false);
   const [sessionLaunchRecord, setSessionLaunchRecord] = useState<SessionLaunchRecord>();
   const [sessionSnapshot, setSessionSnapshot] = useState<SessionSetupSnapshot>();
+  const [selectedDebriefSessionId, setSelectedDebriefSessionId] = useState<string>();
   const [selectedReview, setSelectedReview] = useState<SessionHistoryItem>();
   const [profileSaveError, setProfileSaveError] = useState<string>();
   const [profileSavePending, setProfileSavePending] = useState(false);
@@ -388,7 +388,7 @@ export default function Home() {
                 aria-expanded={appMenuOpen}
                 aria-label={appMenuOpen ? "Close menu" : "Open menu"}
                 className={
-                  activeView === "me" || activeView === "debrief" || activeView === "admin"
+                  activeView === "me" || activeView === "admin"
                     ? "app-menu-button active"
                     : "app-menu-button"
                 }
@@ -407,19 +407,6 @@ export default function Home() {
                   >
                     <UserRound aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
                     <span>Me</span>
-                  </button>
-                  <button
-                    className={activeView === "debrief" ? "active" : undefined}
-                    onClick={() => openView("debrief")}
-                    role="menuitem"
-                    type="button"
-                  >
-                    <MessageSquareText
-                      aria-hidden="true"
-                      className="tab-icon"
-                      strokeWidth={2.2}
-                    />
-                    <span>Debrief</span>
                   </button>
                   {adminAccess && (
                     <button
@@ -499,6 +486,10 @@ export default function Home() {
           {signedIn && activeView === "history" && (
             <HistoryView
               catalog={interviewCatalog.catalog}
+              onDebrief={(session) => {
+                setSelectedDebriefSessionId(session.id);
+                setActiveView("debrief");
+              }}
               onPractice={openPractice}
               onReview={(session) => {
                 setSelectedReview(session);
@@ -509,7 +500,12 @@ export default function Home() {
           {signedIn && activeView === "stories" && (
             <StoriesView onPracticeStory={launchStoryPractice} />
           )}
-          {signedIn && activeView === "debrief" && <DebriefView />}
+          {signedIn && activeView === "debrief" && (
+            <DebriefView
+              initialSessionId={selectedDebriefSessionId}
+              onBack={() => setActiveView("history")}
+            />
+          )}
           {signedIn && activeView === "session" && sessionSnapshot && sessionLaunchRecord && (
             <SessionView
               catalog={interviewCatalog.catalog}

@@ -16,7 +16,12 @@ function formatSessionLabel(session: SessionHistoryItem) {
   return `${target} - ${date}`;
 }
 
-export function DebriefView() {
+type DebriefViewProps = {
+  initialSessionId?: string;
+  onBack: () => void;
+};
+
+export function DebriefView({ initialSessionId, onBack }: DebriefViewProps) {
   const [debriefs, setDebriefs] = useState<SessionDebriefRecord[]>([]);
   const [error, setError] = useState<string>();
   const [note, setNote] = useState("");
@@ -72,7 +77,9 @@ export function DebriefView() {
 
           setSessions(nextSessions);
           setDebriefs(debriefsBody.debriefs ?? []);
-          setSelectedSessionId((current) => current || firstEligibleSession?.id || "");
+          setSelectedSessionId(
+            (current) => current || initialSessionId || firstEligibleSession?.id || "",
+          );
         }
       } catch (loadError) {
         if (!ignore) {
@@ -88,7 +95,7 @@ export function DebriefView() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [initialSessionId]);
 
   async function createDebrief() {
     if (!selectedSessionId || !note.trim()) {
@@ -136,6 +143,9 @@ export function DebriefView() {
           <p className="eyebrow">Debrief</p>
           <h1 id="debrief-title">Revisit a practice session</h1>
         </div>
+        <button className="secondary" onClick={onBack} type="button">
+          Back to History
+        </button>
       </div>
 
       <div className="debrief-layout">
