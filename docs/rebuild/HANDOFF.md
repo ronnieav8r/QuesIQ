@@ -121,6 +121,10 @@ progression milestones should follow.
   level math now reads the threshold table instead of hardcoded fixed levels.
 - Added Admin > Data visibility for Users, Profiles, Sessions, and Evaluations
   so core hidden tables can be inspected without database access.
+- Began UI modernization Phase 1A by adding design tokens for spacing,
+  typography, radius, surface colors, shadows, and transitions, then wiring
+  base buttons, inputs, app shell, panels/cards, tables, tabs, and feedback
+  dialog primitives to those tokens without changing product flow.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,

@@ -156,6 +156,12 @@ Last updated: 2026-05-25
     reads the threshold table instead of fixed hardcoded thresholds
   - Admin has a Data section for inspecting Users, Profiles, Sessions, and
     Evaluations without direct database access
+- UI modernization Phase 1A foundation:
+  - added global design tokens for spacing, typography, radius, surface colors,
+    soft shadow, and fast transitions
+  - normalized base buttons, inputs, app shell, panels/cards, tabs, tables, and
+    feedback dialog primitives around those tokens
+  - preserved current screen structure and product behavior
 
 ## Verification
 
@@ -163,7 +169,7 @@ The current coded app has passed:
 
 - ESLint
 - TypeScript check
-- Latest local feedback/progression slice checks passed with ESLint,
+- Latest local feedback/progression/UI foundation checks passed with ESLint,
   TypeScript, and production build.
 - Next production build
 - Latest local checks passed with local `npm` available on PATH.
