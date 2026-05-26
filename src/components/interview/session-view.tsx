@@ -134,7 +134,7 @@ export function SessionView({
       <div className="session-heading">
         <div>
           <p className="eyebrow">Voice Session</p>
-          <h1 id="session-title">Que is nearly on the line.</h1>
+          <h1 id="session-title">Voice practice</h1>
         </div>
         <button className="back-button" onClick={onExit} type="button">
           Exit Session
@@ -149,12 +149,11 @@ export function SessionView({
           <span />
         </div>
         <div>
-          <p className="eyebrow">Session Surface</p>
-          <h2 id="session-readiness-title">Session created and ready for voice</h2>
+          <p className="eyebrow">Ready</p>
+          <h2 id="session-readiness-title">Que is ready to practice.</h2>
           <p>
-            QuesIQ created this Session before voice launch. Transcript turns
-            and lifecycle events collect in an app-owned artifact draft for the
-            next persistence slice.
+            Start when you are ready. After the conversation, QuesIQ will save
+            the transcript and prepare a practice review.
           </p>
         </div>
       </section>
@@ -179,8 +178,8 @@ export function SessionView({
 
         <section className="panel session-config" aria-labelledby="session-config-title">
           <div className="section-head">
-            <h2 id="session-config-title">Launch Snapshot</h2>
-            <span>Session created</span>
+            <h2 id="session-config-title">Session Details</h2>
+            <span>Saved</span>
           </div>
           <dl>
             <div>
@@ -214,7 +213,7 @@ export function SessionView({
 
         <section className="panel session-artifact" aria-labelledby="session-artifact-title">
           <div className="section-head">
-            <h2 id="session-artifact-title">Voice Artifact</h2>
+            <h2 id="session-artifact-title">Session Capture</h2>
             <span>
               {artifactSaveStatus === "saving" && "Saving"}
               {artifactSaveStatus === "saved" && "Saved"}
@@ -253,12 +252,12 @@ export function SessionView({
 
         <section className="panel session-next" aria-labelledby="session-next-title">
           <div>
-            <p className="eyebrow">Next integration</p>
-            <h2 id="session-next-title">Evaluate the saved practice artifact</h2>
+            <p className="eyebrow">After Practice</p>
+            <h2 id="session-next-title">Review what happened</h2>
           </div>
           <p>
-            The saved transcript now turns into a first QuesIQ review with
-            scores, a coaching insight, and the next suggested move.
+            Once the voice session is saved, Que turns the transcript into
+            scores, a coaching insight, and a suggested next move.
           </p>
           <div className="inline-actions">
             <button onClick={onBackToSetup} type="button">
@@ -304,7 +303,7 @@ export function SessionView({
           ) : (
             <p>
               After the voice artifact is saved, Que will review the transcript
-              and prepare your first feedback summary here.
+              and prepare your practice feedback here.
             </p>
           )}
           {evaluationError && <p className="form-error">{evaluationError}</p>}

@@ -175,8 +175,7 @@ export function PracticeSetup({
             </div>
           </dl>
           <p>
-            QuesIQ creates the Session record before opening Que&apos;s live browser
-            voice practice.
+            QuesIQ saves this setup before Que starts the live voice practice.
           </p>
           {sessionLaunchError && <p className="form-error">{sessionLaunchError}</p>}
           <button disabled={sessionLaunchPending} onClick={onLaunch} type="button">

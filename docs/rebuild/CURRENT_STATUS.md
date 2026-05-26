@@ -163,6 +163,14 @@ Last updated: 2026-05-25
   - normalized base buttons, inputs, app shell, panels/cards, tabs, tables, and
     feedback dialog primitives around those tokens
   - preserved current screen structure and product behavior
+- UI modernization Phase 1B core user-screen cleanup:
+  - tightened mobile rhythm across Home, Practice, Session/Review, History, Me,
+    Auth, and Onboarding surfaces through shared CSS
+  - small-screen session/context detail rows now stack instead of squeezing
+    label/value pairs
+  - session headings and readiness panels stack more cleanly on narrow phones
+  - feedback launcher moves above bottom navigation on narrow phones
+  - live session copy is more user-facing and less implementation-oriented
 
 ## Verification
 
@@ -170,8 +178,8 @@ The current coded app has passed:
 
 - ESLint
 - TypeScript check
-- Latest local feedback/progression/UI foundation checks passed with ESLint,
-  TypeScript, and production build.
+- Latest local feedback/progression/UI foundation and user-screen cleanup checks
+  passed with ESLint, TypeScript, and production build.
 - Next production build
 - Latest local checks passed with local `npm` available on PATH.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:

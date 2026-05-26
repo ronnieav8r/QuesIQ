@@ -129,6 +129,11 @@ progression milestones should follow.
   typography, radius, surface colors, shadows, and transitions, then wiring
   base buttons, inputs, app shell, panels/cards, tables, tabs, and feedback
   dialog primitives to those tokens without changing product flow.
+- Completed UI modernization Phase 1B core user-screen cleanup: normalized
+  user-facing screen rhythm, mobile key/value rows, small-screen header
+  stacking, feedback button placement above bottom nav, and removed
+  implementation-flavored copy from the live session surface without changing
+  product flow.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
