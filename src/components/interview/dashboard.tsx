@@ -1,6 +1,11 @@
+import { useEffect, useState } from "react";
+
 import { useSessionHistory } from "@/components/interview/session-history";
 import type { InterviewContext } from "@/product/interview-types";
-import type { SessionHistoryItem } from "@/product/interview-types";
+import type {
+  ProgressionSummaryRecord,
+  SessionHistoryItem,
+} from "@/product/interview-types";
 
 type DashboardProps = {
   contextReady: boolean;
@@ -18,6 +23,52 @@ export function Dashboard({
   onReview,
 }: DashboardProps) {
   const history = useSessionHistory();
+  const [progression, setProgression] = useState<ProgressionSummaryRecord>();
+  const [progressionError, setProgressionError] = useState<string>();
+  const [progressionStatus, setProgressionStatus] = useState<"idle" | "loaded" | "loading">(
+    "idle",
+  );
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadProgression() {
+      try {
+        setProgressionError(undefined);
+        setProgressionStatus("loading");
+
+        const response = await fetch("/api/progression");
+        const body = (await response.json()) as {
+          detail?: string;
+          error?: string;
+          progression?: ProgressionSummaryRecord;
+        };
+
+        if (!response.ok) {
+          throw new Error(body.detail || body.error || "Progression could not be loaded.");
+        }
+
+        if (!ignore) {
+          setProgression(body.progression);
+          setProgressionStatus("loaded");
+        }
+      } catch (error) {
+        if (!ignore) {
+          setProgressionError(
+            error instanceof Error ? error.message : "Progression could not be loaded.",
+          );
+          setProgressionStatus("loaded");
+        }
+      }
+    }
+
+    void loadProgression();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
   const completedReviews = history.sessions.filter((session) => session.hasEvaluation);
   const needsReview = history.sessions.filter(
     (session) =>
@@ -45,17 +96,28 @@ export function Dashboard({
       label: scores[0]?.label || key[0].toUpperCase() + key.slice(1),
     };
   });
-  const completedCount = completedReviews.length;
-  const xp = completedCount * 100;
-  const level = Math.floor(xp / 300) + 1;
-  const levelXp = xp % 300;
-  const levelProgress = Math.min(100, Math.round((levelXp / 300) * 100));
+  const derivedCompletedCount = completedReviews.length;
+  const derivedXp = derivedCompletedCount * 100;
+  const derivedLevel = Math.floor(derivedXp / 300) + 1;
+  const derivedLevelXp = derivedXp % 300;
+  const completedCount = progression?.completedReviews ?? derivedCompletedCount;
+  const xp = progression?.totalXp ?? derivedXp;
+  const level = progression?.level ?? derivedLevel;
+  const levelXp = progression?.currentLevelXp ?? derivedLevelXp;
+  const nextLevelXp = progression?.nextLevelXp ?? 300;
+  const levelProgress = Math.min(100, Math.round((levelXp / nextLevelXp) * 100));
   const lastPracticed = history.sessions.find(
     (session) => session.hasEvaluation || session.transcript.length > 0,
   );
-  const weakestScore = scoreAverages
+  const derivedWeakestScore = scoreAverages
     .filter((score) => score.average !== undefined)
     .sort((a, b) => (a.average ?? 0) - (b.average ?? 0))[0];
+  const weakestScore = progression?.weakestScoreLabel
+    ? {
+        average: progression.weakestScoreAverage,
+        label: progression.weakestScoreLabel,
+      }
+    : derivedWeakestScore;
   const attentionSession = needsReview[0];
   const latestCompleted = completedReviews[0];
   const recommendedTitle = attentionSession
@@ -81,7 +143,10 @@ export function Dashboard({
           <h1 id="home-title">Practice interviews out loud.</h1>
         </div>
         <div className="level-chip">
-          <span>Level {level}</span>
+            <span>
+              Level {level}
+              {progression?.streakDays ? ` / ${progression.streakDays} day streak` : ""}
+            </span>
           <strong>{xp} XP</strong>
         </div>
       </div>
@@ -197,7 +262,9 @@ export function Dashboard({
         <section aria-labelledby="progress-title" className="panel progress-panel">
           <div className="section-head">
             <h2 id="progress-title">Progress</h2>
-            <span>{completedCount} completed</span>
+          <span>
+            {progressionStatus === "loading" ? "Loading" : `${completedCount} completed`}
+          </span>
           </div>
           <div
             aria-label={`${levelProgress} percent toward level ${level + 1}`}
@@ -207,15 +274,20 @@ export function Dashboard({
           </div>
           <p>
             {lastPracticed
-              ? `Last practiced ${new Date(lastPracticed.createdAt).toLocaleDateString()}. ${300 - levelXp} XP to level ${level + 1}.`
+              ? `Last practiced ${
+                  progression?.lastPracticedAt
+                    ? new Date(progression.lastPracticedAt).toLocaleDateString()
+                    : new Date(lastPracticed.createdAt).toLocaleDateString()
+                }. ${nextLevelXp - levelXp} XP to level ${level + 1}.`
               : "Complete a reviewed session to start earning XP and progress."}
           </p>
-          {latestCompleted?.evaluation?.nextAction && (
+          {(progression?.latestNextAction || latestCompleted?.evaluation?.nextAction) && (
             <div className="progress-next">
               <span>Latest next move</span>
-              <p>{latestCompleted.evaluation.nextAction}</p>
+              <p>{progression?.latestNextAction || latestCompleted?.evaluation?.nextAction}</p>
             </div>
           )}
+          {progressionError && <p className="form-error">{progressionError}</p>}
         </section>
 
         <section aria-labelledby="stats-title" className="panel score-panel">

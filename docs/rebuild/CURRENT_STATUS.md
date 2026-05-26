@@ -139,8 +139,17 @@ Last updated: 2026-05-25
     History
   - Home score strip calculates the five score averages from completed saved
     evaluations
-  - Home derives simple XP, level progress, last-practiced text, latest next
-    move, and Recommended Next from saved Sessions and evaluations
+  - Home initially derived simple XP, level progress, last-practiced text,
+    latest next move, and Recommended Next from saved Sessions and evaluations
+- Durable progression persistence:
+  - reviewed sessions create idempotent progression events worth XP
+  - user progression summaries persist total XP, level, current level XP,
+    streak, longest streak, completed review count, latest next action, and
+    weakest score
+  - Home now reads the saved progression summary with derived history as a
+    fallback while loading
+  - first progression load can backfill events from existing completed
+    evaluations so earlier reviewed sessions count
 
 ## Verification
 
@@ -148,8 +157,8 @@ The current coded app has passed:
 
 - ESLint
 - TypeScript check
-- Latest local feedback slice checks passed with ESLint, TypeScript, and
-  production build.
+- Latest local feedback/progression slice checks passed with ESLint,
+  TypeScript, and production build.
 - Next production build
 - Latest local checks passed with local `npm` available on PATH.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
@@ -209,12 +218,15 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
    especially `gpt-realtime-mini audio` if it shows text-token prices.
 4. Keep pricing updates manual until candidate preview/writeback or a
    deterministic pricing parser is built.
-5. Expand prompted micro-feedback beyond the first review-usefulness popup by
+5. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
+   new completed reviews award XP once, Home shows saved streak/level/latest
+   next action, and retry/reopen does not double-count.
+6. Expand prompted micro-feedback beyond the first review-usefulness popup by
    rotating specific questions about AI voice realism, transcript accuracy, and
    scoring fairness.
-6. Decide whether persisted progression/streak records or Interview V1
-   prompt/config hardening should follow.
-7. Continue deploy-based QA on `quesiq-web` while localhost preview is
+7. Decide whether deeper milestones/quests or Interview V1 hardening should
+   follow.
+8. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 
 ## Reference Inputs

@@ -10,11 +10,12 @@ OpenAI Realtime voice,
 voice artifact persistence, a structured post-session practice review, saved
 review revisit, profile persistence, history, score summaries, and first derived
 progression. A local feedback/bug-reporting slice now exists with global access,
-optional screenshots, and first prompted review feedback; it needs deploy QA.
+optional screenshots, and first prompted review feedback. Durable progression
+events/summaries now exist locally and need deploy QA.
 
-The next useful product slice is deploying and QAing the Admin prompt/AI Usage
-work, then deciding whether persisted progression/streak records or Interview
-V1 hardening should follow.
+The next useful product slice is deploying and QAing the feedback/Admin and
+progression work, then deciding whether Interview V1 hardening or deeper
+progression milestones should follow.
 
 ## Done Since Last Handoff
 
@@ -109,6 +110,10 @@ V1 hardening should follow.
   Sessions, and split Admin Feedback into Feedback and Bugs subtabs.
 - Tightened Admin spreadsheet-style tables so headers stay on one line and long
   values truncate by default but can expand inline when clicked.
+- Added durable progression: reviewed sessions now create idempotent
+  progression events, update a user progression summary with XP, level, streak,
+  longest streak, completed reviews, latest next action, and weakest score, and
+  Home reads that saved summary with a backfill path for existing evaluations.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -124,8 +129,8 @@ V1 hardening should follow.
 
 - ESLint passed.
 - TypeScript check passed.
-- Latest local feedback slice checks passed: ESLint, TypeScript, and production
-  build.
+- Latest local feedback/progression checks passed: ESLint, TypeScript, and
+  production build.
 - Next production build passed.
 - Local `npm` is now available on PATH, and latest checks passed with it.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
@@ -199,14 +204,17 @@ V1 hardening should follow.
    especially `gpt-realtime-mini audio` if it was changed to text pricing.
 4. Keep pricing updates manual until a candidate preview table or deterministic
    pricing-page parser is built.
-5. Expand prompted micro-feedback beyond the first review-usefulness popup by
+5. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
+   new completed reviews award XP once, Home shows saved streak/level/latest
+   next action, and retry/reopen does not double-count.
+6. Expand prompted micro-feedback beyond the first review-usefulness popup by
    rotating specific questions about voice realism, transcript accuracy, and
    scoring fairness.
-6. Decide whether persisted progression/streak records or Interview V1
-   prompt/config hardening should follow.
-7. Add deploy/user-confirmed QA for any changes because localhost preview is
+7. Decide whether deeper milestones/quests or Interview V1 hardening should
+   follow.
+8. Add deploy/user-confirmed QA for any changes because localhost preview is
    deprecated in this environment.
-8. Keep verifying that `Launch Voice Session` creates a Session id before direct
+9. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
 
 ## Watch Outs

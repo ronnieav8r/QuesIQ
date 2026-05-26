@@ -134,6 +134,24 @@ export type EvaluationScoreKey =
   | "impact"
   | "authenticity";
 
+export type ProgressionEventType = "review_completed";
+
+export type ProgressionSummaryRecord = {
+  completedReviews: number;
+  currentLevelXp: number;
+  lastPracticedAt?: string;
+  latestNextAction?: string;
+  level: number;
+  longestStreakDays: number;
+  nextLevelXp: number;
+  streakDays: number;
+  totalXp: number;
+  updatedAt: string;
+  weakestScoreAverage?: number;
+  weakestScoreKey?: EvaluationScoreKey;
+  weakestScoreLabel?: string;
+};
+
 export type EvaluationScore = {
   key: EvaluationScoreKey;
   label: string;

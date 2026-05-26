@@ -12,8 +12,10 @@ import {
 } from "drizzle-orm/pg-core";
 
 import type {
+  EvaluationScoreKey,
   FeedbackKind,
   PricingReviewResult,
+  ProgressionEventType,
   SessionEvaluationResult,
   SessionSetupSnapshot,
   SessionStatus,
@@ -382,5 +384,56 @@ export const userFeedback = pgTable(
     sessionIdx: index("user_feedback_session_idx").on(feedback.sessionId),
     statusIdx: index("user_feedback_status_idx").on(feedback.status),
     userIdx: index("user_feedback_user_idx").on(feedback.userId),
+  }),
+);
+
+export const progressionEvents = pgTable(
+  "progression_events",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    eventType: text("event_type").$type<ProgressionEventType>().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).defaultNow().notNull(),
+    sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "set null" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    xp: integer("xp").default(0).notNull(),
+  },
+  (event) => ({
+    occurredAtIdx: index("progression_events_occurred_at_idx").on(event.occurredAt),
+    sessionEventIdx: uniqueIndex("progression_events_session_event_idx").on(
+      event.sessionId,
+      event.eventType,
+    ),
+    userIdx: index("progression_events_user_idx").on(event.userId),
+  }),
+);
+
+export const userProgression = pgTable(
+  "user_progression",
+  {
+    completedReviews: integer("completed_reviews").default(0).notNull(),
+    currentLevelXp: integer("current_level_xp").default(0).notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    lastPracticeDate: text("last_practice_date"),
+    lastPracticedAt: timestamp("last_practiced_at", { withTimezone: true }),
+    latestNextAction: text("latest_next_action"),
+    level: integer("level").default(1).notNull(),
+    longestStreakDays: integer("longest_streak_days").default(0).notNull(),
+    nextLevelXp: integer("next_level_xp").default(300).notNull(),
+    streakDays: integer("streak_days").default(0).notNull(),
+    totalXp: integer("total_xp").default(0).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    weakestScoreAverageTenths: integer("weakest_score_average_tenths"),
+    weakestScoreKey: text("weakest_score_key").$type<EvaluationScoreKey>(),
+    weakestScoreLabel: text("weakest_score_label"),
+  },
+  (progression) => ({
+    userIdIdx: uniqueIndex("user_progression_user_id_idx").on(progression.userId),
   }),
 );

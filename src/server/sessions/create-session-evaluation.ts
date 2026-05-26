@@ -15,6 +15,7 @@ import {
   estimateTokenCostMicroUsd,
   getActiveAiPricing,
 } from "@/server/pricing/ai-pricing";
+import { recordReviewProgression } from "@/server/progression/progression";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 
 type SessionEvaluationRecord = {
@@ -242,6 +243,7 @@ export async function createSessionEvaluation(
         updatedAt: now,
       })
       .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
+    await recordReviewProgression(userId, sessionId, existing.result);
 
     return existing;
   }
@@ -386,6 +388,7 @@ export async function createSessionEvaluation(
       updatedAt: now,
     })
     .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
+  await recordReviewProgression(userId, sessionId, result);
 
   return evaluation;
 }
