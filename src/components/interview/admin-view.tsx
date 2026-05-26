@@ -394,8 +394,10 @@ export function AdminView() {
     sessions: AdminSessionRecord[];
     users: AdminUserRecord[];
   }>({ evaluations: [], profiles: [], sessions: [], users: [] });
+  const [dataError, setDataError] = useState<string>();
   const [dataSection, setDataSection] =
     useState<"evaluations" | "profiles" | "sessions" | "users">("users");
+  const [dataStatus, setDataStatus] = useState<"idle" | "loaded" | "loading">("idle");
   const [pricing, setPricing] = useState<AiPricingRecord[]>([]);
   const [pricingReviews, setPricingReviews] = useState<PricingReviewRecord[]>([]);
   const [progressionLevels, setProgressionLevels] = useState<
@@ -516,6 +518,12 @@ export function AdminView() {
     }),
     [feedback],
   );
+  const dataCounts = {
+    evaluations: adminData.evaluations.length,
+    profiles: adminData.profiles.length,
+    sessions: adminData.sessions.length,
+    users: adminData.users.length,
+  };
 
   function applySelectedConfig(config?: PromptConfigRecord) {
     if (!config) {
@@ -677,7 +685,8 @@ export function AdminView() {
 
   async function loadAdminData() {
     try {
-      setError(undefined);
+      setDataError(undefined);
+      setDataStatus("loading");
       const response = await fetch("/api/admin/data");
       const body = (await response.json()) as {
         detail?: string;
@@ -699,9 +708,11 @@ export function AdminView() {
         users: body.users ?? [],
       });
     } catch (loadError) {
-      setError(
+      setDataError(
         loadError instanceof Error ? loadError.message : "Admin data could not be loaded.",
       );
+    } finally {
+      setDataStatus("loaded");
     }
   }
 
@@ -822,7 +833,6 @@ export function AdminView() {
           componentResponse,
           aiRunsResponse,
           feedbackResponse,
-          dataResponse,
           progressionResponse,
           realtimeUsageResponse,
           pricingResponse,
@@ -830,7 +840,6 @@ export function AdminView() {
           fetch("/api/admin/prompt-configs"),
           fetch("/api/admin/prompt-components"),
           fetch("/api/admin/ai-runs"),
-          fetch("/api/admin/data"),
           fetch("/api/admin/feedback"),
           fetch("/api/admin/progression"),
           fetch("/api/admin/realtime-usage"),
@@ -853,13 +862,6 @@ export function AdminView() {
         const feedbackBody = (await feedbackResponse.json()) as {
           error?: string;
           feedback?: FeedbackRecord[];
-        };
-        const dataBody = (await dataResponse.json()) as {
-          error?: string;
-          evaluations?: AdminEvaluationRecord[];
-          profiles?: AdminProfileRecord[];
-          sessions?: AdminSessionRecord[];
-          users?: AdminUserRecord[];
         };
         const progressionBody = (await progressionResponse.json()) as {
           error?: string;
@@ -899,10 +901,6 @@ export function AdminView() {
           throw new Error(feedbackBody.error || "Feedback could not be loaded.");
         }
 
-        if (!dataResponse.ok) {
-          throw new Error(dataBody.error || "Admin data could not be loaded.");
-        }
-
         if (!progressionResponse.ok) {
           throw new Error(progressionBody.error || "Progression could not be loaded.");
         }
@@ -926,12 +924,6 @@ export function AdminView() {
           setConfigs(nextConfigs);
           setComponents(nextComponents);
           setAiRuns(aiRunsBody.runs ?? []);
-          setAdminData({
-            evaluations: dataBody.evaluations ?? [],
-            profiles: dataBody.profiles ?? [],
-            sessions: dataBody.sessions ?? [],
-            users: dataBody.users ?? [],
-          });
           setFeedback(feedbackBody.feedback ?? []);
           setProgressionEvents(progressionBody.events ?? []);
           setProgressionLevels(progressionBody.levels ?? []);
@@ -964,6 +956,18 @@ export function AdminView() {
       ignore = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (adminSection !== "data" || dataStatus !== "idle") {
+      return;
+    }
+
+    const loadTimer = window.setTimeout(() => {
+      void loadAdminData();
+    }, 0);
+
+    return () => window.clearTimeout(loadTimer);
+  }, [adminSection, dataStatus]);
 
   async function saveVersion(activate: boolean) {
     if (!selectedConfig) {
@@ -1795,7 +1799,7 @@ export function AdminView() {
             <section className="ai-runs-panel" aria-labelledby="data-admin-title">
               <div className="section-head">
                 <h2 id="data-admin-title">Data</h2>
-                <span>Core app tables</span>
+                <span>{dataStatus === "loading" ? "Loading" : "Core app tables"}</span>
               </div>
               <div className="component-tabs" aria-label="Data section">
                 {(["users", "profiles", "sessions", "evaluations"] as const).map((section) => (
@@ -1805,10 +1809,16 @@ export function AdminView() {
                     onClick={() => setDataSection(section)}
                     type="button"
                   >
-                    {section[0].toUpperCase() + section.slice(1)}
+                    {section[0].toUpperCase() + section.slice(1)} ({dataCounts[section]})
                   </button>
                 ))}
               </div>
+              <div className="inline-actions">
+                <button className="secondary" onClick={loadAdminData} type="button">
+                  Refresh Data
+                </button>
+              </div>
+              {dataError && <p className="form-error">{dataError}</p>}
               <div className="usage-table-wrap">
                 <table className="usage-table">
                   {dataSection === "users" && (
@@ -1822,14 +1832,20 @@ export function AdminView() {
                         </tr>
                       </thead>
                       <tbody>
-                        {adminData.users.map((user) => (
-                          <tr key={user.id}>
-                            <td><ExpandableCell value={user.email} /></td>
-                            <td><ExpandableCell value={user.name} /></td>
-                            <td>{user.emailVerified ? new Date(user.emailVerified).toLocaleString() : "--"}</td>
-                            <td className="narrow-column"><ExpandableCell className="mono-cell" value={user.id} /></td>
+                        {adminData.users.length > 0 ? (
+                          adminData.users.map((user) => (
+                            <tr key={user.id}>
+                              <td><ExpandableCell value={user.email} /></td>
+                              <td><ExpandableCell value={user.name} /></td>
+                              <td>{user.emailVerified ? new Date(user.emailVerified).toLocaleString() : "--"}</td>
+                              <td className="narrow-column"><ExpandableCell className="mono-cell" value={user.id} /></td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={4}>No users returned from the admin data endpoint.</td>
                           </tr>
-                        ))}
+                        )}
                       </tbody>
                     </>
                   )}
@@ -1846,16 +1862,22 @@ export function AdminView() {
                         </tr>
                       </thead>
                       <tbody>
-                        {adminData.profiles.map((profile) => (
-                          <tr key={profile.userId}>
-                            <td><ExpandableCell value={profile.userEmail || profile.userId} /></td>
-                            <td>{profile.preferredName || "--"}</td>
-                            <td><ExpandableCell value={profile.targetRole} /></td>
-                            <td><ExpandableCell value={profile.targetCompany} /></td>
-                            <td><ExpandableCell value={profile.resumeName} /></td>
-                            <td>{new Date(profile.updatedAt).toLocaleString()}</td>
+                        {adminData.profiles.length > 0 ? (
+                          adminData.profiles.map((profile) => (
+                            <tr key={profile.userId}>
+                              <td><ExpandableCell value={profile.userEmail || profile.userId} /></td>
+                              <td>{profile.preferredName || "--"}</td>
+                              <td><ExpandableCell value={profile.targetRole} /></td>
+                              <td><ExpandableCell value={profile.targetCompany} /></td>
+                              <td><ExpandableCell value={profile.resumeName} /></td>
+                              <td>{new Date(profile.updatedAt).toLocaleString()}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={6}>No profiles returned from the admin data endpoint.</td>
                           </tr>
-                        ))}
+                        )}
                       </tbody>
                     </>
                   )}
@@ -1874,18 +1896,24 @@ export function AdminView() {
                         </tr>
                       </thead>
                       <tbody>
-                        {adminData.sessions.map((session) => (
-                          <tr key={session.id}>
-                            <td>{new Date(session.createdAt).toLocaleString()}</td>
-                            <td><ExpandableCell value={session.userEmail || session.userId} /></td>
-                            <td><ExpandableCell value={session.targetRole} /></td>
-                            <td>{session.modeKey}</td>
-                            <td>{session.status}</td>
-                            <td>{session.evaluationStatus}</td>
-                            <td>{session.transcriptTurns}</td>
-                            <td className="narrow-column"><ExpandableCell className="mono-cell" value={session.id} /></td>
+                        {adminData.sessions.length > 0 ? (
+                          adminData.sessions.map((session) => (
+                            <tr key={session.id}>
+                              <td>{new Date(session.createdAt).toLocaleString()}</td>
+                              <td><ExpandableCell value={session.userEmail || session.userId} /></td>
+                              <td><ExpandableCell value={session.targetRole} /></td>
+                              <td>{session.modeKey}</td>
+                              <td>{session.status}</td>
+                              <td>{session.evaluationStatus}</td>
+                              <td>{session.transcriptTurns}</td>
+                              <td className="narrow-column"><ExpandableCell className="mono-cell" value={session.id} /></td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={8}>No sessions returned from the admin data endpoint.</td>
                           </tr>
-                        ))}
+                        )}
                       </tbody>
                     </>
                   )}
@@ -1903,23 +1931,28 @@ export function AdminView() {
                         </tr>
                       </thead>
                       <tbody>
-                        {adminData.evaluations.map((evaluation) => (
-                          <tr key={evaluation.id}>
-                            <td>{new Date(evaluation.createdAt).toLocaleString()}</td>
-                            <td><ExpandableCell value={evaluation.userEmail || evaluation.userId} /></td>
-                            <td><ExpandableCell value={evaluation.targetRole} /></td>
-                            <td>{evaluation.averageScore.toFixed(1)}</td>
-                            <td><ExpandableCell value={evaluation.model} /></td>
-                            <td><ExpandableCell value={evaluation.summary} /></td>
-                            <td className="narrow-column"><ExpandableCell className="mono-cell" value={evaluation.sessionId} /></td>
+                        {adminData.evaluations.length > 0 ? (
+                          adminData.evaluations.map((evaluation) => (
+                            <tr key={evaluation.id}>
+                              <td>{new Date(evaluation.createdAt).toLocaleString()}</td>
+                              <td><ExpandableCell value={evaluation.userEmail || evaluation.userId} /></td>
+                              <td><ExpandableCell value={evaluation.targetRole} /></td>
+                              <td>{evaluation.averageScore.toFixed(1)}</td>
+                              <td><ExpandableCell value={evaluation.model} /></td>
+                              <td><ExpandableCell value={evaluation.summary} /></td>
+                              <td className="narrow-column"><ExpandableCell className="mono-cell" value={evaluation.sessionId} /></td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={7}>No evaluations returned from the admin data endpoint.</td>
                           </tr>
-                        ))}
+                        )}
                       </tbody>
                     </>
                   )}
                 </table>
               </div>
-              {error && <p className="form-error">{error}</p>}
             </section>
           )}
 
