@@ -11,7 +11,9 @@ voice artifact persistence, a structured post-session practice review, saved
 review revisit, profile persistence, history, score summaries, durable
 progression, Admin data visibility, and beta feedback/bug reporting. UI
 modernization Phase 1A, 1B, Phase 2A text-first navigation refinement, and
-Phase 2B icon polish are complete.
+Phase 2B icon polish are complete. The QuesIQ Interview brand logo is now wired
+into the app shell, Bubble level thresholds have been imported, and the first
+backend-owned quest system is in code.
 
 Quira now has only a baseline embedded support launcher in QuesIQ. The desired
 future Quira experience is a true AI chat assistant that can hold a
@@ -144,6 +146,14 @@ path until Phase 2 navigation is completed unless the product direction changes.
   Home, Practice, History, and Me icons into the primary nav, kept labels
   visible on mobile and desktop, and preserved the four-item single-row mobile
   nav.
+- Added QuesIQ Interview brand assets from
+  `D:\Altitude Pro Media\QuestIQ\Logo\Finished`: full interview logo in the app
+  header and icon-only mark as the app icon metadata.
+- Imported Bubble progression levels into a migration: 15 titled thresholds from
+  Rookie through Master replace the temporary Level 1-10 defaults.
+- Added the first quest system from the revised Bubble quest export: 37 seeded
+  progression quests, per-user quest completion records, idempotent quest XP
+  ledger events, Home quest progress, and Admin quest visibility.
 - Added the first embedded Quira support baseline inside QuesIQ: the global
   feedback launcher is now a small Quira entry point with Help, Feedback, and
   Bug paths, curated product guidance, optional screenshots, and the same
@@ -242,23 +252,26 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 1. Deploy/user-confirm QA the latest Admin, feedback, progression, UI Phase 2,
    and Quira baseline changes on `quesiq-web`.
-2. User-confirm QA the Admin tab: Prompts, Modes, Questions, Styles, API Calls,
+2. Run/user-confirm database migration QA for the imported levels and quests:
+   Progression > Levels shows Rookie through Master, Progression > Quests shows
+   37 active quest definitions, and Home awards quest XP only once per quest.
+3. User-confirm QA the Admin tab: Prompts, Modes, Questions, Styles, API Calls,
    Realtime Sessions, Pricing, Feedback/Bugs, Progression, Levels, and Data.
-3. Keep monthly/scheduled pricing checks paused; use manual Admin pricing review
+4. Keep monthly/scheduled pricing checks paused; use manual Admin pricing review
    only if needed.
-4. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
+5. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
    new completed reviews award XP once, Home shows saved streak/level/latest
    next action, level thresholds load from Admin, and retry/reopen does not
    double-count.
-5. Expand prompted micro-feedback beyond the first review-usefulness popup by
+6. Expand prompted micro-feedback beyond the first review-usefulness popup by
    rotating specific questions about voice realism, transcript accuracy, and
    scoring fairness.
-6. Later Quira work: replace the curated Help panel with an AI chat assistant
+7. Later Quira work: replace the curated Help panel with an AI chat assistant
    that uses a maintained QuesIQ knowledge base and can submit structured bugs,
    feedback, screenshots, and current screen/session context.
-7. Continue deploy/user-confirmed QA for changes because localhost preview is
+8. Continue deploy/user-confirmed QA for changes because localhost preview is
    deprecated in this environment.
-8. Keep verifying that `Launch Voice Session` creates a Session id before direct
+9. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
 
 ## Watch Outs

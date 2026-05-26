@@ -16,6 +16,7 @@ import type {
   FeedbackKind,
   PricingReviewResult,
   ProgressionEventType,
+  QuestCheckType,
   SessionEvaluationResult,
   SessionSetupSnapshot,
   SessionStatus,
@@ -445,3 +446,43 @@ export const progressionLevelThresholds = pgTable("progression_level_thresholds"
   name: text("name").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const progressionQuests = pgTable("progression_quests", {
+  category: text("category").default("milestone").notNull(),
+  checkDimension: text("check_dimension"),
+  checkThreshold: integer("check_threshold").notNull(),
+  checkType: text("check_type").$type<QuestCheckType>().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  description: text("description").notNull(),
+  displayOrder: integer("display_order").default(0).notNull(),
+  enabled: boolean("enabled").default(true).notNull(),
+  key: text("key").primaryKey(),
+  title: text("title").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  xpReward: integer("xp_reward").default(0).notNull(),
+});
+
+export const userQuests = pgTable(
+  "user_quests",
+  {
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    progress: integer("progress").default(0).notNull(),
+    questKey: text("quest_key")
+      .notNull()
+      .references(() => progressionQuests.key, { onDelete: "cascade" }),
+    status: text("status").$type<"completed" | "open">().default("open").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (quest) => ({
+    questIdx: index("user_quests_quest_idx").on(quest.questKey),
+    userQuestIdx: uniqueIndex("user_quests_user_quest_idx").on(
+      quest.userId,
+      quest.questKey,
+    ),
+  }),
+);

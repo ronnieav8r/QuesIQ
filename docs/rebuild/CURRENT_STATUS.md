@@ -181,6 +181,19 @@ Last updated: 2026-05-25
   - wired Home, Practice, History, and Me icons into the primary nav
   - kept labels visible on mobile and desktop
   - preserved the four-item single-row mobile bottom nav
+- Brand assets:
+  - copied the QuesIQ icon-only and Interview logo PNGs into `public/brand/`
+  - app shell header now uses the full QuesIQ Interview logo
+  - app metadata uses the icon-only mark for browser/app icons
+- Bubble progression import:
+  - level thresholds are seeded from the Bubble export as 15 titled levels:
+    Rookie through Master
+  - quests are seeded from the revised Bubble export as 37 active milestone
+    definitions with stable quest keys, titles, checks, and XP rewards
+  - user quest completions are stored separately and award XP through the
+    existing progression event ledger with `quest_completed` events
+  - Home now shows quest progress, and Admin > Progression includes quest
+    visibility
 - Embedded Quira support baseline:
   - global support now uses a small Quira launcher instead of a plain Feedback
     button
@@ -252,6 +265,9 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
   design tokens/base styling. Phase 1B cleaned up core user-screen rhythm,
   small-screen behavior, and user-facing copy. Phase 2A completed text-first
   navigation refinement, and Phase 2B added lucide icons to the primary nav.
+- Progression now combines reviewed-session XP with imported Bubble quest XP.
+  Quest completion is idempotent through `user_quests`; XP accounting remains in
+  `progression_events`.
 - Keep QuesIQ-owned session snapshots, transcripts/artifacts, evaluations,
   history, and progression in the app backend/data layer.
 - Resume files are uploaded through signed-in onboarding and parsed into profile
@@ -264,21 +280,24 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 1. Deploy and user-confirm QA the Admin, feedback/bug, progression, UI Phase 2,
    and Quira baseline slices on `quesiq-web`.
-2. Add/confirm `ADMIN_EMAILS` in Render before QAing Admin; monthly pricing
+2. Run/user-confirm migration QA for Bubble levels and quests: Admin >
+   Progression > Levels shows Rookie through Master, Admin > Progression >
+   Quests shows 37 active definitions, and Home awards quest XP once per quest.
+3. Add/confirm `ADMIN_EMAILS` in Render before QAing Admin; monthly pricing
    checks are suspended/deprecated, so `PRICING_CHECK_SECRET` is not an active
    QA blocker unless manual pricing-review endpoint testing resumes.
-3. Keep pricing updates manual until candidate preview/writeback or a
+4. Keep pricing updates manual until candidate preview/writeback or a
    deterministic pricing parser is built.
-4. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
+5. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
    new completed reviews award XP once, Home shows saved streak/level/latest
    next action, level thresholds load from Admin, and retry/reopen does not
    double-count.
-5. Expand prompted micro-feedback beyond the first review-usefulness popup by
+6. Expand prompted micro-feedback beyond the first review-usefulness popup by
    rotating specific questions about AI voice realism, transcript accuracy, and
    scoring fairness.
-6. Later Quira work: replace the curated Help panel with an AI chat bot backed
+7. Later Quira work: replace the curated Help panel with an AI chat bot backed
    by a maintained QuesIQ product knowledge base.
-7. Continue deploy-based QA on `quesiq-web` while localhost preview is
+8. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 
 ## Reference Inputs

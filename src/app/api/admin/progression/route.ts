@@ -5,6 +5,7 @@ import {
   listAdminProgressionSummaries,
   listProgressionEvents,
   listProgressionLevelThresholds,
+  listProgressionQuests,
   saveProgressionLevelThreshold,
 } from "@/server/progression/progression";
 
@@ -18,13 +19,14 @@ export async function GET() {
   }
 
   try {
-    const [summaries, events, levels] = await Promise.all([
+    const [summaries, events, levels, quests] = await Promise.all([
       listAdminProgressionSummaries(100),
       listProgressionEvents(100),
       listProgressionLevelThresholds(),
+      listProgressionQuests(),
     ]);
 
-    return NextResponse.json({ events, levels, summaries });
+    return NextResponse.json({ events, levels, quests, summaries });
   } catch (error) {
     console.error("Progression admin load failed.", error);
 

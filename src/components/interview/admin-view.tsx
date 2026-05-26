@@ -15,6 +15,7 @@ import type {
   FeedbackRecord,
   ProgressionEventRecord,
   ProgressionLevelThresholdRecord,
+  ProgressionQuestRecord,
   PricingReviewRecord,
   PromptComponentRecord,
   PromptConfigKey,
@@ -412,6 +413,7 @@ export function AdminView() {
   const [progressionSummaries, setProgressionSummaries] = useState<
     AdminProgressionSummaryRecord[]
   >([]);
+  const [progressionQuests, setProgressionQuests] = useState<ProgressionQuestRecord[]>([]);
   const [pricingDraft, setPricingDraft] = useState<PricingDraft>(pricingToDraft());
   const [realtimeUsage, setRealtimeUsage] = useState<RealtimeSessionUsageRecord[]>([]);
   const [componentDraft, setComponentDraft] = useState("");
@@ -439,7 +441,7 @@ export function AdminView() {
     key: "started",
   });
   const [progressionSection, setProgressionSection] =
-    useState<"events" | "levels" | "summaries">("summaries");
+    useState<"events" | "levels" | "quests" | "summaries">("summaries");
   const [progressionEventSort, setProgressionEventSort] =
     useState<SortState<ProgressionEventSortKey>>({
       direction: "desc",
@@ -725,6 +727,7 @@ export function AdminView() {
         error?: string;
         events?: ProgressionEventRecord[];
         levels?: ProgressionLevelThresholdRecord[];
+        quests?: ProgressionQuestRecord[];
         summaries?: AdminProgressionSummaryRecord[];
       };
 
@@ -734,6 +737,7 @@ export function AdminView() {
 
       setProgressionEvents(body.events ?? []);
       setProgressionLevels(body.levels ?? []);
+      setProgressionQuests(body.quests ?? []);
       setProgressionSummaries(body.summaries ?? []);
     } catch (loadError) {
       setError(
@@ -867,6 +871,7 @@ export function AdminView() {
           error?: string;
           events?: ProgressionEventRecord[];
           levels?: ProgressionLevelThresholdRecord[];
+          quests?: ProgressionQuestRecord[];
           summaries?: AdminProgressionSummaryRecord[];
         };
         const realtimeUsageBody = (await realtimeUsageResponse.json()) as {
@@ -927,6 +932,7 @@ export function AdminView() {
           setFeedback(feedbackBody.feedback ?? []);
           setProgressionEvents(progressionBody.events ?? []);
           setProgressionLevels(progressionBody.levels ?? []);
+          setProgressionQuests(progressionBody.quests ?? []);
           setProgressionSummaries(progressionBody.summaries ?? []);
           setRealtimeUsage(realtimeUsageBody.usage ?? []);
           setPricing(pricingBody.pricing ?? []);
@@ -1492,7 +1498,11 @@ export function AdminView() {
                 <span>
                   {progressionSection === "summaries"
                     ? `${sortedProgressionSummaries.length} users`
-                    : `${sortedProgressionEvents.length} events`}
+                    : progressionSection === "events"
+                      ? `${sortedProgressionEvents.length} events`
+                      : progressionSection === "levels"
+                        ? `${progressionLevels.length} levels`
+                        : `${progressionQuests.length} quests`}
                 </span>
               </div>
               <div className="component-tabs" aria-label="Progression section">
@@ -1516,6 +1526,13 @@ export function AdminView() {
                   type="button"
                 >
                   Levels ({progressionLevels.length})
+                </button>
+                <button
+                  className={progressionSection === "quests" ? "active" : ""}
+                  onClick={() => setProgressionSection("quests")}
+                  type="button"
+                >
+                  Quests ({progressionQuests.length})
                 </button>
               </div>
 
@@ -1791,6 +1808,48 @@ export function AdminView() {
                   </form>
                 </div>
               )}
+              {progressionSection === "quests" &&
+                (progressionQuests.length > 0 ? (
+                  <div className="usage-table-wrap">
+                    <table className="usage-table">
+                      <thead>
+                        <tr>
+                          <th>Order</th>
+                          <th>Quest</th>
+                          <th>Check</th>
+                          <th>Threshold</th>
+                          <th>XP</th>
+                          <th>Status</th>
+                          <th>Description</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {progressionQuests.map((quest) => (
+                          <tr key={quest.questKey}>
+                            <td>{quest.displayOrder}</td>
+                            <td>
+                              <strong>{quest.title}</strong>
+                              <br />
+                              <span className="mono-cell">{quest.questKey}</span>
+                            </td>
+                            <td>
+                              {quest.checkType}
+                              {quest.checkDimension ? ` / ${quest.checkDimension}` : ""}
+                            </td>
+                            <td>{quest.checkThreshold}</td>
+                            <td>{quest.xpReward}</td>
+                            <td>{quest.enabled ? "Active" : "Off"}</td>
+                            <td>
+                              <ExpandableCell value={quest.description} />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p>No quests have been seeded yet.</p>
+                ))}
               {error && <p className="form-error">{error}</p>}
             </section>
           )}

@@ -219,6 +219,12 @@ These are strong defaults until we decide otherwise:
 - UI modernization Phase 2A text-first navigation refinement and Phase 2B
   lucide icon polish are complete; avoid going deeper on Quira's AI-chat
   implementation until the updated navigation is user-confirmed.
+- Use the QuesIQ Interview logo assets from
+  `D:\Altitude Pro Media\QuestIQ\Logo\Finished` for this app, not the unrelated
+  ANN/Altitude branding.
+- Use the imported Bubble level titles and quest definitions as owned app data.
+  Keep quest completions user-owned in this app and award quest XP through the
+  same progression ledger used for reviewed-session XP.
 
 ## Open Decisions Before The Next Large Slice
 

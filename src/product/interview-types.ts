@@ -134,7 +134,44 @@ export type EvaluationScoreKey =
   | "impact"
   | "authenticity";
 
-export type ProgressionEventType = "review_completed";
+export type ProgressionEventType = "quest_completed" | "review_completed";
+
+export type QuestCheckType =
+  | "all_modes_used"
+  | "all_question_types_used"
+  | "all_scores_min"
+  | "avg_score_min"
+  | "debrief_count"
+  | "job_target_set"
+  | "level_reached"
+  | "mode_used"
+  | "question_type_used"
+  | "resume_uploaded"
+  | "session_count"
+  | "single_score_min"
+  | "streak_count";
+
+export type UserQuestRecord = {
+  category: string;
+  checkDimension?: string;
+  checkThreshold: number;
+  checkType: QuestCheckType;
+  completedAt?: string;
+  description: string;
+  displayOrder: number;
+  progress: number;
+  questKey: string;
+  status: "completed" | "open";
+  title: string;
+  xpReward: number;
+};
+
+export type ProgressionQuestRecord = Omit<
+  UserQuestRecord,
+  "completedAt" | "progress" | "status"
+> & {
+  enabled: boolean;
+};
 
 export type ProgressionSummaryRecord = {
   completedReviews: number;
@@ -147,6 +184,10 @@ export type ProgressionSummaryRecord = {
   streakDays: number;
   totalXp: number;
   updatedAt: string;
+  levelName?: string;
+  quests?: UserQuestRecord[];
+  questsCompleted?: number;
+  questsTotal?: number;
   weakestScoreAverage?: number;
   weakestScoreKey?: EvaluationScoreKey;
   weakestScoreLabel?: string;

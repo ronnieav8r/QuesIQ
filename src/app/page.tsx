@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import {
   History as HistoryIcon,
@@ -294,8 +295,15 @@ export default function Home() {
         }
       >
         <header className="app-header">
-          <div>
-            <p className="eyebrow">QuesIQ Interview</p>
+          <div className="brand-lockup">
+            <Image
+              alt="QuesIQ Interview"
+              className="brand-logo"
+              height={144}
+              src="/brand/quesiq-interview-logo.png"
+              priority
+              width={360}
+            />
             <strong>
               {contextReady
                 ? `Que is ready for ${interviewContext.targetRole} practice.`

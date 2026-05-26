@@ -141,6 +141,13 @@
       "when": 1779782400000,
       "tag": "0020_add_progression_level_thresholds",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1779872400000,
+      "tag": "0021_add_bubble_levels_and_quests",
+      "breakpoints": true
     }
   ]
 }

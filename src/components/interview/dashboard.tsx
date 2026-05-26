@@ -103,9 +103,15 @@ export function Dashboard({
   const completedCount = progression?.completedReviews ?? derivedCompletedCount;
   const xp = progression?.totalXp ?? derivedXp;
   const level = progression?.level ?? derivedLevel;
+  const levelName = progression?.levelName;
   const levelXp = progression?.currentLevelXp ?? derivedLevelXp;
   const nextLevelXp = progression?.nextLevelXp ?? 300;
   const levelProgress = Math.min(100, Math.round((levelXp / nextLevelXp) * 100));
+  const quests = progression?.quests ?? [];
+  const openQuests = quests.filter((quest) => quest.status !== "completed");
+  const recentCompletedQuests = quests
+    .filter((quest) => quest.status === "completed")
+    .slice(0, 2);
   const lastPracticed = history.sessions.find(
     (session) => session.hasEvaluation || session.transcript.length > 0,
   );
@@ -145,6 +151,7 @@ export function Dashboard({
         <div className="level-chip">
             <span>
               Level {level}
+              {levelName ? `: ${levelName}` : ""}
               {progression?.streakDays ? ` / ${progression.streakDays} day streak` : ""}
             </span>
           <strong>{xp} XP</strong>
@@ -288,6 +295,46 @@ export function Dashboard({
             </div>
           )}
           {progressionError && <p className="form-error">{progressionError}</p>}
+        </section>
+
+        <section aria-labelledby="quests-title" className="panel quests-panel">
+          <div className="section-head">
+            <h2 id="quests-title">Quests</h2>
+            <span>
+              {progression?.questsTotal
+                ? `${progression.questsCompleted ?? 0}/${progression.questsTotal} done`
+                : "Loading"}
+            </span>
+          </div>
+          {quests.length > 0 ? (
+            <div className="quest-list">
+              {openQuests.slice(0, 4).map((quest) => (
+                <article key={quest.questKey}>
+                  <div>
+                    <strong>{quest.title}</strong>
+                    <span>{quest.xpReward} XP</span>
+                  </div>
+                  <p>{quest.description}</p>
+                  <small>
+                    {Math.min(quest.progress, quest.checkThreshold)}/{quest.checkThreshold}
+                  </small>
+                </article>
+              ))}
+              {openQuests.length === 0 &&
+                recentCompletedQuests.map((quest) => (
+                  <article className="completed" key={quest.questKey}>
+                    <div>
+                      <strong>{quest.title}</strong>
+                      <span>Done</span>
+                    </div>
+                    <p>{quest.description}</p>
+                    <small>{quest.xpReward} XP earned</small>
+                  </article>
+                ))}
+            </div>
+          ) : (
+            <p>Quests will appear here as your progression data loads.</p>
+          )}
         </section>
 
         <section aria-labelledby="stats-title" className="panel score-panel">
