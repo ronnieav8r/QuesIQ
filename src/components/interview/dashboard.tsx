@@ -187,13 +187,15 @@ export function Dashboard({
             <strong>{xp} XP</strong>
           </div>
           <div className="streak-chip">
-            <Flame aria-hidden="true" className="streak-icon" strokeWidth={2.4} />
-            <div>
+            <div className="streak-mark">
+              <Flame aria-hidden="true" className="streak-icon" strokeWidth={2.4} />
               <span>Streak</span>
+            </div>
+            <div className="streak-count">
               <strong>
-                {progression?.streakDays ?? 0}{" "}
-                {(progression?.streakDays ?? 0) === 1 ? "day" : "days"}
+                {progression?.streakDays ?? 0}
               </strong>
+              <span>{(progression?.streakDays ?? 0) === 1 ? "day" : "days"}</span>
             </div>
           </div>
         </div>
