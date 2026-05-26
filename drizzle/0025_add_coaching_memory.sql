@@ -19,6 +19,10 @@ ALTER TABLE "coaching_memory" ADD CONSTRAINT "coaching_memory_last_session_id_se
 --> statement-breakpoint
 CREATE UNIQUE INDEX "coaching_memory_user_id_idx" ON "coaching_memory" USING btree ("user_id");
 --> statement-breakpoint
+UPDATE "prompt_configs"
+SET "active" = false, "updated_at" = now()
+WHERE "key" = 'session_evaluation';
+--> statement-breakpoint
 INSERT INTO "prompt_configs" ("key", "name", "target", "version", "active", "model", "voice", "instructions") VALUES
   (
     'session_evaluation',
@@ -31,6 +35,10 @@ INSERT INTO "prompt_configs" ("key", "name", "target", "version", "active", "mod
     $$You are Que, QuesIQ Interview's interview coach. Evaluate the candidate's spoken practice transcript against the target role, job description, resume context, and prior coaching memory when provided. Be specific, kind, and useful. Score each dimension from 1 to 5 where 5 is strongest. Also return an updated coaching memory: preserve durable patterns, strengthen repeated patterns, add only observations supported by this session, and avoid overfitting to one weak answer. Keep memory concise and do not store sensitive raw transcript details. Do not mention APIs or implementation details.$$
   )
 ON CONFLICT ("key", "version") DO NOTHING;
+--> statement-breakpoint
+UPDATE "prompt_configs"
+SET "active" = false, "updated_at" = now()
+WHERE "key" = 'session_debrief';
 --> statement-breakpoint
 INSERT INTO "prompt_configs" ("key", "name", "target", "version", "active", "model", "voice", "instructions") VALUES
   (
