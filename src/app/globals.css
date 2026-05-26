@@ -178,6 +178,64 @@ p {
   padding: var(--space-2) var(--space-3);
 }
 
+.app-menu {
+  flex: 0 0 auto;
+  position: relative;
+}
+
+.app-menu-button {
+  align-items: center;
+  background: transparent;
+  border-color: var(--border);
+  color: var(--muted);
+  display: inline-flex;
+  justify-content: center;
+  min-height: 2.65rem;
+  min-width: 2.65rem;
+  padding: 0;
+}
+
+.app-menu-button:hover,
+.app-menu-button.active {
+  background: var(--focus-soft);
+  border-color: var(--focus);
+  color: var(--text);
+}
+
+.app-menu-panel {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+  display: grid;
+  gap: var(--space-1);
+  left: 0;
+  min-width: 10rem;
+  padding: var(--space-2);
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  z-index: 25;
+}
+
+.app-menu-panel button {
+  align-items: center;
+  background: transparent;
+  border-color: transparent;
+  color: var(--text);
+  display: inline-flex;
+  gap: var(--space-2);
+  justify-content: start;
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+}
+
+.app-menu-panel button:hover,
+.app-menu-panel button.active {
+  background: var(--focus-soft);
+  border-color: var(--focus);
+}
+
 .brand-lockup {
   display: grid;
   gap: var(--space-1);
@@ -1877,7 +1935,7 @@ textarea::placeholder {
   display: grid;
   gap: var(--space-1);
   grid-area: tabs;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   padding: 1.05rem var(--space-2) var(--space-2);
   position: sticky;
   bottom: 0;

@@ -6,6 +6,7 @@ import {
   BookOpenText,
   History as HistoryIcon,
   Home as HomeIcon,
+  Menu,
   Mic,
   UserRound,
   ChevronDown,
@@ -43,7 +44,6 @@ const appTabs: { Icon: LucideIcon; key: AppView; label: string }[] = [
   { Icon: Mic, key: "practice", label: "Practice" },
   { Icon: BookOpenText, key: "stories", label: "Story Lab" },
   { Icon: HistoryIcon, key: "history", label: "History" },
-  { Icon: UserRound, key: "me", label: "Me" },
 ];
 
 export default function Home() {
@@ -61,6 +61,7 @@ export default function Home() {
   const [profileSaveError, setProfileSaveError] = useState<string>();
   const [profileSavePending, setProfileSavePending] = useState(false);
   const [adminAccess, setAdminAccess] = useState(false);
+  const [appMenuOpen, setAppMenuOpen] = useState(false);
   const [navCollapsed, setNavCollapsed] = useState(() => {
     if (typeof window === "undefined") {
       return false;
@@ -96,6 +97,11 @@ export default function Home() {
 
   function isPrimaryTabCurrent(tabKey: AppView) {
     return activeView === tabKey || (tabKey === "me" && secondaryMeViews.includes(activeView));
+  }
+
+  function openView(nextView: AppView) {
+    setActiveView(nextView);
+    setAppMenuOpen(false);
   }
 
   useEffect(() => {
@@ -214,6 +220,7 @@ export default function Home() {
   }
 
   function openPractice() {
+    setAppMenuOpen(false);
     setActiveView("practice");
     setPracticeStep("mode");
     setSessionLaunchError(undefined);
@@ -372,6 +379,36 @@ export default function Home() {
         }
       >
         <header className="app-header">
+          {signedIn && activeView !== "session" && (
+            <div className="app-menu">
+              <button
+                aria-expanded={appMenuOpen}
+                aria-label={appMenuOpen ? "Close menu" : "Open menu"}
+                className={
+                  activeView === "me" || secondaryMeViews.includes(activeView)
+                    ? "app-menu-button active"
+                    : "app-menu-button"
+                }
+                onClick={() => setAppMenuOpen((current) => !current)}
+                type="button"
+              >
+                <Menu aria-hidden="true" className="tab-icon" strokeWidth={2.4} />
+              </button>
+              {appMenuOpen && (
+                <div className="app-menu-panel" role="menu">
+                  <button
+                    className={activeView === "me" ? "active" : undefined}
+                    onClick={() => openView("me")}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <UserRound aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                    <span>Me</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           <div className="brand-lockup">
             <Image
               alt="QuesIQ Interview"
@@ -517,7 +554,7 @@ export default function Home() {
                 className={isPrimaryTabCurrent(tab.key) ? "tab active" : "tab"}
                 key={tab.key}
                 onClick={() =>
-                  tab.key === "practice" ? openPractice() : setActiveView(tab.key)
+                  tab.key === "practice" ? openPractice() : openView(tab.key)
                 }
                 type="button"
               >
