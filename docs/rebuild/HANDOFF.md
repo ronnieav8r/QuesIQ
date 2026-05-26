@@ -134,6 +134,12 @@ progression milestones should follow.
   stacking, feedback button placement above bottom nav, and removed
   implementation-flavored copy from the live session surface without changing
   product flow.
+- Added the first embedded Quira support layer inside QuesIQ: the global
+  feedback launcher is now a small Quira help entry point with Help, Feedback,
+  and Bug paths, curated product guidance, optional screenshots, and the same
+  screen/session/device context capture behind the scenes. Keep Quira embedded
+  for V1 while naming boundaries cleanly enough to extract later if it becomes a
+  shared service.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -202,6 +208,11 @@ progression milestones should follow.
   scope.
 - QuesIQ should own durable user context, session snapshots, transcript/artifact
   records, evaluation, history, and progression.
+- Quira should ship first as an embedded QuesIQ support assistant, not a
+  separate Render service. The V1 layer should answer product/how-to questions,
+  capture feedback and bugs, and preserve screen/session context; a true
+  AI-backed product expert can be wired later once the app workflows and help
+  knowledge are stable.
 - Practice mode, question type, and interviewer style records are now
   backend-owned seeded catalog data, with checked-in frontend defaults retained
   as a resilience fallback.

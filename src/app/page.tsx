@@ -5,12 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import { AuthControl, AuthView, useAuthSession } from "@/components/auth-control";
 import { AdminView } from "@/components/interview/admin-view";
 import { Dashboard } from "@/components/interview/dashboard";
-import { FeedbackButton } from "@/components/interview/feedback-button";
 import { HistoryView } from "@/components/interview/history-view";
 import { useInterviewCatalog } from "@/components/interview/interview-catalog";
 import { MeView } from "@/components/interview/me-view";
 import { OnboardingView } from "@/components/interview/onboarding-view";
 import { PracticeSetup } from "@/components/interview/practice-setup";
+import { QuiraSupportLauncher } from "@/components/interview/quira-support-launcher";
 import { ReviewDetail } from "@/components/interview/review-detail";
 import { SessionView } from "@/components/interview/session-view";
 import { StoriesView } from "@/components/interview/stories-view";
@@ -423,7 +423,9 @@ export default function Home() {
             ))}
           </nav>
         )}
-        {signedIn && <FeedbackButton screen={activeView} sessionId={feedbackSessionId} />}
+        {signedIn && (
+          <QuiraSupportLauncher screen={activeView} sessionId={feedbackSessionId} />
+        )}
       </section>
     </main>
   );

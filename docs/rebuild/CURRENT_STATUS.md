@@ -171,6 +171,15 @@ Last updated: 2026-05-25
   - session headings and readiness panels stack more cleanly on narrow phones
   - feedback launcher moves above bottom navigation on narrow phones
   - live session copy is more user-facing and less implementation-oriented
+- Embedded Quira support layer:
+  - global support now uses a small Quira launcher instead of a plain Feedback
+    button
+  - Quira offers Help, Feedback, and Bug paths from any signed-in screen
+  - Help currently uses curated QuesIQ product guidance for core workflows and
+    can capture unanswered questions for the team
+  - Feedback and Bug paths continue to save rating, note, optional screenshot,
+    screen, session id, browser language, viewport, and user agent through the
+    existing feedback storage/admin path
 
 ## Verification
 
@@ -220,7 +229,10 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 - Keep VAPI as a fallback if direct voice testing reveals a quality,
   reliability, transcript, or tooling gap.
 - Keep Make for automation edges, not the interview session state machine.
-- Que is the in-app coach. Quira remains the separate public/support assistant.
+- Que is the in-app interview coach. Quira is the product/support assistant.
+- For V1, Quira is implemented inside QuesIQ rather than deployed as a separate
+  Render service. Keep the UI/data boundaries clean so she can become a shared
+  service later if multiple products need her.
 - Keep QuesIQ-owned session snapshots, transcripts/artifacts, evaluations,
   history, and progression in the app backend/data layer.
 - Resume files are uploaded through signed-in onboarding and parsed into profile
