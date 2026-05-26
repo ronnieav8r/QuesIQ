@@ -233,6 +233,11 @@ These are strong defaults until we decide otherwise:
 - Story Lab generated outlines must stay editable. Users should be able to
   correct the saved story asset before practicing it, because the AI may miss
   nuance from messy spoken notes.
+- Story Practice should reuse the owned Session/Realtime/Evaluation pipeline
+  first. The saved story outline travels in the Session snapshot so Que can ask
+  a fitting behavioral question and the post-session review can judge the
+  answer against the intended story before we add a separate story-practice
+  artifact model.
 - Use the QuesIQ Interview logo assets from
   `D:\Altitude Pro Media\QuestIQ\Logo\Finished` for this app, not the unrelated
   ANN/Altitude branding.

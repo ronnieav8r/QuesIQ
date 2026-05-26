@@ -139,6 +139,9 @@ export type SessionSetupSnapshot = {
   interviewContext: InterviewContext;
   modeKey: PracticeModeKey;
   questionTypeKey?: QuestionTypeKey;
+  storyContext?: StoryOutline & {
+    storyId: string;
+  };
   styleKey: InterviewStyleKey;
 };
 

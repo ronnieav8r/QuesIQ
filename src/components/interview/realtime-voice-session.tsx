@@ -33,6 +33,14 @@ const firstTurnInstructions: Record<SessionSetupSnapshot["modeKey"], string> = {
     "Speak in English only. Open rapid fire with one short question for the selected question focus. Ask only one question.",
 };
 
+function getFirstTurnInstructions(snapshot: SessionSetupSnapshot) {
+  if (snapshot.storyContext) {
+    return `Speak in English only. Open with one behavioral interview question that is a good fit for practicing the saved story titled "${snapshot.storyContext.title}". Do not summarize the story first. Ask only one question.`;
+  }
+
+  return firstTurnInstructions[snapshot.modeKey];
+}
+
 function toErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Voice session failed.";
 }
@@ -189,7 +197,7 @@ export function RealtimeVoiceSession({
       JSON.stringify({
         type: "response.create",
         response: {
-          instructions: firstTurnInstructions[snapshot.modeKey],
+          instructions: getFirstTurnInstructions(snapshot),
         },
       }),
     );

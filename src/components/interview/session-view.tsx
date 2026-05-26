@@ -164,8 +164,9 @@ export function SessionView({
           <p className="eyebrow">Ready</p>
           <h2 id="session-readiness-title">Que is ready to practice.</h2>
           <p>
-            Start when you are ready. After the conversation, QuesIQ will save
-            the transcript and prepare a practice review.
+            {snapshot.storyContext
+              ? `Start when you are ready. Que will help you rehearse "${snapshot.storyContext.title}" and QuesIQ will save the transcript for review.`
+              : "Start when you are ready. After the conversation, QuesIQ will save the transcript and prepare a practice review."}
           </p>
         </div>
       </section>
@@ -212,6 +213,12 @@ export function SessionView({
               <dt>Style</dt>
               <dd>{style?.label || snapshot.styleKey}</dd>
             </div>
+            {snapshot.storyContext && (
+              <div>
+                <dt>Story</dt>
+                <dd>{snapshot.storyContext.title}</dd>
+              </div>
+            )}
             <div>
               <dt>Role</dt>
               <dd>{snapshot.interviewContext.targetRole || "General practice"}</dd>

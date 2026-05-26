@@ -233,6 +233,16 @@ Last updated: 2026-05-26
     categories
   - story updates are owner-scoped through a protected `/api/stories/[storyId]`
     route
+- Story Lab Phase 3 practice hook started:
+  - story cards open by tapping the card itself, with one explicit Edit Story
+    action
+  - saved story details include a Practice Story action
+  - Practice Story creates an owned voice Session with the saved story outline
+    carried in the session snapshot
+  - Realtime Que instructions use the saved story context to ask a fitting
+    behavioral practice question without reading the outline back to the user
+  - post-session evaluation receives the saved story context and is instructed
+    to give story-specific feedback
 
 ## Verification
 
@@ -244,8 +254,8 @@ The current coded app has passed:
   baseline checks passed with ESLint, TypeScript, and production build.
 - Next production build
 - Latest local checks passed with local `npm` available on PATH.
-- Story Lab Phase 1 and Phase 2 local checks passed: ESLint, TypeScript, and
-  production build.
+- Story Lab Phase 1, Phase 2, and Phase 3 practice-hook local checks passed:
+  ESLint, TypeScript, and production build.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran

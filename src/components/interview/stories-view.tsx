@@ -101,7 +101,11 @@ function draftToOutline(story: StoryRecord, draft: StoryEditDraft): StoryOutline
   };
 }
 
-export function StoriesView() {
+type StoriesViewProps = {
+  onPracticeStory: (story: StoryRecord) => void;
+};
+
+export function StoriesView({ onPracticeStory }: StoriesViewProps) {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const recordingWantedRef = useRef(false);
   const shouldScrollToDetailRef = useRef(false);
@@ -552,6 +556,7 @@ export function StoriesView() {
                       className={
                         selectedStory?.id === story.id ? "story-card active" : "story-card"
                       }
+                      onClick={() => viewStory(story)}
                     >
                       <div>
                         <strong>{story.title}</strong>
@@ -566,17 +571,13 @@ export function StoriesView() {
                       <div className="inline-actions">
                         <button
                           className="secondary"
-                          onClick={() => viewStory(story)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            startEditing(story);
+                          }}
                           type="button"
                         >
-                          View
-                        </button>
-                        <button
-                          className="secondary"
-                          onClick={() => startEditing(story)}
-                          type="button"
-                        >
-                          Edit
+                          Edit Story
                         </button>
                       </div>
                     </article>
@@ -732,10 +733,15 @@ export function StoriesView() {
                                 onClick={() => startEditing(story)}
                                 type="button"
                               >
-                                Edit
+                                Edit Story
                               </button>
                             </div>
                             <p>{story.summary}</p>
+                            <div className="inline-actions">
+                              <button onClick={() => onPracticeStory(story)} type="button">
+                                Practice Story
+                              </button>
+                            </div>
                             <dl>
                               <div>
                                 <dt>Situation</dt>

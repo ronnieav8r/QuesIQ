@@ -1141,6 +1141,10 @@ textarea::placeholder {
   padding: var(--space-3);
 }
 
+.story-card {
+  cursor: pointer;
+}
+
 .story-card.active {
   border-color: var(--focus);
 }

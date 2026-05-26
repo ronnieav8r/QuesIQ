@@ -35,6 +35,24 @@ function buildQueInstructions(
   const questionFocus = questionLabel
     ? `Question focus: ${questionLabel}.`
     : "Question focus: choose questions appropriate for this mode.";
+  const storyContext = snapshot?.storyContext
+    ? [
+        "This is a Story Lab practice session.",
+        `Saved story title: ${snapshot.storyContext.title}.`,
+        `Story summary: ${snapshot.storyContext.summary}.`,
+        `Situation: ${snapshot.storyContext.situation}.`,
+        `Task: ${snapshot.storyContext.task}.`,
+        `Actions: ${snapshot.storyContext.actions.join(" | ") || "Not provided"}.`,
+        `Result: ${snapshot.storyContext.result}.`,
+        `Practice prompt: ${snapshot.storyContext.practicePrompt}.`,
+        `Useful story angles: ${
+          snapshot.storyContext.alternateSpins
+            .map((spin) => `${spin.angle}: ${spin.question}`)
+            .join(" | ") || "Not provided"
+        }.`,
+        "Ask one behavioral question that lets the candidate practice this saved story. Do not read the outline back to them. Let them answer naturally, then coach whether the story was clear, relevant, specific, and strong enough for the question.",
+      ].join(" ")
+    : undefined;
 
   return [
     promptConfig.instructions,
@@ -50,6 +68,7 @@ function buildQueInstructions(
     promptComponents?.questionType?.promptInstructions
       ? `Question-focus instructions: ${promptComponents.questionType.promptInstructions}`
       : undefined,
+    storyContext,
     `Target role: ${role}.`,
     `Target company: ${company}.`,
     resumeContext

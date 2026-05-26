@@ -125,6 +125,19 @@ function buildEvaluationInput(
         snapshot.interviewContext.resumeText?.trim().slice(0, 5000) || "Not provided",
       resumeName: snapshot.interviewContext.resumeName || "Not provided",
     },
+    storyContext: snapshot.storyContext
+      ? {
+          actions: snapshot.storyContext.actions,
+          alternateSpins: snapshot.storyContext.alternateSpins,
+          categories: snapshot.storyContext.categories,
+          practicePrompt: snapshot.storyContext.practicePrompt,
+          result: snapshot.storyContext.result,
+          situation: snapshot.storyContext.situation,
+          summary: snapshot.storyContext.summary,
+          task: snapshot.storyContext.task,
+          title: snapshot.storyContext.title,
+        }
+      : "Not a Story Lab practice session",
     transcript: artifact.transcript.map((turn) => ({
       speaker: turn.speaker,
       text: turn.text,
@@ -139,11 +152,14 @@ async function requestEvaluation(
   instructions: string,
   model: string,
 ) {
+  const storyEvaluationInstructions = snapshot.storyContext
+    ? "This was a Story Lab practice session. In the summary, coaching insight, score summaries, and next action, explicitly evaluate how well the candidate used the saved story, whether the story answered the question, whether the personal action and result were clear, and what to change before practicing this same story again."
+    : "";
   const response = await fetch("https://api.openai.com/v1/responses", {
     body: JSON.stringify({
       input: [
         {
-          content: instructions,
+          content: [instructions, storyEvaluationInstructions].filter(Boolean).join(" "),
           role: "system",
         },
         {

@@ -32,6 +32,7 @@ import type {
   SessionHistoryItem,
   SessionLaunchRecord,
   SessionSetupSnapshot,
+  StoryRecord,
 } from "@/product/interview-types";
 
 const appTabs: { Icon: LucideIcon; key: AppView; label: string }[] = [
@@ -267,6 +268,62 @@ export default function Home() {
     }
   }
 
+  async function launchStoryPractice(story: StoryRecord) {
+    const snapshot: SessionSetupSnapshot = {
+      interviewContext: { ...interviewContext },
+      modeKey: "coaching",
+      questionTypeKey: "behavioral",
+      storyContext: {
+        actions: story.actions,
+        alternateSpins: story.alternateSpins,
+        categories: story.categories,
+        coachNotes: story.coachNotes,
+        practicePrompt: story.practicePrompt,
+        result: story.result,
+        situation: story.situation,
+        storyId: story.id,
+        summary: story.summary,
+        task: story.task,
+        title: story.title,
+      },
+      styleKey: "friendly",
+    };
+
+    try {
+      setSessionLaunchError(undefined);
+      setSessionLaunchPending(true);
+      const response = await fetch("/api/sessions", {
+        body: JSON.stringify({ snapshot }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        session?: SessionLaunchRecord;
+      };
+
+      if (!response.ok || !body.session) {
+        throw new Error(body.detail || body.error || "Story practice could not be created.");
+      }
+
+      setSelectedModeKey("coaching");
+      setSelectedQuestionKey("behavioral");
+      setSelectedStyleKey("friendly");
+      setSessionSnapshot(snapshot);
+      setSessionLaunchRecord(body.session);
+      setActiveView("session");
+    } catch (error) {
+      setSessionLaunchError(
+        error instanceof Error ? error.message : "Story practice could not be created.",
+      );
+    } finally {
+      setSessionLaunchPending(false);
+    }
+  }
+
   function goBackInPractice() {
     if (practiceStep === "mode") {
       setActiveView("home");
@@ -366,7 +423,9 @@ export default function Home() {
               }}
             />
           )}
-          {signedIn && activeView === "stories" && <StoriesView />}
+          {signedIn && activeView === "stories" && (
+            <StoriesView onPracticeStory={launchStoryPractice} />
+          )}
           {signedIn && activeView === "session" && sessionSnapshot && sessionLaunchRecord && (
             <SessionView
               catalog={interviewCatalog.catalog}

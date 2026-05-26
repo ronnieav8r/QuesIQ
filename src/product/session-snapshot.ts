@@ -4,6 +4,7 @@ import type {
   QuestionTypeKey,
   SessionSetupSnapshot,
 } from "@/product/interview-types";
+import { parseStoryOutline } from "@/product/story-lab";
 
 const modeKeys: PracticeModeKey[] = [
   "first_impression",
@@ -21,6 +22,24 @@ const styleKeys: InterviewStyleKey[] = ["friendly", "neutral", "tough"];
 
 function isString(value: unknown): value is string {
   return typeof value === "string";
+}
+
+function parseStoryContext(value: unknown): SessionSetupSnapshot["storyContext"] {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const storyId = (value as { storyId?: unknown }).storyId;
+  const outline = parseStoryOutline(value);
+
+  if (!isString(storyId) || !outline) {
+    return undefined;
+  }
+
+  return {
+    ...outline,
+    storyId,
+  };
 }
 
 export function parseSessionSetupSnapshot(value: unknown): SessionSetupSnapshot | undefined {
@@ -65,6 +84,7 @@ export function parseSessionSetupSnapshot(value: unknown): SessionSetupSnapshot 
     },
     modeKey: candidate.modeKey,
     questionTypeKey: candidate.questionTypeKey,
+    storyContext: parseStoryContext(candidate.storyContext),
     styleKey: candidate.styleKey,
   };
 }
