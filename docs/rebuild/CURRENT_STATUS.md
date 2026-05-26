@@ -217,6 +217,15 @@ Last updated: 2026-05-26
   - this is intentionally only a baseline; the target future Quira experience
     is an AI chat bot that calls a model, holds a support conversation, walks
     users through QuesIQ, and handles minor troubleshooting
+- Story Lab Phase 1 started:
+  - the former Stories placeholder is now positioned as Story Lab
+  - users can speak messy notes through browser speech recognition, with typing
+    available as a fallback
+  - Que can generate one follow-up question from the raw story-building turns
+  - Que can generate and save a reusable STARR-style story outline with title,
+    summary, situation, task, actions, result, categories, alternate spins,
+    coach notes, and a practice prompt
+  - saved story outlines are stored in Postgres and listed in Story Lab
 
 ## Verification
 
@@ -228,6 +237,8 @@ The current coded app has passed:
   baseline checks passed with ESLint, TypeScript, and production build.
 - Next production build
 - Latest local checks passed with local `npm` available on PATH.
+- Story Lab Phase 1 local checks passed: ESLint, TypeScript, and production
+  build.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran
@@ -313,8 +324,9 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 8. Later Quira work: replace the curated Help panel with an AI chat bot backed
    by a maintained QuesIQ product knowledge base.
 9. Product gap backlog from the Bubble reference, ordered by current user value:
-   Story library, saved job targets, debrief mode, evolving coaching memory,
-   richer Up Next routing, refined XP rewards, and AI-backed Quira support.
+   finish Story Lab practice hooks, saved job targets, debrief mode, evolving
+   coaching memory, richer Up Next routing, refined XP rewards, and AI-backed
+   Quira support.
 10. Treat standalone anonymous bug reports, in-app marketing/blog pages,
    payments, industry packs, mascot work, and VAPI parity as lower-priority
    until the core practice loop and retention features are stronger.

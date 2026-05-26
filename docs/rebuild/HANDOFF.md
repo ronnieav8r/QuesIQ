@@ -180,6 +180,10 @@ path until Phase 2 navigation is completed unless the product direction changes.
   screen/session/device context capture behind the scenes. This is not the final
   Quira product experience; the intended future version is an AI chat bot that
   calls an AI model and has a real support conversation with the user.
+- Started Story Lab Phase 1: the old Stories placeholder is now a voice-first
+  Story Lab where users can speak raw notes, type as a fallback, ask Que for a
+  follow-up question, and generate/save a reusable STARR-style story outline
+  with categories, alternate spins, coach notes, and a practice prompt.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -195,8 +199,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 - ESLint passed.
 - TypeScript check passed.
-- Latest local feedback/progression/UI/Quira baseline checks passed: ESLint,
-  TypeScript, and production build.
+- Latest local feedback/progression/UI/Quira baseline and Story Lab Phase 1
+  checks passed: ESLint, TypeScript, and production build.
 - Next production build passed.
 - Local `npm` is now available on PATH, and latest checks passed with it.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
@@ -290,18 +294,21 @@ path until Phase 2 navigation is completed unless the product direction changes.
 7. Expand prompted micro-feedback beyond the first review-usefulness popup by
    rotating specific questions about voice realism, transcript accuracy, and
    scoring fairness.
-8. Work the highest-value Bubble reference gaps into upcoming phases: Story
-   library, saved job targets, debrief mode, evolving coaching memory, richer Up
-   Next routing, refined XP rewards, and AI-backed Quira support.
-9. Defer or avoid lower-value parity work until the beta needs it: standalone
+8. Continue Story Lab after Phase 1: add story detail/editing polish, then
+   connect saved stories into a dedicated voice practice mode with
+   story-specific feedback.
+9. Work the remaining highest-value Bubble reference gaps into upcoming phases:
+   saved job targets, debrief mode, evolving coaching memory, richer Up Next
+   routing, refined XP rewards, and AI-backed Quira support.
+10. Defer or avoid lower-value parity work until the beta needs it: standalone
    anonymous bug-report page, in-app marketing/blog pages, payments, industry
    packs, mascot work, and VAPI parity.
-10. Later Quira work: replace the curated Help panel with an AI chat assistant
+11. Later Quira work: replace the curated Help panel with an AI chat assistant
    that uses a maintained QuesIQ knowledge base and can submit structured bugs,
    feedback, screenshots, and current screen/session context.
-11. Continue deploy/user-confirmed QA for changes because localhost preview is
+12. Continue deploy/user-confirmed QA for changes because localhost preview is
    deprecated in this environment.
-12. Keep verifying that `Launch Voice Session` creates a Session id before direct
+13. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
 
 ## Watch Outs

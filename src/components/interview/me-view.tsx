@@ -66,7 +66,7 @@ export function MeView({
         </div>
         <div className="destination-list">
           <button className="secondary" onClick={onStories} type="button">
-            Stories
+            Story Lab
           </button>
           {adminAccess && (
             <button className="secondary" onClick={onAdmin} type="button">

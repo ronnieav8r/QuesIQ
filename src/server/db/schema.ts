@@ -17,6 +17,8 @@ import type {
   PricingReviewResult,
   ProgressionEventType,
   QuestCheckType,
+  StoryCategory,
+  StoryOutline,
   SessionEvaluationResult,
   SessionSetupSnapshot,
   SessionStatus,
@@ -159,6 +161,36 @@ export const profiles = pgTable(
   },
   (profile) => ({
     userIdIdx: uniqueIndex("profiles_user_id_idx").on(profile.userId),
+  }),
+);
+
+export const stories = pgTable(
+  "stories",
+  {
+    actions: jsonb("actions").$type<string[]>().default([]).notNull(),
+    alternateSpins: jsonb("alternate_spins")
+      .$type<StoryOutline["alternateSpins"]>()
+      .default([])
+      .notNull(),
+    categories: jsonb("categories").$type<StoryCategory[]>().default([]).notNull(),
+    coachNotes: jsonb("coach_notes").$type<string[]>().default([]).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    practicePrompt: text("practice_prompt").default("").notNull(),
+    rawNotes: text("raw_notes").default("").notNull(),
+    result: text("result").default("").notNull(),
+    situation: text("situation").default("").notNull(),
+    summary: text("summary").default("").notNull(),
+    task: text("task").default("").notNull(),
+    title: text("title").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (story) => ({
+    updatedAtIdx: index("stories_updated_at_idx").on(story.updatedAt),
+    userIdx: index("stories_user_idx").on(story.userId),
   }),
 );
 

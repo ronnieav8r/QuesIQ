@@ -225,6 +225,11 @@ These are strong defaults until we decide otherwise:
 - UI modernization Phase 2A text-first navigation refinement and Phase 2B
   lucide icon polish are complete; avoid going deeper on Quira's AI-chat
   implementation until the updated navigation is user-confirmed.
+- Story Lab should be voice-first. The first slice uses browser speech
+  recognition for messy story capture, with typed notes as a fallback, then
+  server-side AI turns raw story-building conversation into saved STARR-style
+  story assets. Dedicated voice practice with story context is the next Story
+  Lab phase, not part of the first capture/outline slice.
 - Use the QuesIQ Interview logo assets from
   `D:\Altitude Pro Media\QuestIQ\Logo\Finished` for this app, not the unrelated
   ANN/Altitude branding.

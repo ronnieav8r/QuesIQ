@@ -11,6 +11,52 @@ export type AppView =
 
 export type FeedbackKind = "bug" | "feedback";
 
+export type StoryCategory =
+  | "adaptability"
+  | "ambiguity"
+  | "communication"
+  | "conflict"
+  | "customer_impact"
+  | "failure"
+  | "leadership"
+  | "learning"
+  | "ownership"
+  | "problem_solving"
+  | "teamwork"
+  | "time_management";
+
+export type StorySpin = {
+  angle: string;
+  question: string;
+  whyItWorks: string;
+};
+
+export type StoryOutline = {
+  actions: string[];
+  alternateSpins: StorySpin[];
+  categories: StoryCategory[];
+  coachNotes: string[];
+  practicePrompt: string;
+  result: string;
+  situation: string;
+  summary: string;
+  task: string;
+  title: string;
+};
+
+export type StoryRecord = StoryOutline & {
+  createdAt: string;
+  id: string;
+  rawNotes: string;
+  updatedAt: string;
+};
+
+export type StoryBuilderTurn = {
+  id: string;
+  role: "assistant" | "user";
+  text: string;
+};
+
 export type FeedbackRecord = {
   browserLanguage?: string;
   createdAt: string;
