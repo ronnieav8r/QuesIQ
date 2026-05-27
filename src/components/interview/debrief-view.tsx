@@ -79,7 +79,7 @@ export function DebriefView({ catalog, onBack, onReview, session }: DebriefViewP
       <section className="screen debrief-screen" aria-labelledby="debrief-title">
         <div className="screen-toolbar">
           <div>
-            <p className="eyebrow">Voice Debrief</p>
+            <p className="eyebrow">Debrief</p>
             <h1 id="debrief-title">Choose a session first.</h1>
           </div>
           <button className="secondary" onClick={onBack} type="button">
@@ -87,7 +87,7 @@ export function DebriefView({ catalog, onBack, onReview, session }: DebriefViewP
           </button>
         </div>
         <section className="panel">
-          <p>Open a saved practice session from History to start a voice debrief.</p>
+          <p>Open a saved practice session from History to start a debrief.</p>
         </section>
       </section>
     );
@@ -100,7 +100,7 @@ export function DebriefView({ catalog, onBack, onReview, session }: DebriefViewP
     <section className="screen debrief-screen" aria-labelledby="debrief-title">
       <div className="screen-toolbar">
         <div>
-          <p className="eyebrow">Voice Debrief</p>
+          <p className="eyebrow">Debrief</p>
           <h1 id="debrief-title">{session.targetRole}</h1>
         </div>
         <button className="secondary" onClick={onBack} type="button">
@@ -181,9 +181,9 @@ export function DebriefView({ catalog, onBack, onReview, session }: DebriefViewP
 
       {(saveStatus === "saving" || saveStatus === "saved" || saveError) && (
         <section className="panel">
-          {saveStatus === "saving" && <p>Saving voice debrief...</p>}
+          {saveStatus === "saving" && <p>Saving debrief...</p>}
           {saveStatus === "saved" && (
-            <p>Voice debrief saved. Debrief progress and XP can now count this session.</p>
+            <p>Debrief saved. Debrief progress and XP can now count this session.</p>
           )}
           {saveError && <p className="form-error">{saveError}</p>}
         </section>

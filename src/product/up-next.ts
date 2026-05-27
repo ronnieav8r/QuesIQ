@@ -138,7 +138,7 @@ export function getUpNextRecommendation({
       : undefined;
 
     return {
-      actionLabel: "Voice Debrief",
+      actionLabel: "Debrief",
       body: overall
         ? `Your last reviewed session averaged ${overall.toFixed(1)}. Debrief it while the details are fresh.`
         : "Debrief your latest reviewed session while the details are fresh.",

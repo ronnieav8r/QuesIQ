@@ -243,6 +243,11 @@ Last updated: 2026-05-27
     behavioral practice question without reading the outline back to the user
   - post-session evaluation receives the saved story context and is instructed
     to give story-specific feedback
+  - Story Practice reviews now persist compact coaching history back onto the
+    Story record, including last-practiced date, practice count, and recent
+    coaching summaries
+  - normal practice and evaluation calls now receive compact saved-story library
+    context so Que can suggest a better-fit saved story when appropriate
 - Story Lab prompts are now Admin-visible:
   - Story Lab follow-up, story outline generation, Story Practice Realtime
     guidance, and Story Practice Evaluation guidance are versioned prompt
@@ -283,8 +288,8 @@ Last updated: 2026-05-27
 - Verbal Debrief interface started:
   - the old written debrief composer/list screen has been removed from the user
     flow
-  - History cards now launch Voice Debrief for transcript-backed sessions
-  - expanded saved reviews include a Start Voice Debrief button near the bottom
+  - History cards now launch Debrief for transcript-backed sessions
+  - expanded saved reviews include a Start Debrief button near the bottom
   - the voice debrief uses a dedicated Realtime endpoint with the saved
     transcript, written review, review detail, score evidence, and coaching
     memory as context
@@ -413,7 +418,7 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 
 1. Deploy and user-confirm QA the latest prompt/debrief/progression changes on
    `quesiq-web`, making sure migrations through
-   `0030_add_voice_debriefs.sql` run.
+   `0032_add_story_library_prompt_context.sql` run.
 2. Run/user-confirm migration QA for Bubble levels and quests: Admin >
    Progression > Levels shows Rookie through Master, Admin > Progression >
    Quests shows 37 active definitions, Admin level/quest edits save, and Home
@@ -436,9 +441,8 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 8. Later Quira work: replace the curated Help panel with an AI chat bot backed
    by a maintained QuesIQ product knowledge base.
 9. Product gap backlog from the Bubble reference, ordered by current user value:
-   saved job targets, persist story-practice coaching history back onto Story
-   records, richer coaching memory controls, job-target-aware Up Next routing,
-   tuning XP rules from beta behavior, and AI-backed Quira support.
+   saved job targets, richer coaching memory controls, job-target-aware Up Next
+   routing, tuning XP rules from beta behavior, and AI-backed Quira support.
 10. Treat standalone anonymous bug reports, in-app marketing/blog pages,
    payments, industry packs, mascot work, and VAPI parity as lower-priority
    until the core practice loop and retention features are stronger.

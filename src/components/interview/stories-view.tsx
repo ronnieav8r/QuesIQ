@@ -560,7 +560,11 @@ export function StoriesView({ onPracticeStory }: StoriesViewProps) {
                     >
                       <div>
                         <strong>{story.title}</strong>
-                        <span>{new Date(story.updatedAt).toLocaleDateString()}</span>
+                        <span>
+                          {story.lastPracticedAt
+                            ? `Practiced ${new Date(story.lastPracticedAt).toLocaleDateString()}`
+                            : new Date(story.updatedAt).toLocaleDateString()}
+                        </span>
                       </div>
                       <p>{story.summary}</p>
                       <div className="story-tags">
@@ -737,6 +741,14 @@ export function StoriesView({ onPracticeStory }: StoriesViewProps) {
                               </button>
                             </div>
                             <p>{story.summary}</p>
+                            <div className="story-tags">
+                              <span>{story.practiceCount} practices</span>
+                              {story.lastPracticedAt && (
+                                <span>
+                                  Last {new Date(story.lastPracticedAt).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
                             <div className="inline-actions">
                               <button onClick={() => onPracticeStory(story)} type="button">
                                 Practice Story
@@ -776,6 +788,22 @@ export function StoriesView({ onPracticeStory }: StoriesViewProps) {
                                     <li key={note}>{note}</li>
                                   ))}
                                 </ul>
+                              </section>
+                            )}
+                            {story.practiceCoaching.length > 0 && (
+                              <section>
+                                <h3>Practice Coaching</h3>
+                                <div className="story-spin-list">
+                                  {story.practiceCoaching.slice(0, 3).map((coaching) => (
+                                    <article key={coaching.sessionId}>
+                                      <strong>
+                                        {new Date(coaching.practicedAt).toLocaleDateString()}
+                                      </strong>
+                                      <p>{coaching.summary}</p>
+                                      <small>{coaching.nextAction}</small>
+                                    </article>
+                                  ))}
+                                </div>
                               </section>
                             )}
                             <section>

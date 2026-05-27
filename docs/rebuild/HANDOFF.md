@@ -193,6 +193,11 @@ path until Phase 2 navigation is completed unless the product direction changes.
   the explicit action is now Edit Story, and saved story details can launch a
   Practice Story voice session with the story outline included in Que's Realtime
   prompt context and the post-session evaluation input.
+- Added durable Story Practice coaching history: completed Story Practice
+  reviews update the source Story with last-practiced date, practice count, and
+  recent coaching summaries. Normal practice and evaluation prompt context now
+  also includes a compact saved-story library so Que can suggest a better-fit
+  story when the candidate answers with weaker material.
 - Added Story Lab prompt visibility in Admin: follow-up, outline generation,
   Story Practice Realtime guidance, and Story Practice Evaluation guidance are
   now versioned prompt configs under Admin > Prompts > Base.
@@ -335,7 +340,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 1. Deploy/user-confirm QA the latest prompt/debrief/progression changes on
    `quesiq-web`. Confirm migrations through
-   `0030_add_voice_debriefs.sql` run before testing verbal Debrief.
+   `0032_add_story_library_prompt_context.sql` run before testing verbal
+   Debrief and Story Practice coaching history.
 2. Run/user-confirm database migration QA for the imported levels and quests:
    Progression > Levels shows Rookie through Master, Progression > Quests shows
    37 active quest definitions, level/quest edits save from Admin, and Home
@@ -355,9 +361,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
    rotating specific questions about voice realism, transcript accuracy, and
    scoring fairness.
 8. Continue Story Lab after the first Phase 3 hook: deploy/user-confirm QA the
-   Practice Story voice flow and hideable navigation, then consider saving
-   story-practice feedback back onto the Story record as durable story coaching
-   history.
+   Practice Story voice flow, hideable navigation, and saved coaching history
+   on Story records.
 9. Work the remaining highest-value Bubble reference gaps into upcoming phases:
    saved job targets, richer coaching memory controls, job-target-aware Up Next
    routing, beta tuning for XP rules, and AI-backed Quira support.

@@ -22,6 +22,11 @@ import {
 } from "@/server/pricing/ai-pricing";
 import { recordReviewProgression } from "@/server/progression/progression";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
+import {
+  listStoryLibraryContext,
+  recordStoryPracticeCoaching,
+  type StoryLibraryContextItem,
+} from "@/server/stories/stories";
 
 type SessionEvaluationRecord = {
   id: string;
@@ -194,6 +199,7 @@ function buildEvaluationInput(
   snapshot: SessionSetupSnapshot,
   artifact: VoiceSessionArtifactDraft,
   promptComponents: SessionPromptComponents,
+  storyLibrary: StoryLibraryContextItem[],
   memory?: CoachingMemoryRecord,
 ) {
   return {
@@ -238,6 +244,19 @@ function buildEvaluationInput(
           title: snapshot.storyContext.title,
         }
       : "Not a Story Lab practice session",
+    savedStoryLibrary:
+      storyLibrary.length > 0
+        ? storyLibrary.map((story) => ({
+            categories: story.categories,
+            coachNotes: story.coachNotes,
+            lastPracticedAt: story.lastPracticedAt || "Not practiced yet",
+            practicePrompt: story.practicePrompt,
+            result: story.result,
+            storyId: story.id,
+            summary: story.summary,
+            title: story.title,
+          }))
+        : "No saved stories available.",
     transcript: artifact.transcript.map((turn) => ({
       speaker: turn.speaker,
       text: turn.text,
@@ -251,6 +270,7 @@ async function requestEvaluation(
   promptComponents: SessionPromptComponents,
   instructions: string,
   model: string,
+  storyLibrary: StoryLibraryContextItem[],
   memory?: CoachingMemoryRecord,
 ) {
   const storyEvaluationConfig = snapshot.storyContext
@@ -267,7 +287,13 @@ async function requestEvaluation(
         },
         {
           content: JSON.stringify(
-            buildEvaluationInput(snapshot, artifact, promptComponents, memory),
+            buildEvaluationInput(
+              snapshot,
+              artifact,
+              promptComponents,
+              storyLibrary,
+              memory,
+            ),
           ),
           role: "user",
         },
@@ -365,6 +391,22 @@ export async function createSessionEvaluation(
       })
       .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
     await recordReviewProgression(userId, sessionId, existing.result);
+    const [existingSession] = await getDb()
+      .select({
+        contextSnapshot: sessions.contextSnapshot,
+      })
+      .from(sessions)
+      .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)))
+      .limit(1);
+
+    if (existingSession?.contextSnapshot.storyContext?.storyId) {
+      await recordStoryPracticeCoaching({
+        result: existing.result,
+        sessionId,
+        storyId: existingSession.contextSnapshot.storyContext.storyId,
+        userId,
+      });
+    }
 
     return existing;
   }
@@ -416,7 +458,10 @@ export async function createSessionEvaluation(
     getActivePromptConfig("session_evaluation"),
     getSessionPromptComponents(session.contextSnapshot),
   ]);
-  const memory = await getCoachingMemory(userId);
+  const [memory, storyLibrary] = await Promise.all([
+    getCoachingMemory(userId),
+    listStoryLibraryContext(userId),
+  ]);
   const model = promptConfig.model;
   await getDb()
     .update(sessions)
@@ -445,6 +490,7 @@ export async function createSessionEvaluation(
       promptComponents,
       promptConfig.instructions,
       model,
+      storyLibrary,
       memory,
     );
     result = evaluationResponse.evaluation;
@@ -535,6 +581,14 @@ export async function createSessionEvaluation(
     })
     .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
   await recordReviewProgression(userId, sessionId, result, session.voiceArtifact);
+  if (session.contextSnapshot.storyContext?.storyId) {
+    await recordStoryPracticeCoaching({
+      result,
+      sessionId,
+      storyId: session.contextSnapshot.storyContext.storyId,
+      userId,
+    });
+  }
 
   return evaluation;
 }

@@ -21,6 +21,7 @@ import type {
   XpRuleEventType,
   QuestCheckType,
   CoachingMemorySnapshot,
+  StoryPracticeCoachingEntry,
   StoryCategory,
   StoryOutline,
   SessionEvaluationResult,
@@ -182,7 +183,13 @@ export const stories = pgTable(
     coachNotes: jsonb("coach_notes").$type<string[]>().default([]).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     id: uuid("id").defaultRandom().primaryKey(),
+    lastPracticedAt: timestamp("last_practiced_at", { withTimezone: true }),
     practicePrompt: text("practice_prompt").default("").notNull(),
+    practiceCoaching: jsonb("practice_coaching")
+      .$type<StoryPracticeCoachingEntry[]>()
+      .default([])
+      .notNull(),
+    practiceCount: integer("practice_count").default(0).notNull(),
     rawNotes: text("raw_notes").default("").notNull(),
     result: text("result").default("").notNull(),
     situation: text("situation").default("").notNull(),

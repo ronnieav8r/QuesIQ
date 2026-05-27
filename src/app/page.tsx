@@ -62,6 +62,7 @@ export default function Home() {
   const [selectedDebriefSession, setSelectedDebriefSession] =
     useState<SessionHistoryItem>();
   const [selectedReview, setSelectedReview] = useState<SessionHistoryItem>();
+  const [reviewReturnView, setReviewReturnView] = useState<AppView>("home");
   const [profileSaveError, setProfileSaveError] = useState<string>();
   const [profileSavePending, setProfileSavePending] = useState(false);
   const [adminAccess, setAdminAccess] = useState(false);
@@ -467,6 +468,7 @@ export default function Home() {
               onPractice={openPractice}
               onReview={(session) => {
                 setSelectedReview(session);
+                setReviewReturnView("home");
                 setActiveView("review");
               }}
               onStories={() => setActiveView("stories")}
@@ -499,6 +501,7 @@ export default function Home() {
               onPractice={openPractice}
               onReview={(session) => {
                 setSelectedReview(session);
+                setReviewReturnView("history");
                 setActiveView("review");
               }}
             />
@@ -512,6 +515,7 @@ export default function Home() {
               onBack={() => setActiveView("history")}
               onReview={(session) => {
                 setSelectedReview(session);
+                setReviewReturnView("history");
                 setActiveView("review");
               }}
               session={selectedDebriefSession}
@@ -531,8 +535,12 @@ export default function Home() {
           )}
           {signedIn && activeView === "review" && selectedReview && (
             <ReviewDetail
+              backLabel={reviewReturnView === "history" ? "Back to History" : "Back Home"}
+              bottomBackLabel={
+                reviewReturnView === "history" ? "Back to History List" : "Return Home"
+              }
               catalog={interviewCatalog.catalog}
-              onBack={() => setActiveView("home")}
+              onBack={() => setActiveView(reviewReturnView)}
               onDebrief={(session) => {
                 setSelectedDebriefSession(session);
                 setActiveView("debrief");

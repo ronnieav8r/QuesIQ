@@ -9,6 +9,8 @@ import type {
 } from "@/product/interview-types";
 
 type ReviewDetailProps = {
+  backLabel?: string;
+  bottomBackLabel?: string;
   catalog: InterviewCatalog;
   onBack: () => void;
   onDebrief: (session: SessionHistoryItem) => void;
@@ -17,6 +19,8 @@ type ReviewDetailProps = {
 };
 
 export function ReviewDetail({
+  backLabel = "Back Home",
+  bottomBackLabel = "Return Home",
   catalog,
   onBack,
   onDebrief,
@@ -106,7 +110,7 @@ export function ReviewDetail({
           <h1 id="review-detail-title">{session.targetRole}</h1>
         </div>
         <button className="back-button" onClick={onBack} type="button">
-          Back Home
+          {backLabel}
         </button>
       </div>
 
@@ -222,13 +226,13 @@ export function ReviewDetail({
           onClick={() => onDebrief(currentSession)}
           type="button"
         >
-          Start Voice Debrief
+          Start Debrief
         </button>
         <button onClick={onPractice} type="button">
           Practice Again
         </button>
         <button className="secondary" onClick={onBack} type="button">
-          Return Home
+          {bottomBackLabel}
         </button>
       </div>
     </section>

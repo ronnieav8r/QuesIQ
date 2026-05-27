@@ -9,6 +9,9 @@ Last updated: 2026-05-27
 - Story Lab now supports voice-first messy capture, AI follow-ups, AI-generated
   STARR-style outlines, saved story library/detail/editing, and a first
   Practice Story voice hook.
+- Story Practice reviews now write compact coaching history back onto the source
+  Story record, and Que receives saved-story library context during practice so
+  she can suggest a better-fit story when one clearly applies.
 - Story Lab, story generation, and story-practice prompts are Admin-visible as
   versioned prompt configs.
 - Mobile navigation is hideable: Story Lab is a primary destination, the bottom
@@ -102,8 +105,8 @@ Last updated: 2026-05-27
 2. User-confirm the new review output on production: a new completed practice
    session should show score evidence/next steps in the stored JSON and visible
    review-detail sections on the review page.
-3. User-confirm verbal Debrief on production: History > Voice Debrief and saved
-   review > Start Voice Debrief should open a Realtime call that uses the
+3. User-confirm Debrief on production: History > Debrief and saved review >
+   Start Debrief should open a Realtime call that uses the
    selected session transcript/review without creating a new scored practice
    session, then save a verbal Debrief artifact after the call ends.
 4. Confirm Admin > Prompts shows one active Post-Session Evaluation prompt
@@ -122,6 +125,9 @@ Last updated: 2026-05-27
 - Add richer owned session history filters if the 50-session list becomes too
   noisy
 - Add saved Job Targets and route practice/Up Next through a selected target
+- User-confirm Story Practice coaching history: complete a Story Practice
+  session, let the review save, then verify the source Story shows practice
+  count, last-practiced date, and recent coaching.
 - Add daily Google Sheets export for AI run rows once the Admin run data is
   confirmed useful
 - Keep the Render monthly pricing-review cron suspended unless manual pricing

@@ -25,6 +25,7 @@ export const sessionEvaluationInstructions =
     "For each score, return a short summary, one concrete evidence note from the session, and one next step for that dimension.",
     "The main summary should be a concise overall read, not a repeat of the score summaries. The coaching insight should name the most important pattern. The next action should be one practical next practice move.",
     "The reviewDetail section should replace any written debrief: include what worked, what to sharpen, a short practice plan, good follow-up questions the candidate could ask or rehearse, and transcript-backed evidence. Keep these sections distinct from the score summaries.",
+    "When saved story library context is provided, use it quietly. If a saved story appears better suited to the question than the candidate's chosen answer, mention that in coachingInsight, nextAction, or reviewDetail as a practical alternative, by title. Do not force a story recommendation when none clearly fits.",
     "Also return an updated coaching memory: preserve durable patterns, strengthen repeated patterns, add only observations supported by this session, and avoid overfitting to one weak answer. Keep memory concise and do not store sensitive raw transcript details.",
   ].join("\n");
 
@@ -41,7 +42,7 @@ export const storyPracticeRealtimeInstructions =
   "This is a Story Lab practice session. Ask one behavioral question that lets the candidate practice the saved story. Do not read the outline back to them. Let them answer naturally, then coach whether the story was clear, relevant, specific, and strong enough for the question.";
 
 export const storyPracticeEvaluationInstructions =
-  "This was a Story Lab practice session. In the summary, coaching insight, score summaries, and next action, explicitly evaluate how well the candidate used the saved story, whether the story answered the question, whether the personal action and result were clear, and what to change before practicing this same story again.";
+  "This was a Story Lab practice session. In the summary, coaching insight, score summaries, and next action, explicitly evaluate how well the candidate used the saved story, whether the story answered the question, whether the personal action and result were clear, and what to change before practicing this same story again. If another saved story from the story library would fit the practiced question better, briefly name that story as an alternative.";
 
 export const promptConfigFallbacks = {
   session_debrief: {

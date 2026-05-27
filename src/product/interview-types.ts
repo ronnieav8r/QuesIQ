@@ -48,8 +48,20 @@ export type StoryOutline = {
 export type StoryRecord = StoryOutline & {
   createdAt: string;
   id: string;
+  lastPracticedAt?: string;
+  practiceCoaching: StoryPracticeCoachingEntry[];
+  practiceCount: number;
   rawNotes: string;
   updatedAt: string;
+};
+
+export type StoryPracticeCoachingEntry = {
+  coachingInsight: string;
+  nextAction: string;
+  practicedAt: string;
+  scores: EvaluationScore[];
+  sessionId: string;
+  summary: string;
 };
 
 export type StoryBuilderTurn = {

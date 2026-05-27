@@ -10,6 +10,10 @@ import { getCoachingMemory } from "@/server/coaching-memory/coaching-memory";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 import { getOwnedSession } from "@/server/sessions/get-owned-session";
 import { saveRealtimeSessionConfig } from "@/server/sessions/save-realtime-call";
+import {
+  listStoryLibraryContext,
+  type StoryLibraryContextItem,
+} from "@/server/stories/stories";
 
 export const runtime = "nodejs";
 
@@ -29,6 +33,7 @@ function buildQueInstructions(
   promptComponents?: SessionPromptComponents,
   storyPracticeConfig?: PromptConfigRecord,
   memory?: CoachingMemoryRecord,
+  storyLibrary: StoryLibraryContextItem[] = [],
 ) {
   const role = snapshot?.interviewContext.targetRole || "the user's target role";
   const company = snapshot?.interviewContext.targetCompany || "an unspecified company";
@@ -57,6 +62,24 @@ function buildQueInstructions(
         }.`,
       ].join(" ")
     : undefined;
+  const storyLibraryContext =
+    storyLibrary.length > 0
+      ? [
+          "Saved story library context: use this quietly when coaching after an answer. If another saved story seems like a stronger fit for the question than the answer they gave, briefly suggest it by title, such as: that answer was workable, but your story about X may fit this question even better. Do not force a story suggestion when none is clearly relevant.",
+          ...storyLibrary
+            .filter((story) => story.id !== snapshot?.storyContext?.storyId)
+            .slice(0, 8)
+            .map((story) =>
+              [
+                `Story: ${story.title}`,
+                `Summary: ${story.summary}`,
+                `Practice prompt: ${story.practicePrompt}`,
+                `Result: ${story.result}`,
+                `Coach notes: ${story.coachNotes.join(" | ") || "None"}`,
+              ].join(". "),
+            ),
+        ].join(" ")
+      : "No saved story library context is available.";
 
   return [
     promptConfig.instructions,
@@ -73,6 +96,7 @@ function buildQueInstructions(
       ? `Question-focus instructions: ${promptComponents.questionType.promptInstructions}`
       : undefined,
     storyContext,
+    storyLibraryContext,
     `Target role: ${role}.`,
     `Target company: ${company}.`,
     memory
@@ -116,13 +140,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Session was not found." }, { status: 404 });
   }
 
-  const [promptConfig, storyPracticeConfig, promptComponents, memory] = await Promise.all([
+  const [
+    promptConfig,
+    storyPracticeConfig,
+    promptComponents,
+    memory,
+    storyLibrary,
+  ] = await Promise.all([
     getActivePromptConfig("realtime_interviewer"),
     body.snapshot?.storyContext
       ? getActivePromptConfig("story_practice_realtime")
       : Promise.resolve(undefined),
     body.snapshot ? getSessionPromptComponents(body.snapshot) : Promise.resolve({}),
     getCoachingMemory(appSession.user.id),
+    listStoryLibraryContext(appSession.user.id),
   ]);
   const activeRealtimeConfig = storyPracticeConfig ?? promptConfig;
   const sessionConfig = {
@@ -134,6 +165,7 @@ export async function POST(request: Request) {
       promptComponents,
       storyPracticeConfig,
       memory,
+      storyLibrary,
     ),
     audio: {
       input: {
