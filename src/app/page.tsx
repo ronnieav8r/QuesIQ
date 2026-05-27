@@ -458,12 +458,17 @@ export default function Home() {
             <Dashboard
               contextReady={contextReady}
               interviewContext={interviewContext}
+              onDebrief={(session) => {
+                setSelectedDebriefSessionId(session.id);
+                setActiveView("debrief");
+              }}
               onOnboarding={() => setActiveView("onboarding")}
               onPractice={openPractice}
               onReview={(session) => {
                 setSelectedReview(session);
                 setActiveView("review");
               }}
+              onStories={() => setActiveView("stories")}
             />
           )}
           {signedIn && activeView === "practice" && (

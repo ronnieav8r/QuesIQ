@@ -3,36 +3,46 @@ import { Flame } from "lucide-react";
 
 import { useSessionHistory } from "@/components/interview/session-history";
 import { getOverallScore } from "@/product/scoring";
+import { getUpNextRecommendation } from "@/product/up-next";
 import type { InterviewContext } from "@/product/interview-types";
 import type {
   CoachingMemoryRecord,
   ProgressionSummaryRecord,
+  SessionDebriefRecord,
   SessionHistoryItem,
+  StoryRecord,
 } from "@/product/interview-types";
 
 type DashboardProps = {
   contextReady: boolean;
   interviewContext: InterviewContext;
+  onDebrief: (session: SessionHistoryItem) => void;
   onOnboarding: () => void;
   onPractice: () => void;
   onReview: (session: SessionHistoryItem) => void;
+  onStories: () => void;
 };
 
 export function Dashboard({
   contextReady,
   interviewContext,
+  onDebrief,
   onOnboarding,
   onPractice,
   onReview,
+  onStories,
 }: DashboardProps) {
   const history = useSessionHistory();
   const [coachingMemory, setCoachingMemory] = useState<CoachingMemoryRecord>();
   const [coachingMemoryError, setCoachingMemoryError] = useState<string>();
+  const [debriefs, setDebriefs] = useState<SessionDebriefRecord[]>([]);
   const [progression, setProgression] = useState<ProgressionSummaryRecord>();
   const [progressionError, setProgressionError] = useState<string>();
   const [progressionStatus, setProgressionStatus] = useState<"idle" | "loaded" | "loading">(
     "idle",
   );
+  const [stories, setStories] = useState<StoryRecord[]>([]);
+  const [upNextDataError, setUpNextDataError] = useState<string>();
 
   useEffect(() => {
     let ignore = false;
@@ -68,6 +78,61 @@ export function Dashboard({
     }
 
     void loadProgression();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadUpNextData() {
+      try {
+        setUpNextDataError(undefined);
+        const [debriefsResponse, storiesResponse] = await Promise.all([
+          fetch("/api/debriefs"),
+          fetch("/api/stories"),
+        ]);
+        const debriefsBody = (await debriefsResponse.json()) as {
+          debriefs?: SessionDebriefRecord[];
+          detail?: string;
+          error?: string;
+        };
+        const storiesBody = (await storiesResponse.json()) as {
+          detail?: string;
+          error?: string;
+          stories?: StoryRecord[];
+        };
+
+        if (!debriefsResponse.ok) {
+          throw new Error(
+            debriefsBody.detail || debriefsBody.error || "Debriefs could not be loaded.",
+          );
+        }
+
+        if (!storiesResponse.ok) {
+          throw new Error(
+            storiesBody.detail || storiesBody.error || "Stories could not be loaded.",
+          );
+        }
+
+        if (!ignore) {
+          setDebriefs(debriefsBody.debriefs ?? []);
+          setStories(storiesBody.stories ?? []);
+        }
+      } catch (error) {
+        if (!ignore) {
+          setUpNextDataError(
+            error instanceof Error
+              ? error.message
+              : "Recommendation data could not be loaded.",
+          );
+        }
+      }
+    }
+
+    void loadUpNextData();
 
     return () => {
       ignore = true;
@@ -187,32 +252,37 @@ export function Dashboard({
   const lastPracticed = history.sessions.find(
     (session) => session.hasEvaluation || session.transcript.length > 0,
   );
-  const derivedWeakestScore = allTimeScoreAverages
-    .filter((score) => score.average !== undefined)
-    .filter((score) => score.key !== "overall")
-    .sort((a, b) => (a.average ?? 0) - (b.average ?? 0))[0];
-  const weakestScore = progression?.weakestScoreLabel
-    ? {
-        average: progression.weakestScoreAverage,
-        label: progression.weakestScoreLabel,
-      }
-    : derivedWeakestScore;
-  const attentionSession = needsReview[0];
   const latestCompleted = completedReviews[0];
-  const recommendedTitle = attentionSession
-    ? "Finish your pending review."
-    : weakestScore
-      ? `Practice ${weakestScore.label.toLowerCase()} next.`
-      : contextReady
-        ? `Practice your ${interviewContext.targetRole} opening.`
-        : "Start with your first impression.";
-  const recommendedBody = attentionSession
-    ? "A saved transcript is waiting for a review retry before it can count toward your progress."
-    : weakestScore
-      ? `Your ${weakestScore.label.toLowerCase()} average is ${weakestScore.average?.toFixed(1)}. Use the next session to strengthen that dimension.`
-      : contextReady
-        ? "Que can use your interview context while you shape the answer that sets the tone."
-        : "Give Que a little context now, or jump straight into a focused first practice session.";
+  const recommendation = getUpNextRecommendation({
+    completedReviews,
+    contextReady,
+    debriefs,
+    interviewContext,
+    needsReview,
+    progression,
+    scoreAverages: allTimeScoreAverages,
+    stories,
+  });
+
+  function runRecommendationAction() {
+    switch (recommendation.kind) {
+      case "pending_review":
+        onReview(recommendation.session);
+        return;
+      case "missing_context":
+      case "missing_resume":
+        onOnboarding();
+        return;
+      case "debrief_recent":
+        onDebrief(recommendation.session);
+        return;
+      case "story_build":
+        onStories();
+        return;
+      default:
+        onPractice();
+    }
+  }
 
   return (
     <section className="screen home-screen" aria-labelledby="home-title">
@@ -248,25 +318,20 @@ export function Dashboard({
         <section className="next-action" aria-labelledby="next-action-title">
           <div>
             <p className="eyebrow">Recommended Next</p>
-            <h2 id="next-action-title">{recommendedTitle}</h2>
-            <p>{recommendedBody}</p>
+            <h2 id="next-action-title">{recommendation.title}</h2>
+            <p>{recommendation.body}</p>
           </div>
           <div className="stacked-actions">
-            {attentionSession ? (
-              <button onClick={() => onReview(attentionSession)} type="button">
-                Open Review
-              </button>
-            ) : (
-              <button onClick={onPractice} type="button">
-                Start Practice
-              </button>
-            )}
-            {!contextReady && (
+            <button onClick={runRecommendationAction} type="button">
+              {recommendation.actionLabel}
+            </button>
+            {recommendation.kind !== "missing_context" && !contextReady && (
               <button className="secondary" onClick={onOnboarding} type="button">
                 Add Context
               </button>
             )}
           </div>
+          {upNextDataError && <p className="form-error">{upNextDataError}</p>}
         </section>
 
         <section aria-labelledby="context-title" className="context-panel">

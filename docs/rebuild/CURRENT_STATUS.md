@@ -283,6 +283,14 @@ Last updated: 2026-05-26
     context
   - Admin > Prompts includes updated Session Evaluation and Session Debrief
     prompt versions that describe the memory behavior
+- Richer Up Next logic started:
+  - Home now uses a deterministic recommendation waterfall instead of only
+    pending-review/weak-score/default logic
+  - priority order currently covers pending reviews, missing core context,
+    missing parsed resume, debriefing the latest reviewed session, weakest
+    score practice, Story Lab, near-complete quests, and default practice
+  - the primary recommendation button routes directly to review retry,
+    onboarding, debrief, Story Lab, or practice depending on the selected nudge
 
 ## Verification
 
@@ -382,7 +390,7 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
    by a maintained QuesIQ product knowledge base.
 9. Product gap backlog from the Bubble reference, ordered by current user value:
    persist story-practice coaching history back onto Story records, saved job
-   targets, deeper Debrief conversation UX, richer coaching memory controls, richer Up Next routing,
+   targets, deeper Debrief conversation UX, richer coaching memory controls, job-target-aware Up Next routing,
    refined XP rewards, and AI-backed Quira support.
 10. Treat standalone anonymous bug reports, in-app marketing/blog pages,
    payments, industry packs, mascot work, and VAPI parity as lower-priority

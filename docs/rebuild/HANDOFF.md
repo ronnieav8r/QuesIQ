@@ -212,6 +212,10 @@ path until Phase 2 navigation is completed unless the product direction changes.
   Home shows "What Que Is Learning," and future Realtime voice sessions and
   Debriefs receive the saved memory as quiet coaching context. Admin > Prompts
   shows the updated Session Evaluation and Session Debrief prompt versions.
+- Added the first richer Up Next logic on Home as a deterministic recommendation
+  waterfall: pending reviews, missing context, missing parsed resume, debriefing
+  the latest reviewed session, weakest score practice, Story Lab, near-complete
+  quests, and default practice now route the primary recommendation action.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
