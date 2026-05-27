@@ -978,16 +978,16 @@ export function StoriesView({
               </div>
             )}
 
-            <label>
-              <span>
-                {introCaptureMode === "type" ? "Raw intro notes" : "Captured intro material"}
-              </span>
-              <textarea
-                onChange={(event) => setIntroMaterial(event.target.value)}
-                placeholder="Add rough notes from your background, target role, proof points, or the intro you already use."
-                value={introMaterial}
-              />
-            </label>
+            {introCaptureMode !== "tell" && (
+              <label>
+                <span>{introCaptureMode === "type" ? "Raw intro notes" : "Dictated intro notes"}</span>
+                <textarea
+                  onChange={(event) => setIntroMaterial(event.target.value)}
+                  placeholder="Add rough notes from your background, target role, proof points, or the intro you already use."
+                  value={introMaterial}
+                />
+              </label>
+            )}
 
             <div className="inline-actions">
               {introCaptureMode === "dictate" && (

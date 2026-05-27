@@ -14,6 +14,7 @@ import type {
 type RealtimeVoiceSessionProps = {
   endpoint?: string;
   firstTurnInstructions?: string;
+  hideTranscript?: boolean;
   realtimeInstructions?: string;
   onArtifactChange?: (artifact: VoiceSessionArtifactDraft) => void;
   onArtifactFinalized?: (artifact: VoiceSessionArtifactDraft) => void;
@@ -76,6 +77,7 @@ function getPhaseLabel(phase: VoiceSessionPhase, errorMessage?: string) {
 export function RealtimeVoiceSession({
   endpoint = "/api/realtime/session",
   firstTurnInstructions,
+  hideTranscript = false,
   realtimeInstructions,
   onArtifactChange,
   onArtifactFinalized,
@@ -381,18 +383,20 @@ export function RealtimeVoiceSession({
       {errorMessage && <p className="form-error">{errorMessage}</p>}
 
       <div className="realtime-grid">
-        <section aria-label="Session transcript" className="realtime-log transcript-log">
-          <p className="eyebrow">Transcript</p>
-          {artifactDraft.transcript.length === 0 ? (
-            <p>Que and candidate turns will collect here for the session artifact.</p>
-          ) : (
-            artifactDraft.transcript.map((turn) => (
-              <p key={turn.id}>
-                <strong>{turn.speaker}:</strong> {turn.text}
-              </p>
-            ))
-          )}
-        </section>
+        {!hideTranscript && (
+          <section aria-label="Session transcript" className="realtime-log transcript-log">
+            <p className="eyebrow">Transcript</p>
+            {artifactDraft.transcript.length === 0 ? (
+              <p>Que and candidate turns will collect here for the session artifact.</p>
+            ) : (
+              artifactDraft.transcript.map((turn) => (
+                <p key={turn.id}>
+                  <strong>{turn.speaker}:</strong> {turn.text}
+                </p>
+              ))
+            )}
+          </section>
+        )}
 
         {latestEvents.length > 0 && (
           <details className="realtime-debug">
