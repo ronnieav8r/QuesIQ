@@ -107,6 +107,12 @@ const evaluationSchema = {
           label: {
             type: "string",
           },
+          evidence: {
+            type: "string",
+          },
+          nextStep: {
+            type: "string",
+          },
           score: {
             maximum: 5,
             minimum: 1,
@@ -116,18 +122,57 @@ const evaluationSchema = {
             type: "string",
           },
         },
-        required: ["key", "label", "score", "summary"],
+        required: ["key", "label", "score", "summary", "evidence", "nextStep"],
         type: "object",
       },
       maxItems: 5,
       minItems: 5,
       type: "array",
     },
+    reviewDetail: {
+      additionalProperties: false,
+      properties: {
+        evidence: {
+          items: { type: "string" },
+          maxItems: 4,
+          type: "array",
+        },
+        focusAreas: {
+          items: { type: "string" },
+          maxItems: 3,
+          type: "array",
+        },
+        followUpQuestions: {
+          items: { type: "string" },
+          maxItems: 3,
+          type: "array",
+        },
+        practicePlan: {
+          items: { type: "string" },
+          maxItems: 4,
+          type: "array",
+        },
+        strengths: {
+          items: { type: "string" },
+          maxItems: 3,
+          type: "array",
+        },
+      },
+      required: ["strengths", "focusAreas", "practicePlan", "followUpQuestions", "evidence"],
+      type: "object",
+    },
     summary: {
       type: "string",
     },
   },
-  required: ["summary", "coachingInsight", "nextAction", "scores", "coachingMemory"],
+  required: [
+    "summary",
+    "coachingInsight",
+    "nextAction",
+    "scores",
+    "reviewDetail",
+    "coachingMemory",
+  ],
   type: "object",
 };
 
@@ -227,7 +272,7 @@ async function requestEvaluation(
           role: "user",
         },
       ],
-      max_output_tokens: 1500,
+      max_output_tokens: 2200,
       model,
       text: {
         format: {

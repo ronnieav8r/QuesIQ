@@ -188,7 +188,7 @@ const runtimeContextByTarget = {
     "Candidate context: job description, resume name, capped resume excerpt",
     "Prior coaching memory when available: summary, strengths, growth areas, recurring patterns, latest recommendation, and evidence count",
     "Transcript: speaker and text for each saved turn",
-    "Response format: required JSON with summary, coaching insight, next action, five scores, and an updated coaching memory",
+    "Response scaffold enforced in code: summary, coaching insight, next action, five scores with evidence and next steps, review detail sections, and updated coaching memory",
   ],
   realtime: [
     "Practice mode",

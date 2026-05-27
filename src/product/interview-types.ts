@@ -349,15 +349,26 @@ export type AdminEvaluationRecord = {
 };
 
 export type EvaluationScore = {
+  evidence?: string;
   key: EvaluationScoreKey;
   label: string;
+  nextStep?: string;
   score: number;
   summary: string;
+};
+
+export type SessionReviewDetail = {
+  evidence: string[];
+  focusAreas: string[];
+  followUpQuestions: string[];
+  practicePlan: string[];
+  strengths: string[];
 };
 
 export type SessionEvaluationResult = {
   coachingMemory?: CoachingMemorySnapshot;
   coachingInsight: string;
+  reviewDetail?: SessionReviewDetail;
   nextAction: string;
   scores: EvaluationScore[];
   summary: string;

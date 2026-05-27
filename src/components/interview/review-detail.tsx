@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { ReviewDetailSections } from "@/components/interview/review-detail-sections";
 import { withOverallScore } from "@/product/scoring";
 import type {
   InterviewCatalog,
@@ -161,6 +162,7 @@ export function ReviewDetail({ catalog, onBack, onPractice, session }: ReviewDet
               <h3>Coach Note</h3>
               <p>{currentSession.evaluation.coachingInsight}</p>
             </div>
+            <ReviewDetailSections detail={currentSession.evaluation.reviewDetail} />
             <div className="review-callout">
               <h3>Next Move</h3>
               <p>{currentSession.evaluation.nextAction}</p>

@@ -270,6 +270,17 @@ Last updated: 2026-05-26
   - the Session Debrief prompt is seeded into Admin > Prompts for viewing,
     drafting, and activation
   - debrief-count quest progress now counts saved debrief records
+- Post-session review prompt refinement started:
+  - the Bubble reference confirmed the five locked dimensions and role-relative
+    scoring guardrails: Confidence, Clarity, Relevance, Impact, and
+    Authenticity
+  - the coded app now keeps the strict return contract in the OpenAI structured
+    response schema, while Admin > Prompts controls the editable instruction
+    layer
+  - new reviews include richer review-detail sections in the same evaluation
+    call, so written debrief guidance does not duplicate the saved review
+  - future Debrief work should pivot toward a Realtime voice conversation over
+    an existing session transcript and review context
 - Admin navigation moved out of Me and into the hamburger menu while staying
   visible only to admins.
 - Coaching memory started:

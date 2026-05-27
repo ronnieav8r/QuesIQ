@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { FeedbackButton } from "@/components/interview/feedback-button";
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
+import { ReviewDetailSections } from "@/components/interview/review-detail-sections";
 import { withOverallScore } from "@/product/scoring";
 import type {
   InterviewCatalog,
@@ -320,6 +321,7 @@ export function SessionView({
                 <h3>Coach Note</h3>
                 <p>{evaluation.coachingInsight}</p>
               </div>
+              <ReviewDetailSections detail={evaluation.reviewDetail} />
               <div className="review-callout">
                 <h3>Next Move</h3>
                 <p>{evaluation.nextAction}</p>

@@ -91,13 +91,72 @@ const demoEvaluation: SessionEvaluationResult = {
     summary:
       "Ronnie explains operational situations clearly and sounds credible, with the biggest opportunity in making results more concrete.",
   },
+  reviewDetail: {
+    evidence: [
+      "You named the tradeoffs and client communication clearly.",
+      "The answer stayed focused on ownership, but the final outcome was broad.",
+    ],
+    focusAreas: [
+      "Add one concrete result, such as saved time, reduced disruption, or client satisfaction.",
+      "End with a cleaner lesson or business impact instead of stopping at the action.",
+    ],
+    followUpQuestions: [
+      "What changed because you handled the schedule issue well?",
+      "How would your manager or client describe the outcome?",
+    ],
+    practicePlan: [
+      "Retell the same story in 90 seconds.",
+      "Add one measurable or observable result in the final sentence.",
+      "Record one version with a clearer closing lesson.",
+    ],
+    strengths: [
+      "Calm, credible delivery",
+      "Clear ownership of the operational problem",
+      "Good connection to team and client needs",
+    ],
+  },
   nextAction: "Practice one behavioral answer with a measurable result in the final sentence.",
   scores: [
-    { key: "confidence", label: "Confidence", score: 4, summary: "Calm and steady." },
-    { key: "clarity", label: "Clarity", score: 4, summary: "Easy to follow." },
-    { key: "relevance", label: "Relevance", score: 4, summary: "Fits the role well." },
-    { key: "impact", label: "Impact", score: 3, summary: "Needs a stronger result." },
-    { key: "authenticity", label: "Authenticity", score: 5, summary: "Sounds natural." },
+    {
+      evidence: "The answer used steady language and avoided over-explaining.",
+      key: "confidence",
+      label: "Confidence",
+      nextStep: "Keep the same calm tone while adding a sharper close.",
+      score: 4,
+      summary: "Calm and steady.",
+    },
+    {
+      evidence: "The situation, action, and client update were easy to follow.",
+      key: "clarity",
+      label: "Clarity",
+      nextStep: "Make the ending feel more complete.",
+      score: 4,
+      summary: "Easy to follow.",
+    },
+    {
+      evidence: "The example matches operational leadership and team coordination.",
+      key: "relevance",
+      label: "Relevance",
+      nextStep: "Tie the example directly to the target role in one sentence.",
+      score: 4,
+      summary: "Fits the role well.",
+    },
+    {
+      evidence: "The answer described the actions but not the measurable outcome.",
+      key: "impact",
+      label: "Impact",
+      nextStep: "Add a result the interviewer can remember.",
+      score: 3,
+      summary: "Needs a stronger result.",
+    },
+    {
+      evidence: "The answer sounded personal and grounded in real work.",
+      key: "authenticity",
+      label: "Authenticity",
+      nextStep: "Keep the natural tone and add a brief reflection.",
+      score: 5,
+      summary: "Sounds natural.",
+    },
   ],
   summary:
     "A solid operational leadership answer with clear ownership and a natural tone.",

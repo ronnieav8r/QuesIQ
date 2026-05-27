@@ -2,6 +2,7 @@ import type {
   CoachingMemorySnapshot,
   EvaluationScore,
   EvaluationScoreKey,
+  SessionReviewDetail,
   SessionEvaluationResult,
 } from "@/product/interview-types";
 
@@ -36,7 +37,9 @@ function isEvaluationScore(value: unknown): value is EvaluationScore {
     Number.isInteger(score) &&
     score >= 1 &&
     score <= 5 &&
-    isString(candidate.summary)
+    isString(candidate.summary) &&
+    (candidate.evidence === undefined || isString(candidate.evidence)) &&
+    (candidate.nextStep === undefined || isString(candidate.nextStep))
   );
 }
 
@@ -60,6 +63,22 @@ function isCoachingMemorySnapshot(value: unknown): value is CoachingMemorySnapsh
     isStringArray(candidate.recurringPatterns) &&
     isStringArray(candidate.strengths) &&
     isString(candidate.summary)
+  );
+}
+
+function isSessionReviewDetail(value: unknown): value is SessionReviewDetail {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<SessionReviewDetail>;
+
+  return (
+    isStringArray(candidate.evidence) &&
+    isStringArray(candidate.focusAreas) &&
+    isStringArray(candidate.followUpQuestions) &&
+    isStringArray(candidate.practicePlan) &&
+    isStringArray(candidate.strengths)
   );
 }
 
@@ -93,6 +112,9 @@ export function parseSessionEvaluation(
   return {
     coachingMemory: candidate.coachingMemory,
     coachingInsight: candidate.coachingInsight,
+    reviewDetail: isSessionReviewDetail(candidate.reviewDetail)
+      ? candidate.reviewDetail
+      : undefined,
     nextAction: candidate.nextAction,
     scores: candidate.scores,
     summary: candidate.summary,
