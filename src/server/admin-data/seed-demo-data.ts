@@ -13,6 +13,7 @@ import {
   profiles,
   sessions,
   stories,
+  introductions,
   userFeedback,
   users,
 } from "@/server/db/schema";
@@ -162,6 +163,102 @@ const demoEvaluation: SessionEvaluationResult = {
     "A solid operational leadership answer with clear ownership and a natural tone.",
 };
 
+const demoStories = [
+  {
+    actions: [
+      "Mapped the urgent constraints",
+      "Aligned the team on the best tradeoff",
+      "Kept the client informed through the change",
+    ],
+    alternateSpins: [
+      {
+        angle: "Leadership",
+        question: "Tell me about a time you led through ambiguity.",
+        whyItWorks: "Shows calm ownership and coordination.",
+      },
+      {
+        angle: "Communication",
+        question: "Tell me about a time you had to explain a difficult change.",
+        whyItWorks: "Highlights expectation-setting under pressure.",
+      },
+    ],
+    categories: ["leadership", "communication", "problem_solving"] as const,
+    coachNotes: ["Add a measurable result before using this in a final interview."],
+    practicePrompt: "Practice this as a 90-second leadership answer.",
+    rawNotes: "Demo story seeded for UI review.",
+    result: "The team protected quality and the client stayed informed.",
+    situation: "A schedule changed late and created a delivery risk.",
+    summary: "Coordinated a team through a last-minute operational change.",
+    task: "Keep delivery on track while protecting quality.",
+    title: "Last-minute schedule change",
+  },
+  {
+    actions: [
+      "Gathered feedback from the people closest to the workflow",
+      "Built a simpler handoff checklist",
+      "Reviewed the change with managers before rollout",
+    ],
+    alternateSpins: [
+      {
+        angle: "Ownership",
+        question: "Tell me about a time you improved a process.",
+        whyItWorks: "Shows initiative and practical execution.",
+      },
+      {
+        angle: "Customer impact",
+        question: "Tell me about a time your work improved the customer experience.",
+        whyItWorks: "Connects internal process to external value.",
+      },
+    ],
+    categories: ["ownership", "customer_impact", "communication"] as const,
+    coachNotes: ["Open with the before/after difference so impact lands sooner."],
+    practicePrompt: "Practice this as a process-improvement answer.",
+    rawNotes: "Second demo story seeded for Story Lab UI review.",
+    result: "Handoffs became more consistent and managers had fewer follow-up questions.",
+    situation: "A recurring handoff gap was slowing down new project starts.",
+    summary: "Improved a messy handoff process by simplifying the checklist.",
+    task: "Reduce confusion without adding more administrative work.",
+    title: "Cleaner project handoff",
+  },
+];
+
+const demoIntroductions = [
+  {
+    audience: "virtual" as const,
+    background:
+      "I am an operations-focused leader who has spent the last several years coordinating people, process, and client expectations in high-pressure environments.",
+    length: "medium" as const,
+    proofPoint:
+      "I have helped teams handle last-minute changes while protecting quality and keeping stakeholders informed.",
+    rawNotes:
+      "I want my intro to sound calm, credible, and connected to operations leadership. I want to mention team coordination and client communication.",
+    roleInterest:
+      "That is why I am interested in an Operations Manager role where execution, communication, and good judgment all matter.",
+    script:
+      "I am an operations-focused leader who has spent the last several years coordinating people, process, and client expectations in high-pressure environments. My strongest lane is bringing calm structure to messy situations. For example, I have helped teams handle last-minute changes while protecting quality and keeping stakeholders informed. That is why I am interested in an Operations Manager role where execution, communication, and good judgment all matter. I would be happy to start with the experience most similar to this role.",
+    strength: "bringing calm structure to messy situations",
+    title: "Operations manager intro",
+    transition: "I would be happy to start with the experience most similar to this role.",
+  },
+  {
+    audience: "hr_phone" as const,
+    background:
+      "I come from an operations and aviation background where clear communication and reliable follow-through are essential.",
+    length: "short" as const,
+    proofPoint:
+      "I have repeatedly been trusted to coordinate teams when timing, quality, and client expectations all had to be balanced.",
+    rawNotes:
+      "Short recruiter version. Needs to be concise and easy to follow. Mention operations, aviation, communication.",
+    roleInterest:
+      "I am looking for a role where I can use that background to help a team run more smoothly.",
+    script:
+      "I come from an operations and aviation background where clear communication and reliable follow-through are essential. I am strongest at keeping people aligned when priorities shift. I have repeatedly been trusted to coordinate teams when timing, quality, and client expectations all had to be balanced. I am looking for a role where I can use that background to help a team run more smoothly.",
+    strength: "keeping people aligned when priorities shift",
+    title: "Short recruiter intro",
+    transition: "I can share the example that best matches this role.",
+  },
+];
+
 export async function seedRonnieDemoData(fallbackUserId: string) {
   const userId = await findRonnieUser(fallbackUserId);
   const now = new Date();
@@ -188,35 +285,45 @@ export async function seedRonnieDemoData(fallbackUserId: string) {
     created.push("profile");
   }
 
-  const [story] = await getDb()
-    .select({ id: stories.id })
+  const existingStories = await getDb()
+    .select({ title: stories.title })
     .from(stories)
-    .where(eq(stories.userId, userId))
-    .limit(1);
+    .where(eq(stories.userId, userId));
+  const existingStoryTitles = new Set(existingStories.map((story) => story.title));
 
-  if (!story) {
+  for (const story of demoStories) {
+    if (existingStoryTitles.has(story.title)) {
+      continue;
+    }
+
     await getDb().insert(stories).values({
-      actions: ["Mapped the urgent constraints", "Aligned the team", "Kept the client informed"],
-      alternateSpins: [
-        {
-          angle: "Leadership",
-          question: "Tell me about a time you led through ambiguity.",
-          whyItWorks: "Shows calm ownership and coordination.",
-        },
-      ],
-      categories: ["leadership", "communication", "problem_solving"],
-      coachNotes: ["Add a measurable result before using this in a final interview."],
-      practicePrompt: "Practice this as a 90-second leadership answer.",
-      rawNotes: "Demo story seeded for UI review.",
-      result: "The team protected quality and the client stayed informed.",
-      situation: "A schedule changed late and created a delivery risk.",
-      summary: "Coordinated a team through a last-minute operational change.",
-      task: "Keep delivery on track while protecting quality.",
-      title: "Last-minute schedule change",
+      ...story,
+      categories: [...story.categories],
       updatedAt: now,
       userId,
     });
-    created.push("story");
+    created.push(`story:${story.title}`);
+  }
+
+  const existingIntroductions = await getDb()
+    .select({ title: introductions.title })
+    .from(introductions)
+    .where(eq(introductions.userId, userId));
+  const existingIntroductionTitles = new Set(
+    existingIntroductions.map((introduction) => introduction.title),
+  );
+
+  for (const introduction of demoIntroductions) {
+    if (existingIntroductionTitles.has(introduction.title)) {
+      continue;
+    }
+
+    await getDb().insert(introductions).values({
+      ...introduction,
+      updatedAt: now,
+      userId,
+    });
+    created.push(`introduction:${introduction.title}`);
   }
 
   let sessionId: string | undefined;

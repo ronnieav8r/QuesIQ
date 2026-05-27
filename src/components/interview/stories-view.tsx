@@ -1261,27 +1261,31 @@ export function StoriesView({
             </div>
           )}
 
-          <div className="story-chat" aria-label="Story Lab conversation">
-            {turns.map((turn) => (
-              <article className={`story-turn ${turn.role}`} key={turn.id}>
-                <strong>{turn.role === "assistant" ? "Que" : "You"}</strong>
-                <p>{turn.text}</p>
-              </article>
-            ))}
-          </div>
+          {captureMode === "tell" && (
+            <div className="story-chat" aria-label="Story Lab conversation">
+              {turns.map((turn) => (
+                <article className={`story-turn ${turn.role}`} key={turn.id}>
+                  <strong>{turn.role === "assistant" ? "Que" : "You"}</strong>
+                  <p>{turn.text}</p>
+                </article>
+              ))}
+            </div>
+          )}
 
-          <label>
-            <span>{captureMode === "type" ? "Write what happened" : "Story material"}</span>
-            <textarea
-              onChange={(event) => setDraftText(event.target.value)}
-              placeholder={
-                captureMode === "dictate"
-                  ? "Dictate the rough story here, then add it to the story material."
-                  : "Type anything Que should know about what happened."
-              }
-              value={draftText}
-            />
-          </label>
+          {captureMode !== "tell" && (
+            <label>
+              <span>{captureMode === "type" ? "Write what happened" : "Dictated story notes"}</span>
+              <textarea
+                onChange={(event) => setDraftText(event.target.value)}
+                placeholder={
+                  captureMode === "dictate"
+                    ? "Dictate the rough story here, then add it to the story material."
+                    : "Type anything Que should know about what happened."
+                }
+                value={draftText}
+              />
+            </label>
+          )}
 
           <div className="inline-actions">
             {captureMode === "dictate" && (
@@ -1303,7 +1307,7 @@ export function StoriesView({
             )}
             <button
               className="secondary"
-              disabled={!draftText.trim()}
+              disabled={!draftText.trim() || captureMode === "tell"}
               onClick={() => addUserTurn(draftText)}
               type="button"
             >
