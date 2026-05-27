@@ -1194,6 +1194,36 @@ textarea::placeholder {
   min-height: 12rem;
 }
 
+.realtime-debug {
+  background: rgba(21, 27, 51, 0.62);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+
+.realtime-debug summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+}
+
+.realtime-debug-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+}
+
+.realtime-debug code {
+  background: var(--surface-band);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  padding: var(--space-1) var(--space-2);
+}
+
 .session-config dl,
 .session-artifact dl {
   display: grid;
@@ -1466,10 +1496,14 @@ textarea::placeholder {
 }
 
 .segmented-control button {
+  align-items: center;
   background: transparent;
   border-color: transparent;
   color: var(--muted);
+  display: inline-flex;
+  justify-content: center;
   min-height: 2.5rem;
+  text-align: center;
 }
 
 .segmented-control button.active {

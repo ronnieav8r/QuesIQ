@@ -865,6 +865,7 @@ export function StoriesView({
                   endpoint="/api/realtime/story"
                   firstTurnInstructions="Speak in English only. Help the user gather raw material for a 'tell me about yourself' introduction. Ask about their background, strongest proof point, target role, and the first impression they want to leave. Ask only one question at a time."
                   onArtifactFinalized={saveIntroConversationArtifact}
+                  realtimeInstructions="This is an Introduction Builder conversation. Help the user gather raw material for a strong 'tell me about yourself' answer. Ask about their background, strongest proof point, target role, why this role matters, and the first impression they want to leave. Ask one question at a time. Do not grade them yet. The goal is raw material for a later intro draft."
                   sessionId="intro-builder"
                   startButtonLabel="Start Conversation"
                   surfaceClassName="realtime-session story-realtime-session"

@@ -6,6 +6,7 @@ import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 export const runtime = "nodejs";
 
 type RealtimeStoryRequest = {
+  realtimeInstructions?: string;
   sdp?: string;
 };
 
@@ -49,7 +50,8 @@ export async function POST(request: Request) {
     },
     instructions: [
       promptConfig.instructions,
-      "Start by asking the user to tell you what happened, in their own words. Ask only one question at a time. The goal is to gather the raw story for a later outline, not to grade them.",
+      body.realtimeInstructions ||
+        "Start by asking the user to tell you what happened, in their own words. Ask only one question at a time. The goal is to gather the raw story for a later outline, not to grade them.",
     ].join(" "),
     model: promptConfig.model,
     type: "realtime",

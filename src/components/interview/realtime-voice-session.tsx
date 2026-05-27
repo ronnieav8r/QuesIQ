@@ -14,6 +14,7 @@ import type {
 type RealtimeVoiceSessionProps = {
   endpoint?: string;
   firstTurnInstructions?: string;
+  realtimeInstructions?: string;
   onArtifactChange?: (artifact: VoiceSessionArtifactDraft) => void;
   onArtifactFinalized?: (artifact: VoiceSessionArtifactDraft) => void;
   sessionId: string;
@@ -75,6 +76,7 @@ function getPhaseLabel(phase: VoiceSessionPhase, errorMessage?: string) {
 export function RealtimeVoiceSession({
   endpoint = "/api/realtime/session",
   firstTurnInstructions,
+  realtimeInstructions,
   onArtifactChange,
   onArtifactFinalized,
   sessionId,
@@ -310,6 +312,7 @@ export function RealtimeVoiceSession({
           sdp: offer.sdp,
           sessionId,
           snapshot,
+          realtimeInstructions,
         }),
         headers: {
           "Content-Type": "application/json",
@@ -375,6 +378,7 @@ export function RealtimeVoiceSession({
           End Session
         </button>
       </div>
+      {errorMessage && <p className="form-error">{errorMessage}</p>}
 
       <div className="realtime-grid">
         <section aria-label="Session transcript" className="realtime-log transcript-log">
@@ -390,14 +394,14 @@ export function RealtimeVoiceSession({
           )}
         </section>
 
-        <section aria-label="Recent realtime events" className="realtime-log">
-          <p className="eyebrow">Recent Events</p>
-          {latestEvents.length === 0 ? (
-            <p>Connection events will collect after voice starts.</p>
-          ) : (
-            latestEvents.map((event) => <code key={event.id}>{event.type}</code>)
-          )}
-        </section>
+        {latestEvents.length > 0 && (
+          <details className="realtime-debug">
+            <summary>Connection details</summary>
+            <div className="realtime-debug-list">
+              {latestEvents.map((event) => <code key={event.id}>{event.type}</code>)}
+            </div>
+          </details>
+        )}
       </div>
     </section>
   );

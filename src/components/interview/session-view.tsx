@@ -259,10 +259,6 @@ export function SessionView({
               </dd>
             </div>
             <div>
-              <dt>Lifecycle events</dt>
-              <dd>{artifactDraft.events.length}</dd>
-            </div>
-            <div>
               <dt>End reason</dt>
               <dd>{artifactDraft.endReason?.replace("_", " ") || "Live or not started"}</dd>
             </div>
