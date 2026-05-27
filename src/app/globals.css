@@ -1420,15 +1420,35 @@ textarea::placeholder {
 }
 
 .story-lab-tabs {
+  align-items: center;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   display: flex;
+  gap: var(--space-1);
   justify-content: center;
   justify-self: center;
   max-width: 28rem;
+  padding: var(--space-1);
   width: 100%;
 }
 
 .story-lab-tabs button {
-  flex: 0 1 10.5rem;
+  align-items: center;
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  display: inline-flex;
+  flex: 0 0 10.5rem;
+  justify-content: center;
+  min-height: 2.5rem;
+  text-align: center;
+}
+
+.story-lab-tabs button.active {
+  background: var(--focus-soft);
+  border-color: var(--focus);
+  color: var(--text);
 }
 
 .intro-builder,

@@ -901,7 +901,7 @@ export function StoriesView({
         </div>
       </div>
 
-      <div className="segmented-control story-lab-tabs" role="tablist" aria-label="Story Lab sections">
+      <div className="story-lab-tabs" role="tablist" aria-label="Story Lab sections">
         <button
           aria-selected={storyLabTab === "intro"}
           className={storyLabTab === "intro" ? "active" : undefined}
