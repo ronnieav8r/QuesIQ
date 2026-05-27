@@ -1420,10 +1420,15 @@ textarea::placeholder {
 }
 
 .story-lab-tabs {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  justify-content: center;
   justify-self: center;
   max-width: 28rem;
   width: 100%;
+}
+
+.story-lab-tabs button {
+  flex: 0 1 10.5rem;
 }
 
 .intro-builder,
