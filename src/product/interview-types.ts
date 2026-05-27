@@ -474,6 +474,7 @@ export type PromptConfigKey =
   | "session_debrief"
   | "realtime_interviewer"
   | "session_evaluation"
+  | "story_conversation_realtime"
   | "story_follow_up"
   | "story_outline"
   | "story_practice_evaluation"

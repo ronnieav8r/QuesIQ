@@ -183,9 +183,10 @@ path until Phase 2 navigation is completed unless the product direction changes.
   Quira product experience; the intended future version is an AI chat bot that
   calls an AI model and has a real support conversation with the user.
 - Started Story Lab Phase 1: the old Stories placeholder is now a voice-first
-  Story Lab where users can speak raw notes, type as a fallback, ask Que for a
-  follow-up question, and generate/save a reusable STARR-style story outline
-  with categories, alternate spins, coach notes, and a practice prompt.
+  Story Lab where users can Tell Que in a Realtime story conversation, Dictate
+  uninterrupted rough material, or Type as a fallback, then ask Que for a
+  follow-up question and generate/save a reusable STARR-style story outline with
+  categories, alternate spins, coach notes, and a practice prompt.
 - Started Story Lab Phase 2 library polish: saved stories can be selected into
   a detail panel and edited after generation, with owner-scoped updates through
   `/api/stories/[storyId]`.
@@ -198,9 +199,10 @@ path until Phase 2 navigation is completed unless the product direction changes.
   recent coaching summaries. Normal practice and evaluation prompt context now
   also includes a compact saved-story library so Que can suggest a better-fit
   story when the candidate answers with weaker material.
-- Added Story Lab prompt visibility in Admin: follow-up, outline generation,
-  Story Practice Realtime guidance, and Story Practice Evaluation guidance are
-  now versioned prompt configs under Admin > Prompts > Base.
+- Added Story Lab prompt visibility in Admin: Story Conversation Realtime,
+  follow-up, outline generation, Story Practice Realtime guidance, and Story
+  Practice Evaluation guidance are now versioned prompt configs under Admin >
+  Prompts > Base.
 - Tightened mobile app chrome by removing the header readiness text and
   signed-in account name while keeping the logo and sign-out action.
 - Added hideable mobile navigation: Story Lab is a primary nav item, the bottom
@@ -340,8 +342,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 1. Deploy/user-confirm QA the latest prompt/debrief/progression changes on
    `quesiq-web`. Confirm migrations through
-   `0032_add_story_library_prompt_context.sql` run before testing verbal
-   Debrief and Story Practice coaching history.
+   `0033_add_story_conversation_realtime_prompt.sql` run before testing verbal
+   Debrief, Story Practice coaching history, and Tell Que story capture.
 2. Run/user-confirm database migration QA for the imported levels and quests:
    Progression > Levels shows Rookie through Master, Progression > Quests shows
    37 active quest definitions, level/quest edits save from Admin, and Home

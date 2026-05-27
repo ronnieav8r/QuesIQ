@@ -937,6 +937,14 @@ textarea::placeholder {
   background: rgba(21, 29, 44, 0.82);
 }
 
+.story-realtime-session {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
 .realtime-session audio {
   height: 0;
   width: 0;
@@ -1240,6 +1248,7 @@ textarea::placeholder {
 
 .story-lab-layout,
 .story-builder,
+.story-live-panel,
 .story-chat,
 .story-card-list,
 .story-card-group,
@@ -1257,6 +1266,30 @@ textarea::placeholder {
 .story-builder {
   align-content: start;
   background: var(--surface-band);
+}
+
+.segmented-control {
+  align-items: center;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: var(--space-1);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: var(--space-1);
+}
+
+.segmented-control button {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  min-height: 2.5rem;
+}
+
+.segmented-control button.active {
+  background: var(--focus-soft);
+  border-color: var(--focus);
+  color: var(--text);
 }
 
 .story-chat {

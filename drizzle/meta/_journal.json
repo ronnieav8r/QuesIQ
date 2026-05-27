@@ -225,6 +225,13 @@
       "when": 1779912000000,
       "tag": "0032_add_story_library_prompt_context",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1779915600000,
+      "tag": "0033_add_story_conversation_realtime_prompt",
+      "breakpoints": true
     }
   ]
 }

@@ -137,6 +137,7 @@ const promptLabels: Record<PromptConfigKey, string> = {
   realtime_interviewer: "Live Voice Interviewer",
   session_debrief: "Session Debrief",
   session_evaluation: "Post-Session Evaluation",
+  story_conversation_realtime: "Story Conversation Realtime",
   story_follow_up: "Story Lab Follow-Up",
   story_outline: "Story Lab Outline",
   story_practice_evaluation: "Story Practice Evaluation",

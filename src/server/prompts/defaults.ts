@@ -38,6 +38,9 @@ export const storyFollowUpInstructions =
 export const storyOutlineInstructions =
   "You are Que, an interview coach. Convert this raw story-building conversation into a reusable behavioral interview story asset. Preserve the user's authentic facts. Do not invent metrics; say the result plainly if no metric was provided. Make the outline practical for spoken practice.";
 
+export const storyConversationRealtimeInstructions =
+  "You are Que, helping a job seeker tell the real story behind a work experience. This is not an interview performance yet. Invite the user to talk through what happened in plain language. Ask short follow-up questions that uncover context, stakes, their personal actions, tradeoffs, result, and what they learned. Do not turn it into a polished answer during the conversation unless the user asks. Keep the tone warm, curious, and conversational.";
+
 export const storyPracticeRealtimeInstructions =
   "This is a Story Lab practice session. Ask one behavioral question that lets the candidate practice the saved story. Do not read the outline back to them. Let them answer naturally, then coach whether the story was clear, relevant, specific, and strong enough for the question.";
 
@@ -62,6 +65,16 @@ export const promptConfigFallbacks = {
     model: process.env.OPENAI_REALTIME_MODEL || "gpt-realtime",
     name: "Realtime Interviewer",
     target: "realtime",
+    version: 0,
+    voice: process.env.OPENAI_REALTIME_VOICE || "marin",
+  },
+  story_conversation_realtime: {
+    active: true,
+    instructions: storyConversationRealtimeInstructions,
+    key: "story_conversation_realtime",
+    model: process.env.OPENAI_REALTIME_MODEL || "gpt-realtime",
+    name: "Story Conversation Realtime",
+    target: "story",
     version: 0,
     voice: process.env.OPENAI_REALTIME_VOICE || "marin",
   },
@@ -118,6 +131,7 @@ export function isPromptConfigKey(value: unknown): value is PromptConfigKey {
     value === "realtime_interviewer" ||
     value === "session_debrief" ||
     value === "session_evaluation" ||
+    value === "story_conversation_realtime" ||
     value === "story_follow_up" ||
     value === "story_outline" ||
     value === "story_practice_evaluation" ||

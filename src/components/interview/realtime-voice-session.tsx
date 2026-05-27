@@ -19,6 +19,7 @@ type RealtimeVoiceSessionProps = {
   sessionId: string;
   snapshot?: SessionSetupSnapshot;
   startButtonLabel?: string;
+  surfaceClassName?: string;
   title?: string;
 };
 
@@ -79,6 +80,7 @@ export function RealtimeVoiceSession({
   sessionId,
   snapshot,
   startButtonLabel = "Start Session",
+  surfaceClassName = "panel realtime-session",
   title = "Direct browser voice session",
 }: RealtimeVoiceSessionProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -345,7 +347,7 @@ export function RealtimeVoiceSession({
   const seconds = (displayedDuration % 60).toString().padStart(2, "0");
 
   return (
-    <section className="panel realtime-session" aria-labelledby="realtime-session-title">
+    <section className={surfaceClassName} aria-labelledby="realtime-session-title">
       <div className="section-head">
         <div>
           <p className="eyebrow">Live Voice</p>

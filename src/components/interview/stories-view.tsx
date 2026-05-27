@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Mic, Square } from "lucide-react";
 
+import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import type {
   StoryBuilderTurn,
   StoryCategory,
   StoryOutline,
   StoryRecord,
+  VoiceSessionArtifactDraft,
 } from "@/product/interview-types";
 import { storyCategories, storyCategoryLabel } from "@/product/story-lab";
 
@@ -105,8 +107,11 @@ type StoriesViewProps = {
   onPracticeStory: (story: StoryRecord) => void;
 };
 
+type StoryCaptureMode = "dictate" | "tell" | "type";
+
 export function StoriesView({ onPracticeStory }: StoriesViewProps) {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const conversationArtifactKeyRef = useRef<string | undefined>(undefined);
   const recordingWantedRef = useRef(false);
   const shouldScrollToDetailRef = useRef(false);
   const storyDetailRef = useRef<HTMLElement | null>(null);
@@ -118,6 +123,9 @@ export function StoriesView({ onPracticeStory }: StoriesViewProps) {
   const [editError, setEditError] = useState<string>();
   const [editingStoryId, setEditingStoryId] = useState<string>();
   const [error, setError] = useState<string>();
+  const [captureMode, setCaptureMode] = useState<StoryCaptureMode>("tell");
+  const [conversationStatus, setConversationStatus] =
+    useState<"idle" | "ready">("idle");
   const [listStatus, setListStatus] = useState<"idle" | "loaded" | "loading">("idle");
   const [pendingAction, setPendingAction] = useState<"follow_up" | "save">();
   const [recording, setRecording] = useState(false);
@@ -127,7 +135,7 @@ export function StoriesView({ onPracticeStory }: StoriesViewProps) {
   const [turns, setTurns] = useState<StoryBuilderTurn[]>([
     createTurn(
       "assistant",
-      "Tell me about an experience you might use in an interview. It does not need to be polished. Just talk through what happened.",
+      "Tell me what happened. It does not need to sound like an interview answer yet.",
     ),
   ]);
 
@@ -157,6 +165,14 @@ export function StoriesView({ onPracticeStory }: StoriesViewProps) {
   const selectedStory =
     stories.find((story) => story.id === selectedStoryId) ?? stories[0];
   const editingStory = stories.find((story) => story.id === editingStoryId);
+  const captureStatusLabel =
+    captureMode === "tell"
+      ? "Live conversation"
+      : captureMode === "dictate"
+        ? canUseSpeech
+          ? "Dictation ready"
+          : "Type fallback"
+        : "Writing";
 
   useEffect(() => {
     let ignore = false;
@@ -207,6 +223,27 @@ export function StoriesView({ onPracticeStory }: StoriesViewProps) {
 
     setTurns((current) => [...current, createTurn("user", cleanText)]);
     setDraftText("");
+  }
+
+  function saveConversationArtifact(artifact: VoiceSessionArtifactDraft) {
+    if (artifact.transcript.length === 0) {
+      return;
+    }
+
+    const artifactKey = `${artifact.endedAt}:${artifact.transcript.length}`;
+
+    if (conversationArtifactKeyRef.current === artifactKey) {
+      return;
+    }
+
+    conversationArtifactKeyRef.current = artifactKey;
+    setTurns(
+      artifact.transcript.map((turn) =>
+        createTurn(turn.role === "assistant" ? "assistant" : "user", turn.text),
+      ),
+    );
+    setDraftText("");
+    setConversationStatus("ready");
   }
 
   function commitSpeechTranscript() {
@@ -281,7 +318,7 @@ export function StoriesView({ onPracticeStory }: StoriesViewProps) {
           } catch {
             recordingWantedRef.current = false;
             setRecording(false);
-            setError("Voice capture paused. Tap Speak Notes to continue.");
+            setError("Dictation paused. Tap Dictate Story to continue.");
           }
         }, 250);
         return;
@@ -455,7 +492,7 @@ export function StoriesView({ onPracticeStory }: StoriesViewProps) {
       <div className="screen-toolbar">
         <div>
           <p className="eyebrow">Story Lab</p>
-          <h1 id="stories-title">Shape raw experience into reusable answers.</h1>
+          <h1 id="stories-title">Tell the story first. Shape it later.</h1>
         </div>
       </div>
 
@@ -463,8 +500,8 @@ export function StoriesView({ onPracticeStory }: StoriesViewProps) {
         <section className="panel story-builder" aria-labelledby="story-builder-title">
           <div className="section-head">
             <div>
-              <p className="eyebrow">Build a Story</p>
-              <h2 id="story-builder-title">Talk it through with Que.</h2>
+              <p className="eyebrow">Tell Your Story</p>
+              <h2 id="story-builder-title">Start messy. Que will help find the shape.</h2>
             </div>
             {recording ? (
               <span className="recording-indicator active">
@@ -472,9 +509,58 @@ export function StoriesView({ onPracticeStory }: StoriesViewProps) {
                 Recording
               </span>
             ) : (
-              <span>{canUseSpeech ? "Voice ready" : "Type fallback"}</span>
+              <span>{captureStatusLabel}</span>
             )}
           </div>
+
+          <div className="segmented-control" role="tablist" aria-label="Story capture mode">
+            <button
+              aria-selected={captureMode === "tell"}
+              className={captureMode === "tell" ? "active" : undefined}
+              onClick={() => setCaptureMode("tell")}
+              role="tab"
+              type="button"
+            >
+              Tell Que
+            </button>
+            <button
+              aria-selected={captureMode === "dictate"}
+              className={captureMode === "dictate" ? "active" : undefined}
+              onClick={() => setCaptureMode("dictate")}
+              role="tab"
+              type="button"
+            >
+              Dictate
+            </button>
+            <button
+              aria-selected={captureMode === "type"}
+              className={captureMode === "type" ? "active" : undefined}
+              onClick={() => setCaptureMode("type")}
+              role="tab"
+              type="button"
+            >
+              Type
+            </button>
+          </div>
+
+          {captureMode === "tell" && (
+            <div className="story-live-panel">
+              <RealtimeVoiceSession
+                endpoint="/api/realtime/story"
+                firstTurnInstructions="Speak in English only. Ask the user to tell you what happened in their own words. Reassure them that it does not need to sound polished yet. Ask only one question."
+                onArtifactFinalized={saveConversationArtifact}
+                sessionId="story-lab"
+                startButtonLabel="Start Conversation"
+                surfaceClassName="realtime-session story-realtime-session"
+                title="Tell Que what happened"
+              />
+              {conversationStatus === "ready" && (
+                <p>
+                  Conversation captured. Shape it into a reusable story when you are ready.
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="story-chat" aria-label="Story Lab conversation">
             {turns.map((turn) => (
@@ -486,37 +572,43 @@ export function StoriesView({ onPracticeStory }: StoriesViewProps) {
           </div>
 
           <label>
-            <span>Messy notes</span>
+            <span>{captureMode === "type" ? "Write what happened" : "Story material"}</span>
             <textarea
               onChange={(event) => setDraftText(event.target.value)}
-              placeholder="Speak first, or type anything Que should know about what happened."
+              placeholder={
+                captureMode === "dictate"
+                  ? "Dictate the rough story here, then add it to the story material."
+                  : "Type anything Que should know about what happened."
+              }
               value={draftText}
             />
           </label>
 
           <div className="inline-actions">
-            <button
-              className={recording ? "recording-button active" : undefined}
-              onClick={toggleRecording}
-              type="button"
-            >
-              {recording ? (
-                <>
-                  <Square aria-hidden="true" className="button-icon" /> Stop
-                </>
-              ) : (
-                <>
-                  <Mic aria-hidden="true" className="button-icon" /> Speak Notes
-                </>
-              )}
-            </button>
+            {captureMode === "dictate" && (
+              <button
+                className={recording ? "recording-button active" : undefined}
+                onClick={toggleRecording}
+                type="button"
+              >
+                {recording ? (
+                  <>
+                    <Square aria-hidden="true" className="button-icon" /> Stop Dictating
+                  </>
+                ) : (
+                  <>
+                    <Mic aria-hidden="true" className="button-icon" /> Dictate Story
+                  </>
+                )}
+              </button>
+            )}
             <button
               className="secondary"
               disabled={!draftText.trim()}
               onClick={() => addUserTurn(draftText)}
               type="button"
             >
-              Add Note
+              Add to Story
             </button>
             <button
               className="secondary"
@@ -524,10 +616,10 @@ export function StoriesView({ onPracticeStory }: StoriesViewProps) {
               onClick={askFollowUp}
               type="button"
             >
-              {pendingAction === "follow_up" ? "Thinking" : "Ask Follow-Up"}
+              {pendingAction === "follow_up" ? "Thinking" : "Ask Que to Dig Deeper"}
             </button>
             <button disabled={!canSave} onClick={createStory} type="button">
-              {pendingAction === "save" ? "Creating" : "Create Outline"}
+              {pendingAction === "save" ? "Shaping" : "Shape Into Story"}
             </button>
           </div>
           {error && <p className="form-error">{error}</p>}

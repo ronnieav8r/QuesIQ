@@ -219,8 +219,9 @@ Last updated: 2026-05-27
     users through QuesIQ, and handles minor troubleshooting
 - Story Lab Phase 1 started:
   - the former Stories placeholder is now positioned as Story Lab
-  - users can speak messy notes through browser speech recognition, with typing
-    available as a fallback
+  - users can now choose Tell Que, Dictate, or Type as story-capture modes:
+    Tell Que opens a Realtime story conversation, Dictate uses browser speech
+    recognition for uninterrupted capture, and Type is the text fallback
   - Que can generate one follow-up question from the raw story-building turns
   - Que can generate and save a reusable STARR-style story outline with title,
     summary, situation, task, actions, result, categories, alternate spins,
@@ -249,10 +250,10 @@ Last updated: 2026-05-27
   - normal practice and evaluation calls now receive compact saved-story library
     context so Que can suggest a better-fit saved story when appropriate
 - Story Lab prompts are now Admin-visible:
-  - Story Lab follow-up, story outline generation, Story Practice Realtime
-    guidance, and Story Practice Evaluation guidance are versioned prompt
-    configs alongside the existing Realtime interviewer and session evaluation
-    prompts
+  - Story Conversation Realtime, Story Lab follow-up, story outline generation,
+    Story Practice Realtime guidance, and Story Practice Evaluation guidance are
+    versioned prompt configs alongside the existing Realtime interviewer and
+    session evaluation prompts
   - Admin > Prompts > Base can view, draft, and activate these prompts
 - Mobile chrome was tightened:
   - removed the app-header readiness line
@@ -418,7 +419,7 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 
 1. Deploy and user-confirm QA the latest prompt/debrief/progression changes on
    `quesiq-web`, making sure migrations through
-   `0032_add_story_library_prompt_context.sql` run.
+   `0033_add_story_conversation_realtime_prompt.sql` run.
 2. Run/user-confirm migration QA for Bubble levels and quests: Admin >
    Progression > Levels shows Rookie through Master, Admin > Progression >
    Quests shows 37 active definitions, Admin level/quest edits save, and Home

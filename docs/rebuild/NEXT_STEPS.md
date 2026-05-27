@@ -6,14 +6,14 @@ Last updated: 2026-05-27
 
 - The rebuild lives in `C:\Users\weeks\Documents\GitHub\QuesIQ`.
 - Responsive dashboard, onboarding/context UI, and practice setup are in code.
-- Story Lab now supports voice-first messy capture, AI follow-ups, AI-generated
-  STARR-style outlines, saved story library/detail/editing, and a first
-  Practice Story voice hook.
+- Story Lab now supports Tell Que Realtime story conversation, Dictate
+  uninterrupted rough capture, Type fallback, AI follow-ups, AI-generated
+  STARR-style outlines, saved story library/detail/editing, and Practice Story.
 - Story Practice reviews now write compact coaching history back onto the source
   Story record, and Que receives saved-story library context during practice so
   she can suggest a better-fit story when one clearly applies.
-- Story Lab, story generation, and story-practice prompts are Admin-visible as
-  versioned prompt configs.
+- Story Lab conversation, story generation, and story-practice prompts are
+  Admin-visible as versioned prompt configs.
 - Mobile navigation is hideable: Story Lab is a primary destination, the bottom
   nav can collapse into a small Menu handle, and desktop keeps the left rail.
 - Admin is now available from the hamburger menu instead of inside Me, and Me is
@@ -100,8 +100,7 @@ Last updated: 2026-05-27
 ## Immediate
 
 1. Deploy the current branch and confirm Render runs the newest migrations,
-   especially `drizzle/0028_refine_session_evaluation_prompt.sql` and
-   `drizzle/0030_add_voice_debriefs.sql`.
+   especially `drizzle/0033_add_story_conversation_realtime_prompt.sql`.
 2. User-confirm the new review output on production: a new completed practice
    session should show score evidence/next steps in the stored JSON and visible
    review-detail sections on the review page.
