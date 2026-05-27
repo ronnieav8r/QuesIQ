@@ -1,7 +1,6 @@
 import type {
   InterviewContext,
   ProgressionSummaryRecord,
-  SessionDebriefRecord,
   SessionHistoryItem,
   StoryRecord,
 } from "@/product/interview-types";
@@ -54,7 +53,6 @@ type ScoreAverage = {
 type UpNextInput = {
   completedReviews: SessionHistoryItem[];
   contextReady: boolean;
-  debriefs: SessionDebriefRecord[];
   interviewContext: InterviewContext;
   needsReview: SessionHistoryItem[];
   progression?: ProgressionSummaryRecord;
@@ -96,7 +94,6 @@ function getQuestNudge(progression?: ProgressionSummaryRecord) {
 export function getUpNextRecommendation({
   completedReviews,
   contextReady,
-  debriefs,
   interviewContext,
   needsReview,
   progression,
@@ -134,16 +131,14 @@ export function getUpNextRecommendation({
   }
 
   const latestCompleted = completedReviews[0];
-  const hasDebriefForLatest =
-    latestCompleted && debriefs.some((debrief) => debrief.sessionId === latestCompleted.id);
 
-  if (latestCompleted && !hasDebriefForLatest) {
+  if (latestCompleted) {
     const overall = latestCompleted.evaluation
       ? getOverallScore(latestCompleted.evaluation.scores)
       : undefined;
 
     return {
-      actionLabel: "Debrief",
+      actionLabel: "Voice Debrief",
       body: overall
         ? `Your last reviewed session averaged ${overall.toFixed(1)}. Debrief it while the details are fresh.`
         : "Debrief your latest reviewed session while the details are fresh.",

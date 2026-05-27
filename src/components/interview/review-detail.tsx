@@ -11,11 +11,18 @@ import type {
 type ReviewDetailProps = {
   catalog: InterviewCatalog;
   onBack: () => void;
+  onDebrief: (session: SessionHistoryItem) => void;
   onPractice: () => void;
   session: SessionHistoryItem;
 };
 
-export function ReviewDetail({ catalog, onBack, onPractice, session }: ReviewDetailProps) {
+export function ReviewDetail({
+  catalog,
+  onBack,
+  onDebrief,
+  onPractice,
+  session,
+}: ReviewDetailProps) {
   const [currentSession, setCurrentSession] = useState(session);
   const [retryError, setRetryError] = useState<string>();
   const [retryPending, setRetryPending] = useState(false);
@@ -210,6 +217,13 @@ export function ReviewDetail({ catalog, onBack, onPractice, session }: ReviewDet
       </details>
 
       <div className="inline-actions">
+        <button
+          disabled={currentSession.transcript.length === 0}
+          onClick={() => onDebrief(currentSession)}
+          type="button"
+        >
+          Start Voice Debrief
+        </button>
         <button onClick={onPractice} type="button">
           Practice Again
         </button>

@@ -59,7 +59,8 @@ export default function Home() {
   const [sessionLaunchPending, setSessionLaunchPending] = useState(false);
   const [sessionLaunchRecord, setSessionLaunchRecord] = useState<SessionLaunchRecord>();
   const [sessionSnapshot, setSessionSnapshot] = useState<SessionSetupSnapshot>();
-  const [selectedDebriefSessionId, setSelectedDebriefSessionId] = useState<string>();
+  const [selectedDebriefSession, setSelectedDebriefSession] =
+    useState<SessionHistoryItem>();
   const [selectedReview, setSelectedReview] = useState<SessionHistoryItem>();
   const [profileSaveError, setProfileSaveError] = useState<string>();
   const [profileSavePending, setProfileSavePending] = useState(false);
@@ -459,7 +460,7 @@ export default function Home() {
               contextReady={contextReady}
               interviewContext={interviewContext}
               onDebrief={(session) => {
-                setSelectedDebriefSessionId(session.id);
+                setSelectedDebriefSession(session);
                 setActiveView("debrief");
               }}
               onOnboarding={() => setActiveView("onboarding")}
@@ -492,7 +493,7 @@ export default function Home() {
             <HistoryView
               catalog={interviewCatalog.catalog}
               onDebrief={(session) => {
-                setSelectedDebriefSessionId(session.id);
+                setSelectedDebriefSession(session);
                 setActiveView("debrief");
               }}
               onPractice={openPractice}
@@ -507,8 +508,13 @@ export default function Home() {
           )}
           {signedIn && activeView === "debrief" && (
             <DebriefView
-              initialSessionId={selectedDebriefSessionId}
+              catalog={interviewCatalog.catalog}
               onBack={() => setActiveView("history")}
+              onReview={(session) => {
+                setSelectedReview(session);
+                setActiveView("review");
+              }}
+              session={selectedDebriefSession}
             />
           )}
           {signedIn && activeView === "session" && sessionSnapshot && sessionLaunchRecord && (
@@ -527,6 +533,10 @@ export default function Home() {
             <ReviewDetail
               catalog={interviewCatalog.catalog}
               onBack={() => setActiveView("home")}
+              onDebrief={(session) => {
+                setSelectedDebriefSession(session);
+                setActiveView("debrief");
+              }}
               onPractice={openPractice}
               session={selectedReview}
             />

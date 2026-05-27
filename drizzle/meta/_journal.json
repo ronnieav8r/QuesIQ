@@ -197,6 +197,13 @@
       "when": 1779897600000,
       "tag": "0028_refine_session_evaluation_prompt",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1779901200000,
+      "tag": "0029_refine_verbal_debrief_prompt",
+      "breakpoints": true
     }
   ]
 }

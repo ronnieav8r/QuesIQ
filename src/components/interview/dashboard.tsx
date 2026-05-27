@@ -8,7 +8,6 @@ import type { InterviewContext } from "@/product/interview-types";
 import type {
   CoachingMemoryRecord,
   ProgressionSummaryRecord,
-  SessionDebriefRecord,
   SessionHistoryItem,
   StoryRecord,
 } from "@/product/interview-types";
@@ -35,7 +34,6 @@ export function Dashboard({
   const history = useSessionHistory();
   const [coachingMemory, setCoachingMemory] = useState<CoachingMemoryRecord>();
   const [coachingMemoryError, setCoachingMemoryError] = useState<string>();
-  const [debriefs, setDebriefs] = useState<SessionDebriefRecord[]>([]);
   const [progression, setProgression] = useState<ProgressionSummaryRecord>();
   const [progressionError, setProgressionError] = useState<string>();
   const [progressionStatus, setProgressionStatus] = useState<"idle" | "loaded" | "loading">(
@@ -90,26 +88,12 @@ export function Dashboard({
     async function loadUpNextData() {
       try {
         setUpNextDataError(undefined);
-        const [debriefsResponse, storiesResponse] = await Promise.all([
-          fetch("/api/debriefs"),
-          fetch("/api/stories"),
-        ]);
-        const debriefsBody = (await debriefsResponse.json()) as {
-          debriefs?: SessionDebriefRecord[];
-          detail?: string;
-          error?: string;
-        };
+        const storiesResponse = await fetch("/api/stories");
         const storiesBody = (await storiesResponse.json()) as {
           detail?: string;
           error?: string;
           stories?: StoryRecord[];
         };
-
-        if (!debriefsResponse.ok) {
-          throw new Error(
-            debriefsBody.detail || debriefsBody.error || "Debriefs could not be loaded.",
-          );
-        }
 
         if (!storiesResponse.ok) {
           throw new Error(
@@ -118,7 +102,6 @@ export function Dashboard({
         }
 
         if (!ignore) {
-          setDebriefs(debriefsBody.debriefs ?? []);
           setStories(storiesBody.stories ?? []);
         }
       } catch (error) {
@@ -256,7 +239,6 @@ export function Dashboard({
   const recommendation = getUpNextRecommendation({
     completedReviews,
     contextReady,
-    debriefs,
     interviewContext,
     needsReview,
     progression,

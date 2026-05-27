@@ -260,16 +260,15 @@ Last updated: 2026-05-26
     and expanded again with a chevron
   - the collapsed/expanded nav preference is remembered locally
   - desktop keeps the persistent left navigation rail
-- Debrief mode started:
-  - Debrief is available as an action on each transcript-backed History item
-  - tapping Debrief opens the debrief screen with that session preselected
-  - users can add a question or note and have Que generate a saved structured
-    debrief
-  - debriefs are tied to the original session and do not create a new scored
-    practice session
-  - the Session Debrief prompt is seeded into Admin > Prompts for viewing,
-    drafting, and activation
-  - debrief-count quest progress now counts saved debrief records
+- Debrief mode pivot:
+  - written debrief generation was deprecated because it duplicated the saved
+    practice review
+  - Debrief now means a Realtime voice conversation tied to an existing
+    transcript-backed session
+  - the Session Debrief prompt remains in Admin > Prompts for viewing, drafting,
+    and activation, but it now drives the verbal debrief assistant
+  - debrief-count quests and saved debrief records are legacy until voice
+    debrief persistence is deliberately added
 - Post-session review prompt refinement started:
   - the Bubble reference confirmed the five locked dimensions and role-relative
     scoring guardrails: Confidence, Clarity, Relevance, Impact, and
@@ -281,6 +280,16 @@ Last updated: 2026-05-26
     call, so written debrief guidance does not duplicate the saved review
   - future Debrief work should pivot toward a Realtime voice conversation over
     an existing session transcript and review context
+- Verbal Debrief interface started:
+  - the old written debrief composer/list screen has been removed from the user
+    flow
+  - History cards now launch Voice Debrief for transcript-backed sessions
+  - expanded saved reviews include a Start Voice Debrief button near the bottom
+  - the voice debrief uses a dedicated Realtime endpoint with the saved
+    transcript, written review, review detail, score evidence, and coaching
+    memory as context
+  - voice debriefs do not currently create a new scored practice session or a
+    saved written debrief record
 - Admin navigation moved out of Me and into the hamburger menu while staying
   visible only to admins.
 - Coaching memory started:

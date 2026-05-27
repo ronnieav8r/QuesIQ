@@ -29,7 +29,7 @@ export const sessionEvaluationInstructions =
   ].join("\n");
 
 export const sessionDebriefInstructions =
-  "You are Que, QuesIQ Interview's interview coach. Debrief a completed practice session with the candidate. Use the saved transcript, session review, prior coaching memory when provided, and the candidate's debrief note or question. Do not rescore the session or update memory from this debrief. Help the candidate understand what happened, name concrete patterns, and give a focused plan for the next practice attempt.";
+  "You are Que, QuesIQ Interview's interview coach. Hold a live voice debrief for a completed practice session. Use the saved transcript, written review, score evidence, review detail, and prior coaching memory when provided. Do not rescore the session or update memory from this debrief. Help the candidate understand what happened, rework answers, explain score patterns with transcript examples, and choose a focused next practice step. Keep the conversation concise, natural, and interactive. Do not read the transcript back in bulk.";
 
 export const storyFollowUpInstructions =
   "You are Que, helping a job seeker turn a raw experience into a reusable interview story. Ask exactly one warm, specific follow-up question. Prefer missing stakes, personal action, measurable result, or reflection. Do not outline the story yet.";
@@ -48,10 +48,11 @@ export const promptConfigFallbacks = {
     active: true,
     instructions: sessionDebriefInstructions,
     key: "session_debrief",
-    model: process.env.OPENAI_DEBRIEF_MODEL || process.env.OPENAI_EVALUATION_MODEL || "gpt-5.4-mini",
+    model: process.env.OPENAI_DEBRIEF_MODEL || process.env.OPENAI_REALTIME_MODEL || "gpt-realtime",
     name: "Session Debrief",
     target: "debrief",
     version: 0,
+    voice: process.env.OPENAI_REALTIME_VOICE || "marin",
   },
   realtime_interviewer: {
     active: true,

@@ -199,17 +199,22 @@ path until Phase 2 navigation is completed unless the product direction changes.
 - Added hideable mobile navigation: Story Lab is a primary nav item, the bottom
   nav can collapse into a small chevron Menu handle, the preference is stored
   locally, and desktop keeps the left navigation rail.
-- Started Debrief mode: signed-in users can tap Debrief on a History item to
-  open a saved transcript-backed session, ask Que a debrief question, and save
-  a structured debrief tied to the original session without creating a new
-  scored practice session. Admins can view and edit the Session Debrief prompt
-  under Admin > Prompts.
+- Started Debrief mode as a written debrief, then pivoted it after review:
+  written debrief generation duplicated the saved practice review, so Debrief
+  now means a Realtime voice conversation tied to an existing transcript-backed
+  session. Admins can view and edit the Session Debrief prompt under Admin >
+  Prompts.
 - Refined the post-session evaluation direction using the Bubble scoring
   reference: the evaluation prompt now owns the written "debrief-like" review
   sections, including what worked, focus areas, practice plan, follow-up
   questions, and transcript-backed evidence. The longer-term Debrief product
   direction is a voice conversation tied to a completed session, not a second
   written review.
+- Replaced the deprecated written Debrief screen with a voice debrief interface:
+  History session cards and the expanded written review can launch a Realtime
+  voice debrief that uses the original transcript, written review, score
+  evidence, review detail, and coaching memory as context without creating a
+  new scored practice session.
 - Moved Admin out of Me and into the hamburger menu while keeping it visible
   only for admin users.
 - Added the first coaching memory slice without a second memory API call:

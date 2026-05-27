@@ -177,11 +177,10 @@ const xpRuleAwardModes: XpRuleAwardMode[] = ["stack", "highest_only"];
 const runtimeContextByTarget = {
   debrief: [
     "Completed session: target role, target company, mode, question focus, and interviewer style",
-    "Saved practice review: summary, coaching insight, next action, and score summaries when available",
+    "Saved practice review: summary, coaching insight, next action, score summaries, score evidence, and review detail sections when available",
     "Prior coaching memory when available for continuity",
     "Transcript: speaker and text for each saved turn",
-    "Candidate debrief note or question",
-    "Response format: required JSON with summary, strengths, focus areas, practice plan, and one follow-up question",
+    "Realtime voice instructions: conversational debrief only, no written JSON response and no rescoring",
   ],
   evaluation: [
     "Session: mode, question focus, interviewer style, target role, target company",

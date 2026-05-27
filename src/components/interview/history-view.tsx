@@ -133,7 +133,7 @@ export function HistoryView({
                   onClick={() => onDebrief(session)}
                   type="button"
                 >
-                  Debrief
+                  Voice Debrief
                 </button>
               </div>
             </article>

@@ -12,9 +12,13 @@ import type {
 } from "@/product/interview-types";
 
 type RealtimeVoiceSessionProps = {
-  onArtifactChange: (artifact: VoiceSessionArtifactDraft) => void;
+  endpoint?: string;
+  firstTurnInstructions?: string;
+  onArtifactChange?: (artifact: VoiceSessionArtifactDraft) => void;
   sessionId: string;
-  snapshot: SessionSetupSnapshot;
+  snapshot?: SessionSetupSnapshot;
+  startButtonLabel?: string;
+  title?: string;
 };
 
 const emptyArtifactDraft: VoiceSessionArtifactDraft = {
@@ -67,9 +71,13 @@ function getPhaseLabel(phase: VoiceSessionPhase, errorMessage?: string) {
 }
 
 export function RealtimeVoiceSession({
+  endpoint = "/api/realtime/session",
+  firstTurnInstructions,
   onArtifactChange,
   sessionId,
   snapshot,
+  startButtonLabel = "Start Session",
+  title = "Direct browser voice session",
 }: RealtimeVoiceSessionProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
@@ -162,7 +170,7 @@ export function RealtimeVoiceSession({
   }
 
   useEffect(() => {
-    onArtifactChange(artifactDraft);
+    onArtifactChange?.(artifactDraft);
   }, [artifactDraft, onArtifactChange]);
 
   useEffect(() => {
@@ -197,7 +205,11 @@ export function RealtimeVoiceSession({
       JSON.stringify({
         type: "response.create",
         response: {
-          instructions: getFirstTurnInstructions(snapshot),
+          instructions:
+            firstTurnInstructions ||
+            (snapshot
+              ? getFirstTurnInstructions(snapshot)
+              : "Speak in English only. Open with one short question. Ask only one question."),
         },
       }),
     );
@@ -283,7 +295,7 @@ export function RealtimeVoiceSession({
       await peerConnection.setLocalDescription(offer);
       setPhase("connecting");
 
-      const sessionResponse = await fetch("/api/realtime/session", {
+      const sessionResponse = await fetch(endpoint, {
         body: JSON.stringify({
           sdp: offer.sdp,
           sessionId,
@@ -329,7 +341,7 @@ export function RealtimeVoiceSession({
       <div className="section-head">
         <div>
           <p className="eyebrow">Live Voice</p>
-          <h2 id="realtime-session-title">Direct browser voice session</h2>
+          <h2 id="realtime-session-title">{title}</h2>
         </div>
         <div className="recording-status-row">
           {recordingActive && (
@@ -347,7 +359,7 @@ export function RealtimeVoiceSession({
       <audio autoPlay ref={audioRef} />
       <div className="inline-actions">
         <button disabled={!canStart} onClick={connect} type="button">
-          {phase === "ended" || phase === "error" ? "Start Again" : "Start Session"}
+          {phase === "ended" || phase === "error" ? "Start Again" : startButtonLabel}
         </button>
         <button className="secondary" disabled={!canEnd} onClick={endSession} type="button">
           End Session
