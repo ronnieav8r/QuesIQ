@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-05-26
+Last updated: 2026-05-27
 
 ## Current Focus
 
@@ -15,10 +15,12 @@ Phase 2B icon polish are complete. The QuesIQ Interview brand logo is now wired
 into the app shell, Bubble level thresholds have been imported, and the first
 backend-owned quest system is in code.
 
-The latest Bubble-reference comparison identified the next highest-value product
-gap as Stories + saved Job Targets, because those make practice more personal
-and unlock stronger recommendations. Debrief mode and evolving coaching memory
-should follow that foundation. Avoid treating Bubble parity as the goal; carry
+The latest Bubble-reference work moved three high-value gaps forward: richer
+post-session review scaffolding, coaching memory, and verbal Debrief. Written
+Debrief is no longer a separate user flow; written reflection belongs inside
+the structured practice review, while Debrief now means a Realtime voice
+conversation tied to a completed session. Saved Job Targets remain the next
+major personalization gap. Avoid treating Bubble parity as the goal; carry
 forward only features that improve practice, feedback, retention, or beta
 learning.
 
@@ -230,8 +232,9 @@ path until Phase 2 navigation is completed unless the product direction changes.
 - Added editable XP rules under Admin > Progression > XP Rules. Review XP now
   comes from rule awards instead of a hardcoded flat reward, with a smaller
   completion base and larger highest-only duration/score tiers. Resume upload
-  and Debrief completion rewards also use the rules table, and XP Events show
-  rule metadata for visibility.
+  rewards also use the rules table. Debrief completion rules still refer to
+  legacy saved written debrief records until verbal Debrief persistence is
+  deliberately added, and XP Events show rule metadata for visibility.
 - Added an admin-only demo data seed endpoint/button for the Ronnie account:
   Admin > Data can create representative profile, story, session, evaluation,
   debrief, coaching memory, feedback, and progression rows when missing.
@@ -253,6 +256,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
 - Latest local feedback/progression/UI/Quira baseline and Story Lab Phase 1/2/3
   checks passed: ESLint, TypeScript, and production build.
 - Next production build passed.
+- Latest local review/debrief prompt work passed ESLint, TypeScript check, and
+  production build. Build output includes `/api/realtime/debrief`.
 - Local `npm` is now available on PATH, and latest checks passed with it.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
   succeeded, Drizzle migrations applied successfully, and Next started.
@@ -295,8 +300,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
   of truth unless intentionally resynced.
 - Direct OpenAI Realtime is the preferred first browser voice path.
 - Default prompt configs are seeded with `gpt-realtime`/`marin` for interview
-  voice and `gpt-5.4-mini` for evaluation. After migration, the active
-  Postgres prompt config is the editable runtime source.
+  voice and verbal Debrief, and `gpt-5.4-mini` for evaluation. After migration,
+  the active Postgres prompt config is the editable runtime source.
 - Practice mode, question-focus, and interviewer-style instructions are
   editable catalog prompt components and are composed into AI calls at runtime.
 - VAPI is a fallback path, not the default path, while phone calls are out of
@@ -325,8 +330,9 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 ## Next Best Work
 
-1. Deploy/user-confirm QA the latest Admin, feedback, progression, UI Phase 2,
-   and Quira baseline changes on `quesiq-web`.
+1. Deploy/user-confirm QA the latest prompt/debrief/progression changes on
+   `quesiq-web`. Confirm migrations through
+   `0029_refine_verbal_debrief_prompt.sql` run before testing verbal Debrief.
 2. Run/user-confirm database migration QA for the imported levels and quests:
    Progression > Levels shows Rookie through Master, Progression > Quests shows
    37 active quest definitions, level/quest edits save from Admin, and Home
@@ -350,8 +356,9 @@ path until Phase 2 navigation is completed unless the product direction changes.
    story-practice feedback back onto the Story record as durable story coaching
    history.
 9. Work the remaining highest-value Bubble reference gaps into upcoming phases:
-   saved job targets, debrief mode, evolving coaching memory, richer Up Next
-   routing, refined XP rewards, and AI-backed Quira support.
+   saved job targets, verbal Debrief persistence/transcript decisions, richer
+   coaching memory controls, job-target-aware Up Next routing, beta tuning for
+   XP rules, and AI-backed Quira support.
 10. Defer or avoid lower-value parity work until the beta needs it: standalone
    anonymous bug-report page, in-app marketing/blog pages, payments, industry
    packs, mascot work, and VAPI parity.
@@ -382,4 +389,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
 - Pricing review AI output was inconsistent across live tests. Treat it as an
   advisory signal only. Do not rely on AI acceptance/writeback for pricing until
   candidate-row preview or deterministic parsing is implemented.
+- The legacy `/api/debriefs` written-debrief endpoint and `debriefs` table still
+  exist for now, but the user-facing flow has moved to verbal Debrief through
+  `/api/realtime/debrief`. Do not build new written debrief UX unless product
+  direction changes.
 - `tsconfig.tsbuildinfo` is generated TypeScript cache and intentionally ignored.

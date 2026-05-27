@@ -131,6 +131,19 @@ the runtime source for live voice and evaluation instructions/model settings.
 The checked-in defaults remain a fallback if prompt config records are not
 available.
 
+### Fold Written Debrief Into Review, Use Voice For Debrief
+
+Written debrief content belongs in the post-session review, not in a second
+generated written artifact. The review prompt should own the structured
+reflection sections: what worked, what to sharpen, practice plan, follow-up
+questions, score evidence, and next steps.
+
+Debrief in the product now means a Realtime voice conversation tied to one
+completed, transcript-backed session. The verbal debrief receives the saved
+transcript, written review, score evidence, expanded review detail, and coaching
+memory as context. It should not rescore the session, update memory, create a
+new scored practice session, or duplicate the written review.
+
 ### Use Versioned Prompt Configs For AI Calls
 
 Realtime interviewer and post-session evaluation prompts are composed product

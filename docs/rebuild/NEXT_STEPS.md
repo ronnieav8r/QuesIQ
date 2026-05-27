@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-05-26
+Last updated: 2026-05-27
 
 ## Current State
 
@@ -13,6 +13,23 @@ Last updated: 2026-05-26
   versioned prompt configs.
 - Mobile navigation is hideable: Story Lab is a primary destination, the bottom
   nav can collapse into a small Menu handle, and desktop keeps the left rail.
+- Admin is now available from the hamburger menu instead of inside Me, and Me is
+  also available from that menu. Admin remains gated by `ADMIN_EMAILS`.
+- Written Debrief has been removed from the user flow. Debrief now means a
+  Realtime voice conversation launched from History or from the bottom of an
+  expanded saved review.
+- The post-session evaluation prompt now carries richer Bubble-inspired review
+  guardrails: five locked dimensions, role-relative scoring, score evidence,
+  next steps, review detail sections, and coaching memory updates in the same
+  model call.
+- Coaching memory is stored per user and is passed quietly into future practice
+  sessions and verbal Debriefs.
+- Home has richer Up Next routing for pending reviews, missing context/resume,
+  verbal Debrief, weak-score practice, Story Lab, quests, and default practice.
+- XP rules are editable in Admin > Progression > XP Rules, with review rewards
+  weighted more toward duration and score than flat completion.
+- Admin > Data includes a Ronnie demo-data seeding button for representative
+  empty-table rows.
 - Practice setup creates a client-side session setup snapshot, persists the first
   app-owned Session launch record, and opens a focused voice session screen.
 - Practice modes, question types, and interviewer styles now live in seeded
@@ -43,7 +60,8 @@ Last updated: 2026-05-26
 - Signed-out users now land on the sign-in screen; app tabs are hidden until
   Auth.js reports a signed-in user.
 - The first evaluation handoff is in code: saved transcript artifacts can create
-  an owned structured review with five QuesIQ score dimensions.
+  an owned structured review with five QuesIQ score dimensions plus richer
+  written review-detail sections.
 - The first owned history/review revisit path is in code: Home loads recent
   signed-in Sessions and opens completed saved reviews after leaving the live
   session screen.
@@ -55,8 +73,9 @@ Last updated: 2026-05-26
 - First history/progression summary is in code: History lists owned sessions,
   status, and per-session average, while Home shows five score averages from
   completed evaluations.
-- Home now derives simple XP, level progress, last-practiced text, latest next
-  move, and Recommended Next from saved Sessions and evaluations.
+- Home now reads durable progression where available and shows level, XP,
+  streak, quests, score summaries, coaching memory, and richer Recommended Next
+  routing from saved Sessions, evaluations, stories, and profile context.
 - Created-only/incomplete Sessions are hidden from visible History.
 - Resume upload now persists metadata and parsed text to the signed-in Profile
   record for TXT, MD, DOCX, and most PDFs. Parsed resume context is copied into
@@ -74,20 +93,22 @@ Last updated: 2026-05-26
 
 ## Immediate
 
-1. Add/confirm `ADMIN_EMAILS` and `PRICING_CHECK_SECRET` on the Render web
-   service, add/confirm `PRICING_CHECK_SECRET` on the Render monthly
-   pricing-review cron service, then deploy and user-confirm QA the Admin prompt
-   config panel plus AI Usage tabs.
-2. Manually correct any bad pricing rows from the earlier AI accept experiment,
-   especially `gpt-realtime-mini audio` if it shows text-token prices.
-3. Confirm live voice and evaluation still use the active prompt config and
-   mode/style/question prompt components, and that new voice sessions create
-   Realtime usage estimates after artifact save.
-4. Keep pricing updates manual until candidate preview/writeback or a
+1. Deploy the current branch and confirm Render runs the newest migrations,
+   especially `drizzle/0028_refine_session_evaluation_prompt.sql` and
+   `drizzle/0029_refine_verbal_debrief_prompt.sql`.
+2. User-confirm the new review output on production: a new completed practice
+   session should show score evidence/next steps in the stored JSON and visible
+   review-detail sections on the review page.
+3. User-confirm verbal Debrief on production: History > Voice Debrief and saved
+   review > Start Voice Debrief should open a Realtime call that uses the
+   selected session transcript/review without creating a new scored practice
+   session.
+4. Confirm Admin > Prompts shows one active Post-Session Evaluation prompt
+   version and one active Session Debrief prompt version after migrations.
+5. Confirm Admin > Progression > XP Rules reflects the newer score/duration
+   weighted rules and that reviewed sessions award rule-based XP once.
+6. Keep pricing updates manual until candidate preview/writeback or a
    deterministic pricing parser is built.
-5. Decide whether persisted progression/streak records or Interview V1
-   prompt/config hardening should follow.
-6. Note email template polish as a later UX task.
 7. Prefer deploy-based or user-confirmed QA. Localhost preview is deprecated on
    any port until we intentionally invest time to fix it.
 
@@ -97,11 +118,13 @@ Last updated: 2026-05-26
   slice proves useful
 - Add richer owned session history filters if the 50-session list becomes too
   noisy
-- Persist progression/streak records if derived XP/level is not enough
+- Add persistence/accounting for verbal Debrief completions if the product still
+  wants debrief-count quests or XP tied to voice debrief usage
+- Add saved Job Targets and route practice/Up Next through a selected target
 - Add daily Google Sheets export for AI run rows once the Admin run data is
   confirmed useful
-- Confirm the Render monthly pricing-review cron reaches `/api/pricing/review`
-  using `PRICING_CHECK_SECRET`
+- Keep the Render monthly pricing-review cron suspended unless manual pricing
+  review is deliberately resumed
 - Add candidate preview/checkboxes before allowing AI pricing-review writeback,
   or replace the AI review with a deterministic parser for the developer pricing
   page
@@ -116,6 +139,8 @@ Last updated: 2026-05-26
 - Capture transcript/events for app-owned session artifacts
 - Decide whether to store audio, transcript only, or derived excerpts for beta
 - Tune the first-turn, transcript, and review handoff after beta testing
+- Tune the verbal Debrief first turn and decide whether debrief transcripts
+  should be saved as separate artifacts
 - Keep VAPI as fallback, not the default implementation path
 
 ## Things Not To Do First

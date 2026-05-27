@@ -1,6 +1,6 @@
 # Current Status
 
-Last updated: 2026-05-26
+Last updated: 2026-05-27
 
 ## Rebuild Location
 
@@ -278,8 +278,8 @@ Last updated: 2026-05-26
     layer
   - new reviews include richer review-detail sections in the same evaluation
     call, so written debrief guidance does not duplicate the saved review
-  - future Debrief work should pivot toward a Realtime voice conversation over
-    an existing session transcript and review context
+  - migration `0028_refine_session_evaluation_prompt.sql` activates the richer
+    Session Evaluation prompt version
 - Verbal Debrief interface started:
   - the old written debrief composer/list screen has been removed from the user
     flow
@@ -317,7 +317,9 @@ Last updated: 2026-05-26
   - default review rewards are intentionally less completion-heavy: small base
     completion XP, highest-only duration tiers, highest-only overall-score
     tiers, and a small first-practice-today bonus
-  - resume upload and Debrief completion rewards are also rule-driven
+  - resume upload rewards are rule-driven; Debrief completion rules currently
+    refer to legacy saved written debrief records until verbal debrief
+    persistence is deliberately added
   - Admin XP Events now expose event metadata so individual rule awards can be
     inspected
 - Admin demo data seeding started:
@@ -325,7 +327,7 @@ Last updated: 2026-05-26
   - the seed targets a user whose email/name/id contains `ronnieav8r`, falling
     back to the current admin user
   - it creates representative rows for empty/missing profile, story, session,
-    evaluation, debrief, coaching memory, feedback, and progression data
+    evaluation, legacy debrief, coaching memory, feedback, and progression data
 
 ## Verification
 
@@ -336,6 +338,9 @@ The current coded app has passed:
 - Latest local feedback/progression/UI foundation/user-screen cleanup/Quira
   baseline checks passed with ESLint, TypeScript, and production build.
 - Next production build
+- Latest local review/debrief prompt work passed ESLint, TypeScript check, and
+  production build. Build output includes the new `/api/realtime/debrief`
+  route.
 - Latest local checks passed with local `npm` available on PATH.
 - Story Lab Phase 1, Phase 2, and Phase 3 practice-hook local checks passed:
   ESLint, TypeScript, and production build.
@@ -370,6 +375,12 @@ The current coded app has passed:
 Ignored local/generated paths currently include `.env.local`, `.next/`,
 `.tools/`, `node_modules/`, and `tsconfig.tsbuildinfo`.
 
+Legacy written-debrief backend pieces still exist (`/api/debriefs`, the
+`debriefs` table, and old debrief XP/quest checks), but the active user flow is
+verbal Debrief through `/api/realtime/debrief`. Treat saved written debrief data
+as legacy/demo/reference until verbal Debrief persistence is deliberately
+designed.
+
 ## Current Product Direction
 
 - Replace Bubble for the core QuesIQ Interview app.
@@ -400,8 +411,9 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 
 ## Next Work
 
-1. Deploy and user-confirm QA the Admin, feedback/bug, progression, UI Phase 2,
-   Story Lab, hideable navigation, and Quira baseline slices on `quesiq-web`.
+1. Deploy and user-confirm QA the latest prompt/debrief/progression changes on
+   `quesiq-web`, making sure migrations through
+   `0029_refine_verbal_debrief_prompt.sql` run.
 2. Run/user-confirm migration QA for Bubble levels and quests: Admin >
    Progression > Levels shows Rookie through Master, Admin > Progression >
    Quests shows 37 active definitions, Admin level/quest edits save, and Home
@@ -424,10 +436,10 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 8. Later Quira work: replace the curated Help panel with an AI chat bot backed
    by a maintained QuesIQ product knowledge base.
 9. Product gap backlog from the Bubble reference, ordered by current user value:
-   persist story-practice coaching history back onto Story records, saved job
-   targets, deeper Debrief conversation UX, richer coaching memory controls, job-target-aware Up Next routing,
-   and tuning XP rules from beta behavior,
-   refined XP rewards, and AI-backed Quira support.
+   saved job targets, persist story-practice coaching history back onto Story
+   records, verbal Debrief transcript/persistence decisions, richer coaching
+   memory controls, job-target-aware Up Next routing, tuning XP rules from beta
+   behavior, and AI-backed Quira support.
 10. Treat standalone anonymous bug reports, in-app marketing/blog pages,
    payments, industry packs, mascot work, and VAPI parity as lower-priority
    until the core practice loop and retention features are stronger.
