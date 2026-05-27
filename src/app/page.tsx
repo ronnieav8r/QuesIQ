@@ -32,6 +32,7 @@ import { initialInterviewContext } from "@/product/practice-data";
 import type {
   AppView,
   InterviewStyleKey,
+  IntroductionRecord,
   JobTargetRecord,
   PracticeMode,
   PracticeStep,
@@ -481,6 +482,52 @@ export default function Home() {
     }
   }
 
+  async function launchIntroductionPractice(introduction: IntroductionRecord) {
+    const snapshot: SessionSetupSnapshot = {
+      interviewContext: { ...interviewContext },
+      introductionContext: {
+        ...introduction,
+        introductionId: introduction.id,
+      },
+      modeKey: "first_impression",
+      styleKey: "friendly",
+    };
+
+    try {
+      setSessionLaunchError(undefined);
+      setSessionLaunchPending(true);
+      const response = await fetch("/api/sessions", {
+        body: JSON.stringify({ snapshot }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        session?: SessionLaunchRecord;
+      };
+
+      if (!response.ok || !body.session) {
+        throw new Error(body.detail || body.error || "Intro practice could not be created.");
+      }
+
+      setSelectedModeKey("first_impression");
+      setSelectedQuestionKey(undefined);
+      setSelectedStyleKey("friendly");
+      setSessionSnapshot(snapshot);
+      setSessionLaunchRecord(body.session);
+      setActiveView("session");
+    } catch (error) {
+      setSessionLaunchError(
+        error instanceof Error ? error.message : "Intro practice could not be created.",
+      );
+    } finally {
+      setSessionLaunchPending(false);
+    }
+  }
+
   function goBackInPractice() {
     if (practiceStep === "mode") {
       setActiveView("home");
@@ -640,6 +687,7 @@ export default function Home() {
             <StoriesView
               interviewContext={interviewContext}
               jobTargets={jobTargets}
+              onPracticeIntroduction={launchIntroductionPractice}
               onPracticeStory={launchStoryPractice}
               selectedJobTarget={selectedJobTarget}
             />

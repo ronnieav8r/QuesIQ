@@ -1,5 +1,6 @@
 import type {
   InterviewContext,
+  IntroductionRecord,
   JobTargetRecord,
   ProgressionSummaryRecord,
   SessionHistoryItem,
@@ -18,7 +19,12 @@ export type UpNextRecommendation =
   | {
       actionLabel: string;
       body: string;
-      kind: "missing_context" | "missing_resume" | "story_build" | "default_practice";
+      kind:
+        | "intro_build"
+        | "missing_context"
+        | "missing_resume"
+        | "story_build"
+        | "default_practice";
       title: string;
     }
   | {
@@ -55,6 +61,7 @@ type UpNextInput = {
   completedReviews: SessionHistoryItem[];
   contextReady: boolean;
   interviewContext: InterviewContext;
+  introductions: IntroductionRecord[];
   jobTargets: JobTargetRecord[];
   needsReview: SessionHistoryItem[];
   progression?: ProgressionSummaryRecord;
@@ -97,6 +104,7 @@ export function getUpNextRecommendation({
   completedReviews,
   contextReady,
   interviewContext,
+  introductions,
   jobTargets,
   needsReview,
   progression,
@@ -139,6 +147,15 @@ export function getUpNextRecommendation({
       body: "Move your current role and company into a saved job target so future practice can stay tied to a specific opportunity.",
       kind: "missing_context",
       title: "Create your first job target.",
+    };
+  }
+
+  if (introductions.length === 0) {
+    return {
+      actionLabel: "Open Story Lab",
+      body: "Build a concise introduction before the next first-impression or screening practice.",
+      kind: "intro_build",
+      title: "Prepare your interview introduction.",
     };
   }
 

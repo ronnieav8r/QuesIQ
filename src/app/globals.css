@@ -1367,6 +1367,7 @@ textarea::placeholder {
 .intro-option-grid,
 .intro-preview,
 .intro-guidance,
+.intro-library,
 .story-builder,
 .story-live-panel,
 .story-chat,
@@ -1390,6 +1391,9 @@ textarea::placeholder {
 
 .story-lab-tabs {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  justify-self: center;
+  max-width: 28rem;
+  width: 100%;
 }
 
 .intro-builder,
@@ -1441,6 +1445,13 @@ textarea::placeholder {
   color: var(--text);
   font-size: var(--font-size-md);
   margin-bottom: 0;
+}
+
+.inline-status {
+  align-self: center;
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
 }
 
 .segmented-control {

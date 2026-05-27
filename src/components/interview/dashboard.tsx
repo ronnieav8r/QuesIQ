@@ -7,6 +7,7 @@ import { getUpNextRecommendation } from "@/product/up-next";
 import type { InterviewContext } from "@/product/interview-types";
 import type {
   CoachingMemoryRecord,
+  IntroductionRecord,
   JobTargetRecord,
   ProgressionSummaryRecord,
   SessionHistoryItem,
@@ -39,6 +40,7 @@ export function Dashboard({
   const history = useSessionHistory();
   const [coachingMemory, setCoachingMemory] = useState<CoachingMemoryRecord>();
   const [coachingMemoryError, setCoachingMemoryError] = useState<string>();
+  const [introductions, setIntroductions] = useState<IntroductionRecord[]>([]);
   const [progression, setProgression] = useState<ProgressionSummaryRecord>();
   const [progressionError, setProgressionError] = useState<string>();
   const [progressionStatus, setProgressionStatus] = useState<"idle" | "loaded" | "loading">(
@@ -93,11 +95,19 @@ export function Dashboard({
     async function loadUpNextData() {
       try {
         setUpNextDataError(undefined);
-        const storiesResponse = await fetch("/api/stories");
+        const [storiesResponse, introductionsResponse] = await Promise.all([
+          fetch("/api/stories"),
+          fetch("/api/introductions"),
+        ]);
         const storiesBody = (await storiesResponse.json()) as {
           detail?: string;
           error?: string;
           stories?: StoryRecord[];
+        };
+        const introductionsBody = (await introductionsResponse.json()) as {
+          detail?: string;
+          error?: string;
+          introductions?: IntroductionRecord[];
         };
 
         if (!storiesResponse.ok) {
@@ -105,9 +115,17 @@ export function Dashboard({
             storiesBody.detail || storiesBody.error || "Stories could not be loaded.",
           );
         }
+        if (!introductionsResponse.ok) {
+          throw new Error(
+            introductionsBody.detail ||
+              introductionsBody.error ||
+              "Introductions could not be loaded.",
+          );
+        }
 
         if (!ignore) {
           setStories(storiesBody.stories ?? []);
+          setIntroductions(introductionsBody.introductions ?? []);
         }
       } catch (error) {
         if (!ignore) {
@@ -248,6 +266,7 @@ export function Dashboard({
     completedReviews,
     contextReady,
     interviewContext,
+    introductions,
     jobTargets,
     needsReview,
     progression,
@@ -267,6 +286,7 @@ export function Dashboard({
       case "debrief_recent":
         onDebrief(recommendation.session);
         return;
+      case "intro_build":
       case "story_build":
         onStories();
         return;

@@ -265,11 +265,20 @@ Last updated: 2026-05-27
   - Story Lab now has separate TMAAT and Introduction tabs
   - TMAAT keeps the existing Tell Que, Dictate, Type, saved story library, edit,
     and Practice Story flow
-  - Introduction Builder gathers setting, length range, background, strength,
-    proof point, role interest, and closing handoff context
+  - Introduction Builder gathers setting, length range, raw intro material,
+    background, strength, proof point, role interest, and closing handoff context
+    through Talk with Que, Dictate, or Type entry points
+  - users can save multiple introductions and launch a focused Intro Practice
+    session from a saved introduction
   - Intro guidance uses the active saved job target or profile role/company when
     available, with Short, Medium, and Long timing ranges for HR phone screens,
     virtual interviews, and in-person interviews
+  - Intro Practice carries the saved intro into Que's Realtime context and stores
+    review coaching back on the introduction after evaluation; short intro
+    practice sessions can score after a lower minimum duration
+  - progression quests now include first saved Introduction and first saved TMAAT
+    Story checks, and Home's Recommended Next can route users to Story Lab when
+    no saved introduction exists
 - Story Lab prompts are now Admin-visible:
   - Story Conversation Realtime, Story Lab follow-up, story outline generation,
     Story Practice Realtime guidance, and Story Practice Evaluation guidance are

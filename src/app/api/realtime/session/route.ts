@@ -62,6 +62,20 @@ function buildQueInstructions(
         }.`,
       ].join(" ")
     : undefined;
+  const introductionContext = snapshot?.introductionContext
+    ? [
+        "This is an Introduction Builder practice session. Start with a concise 'tell me about yourself' prompt. The candidate is practicing a saved introduction. Do not read the saved script aloud. Let them answer naturally, then coach whether it matched the target length, sounded specific, connected to the role, and gave the interviewer a useful next thread.",
+        `Saved introduction title: ${snapshot.introductionContext.title}.`,
+        `Intended setting: ${snapshot.introductionContext.audience}.`,
+        `Intended length: ${snapshot.introductionContext.length}.`,
+        `Saved script: ${snapshot.introductionContext.script}.`,
+        `Background line: ${snapshot.introductionContext.background || "Not provided"}.`,
+        `Core strength: ${snapshot.introductionContext.strength || "Not provided"}.`,
+        `Proof point: ${snapshot.introductionContext.proofPoint || "Not provided"}.`,
+        `Role interest: ${snapshot.introductionContext.roleInterest || "Not provided"}.`,
+        `Closing handoff: ${snapshot.introductionContext.transition || "Not provided"}.`,
+      ].join(" ")
+    : undefined;
   const storyLibraryContext =
     storyLibrary.length > 0
       ? [
@@ -96,6 +110,7 @@ function buildQueInstructions(
       ? `Question-focus instructions: ${promptComponents.questionType.promptInstructions}`
       : undefined,
     storyContext,
+    introductionContext,
     storyLibraryContext,
     `Target role: ${role}.`,
     `Target company: ${company}.`,

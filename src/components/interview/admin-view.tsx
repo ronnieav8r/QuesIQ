@@ -149,6 +149,7 @@ const questCheckTypes: QuestCheckType[] = [
   "mode_used",
   "all_modes_used",
   "debrief_count",
+  "introduction_count",
   "resume_uploaded",
   "job_target_set",
   "streak_count",
@@ -158,6 +159,7 @@ const questCheckTypes: QuestCheckType[] = [
   "all_scores_min",
   "avg_score_min",
   "level_reached",
+  "story_count",
 ];
 
 const xpRuleEventTypes: XpRuleEventType[] = [

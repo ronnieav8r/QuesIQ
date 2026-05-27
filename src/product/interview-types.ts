@@ -70,6 +70,38 @@ export type StoryBuilderTurn = {
   text: string;
 };
 
+export type IntroAudience = "hr_phone" | "in_person" | "virtual";
+
+export type IntroLength = "long" | "medium" | "short";
+
+export type IntroductionPracticeCoachingEntry = {
+  coachingInsight: string;
+  nextAction: string;
+  practicedAt: string;
+  scores: EvaluationScore[];
+  sessionId: string;
+  summary: string;
+};
+
+export type IntroductionRecord = {
+  audience: IntroAudience;
+  background: string;
+  createdAt: string;
+  id: string;
+  lastPracticedAt?: string;
+  length: IntroLength;
+  practiceCoaching: IntroductionPracticeCoachingEntry[];
+  practiceCount: number;
+  proofPoint: string;
+  rawNotes: string;
+  roleInterest: string;
+  script: string;
+  strength: string;
+  title: string;
+  transition: string;
+  updatedAt: string;
+};
+
 export type FeedbackRecord = {
   browserLanguage?: string;
   createdAt: string;
@@ -162,6 +194,9 @@ export type InterviewCatalog = {
 
 export type SessionSetupSnapshot = {
   interviewContext: InterviewContext;
+  introductionContext?: IntroductionRecord & {
+    introductionId: string;
+  };
   modeKey: PracticeModeKey;
   questionTypeKey?: QuestionTypeKey;
   storyContext?: StoryOutline & {
@@ -251,6 +286,7 @@ export type QuestCheckType =
   | "all_scores_min"
   | "avg_score_min"
   | "debrief_count"
+  | "introduction_count"
   | "job_target_set"
   | "level_reached"
   | "mode_used"
@@ -258,6 +294,7 @@ export type QuestCheckType =
   | "resume_uploaded"
   | "session_count"
   | "single_score_min"
+  | "story_count"
   | "streak_count";
 
 export type UserQuestRecord = {

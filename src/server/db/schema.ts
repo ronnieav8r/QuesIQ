@@ -30,6 +30,9 @@ import type {
   SessionStatus,
   VoiceDebriefStatus,
   VoiceSessionArtifactDraft,
+  IntroductionPracticeCoachingEntry,
+  IntroAudience,
+  IntroLength,
 } from "@/product/interview-types";
 
 export const users = pgTable("user", {
@@ -230,6 +233,38 @@ export const stories = pgTable(
   (story) => ({
     updatedAtIdx: index("stories_updated_at_idx").on(story.updatedAt),
     userIdx: index("stories_user_idx").on(story.userId),
+  }),
+);
+
+export const introductions = pgTable(
+  "introductions",
+  {
+    audience: text("audience").$type<IntroAudience>().default("virtual").notNull(),
+    background: text("background").default("").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    lastPracticedAt: timestamp("last_practiced_at", { withTimezone: true }),
+    length: text("length").$type<IntroLength>().default("medium").notNull(),
+    practiceCoaching: jsonb("practice_coaching")
+      .$type<IntroductionPracticeCoachingEntry[]>()
+      .default([])
+      .notNull(),
+    practiceCount: integer("practice_count").default(0).notNull(),
+    proofPoint: text("proof_point").default("").notNull(),
+    rawNotes: text("raw_notes").default("").notNull(),
+    roleInterest: text("role_interest").default("").notNull(),
+    script: text("script").default("").notNull(),
+    strength: text("strength").default("").notNull(),
+    title: text("title").notNull(),
+    transition: text("transition").default("").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (introduction) => ({
+    updatedAtIdx: index("introductions_updated_at_idx").on(introduction.updatedAt),
+    userIdx: index("introductions_user_idx").on(introduction.userId),
   }),
 );
 

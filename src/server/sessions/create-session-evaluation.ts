@@ -27,6 +27,7 @@ import {
   recordStoryPracticeCoaching,
   type StoryLibraryContextItem,
 } from "@/server/stories/stories";
+import { recordIntroductionPracticeCoaching } from "@/server/introductions/introductions";
 
 type SessionEvaluationRecord = {
   id: string;
@@ -182,6 +183,7 @@ const evaluationSchema = {
 };
 
 const minimumReviewDurationSeconds = 120;
+const minimumIntroReviewDurationSeconds = 30;
 
 function extractResponseText(body: ResponsesApiBody) {
   if (body.output_text) {
@@ -244,6 +246,19 @@ function buildEvaluationInput(
           title: snapshot.storyContext.title,
         }
       : "Not a Story Lab practice session",
+    introductionContext: snapshot.introductionContext
+      ? {
+          audience: snapshot.introductionContext.audience,
+          background: snapshot.introductionContext.background,
+          intendedLength: snapshot.introductionContext.length,
+          proofPoint: snapshot.introductionContext.proofPoint,
+          roleInterest: snapshot.introductionContext.roleInterest,
+          savedScript: snapshot.introductionContext.script,
+          strength: snapshot.introductionContext.strength,
+          title: snapshot.introductionContext.title,
+          transition: snapshot.introductionContext.transition,
+        }
+      : "Not an Introduction Builder practice session",
     savedStoryLibrary:
       storyLibrary.length > 0
         ? storyLibrary.map((story) => ({
@@ -407,6 +422,15 @@ export async function createSessionEvaluation(
         userId,
       });
     }
+    if (existingSession?.contextSnapshot.introductionContext?.introductionId) {
+      await recordIntroductionPracticeCoaching({
+        introductionId:
+          existingSession.contextSnapshot.introductionContext.introductionId,
+        result: existing.result,
+        sessionId,
+        userId,
+      });
+    }
 
     return existing;
   }
@@ -438,9 +462,13 @@ export async function createSessionEvaluation(
     throw new Error("This practice session does not have a saved transcript yet.");
   }
 
+  const minimumDuration = session.contextSnapshot.introductionContext
+    ? minimumIntroReviewDurationSeconds
+    : minimumReviewDurationSeconds;
+
   if (
     session.voiceArtifact.durationSeconds !== undefined &&
-    session.voiceArtifact.durationSeconds < minimumReviewDurationSeconds
+    session.voiceArtifact.durationSeconds < minimumDuration
   ) {
     await getDb()
       .update(sessions)
@@ -586,6 +614,14 @@ export async function createSessionEvaluation(
       result,
       sessionId,
       storyId: session.contextSnapshot.storyContext.storyId,
+      userId,
+    });
+  }
+  if (session.contextSnapshot.introductionContext?.introductionId) {
+    await recordIntroductionPracticeCoaching({
+      introductionId: session.contextSnapshot.introductionContext.introductionId,
+      result,
+      sessionId,
       userId,
     });
   }

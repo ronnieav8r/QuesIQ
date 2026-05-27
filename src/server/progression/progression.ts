@@ -21,12 +21,14 @@ import { getDb } from "@/server/db/client";
 import {
   debriefs,
   evaluations,
+  introductions,
   profiles,
   progressionEvents,
   progressionLevelThresholds,
   progressionQuests,
   progressionXpRules,
   sessions,
+  stories,
   userProgression,
   userQuests,
   users,
@@ -705,6 +707,8 @@ async function getQuestProgress(
     profileRows,
     legacyDebriefRows,
     voiceDebriefRows,
+    storyRows,
+    introductionRows,
   ] = await Promise.all([
     getDb()
       .select({
@@ -742,6 +746,18 @@ async function getQuestProgress(
       })
       .from(voiceDebriefs)
       .where(eq(voiceDebriefs.userId, userId)),
+    getDb()
+      .select({
+        id: stories.id,
+      })
+      .from(stories)
+      .where(eq(stories.userId, userId)),
+    getDb()
+      .select({
+        id: introductions.id,
+      })
+      .from(introductions)
+      .where(eq(introductions.userId, userId)),
   ]);
   const completedSessions = sessionRows.filter((session) => session.status !== "created");
   const modeKeys = completedSessions.map((session) => session.modeKey);
@@ -769,6 +785,8 @@ async function getQuestProgress(
         : 0;
     case "debrief_count":
       return legacyDebriefRows.length + voiceDebriefRows.length;
+    case "introduction_count":
+      return introductionRows.length;
     case "job_target_set":
       return profile?.targetCompany?.trim() && profile.targetRole.trim() ? 1 : 0;
     case "level_reached":
@@ -789,6 +807,8 @@ async function getQuestProgress(
         ? threshold
         : 0;
     }
+    case "story_count":
+      return storyRows.length;
     case "streak_count":
       return summary.longestStreakDays;
     default:

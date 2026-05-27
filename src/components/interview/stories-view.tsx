@@ -6,6 +6,9 @@ import { Mic, Square } from "lucide-react";
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import type {
   InterviewContext,
+  IntroductionRecord,
+  IntroAudience,
+  IntroLength,
   JobTargetRecord,
   StoryBuilderTurn,
   StoryCategory,
@@ -108,14 +111,14 @@ function draftToOutline(story: StoryRecord, draft: StoryEditDraft): StoryOutline
 type StoriesViewProps = {
   interviewContext: InterviewContext;
   jobTargets: JobTargetRecord[];
+  onPracticeIntroduction: (introduction: IntroductionRecord) => void;
   onPracticeStory: (story: StoryRecord) => void;
   selectedJobTarget?: JobTargetRecord;
 };
 
 type StoryCaptureMode = "dictate" | "tell" | "type";
 type StoryLabTab = "intro" | "tmaat";
-type IntroAudience = "hr_phone" | "in_person" | "virtual";
-type IntroLength = "long" | "medium" | "short";
+type IntroCaptureMode = "dictate" | "tell" | "type";
 
 type IntroDraft = {
   background: string;
@@ -191,11 +194,15 @@ function getAudienceGuidance(audience: IntroAudience) {
 export function StoriesView({
   interviewContext,
   jobTargets,
+  onPracticeIntroduction,
   onPracticeStory,
   selectedJobTarget,
 }: StoriesViewProps) {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const conversationArtifactKeyRef = useRef<string | undefined>(undefined);
+  const introConversationArtifactKeyRef = useRef<string | undefined>(undefined);
+  const introMaterialRef = useRef("");
+  const introSpeechTranscriptRef = useRef("");
   const recordingWantedRef = useRef(false);
   const shouldScrollToDetailRef = useRef(false);
   const storyDetailRef = useRef<HTMLElement | null>(null);
@@ -211,6 +218,7 @@ export function StoriesView({
   const [conversationStatus, setConversationStatus] =
     useState<"idle" | "ready">("idle");
   const [introAudience, setIntroAudience] = useState<IntroAudience>("virtual");
+  const [introCaptureMode, setIntroCaptureMode] = useState<IntroCaptureMode>("tell");
   const [introDraft, setIntroDraft] = useState<IntroDraft>({
     background: "",
     proofPoint: "",
@@ -219,13 +227,16 @@ export function StoriesView({
     transition: "",
   });
   const [introLength, setIntroLength] = useState<IntroLength>("medium");
+  const [introMaterial, setIntroMaterial] = useState("");
+  const [introPending, setIntroPending] = useState(false);
+  const [introductions, setIntroductions] = useState<IntroductionRecord[]>([]);
   const [listStatus, setListStatus] = useState<"idle" | "loaded" | "loading">("idle");
   const [pendingAction, setPendingAction] = useState<"follow_up" | "save">();
   const [recording, setRecording] = useState(false);
   const [selectedStoryId, setSelectedStoryId] = useState<string>();
   const [saveEditPending, setSaveEditPending] = useState(false);
   const [stories, setStories] = useState<StoryRecord[]>([]);
-  const [storyLabTab, setStoryLabTab] = useState<StoryLabTab>("tmaat");
+  const [storyLabTab, setStoryLabTab] = useState<StoryLabTab>("intro");
   const [turns, setTurns] = useState<StoryBuilderTurn[]>([
     createTurn(
       "assistant",
@@ -247,6 +258,10 @@ export function StoriesView({
   }, [draftText]);
 
   useEffect(() => {
+    introMaterialRef.current = introMaterial;
+  }, [introMaterial]);
+
+  useEffect(() => {
     if (!shouldScrollToDetailRef.current || !storyDetailRef.current) {
       return;
     }
@@ -263,6 +278,14 @@ export function StoriesView({
     captureMode === "tell"
       ? "Live conversation"
       : captureMode === "dictate"
+        ? canUseSpeech
+          ? "Dictation ready"
+          : "Type fallback"
+        : "Writing";
+  const introCaptureStatusLabel =
+    introCaptureMode === "tell"
+      ? "Live conversation"
+      : introCaptureMode === "dictate"
         ? canUseSpeech
           ? "Dictation ready"
           : "Type fallback"
@@ -295,19 +318,35 @@ export function StoriesView({
     async function loadStories() {
       try {
         setListStatus("loading");
-        const response = await fetch("/api/stories");
+        const [response, introductionsResponse] = await Promise.all([
+          fetch("/api/stories"),
+          fetch("/api/introductions"),
+        ]);
         const body = (await response.json()) as {
           detail?: string;
           error?: string;
           stories?: StoryRecord[];
         };
+        const introductionsBody = (await introductionsResponse.json()) as {
+          detail?: string;
+          error?: string;
+          introductions?: IntroductionRecord[];
+        };
 
         if (!response.ok) {
           throw new Error(body.detail || body.error || "Story Lab could not be loaded.");
         }
+        if (!introductionsResponse.ok) {
+          throw new Error(
+            introductionsBody.detail ||
+              introductionsBody.error ||
+              "Introductions could not be loaded.",
+          );
+        }
 
         if (!ignore) {
           setStories(body.stories ?? []);
+          setIntroductions(introductionsBody.introductions ?? []);
           setSelectedStoryId((current) => current ?? body.stories?.[0]?.id);
           setListStatus("loaded");
         }
@@ -359,6 +398,25 @@ export function StoriesView({
     );
     setDraftText("");
     setConversationStatus("ready");
+  }
+
+  function saveIntroConversationArtifact(artifact: VoiceSessionArtifactDraft) {
+    if (artifact.transcript.length === 0) {
+      return;
+    }
+
+    const artifactKey = `${artifact.endedAt}:${artifact.transcript.length}`;
+
+    if (introConversationArtifactKeyRef.current === artifactKey) {
+      return;
+    }
+
+    introConversationArtifactKeyRef.current = artifactKey;
+    setIntroMaterial(
+      artifact.transcript
+        .map((turn) => `${turn.speaker}: ${turn.text}`)
+        .join("\n"),
+    );
   }
 
   function commitSpeechTranscript() {
@@ -448,6 +506,93 @@ export function StoriesView({
     recognition.start();
   }
 
+  function commitIntroSpeechTranscript() {
+    const finalTranscript = introSpeechTranscriptRef.current.trim();
+    const visibleTranscript = introMaterialRef.current.trim();
+    const transcript =
+      visibleTranscript.length > finalTranscript.length ? visibleTranscript : finalTranscript;
+
+    if (transcript) {
+      setIntroMaterial(transcript);
+      introSpeechTranscriptRef.current = "";
+    }
+  }
+
+  function stopIntroRecording() {
+    recordingWantedRef.current = false;
+    window.clearTimeout(restartTimeoutRef.current);
+    setRecording(false);
+    recognitionRef.current?.stop();
+    commitIntroSpeechTranscript();
+  }
+
+  function toggleIntroRecording() {
+    if (recording) {
+      stopIntroRecording();
+      return;
+    }
+
+    const Recognition = getSpeechRecognition();
+
+    if (!Recognition) {
+      setError("Voice capture is not available in this browser. Typing still works.");
+      return;
+    }
+
+    const recognition = new Recognition();
+
+    introSpeechTranscriptRef.current = "";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+    recognition.onresult = (event) => {
+      let interimTranscript = "";
+
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        const transcript = result[0].transcript;
+
+        if (result.isFinal) {
+          introSpeechTranscriptRef.current += transcript;
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      setIntroMaterial(`${introSpeechTranscriptRef.current} ${interimTranscript}`.trim());
+    };
+    recognition.onerror = (event) => {
+      if (recordingWantedRef.current && event.error === "no-speech") {
+        return;
+      }
+
+      recordingWantedRef.current = false;
+      setError("Voice capture stopped. You can try again or type the note.");
+      setRecording(false);
+    };
+    recognition.onend = () => {
+      if (recordingWantedRef.current) {
+        restartTimeoutRef.current = window.setTimeout(() => {
+          try {
+            recognition.start();
+          } catch {
+            recordingWantedRef.current = false;
+            setRecording(false);
+            setError("Dictation paused. Tap Dictate Intro to continue.");
+          }
+        }, 250);
+        return;
+      }
+
+      setRecording(false);
+    };
+    recognitionRef.current = recognition;
+    setError(undefined);
+    recordingWantedRef.current = true;
+    setRecording(true);
+    recognition.start();
+  }
+
   async function askFollowUp() {
     try {
       setError(undefined);
@@ -511,6 +656,47 @@ export function StoriesView({
       setError(error instanceof Error ? error.message : "Story could not be saved.");
     } finally {
       setPendingAction(undefined);
+    }
+  }
+
+  async function saveIntroduction() {
+    try {
+      setError(undefined);
+      setIntroPending(true);
+      const response = await fetch("/api/introductions", {
+        body: JSON.stringify({
+          introduction: {
+            ...introDraft,
+            audience: introAudience,
+            length: introLength,
+            rawNotes: introMaterial,
+            script: introDraftText,
+            title: [introLengthGuidance.label, targetRole || "Interview", "Introduction"]
+              .filter(Boolean)
+              .join(" "),
+          },
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        introduction?: IntroductionRecord;
+      };
+
+      if (!response.ok || !body.introduction) {
+        throw new Error(body.detail || body.error || "Introduction could not be saved.");
+      }
+
+      setIntroductions((current) => [body.introduction as IntroductionRecord, ...current]);
+      setIntroMaterial("");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Introduction could not be saved.");
+    } finally {
+      setIntroPending(false);
     }
   }
 
@@ -613,15 +799,6 @@ export function StoriesView({
 
       <div className="segmented-control story-lab-tabs" role="tablist" aria-label="Story Lab sections">
         <button
-          aria-selected={storyLabTab === "tmaat"}
-          className={storyLabTab === "tmaat" ? "active" : undefined}
-          onClick={() => setStoryLabTab("tmaat")}
-          role="tab"
-          type="button"
-        >
-          TMAAT
-        </button>
-        <button
           aria-selected={storyLabTab === "intro"}
           className={storyLabTab === "intro" ? "active" : undefined}
           onClick={() => setStoryLabTab("intro")}
@@ -629,6 +806,15 @@ export function StoriesView({
           type="button"
         >
           Introduction
+        </button>
+        <button
+          aria-selected={storyLabTab === "tmaat"}
+          className={storyLabTab === "tmaat" ? "active" : undefined}
+          onClick={() => setStoryLabTab("tmaat")}
+          role="tab"
+          type="button"
+        >
+          TMAAT
         </button>
       </div>
 
@@ -641,6 +827,82 @@ export function StoriesView({
                 <h2 id="intro-builder-title">Shape your opening answer.</h2>
               </div>
               <span>{introLengthGuidance.range}</span>
+            </div>
+
+            <div className="segmented-control" role="tablist" aria-label="Introduction capture mode">
+              <button
+                aria-selected={introCaptureMode === "tell"}
+                className={introCaptureMode === "tell" ? "active" : undefined}
+                onClick={() => setIntroCaptureMode("tell")}
+                role="tab"
+                type="button"
+              >
+                Talk with Que
+              </button>
+              <button
+                aria-selected={introCaptureMode === "dictate"}
+                className={introCaptureMode === "dictate" ? "active" : undefined}
+                onClick={() => setIntroCaptureMode("dictate")}
+                role="tab"
+                type="button"
+              >
+                Dictate
+              </button>
+              <button
+                aria-selected={introCaptureMode === "type"}
+                className={introCaptureMode === "type" ? "active" : undefined}
+                onClick={() => setIntroCaptureMode("type")}
+                role="tab"
+                type="button"
+              >
+                Type
+              </button>
+            </div>
+
+            {introCaptureMode === "tell" && (
+              <div className="story-live-panel">
+                <RealtimeVoiceSession
+                  endpoint="/api/realtime/story"
+                  firstTurnInstructions="Speak in English only. Help the user gather raw material for a 'tell me about yourself' introduction. Ask about their background, strongest proof point, target role, and the first impression they want to leave. Ask only one question at a time."
+                  onArtifactFinalized={saveIntroConversationArtifact}
+                  sessionId="intro-builder"
+                  startButtonLabel="Start Conversation"
+                  surfaceClassName="realtime-session story-realtime-session"
+                  title="Talk with Que about your intro"
+                />
+              </div>
+            )}
+
+            <label>
+              <span>
+                {introCaptureMode === "type" ? "Raw intro notes" : "Captured intro material"}
+              </span>
+              <textarea
+                onChange={(event) => setIntroMaterial(event.target.value)}
+                placeholder="Add rough notes from your background, target role, proof points, or the intro you already use."
+                value={introMaterial}
+              />
+            </label>
+
+            <div className="inline-actions">
+              {introCaptureMode === "dictate" && (
+                <button
+                  className={recording ? "recording-button active" : undefined}
+                  onClick={toggleIntroRecording}
+                  type="button"
+                >
+                  {recording ? (
+                    <>
+                      <Square aria-hidden="true" className="button-icon" /> Stop Dictating
+                    </>
+                  ) : (
+                    <>
+                      <Mic aria-hidden="true" className="button-icon" /> Dictate Intro
+                    </>
+                  )}
+                </button>
+              )}
+              <span className="inline-status">{introCaptureStatusLabel}</span>
             </div>
 
             <div className="intro-option-grid">
@@ -735,6 +997,12 @@ export function StoriesView({
                 />
               </label>
             </div>
+
+            <div className="inline-actions">
+              <button disabled={introPending || !introDraftText.trim()} onClick={saveIntroduction} type="button">
+                {introPending ? "Saving" : "Save Introduction"}
+              </button>
+            </div>
           </section>
 
           <aside className="panel intro-preview" aria-labelledby="intro-preview-title">
@@ -762,6 +1030,44 @@ export function StoriesView({
             <article className="intro-script">
               <p>{introDraftText}</p>
             </article>
+            <section className="intro-library" aria-labelledby="intro-library-title">
+              <div className="section-head">
+                <h2 id="intro-library-title">Saved Introductions</h2>
+                <span>{introductions.length} saved</span>
+              </div>
+              {introductions.length === 0 ? (
+                <p>Saved intros will appear here so you can practice each version.</p>
+              ) : (
+                <div className="story-card-list">
+                  {introductions.map((introduction) => (
+                    <article className="story-card" key={introduction.id}>
+                      <div>
+                        <strong>{introduction.title}</strong>
+                        <span>
+                          {introduction.lastPracticedAt
+                            ? `Practiced ${new Date(introduction.lastPracticedAt).toLocaleDateString()}`
+                            : new Date(introduction.updatedAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p>{introduction.script}</p>
+                      <div className="story-tags">
+                        <span>{getAudienceGuidance(introduction.audience).label}</span>
+                        <span>{getIntroLengthGuidance(introduction.length).range}</span>
+                        <span>{introduction.practiceCount} practices</span>
+                      </div>
+                      <div className="inline-actions">
+                        <button
+                          onClick={() => onPracticeIntroduction(introduction)}
+                          type="button"
+                        >
+                          Practice Intro
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
           </aside>
         </div>
       ) : (
