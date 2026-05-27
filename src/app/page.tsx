@@ -637,7 +637,12 @@ export default function Home() {
             />
           )}
           {signedIn && activeView === "stories" && (
-            <StoriesView onPracticeStory={launchStoryPractice} />
+            <StoriesView
+              interviewContext={interviewContext}
+              jobTargets={jobTargets}
+              onPracticeStory={launchStoryPractice}
+              selectedJobTarget={selectedJobTarget}
+            />
           )}
           {signedIn && activeView === "debrief" && (
             <DebriefView

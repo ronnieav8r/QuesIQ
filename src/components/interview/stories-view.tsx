@@ -5,6 +5,8 @@ import { Mic, Square } from "lucide-react";
 
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import type {
+  InterviewContext,
+  JobTargetRecord,
   StoryBuilderTurn,
   StoryCategory,
   StoryOutline,
@@ -104,12 +106,94 @@ function draftToOutline(story: StoryRecord, draft: StoryEditDraft): StoryOutline
 }
 
 type StoriesViewProps = {
+  interviewContext: InterviewContext;
+  jobTargets: JobTargetRecord[];
   onPracticeStory: (story: StoryRecord) => void;
+  selectedJobTarget?: JobTargetRecord;
 };
 
 type StoryCaptureMode = "dictate" | "tell" | "type";
+type StoryLabTab = "intro" | "tmaat";
+type IntroAudience = "hr_phone" | "in_person" | "virtual";
+type IntroLength = "long" | "medium" | "short";
 
-export function StoriesView({ onPracticeStory }: StoriesViewProps) {
+type IntroDraft = {
+  background: string;
+  proofPoint: string;
+  roleInterest: string;
+  strength: string;
+  transition: string;
+};
+
+const introAudienceOptions: Array<{
+  description: string;
+  key: IntroAudience;
+  label: string;
+}> = [
+  {
+    description: "Best for screening calls where the listener wants a quick fit check.",
+    key: "hr_phone",
+    label: "HR phone screening",
+  },
+  {
+    description: "Best when you need energy, clarity, and enough detail for follow-ups.",
+    key: "virtual",
+    label: "Virtual interview",
+  },
+  {
+    description: "Best when the room has more time and may include several stakeholders.",
+    key: "in_person",
+    label: "In person",
+  },
+];
+
+const introLengthOptions: Array<{
+  bestFor: string;
+  key: IntroLength;
+  label: string;
+  range: string;
+}> = [
+  {
+    bestFor: "HR phone screens and early recruiter calls.",
+    key: "short",
+    label: "Short",
+    range: "30-45 sec",
+  },
+  {
+    bestFor: "Most virtual interviews and hiring-manager openings.",
+    key: "medium",
+    label: "Medium",
+    range: "60-90 sec",
+  },
+  {
+    bestFor: "In-person interviews, panels, or senior-level conversations.",
+    key: "long",
+    label: "Long",
+    range: "90-120 sec",
+  },
+];
+
+function joinIntroParts(parts: string[]) {
+  return parts
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(" ");
+}
+
+function getIntroLengthGuidance(length: IntroLength) {
+  return introLengthOptions.find((option) => option.key === length) ?? introLengthOptions[1];
+}
+
+function getAudienceGuidance(audience: IntroAudience) {
+  return introAudienceOptions.find((option) => option.key === audience) ?? introAudienceOptions[1];
+}
+
+export function StoriesView({
+  interviewContext,
+  jobTargets,
+  onPracticeStory,
+  selectedJobTarget,
+}: StoriesViewProps) {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const conversationArtifactKeyRef = useRef<string | undefined>(undefined);
   const recordingWantedRef = useRef(false);
@@ -126,12 +210,22 @@ export function StoriesView({ onPracticeStory }: StoriesViewProps) {
   const [captureMode, setCaptureMode] = useState<StoryCaptureMode>("tell");
   const [conversationStatus, setConversationStatus] =
     useState<"idle" | "ready">("idle");
+  const [introAudience, setIntroAudience] = useState<IntroAudience>("virtual");
+  const [introDraft, setIntroDraft] = useState<IntroDraft>({
+    background: "",
+    proofPoint: "",
+    roleInterest: "",
+    strength: "",
+    transition: "",
+  });
+  const [introLength, setIntroLength] = useState<IntroLength>("medium");
   const [listStatus, setListStatus] = useState<"idle" | "loaded" | "loading">("idle");
   const [pendingAction, setPendingAction] = useState<"follow_up" | "save">();
   const [recording, setRecording] = useState(false);
   const [selectedStoryId, setSelectedStoryId] = useState<string>();
   const [saveEditPending, setSaveEditPending] = useState(false);
   const [stories, setStories] = useState<StoryRecord[]>([]);
+  const [storyLabTab, setStoryLabTab] = useState<StoryLabTab>("tmaat");
   const [turns, setTurns] = useState<StoryBuilderTurn[]>([
     createTurn(
       "assistant",
@@ -173,6 +267,27 @@ export function StoriesView({ onPracticeStory }: StoriesViewProps) {
           ? "Dictation ready"
           : "Type fallback"
         : "Writing";
+  const activeTarget = selectedJobTarget ?? jobTargets[0];
+  const targetRole = activeTarget?.targetRole || interviewContext.targetRole;
+  const targetCompany = activeTarget?.targetCompany || interviewContext.targetCompany;
+  const introLengthGuidance = getIntroLengthGuidance(introLength);
+  const audienceGuidance = getAudienceGuidance(introAudience);
+  const introDraftText = joinIntroParts([
+    introDraft.background ||
+      (targetRole
+        ? `I have been building experience that connects directly to ${targetRole} work.`
+        : "I have been building experience across roles that require clear judgment, communication, and follow-through."),
+    introDraft.strength
+      ? `My strongest lane is ${introDraft.strength}.`
+      : "I am strongest when I can connect the goal, the people, and the execution details.",
+    introDraft.proofPoint ? `For example, ${introDraft.proofPoint}.` : "",
+    introDraft.roleInterest ||
+      (targetRole || targetCompany
+        ? `That is why I am interested in ${targetCompany ? `${targetCompany} ` : ""}${targetRole || "this opportunity"}.`
+        : "That is why I am looking for a role where I can make a practical impact quickly."),
+    introDraft.transition ||
+      "I would be happy to walk through the parts of my background that are most relevant.",
+  ]);
 
   useEffect(() => {
     let ignore = false;
@@ -492,15 +607,169 @@ export function StoriesView({ onPracticeStory }: StoriesViewProps) {
       <div className="screen-toolbar">
         <div>
           <p className="eyebrow">Story Lab</p>
-          <h1 id="stories-title">Tell the story first. Shape it later.</h1>
+          <h1 id="stories-title">Build the answers interviewers remember.</h1>
         </div>
       </div>
 
+      <div className="segmented-control story-lab-tabs" role="tablist" aria-label="Story Lab sections">
+        <button
+          aria-selected={storyLabTab === "tmaat"}
+          className={storyLabTab === "tmaat" ? "active" : undefined}
+          onClick={() => setStoryLabTab("tmaat")}
+          role="tab"
+          type="button"
+        >
+          TMAAT
+        </button>
+        <button
+          aria-selected={storyLabTab === "intro"}
+          className={storyLabTab === "intro" ? "active" : undefined}
+          onClick={() => setStoryLabTab("intro")}
+          role="tab"
+          type="button"
+        >
+          Introduction
+        </button>
+      </div>
+
+      {storyLabTab === "intro" ? (
+        <div className="intro-builder-layout">
+          <section className="panel intro-builder" aria-labelledby="intro-builder-title">
+            <div className="section-head">
+              <div>
+                <p className="eyebrow">Introduction Builder</p>
+                <h2 id="intro-builder-title">Shape your opening answer.</h2>
+              </div>
+              <span>{introLengthGuidance.range}</span>
+            </div>
+
+            <div className="intro-option-grid">
+              <section>
+                <h3>Interview setting</h3>
+                <div className="target-chip-list">
+                  {introAudienceOptions.map((option) => (
+                    <button
+                      className={introAudience === option.key ? "target-chip active" : "target-chip"}
+                      key={option.key}
+                      onClick={() => setIntroAudience(option.key)}
+                      type="button"
+                    >
+                      <strong>{option.label}</strong>
+                      <span>{option.description}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section>
+                <h3>Length</h3>
+                <div className="target-chip-list intro-length-list">
+                  {introLengthOptions.map((option) => (
+                    <button
+                      className={introLength === option.key ? "target-chip active" : "target-chip"}
+                      key={option.key}
+                      onClick={() => setIntroLength(option.key)}
+                      type="button"
+                    >
+                      <strong>{option.label}</strong>
+                      <span>{option.range}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            </div>
+
+            <div className="field-grid">
+              <label>
+                <span>Background in one line</span>
+                <input
+                  onChange={(event) =>
+                    setIntroDraft({ ...introDraft, background: event.target.value })
+                  }
+                  placeholder="Example: I am an operations leader with eight years in..."
+                  value={introDraft.background}
+                />
+              </label>
+              <label>
+                <span>Core strength</span>
+                <input
+                  onChange={(event) =>
+                    setIntroDraft({ ...introDraft, strength: event.target.value })
+                  }
+                  placeholder="Example: building calm process around messy growth"
+                  value={introDraft.strength}
+                />
+              </label>
+            </div>
+
+            <label>
+              <span>Proof point</span>
+              <textarea
+                onChange={(event) =>
+                  setIntroDraft({ ...introDraft, proofPoint: event.target.value })
+                }
+                placeholder="Example: I helped reduce onboarding time by 30% while improving manager visibility."
+                value={introDraft.proofPoint}
+              />
+            </label>
+
+            <div className="field-grid">
+              <label>
+                <span>Why this role</span>
+                <textarea
+                  onChange={(event) =>
+                    setIntroDraft({ ...introDraft, roleInterest: event.target.value })
+                  }
+                  placeholder="Connect your background to this role, company, or team."
+                  value={introDraft.roleInterest}
+                />
+              </label>
+              <label>
+                <span>Closing handoff</span>
+                <textarea
+                  onChange={(event) =>
+                    setIntroDraft({ ...introDraft, transition: event.target.value })
+                  }
+                  placeholder="Example: I can start with the role most similar to this one."
+                  value={introDraft.transition}
+                />
+              </label>
+            </div>
+          </section>
+
+          <aside className="panel intro-preview" aria-labelledby="intro-preview-title">
+            <div className="section-head">
+              <div>
+                <p className="eyebrow">Draft</p>
+                <h2 id="intro-preview-title">Tell me about yourself.</h2>
+              </div>
+            </div>
+            <div className="intro-guidance">
+              <span>{audienceGuidance.label}</span>
+              <p>{audienceGuidance.description}</p>
+              <span>{introLengthGuidance.label}: {introLengthGuidance.range}</span>
+              <p>{introLengthGuidance.bestFor}</p>
+              {(targetRole || targetCompany) && (
+                <>
+                  <span>Target context</span>
+                  <p>
+                    Aim the intro toward {targetCompany ? `${targetCompany} ` : ""}
+                    {targetRole || "this role"} without sounding like a cover letter.
+                  </p>
+                </>
+              )}
+            </div>
+            <article className="intro-script">
+              <p>{introDraftText}</p>
+            </article>
+          </aside>
+        </div>
+      ) : (
       <div className="story-lab-layout">
         <section className="panel story-builder" aria-labelledby="story-builder-title">
           <div className="section-head">
             <div>
-              <p className="eyebrow">Tell Your Story</p>
+              <p className="eyebrow">TMAAT Story</p>
               <h2 id="story-builder-title">Start messy. Que will help find the shape.</h2>
             </div>
             {recording ? (
@@ -921,6 +1190,7 @@ export function StoriesView({ onPracticeStory }: StoriesViewProps) {
           )}
         </section>
       </div>
+      )}
     </section>
   );
 }

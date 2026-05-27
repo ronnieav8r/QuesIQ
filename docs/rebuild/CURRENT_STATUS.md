@@ -261,6 +261,15 @@ Last updated: 2026-05-27
     coaching summaries
   - normal practice and evaluation calls now receive compact saved-story library
     context so Que can suggest a better-fit saved story when appropriate
+- Story Lab introduction builder started:
+  - Story Lab now has separate TMAAT and Introduction tabs
+  - TMAAT keeps the existing Tell Que, Dictate, Type, saved story library, edit,
+    and Practice Story flow
+  - Introduction Builder gathers setting, length range, background, strength,
+    proof point, role interest, and closing handoff context
+  - Intro guidance uses the active saved job target or profile role/company when
+    available, with Short, Medium, and Long timing ranges for HR phone screens,
+    virtual interviews, and in-person interviews
 - Story Lab prompts are now Admin-visible:
   - Story Conversation Realtime, Story Lab follow-up, story outline generation,
     Story Practice Realtime guidance, and Story Practice Evaluation guidance are
