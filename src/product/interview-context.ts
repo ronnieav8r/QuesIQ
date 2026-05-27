@@ -22,6 +22,7 @@ export function parseInterviewContext(value: unknown): InterviewContext | undefi
 
   return {
     jobDescription: candidate.jobDescription,
+    jobTargetId: isString(candidate.jobTargetId) ? candidate.jobTargetId : undefined,
     preferredName: candidate.preferredName,
     resumeParsedAt: isString(candidate.resumeParsedAt) ? candidate.resumeParsedAt : undefined,
     resumeName: isString(candidate.resumeName) ? candidate.resumeName : undefined,

@@ -171,6 +171,32 @@ export const profiles = pgTable(
   }),
 );
 
+export const jobTargets = pgTable(
+  "job_targets",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    jobDescription: text("job_description").default("").notNull(),
+    label: text("label").default("").notNull(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    targetCompany: text("target_company").default("").notNull(),
+    targetRole: text("target_role").default("").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (target) => ({
+    lastUsedIdx: index("job_targets_last_used_idx").on(target.userId, target.lastUsedAt),
+    userIdx: index("job_targets_user_idx").on(target.userId),
+    userTargetIdx: uniqueIndex("job_targets_user_role_company_idx").on(
+      target.userId,
+      target.targetRole,
+      target.targetCompany,
+    ),
+  }),
+);
+
 export const stories = pgTable(
   "stories",
   {

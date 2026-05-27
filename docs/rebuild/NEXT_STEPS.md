@@ -12,6 +12,9 @@ Last updated: 2026-05-27
 - Story Practice reviews now write compact coaching history back onto the source
   Story record, and Que receives saved-story library context during practice so
   she can suggest a better-fit story when one clearly applies.
+- Saved Job Targets have a first owned slice: onboarding can save the current
+  role/company/job description as a target, Practice setup can select a saved
+  target, and Home can nudge target-aware practice.
 - Story Lab conversation, story generation, and story-practice prompts are
   Admin-visible as versioned prompt configs.
 - Mobile navigation is hideable: Story Lab is a primary destination, the bottom
@@ -100,7 +103,7 @@ Last updated: 2026-05-27
 ## Immediate
 
 1. Deploy the current branch and confirm Render runs the newest migrations,
-   especially `drizzle/0033_add_story_conversation_realtime_prompt.sql`.
+   especially `drizzle/0034_add_job_targets.sql`.
 2. User-confirm the new review output on production: a new completed practice
    session should show score evidence/next steps in the stored JSON and visible
    review-detail sections on the review page.
@@ -123,7 +126,9 @@ Last updated: 2026-05-27
   slice proves useful
 - Add richer owned session history filters if the 50-session list becomes too
   noisy
-- Add saved Job Targets and route practice/Up Next through a selected target
+- User-confirm saved Job Targets: save a profile context as a target, choose it
+  in Practice setup, launch a session, and verify the session snapshot uses the
+  target role/company/job description.
 - User-confirm Story Practice coaching history: complete a Story Practice
   session, let the review save, then verify the source Story shows practice
   count, last-practiced date, and recent coaching.

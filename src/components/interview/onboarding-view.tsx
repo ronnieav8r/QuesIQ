@@ -5,7 +5,7 @@ import type { InterviewContext } from "@/product/interview-types";
 type OnboardingViewProps = {
   interviewContext: InterviewContext;
   onBack: () => void;
-  onSave: (nextContext: InterviewContext) => Promise<void> | void;
+  onSave: (nextContext: InterviewContext, saveAsJobTarget?: boolean) => Promise<void> | void;
   saveError?: string;
   savePending?: boolean;
   onSkip: () => void;
@@ -23,6 +23,7 @@ export function OnboardingView({
   const [resumeUploadError, setResumeUploadError] = useState<string>();
   const [resumeUploadPending, setResumeUploadPending] = useState(false);
   const [resumeUploadWarning, setResumeUploadWarning] = useState<string>();
+  const [saveAsJobTarget, setSaveAsJobTarget] = useState(true);
   const [selectedResumeFile, setSelectedResumeFile] = useState<File>();
 
   async function saveContext(event: FormEvent<HTMLFormElement>) {
@@ -76,7 +77,8 @@ export function OnboardingView({
 
     await onSave({
       ...nextContext,
-    });
+      jobTargetId: undefined,
+    }, saveAsJobTarget);
   }
 
   return (
@@ -181,6 +183,15 @@ export function OnboardingView({
                   }`
                 : "Optional. TXT, MD, DOCX, and most PDF resumes can be parsed for Que."}
             </small>
+          </label>
+
+          <label className="checkbox-row">
+            <input
+              checked={saveAsJobTarget}
+              onChange={(event) => setSaveAsJobTarget(event.target.checked)}
+              type="checkbox"
+            />
+            <span>Save this role as a reusable job target</span>
           </label>
 
           <div className="inline-actions">

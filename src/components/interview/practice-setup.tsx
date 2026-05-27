@@ -7,17 +7,21 @@ import type {
   QuestionType,
   QuestionTypeKey,
   InterviewStyleKey,
+  JobTargetRecord,
 } from "@/product/interview-types";
 
 type PracticeSetupProps = {
   catalog: InterviewCatalog;
   interviewContext: InterviewContext;
+  jobTargets: JobTargetRecord[];
   onBack: () => void;
+  onJobTarget: (target?: JobTargetRecord) => void;
   onLaunch: () => void;
   onMode: (mode: PracticeMode) => void;
   onQuestion: (questionKey: QuestionTypeKey) => void;
   onStyle: (styleKey: InterviewStyleKey) => void;
   selectedMode?: PracticeMode;
+  selectedJobTarget?: JobTargetRecord;
   selectedQuestion?: QuestionType;
   selectedStyle?: InterviewStyle;
   sessionLaunchError?: string;
@@ -41,12 +45,15 @@ function stepLabel(step: PracticeStep) {
 export function PracticeSetup({
   catalog,
   interviewContext,
+  jobTargets,
   onBack,
+  onJobTarget,
   onLaunch,
   onMode,
   onQuestion,
   onStyle,
   selectedMode,
+  selectedJobTarget,
   selectedQuestion,
   selectedStyle,
   sessionLaunchError,
@@ -85,6 +92,38 @@ export function PracticeSetup({
 
       {step === "mode" && (
         <section aria-labelledby="mode-title" className="choice-screen">
+          <section className="target-picker" aria-labelledby="target-picker-title">
+            <div className="section-head">
+              <div>
+                <p className="eyebrow">Job Target</p>
+                <h2 id="target-picker-title">Choose the role Que should aim at</h2>
+              </div>
+              <span>{selectedJobTarget ? "Saved target" : "Profile context"}</span>
+            </div>
+            <div className="target-chip-list">
+              <button
+                className={!selectedJobTarget ? "target-chip active" : "target-chip"}
+                onClick={() => onJobTarget(undefined)}
+                type="button"
+              >
+                <strong>{interviewContext.targetRole || "Profile target"}</strong>
+                <span>{interviewContext.targetCompany || "No company selected"}</span>
+              </button>
+              {jobTargets.map((target) => (
+                <button
+                  className={
+                    selectedJobTarget?.id === target.id ? "target-chip active" : "target-chip"
+                  }
+                  key={target.id}
+                  onClick={() => onJobTarget(target)}
+                  type="button"
+                >
+                  <strong>{target.label}</strong>
+                  <span>{target.jobDescription ? "Job description saved" : "No JD"}</span>
+                </button>
+              ))}
+            </div>
+          </section>
           <h2 id="mode-title">Choose a practice mode</h2>
           <div className="mode-list">
             {practiceModes.map((mode) => (
@@ -167,7 +206,11 @@ export function PracticeSetup({
             </div>
             <div>
               <dt>Target role</dt>
-              <dd>{interviewContext.targetRole || "General practice"}</dd>
+              <dd>{selectedJobTarget?.targetRole || interviewContext.targetRole || "General practice"}</dd>
+            </div>
+            <div>
+              <dt>Target company</dt>
+              <dd>{selectedJobTarget?.targetCompany || interviewContext.targetCompany || "Optional"}</dd>
             </div>
             <div>
               <dt>Resume context</dt>

@@ -32,6 +32,7 @@ import { initialInterviewContext } from "@/product/practice-data";
 import type {
   AppView,
   InterviewStyleKey,
+  JobTargetRecord,
   PracticeMode,
   PracticeStep,
   QuestionTypeKey,
@@ -55,6 +56,8 @@ export default function Home() {
   const [selectedQuestionKey, setSelectedQuestionKey] = useState<QuestionTypeKey>();
   const [selectedStyleKey, setSelectedStyleKey] = useState<InterviewStyleKey>();
   const [interviewContext, setInterviewContext] = useState(initialInterviewContext);
+  const [jobTargets, setJobTargets] = useState<JobTargetRecord[]>([]);
+  const [selectedJobTarget, setSelectedJobTarget] = useState<JobTargetRecord>();
   const [sessionLaunchError, setSessionLaunchError] = useState<string>();
   const [sessionLaunchPending, setSessionLaunchPending] = useState(false);
   const [sessionLaunchRecord, setSessionLaunchRecord] = useState<SessionLaunchRecord>();
@@ -191,13 +194,72 @@ export default function Home() {
     };
   }, [signedIn]);
 
-  async function saveProfileContext(nextContext: typeof interviewContext) {
+  async function refreshJobTargets() {
+    try {
+      const response = await fetch("/api/job-targets");
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        targets?: JobTargetRecord[];
+      };
+
+      if (!response.ok) {
+        throw new Error(body.detail || body.error || "Job targets could not be loaded.");
+      }
+
+      setJobTargets(body.targets ?? []);
+    } catch (error) {
+      console.error("Job target load failed.", error);
+    }
+  }
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadJobTargets() {
+      if (!signedIn) {
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/job-targets");
+        const body = (await response.json()) as {
+          detail?: string;
+          error?: string;
+          targets?: JobTargetRecord[];
+        };
+
+        if (!response.ok) {
+          throw new Error(body.detail || body.error || "Job targets could not be loaded.");
+        }
+
+        if (!ignore) {
+          setJobTargets(body.targets ?? []);
+        }
+      } catch (error) {
+        if (!ignore) {
+          console.error("Job target load failed.", error);
+        }
+      }
+    }
+
+    void loadJobTargets();
+
+    return () => {
+      ignore = true;
+    };
+  }, [signedIn]);
+
+  async function saveProfileContext(
+    nextContext: typeof interviewContext,
+    saveAsJobTarget = false,
+  ) {
     try {
       setProfileSaveError(undefined);
       setProfileSavePending(true);
 
       const response = await fetch("/api/profile", {
-        body: JSON.stringify({ profile: nextContext }),
+        body: JSON.stringify({ profile: nextContext, saveAsJobTarget }),
         headers: {
           "Content-Type": "application/json",
         },
@@ -207,6 +269,7 @@ export default function Home() {
         detail?: string;
         error?: string;
         profile?: typeof interviewContext;
+        target?: JobTargetRecord;
       };
 
       if (!response.ok || !body.profile) {
@@ -214,6 +277,13 @@ export default function Home() {
       }
 
       setInterviewContext(body.profile);
+      if (body.target) {
+        setJobTargets((current) => [
+          body.target as JobTargetRecord,
+          ...current.filter((target) => target.id !== body.target?.id),
+        ]);
+        setSelectedJobTarget(body.target);
+      }
       setActiveView("home");
     } catch (error) {
       setProfileSaveError(
@@ -233,6 +303,7 @@ export default function Home() {
     setSelectedModeKey(undefined);
     setSelectedQuestionKey(undefined);
     setSelectedStyleKey(undefined);
+    setSelectedJobTarget((current) => current ?? jobTargets[0]);
   }
 
   function chooseMode(mode: PracticeMode) {
@@ -261,8 +332,17 @@ export default function Home() {
       return;
     }
 
+    const targetContext = selectedJobTarget
+      ? {
+          ...interviewContext,
+          jobDescription: selectedJobTarget.jobDescription,
+          jobTargetId: selectedJobTarget.id,
+          targetCompany: selectedJobTarget.targetCompany,
+          targetRole: selectedJobTarget.targetRole,
+        }
+      : { ...interviewContext, jobTargetId: undefined };
     const snapshot: SessionSetupSnapshot = {
-      interviewContext: { ...interviewContext },
+      interviewContext: targetContext,
       modeKey: selectedMode.key,
       questionTypeKey: selectedQuestion?.key,
       styleKey: selectedStyle.key,
@@ -290,6 +370,9 @@ export default function Home() {
 
       setSessionSnapshot(snapshot);
       setSessionLaunchRecord(body.session);
+      if (selectedJobTarget) {
+        await refreshJobTargets();
+      }
       setActiveView("session");
     } catch (error) {
       setSessionLaunchError(
@@ -460,6 +543,7 @@ export default function Home() {
             <Dashboard
               contextReady={contextReady}
               interviewContext={interviewContext}
+              jobTargets={jobTargets}
               onDebrief={(session) => {
                 setSelectedDebriefSession(session);
                 setActiveView("debrief");
@@ -478,12 +562,15 @@ export default function Home() {
             <PracticeSetup
               catalog={interviewCatalog.catalog}
               interviewContext={interviewContext}
+              jobTargets={jobTargets}
               onBack={goBackInPractice}
+              onJobTarget={setSelectedJobTarget}
               onLaunch={launchSession}
               onMode={chooseMode}
               onQuestion={chooseQuestion}
               onStyle={chooseStyle}
               selectedMode={selectedMode}
+              selectedJobTarget={selectedJobTarget}
               selectedQuestion={selectedQuestion}
               selectedStyle={selectedStyle}
               sessionLaunchError={sessionLaunchError}

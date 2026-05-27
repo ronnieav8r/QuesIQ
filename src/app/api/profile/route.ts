@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { parseInterviewContext } from "@/product/interview-context";
+import { saveJobTargetFromContext } from "@/server/job-targets/job-targets";
 import { getProfile } from "@/server/profiles/get-profile";
 import { saveProfile } from "@/server/profiles/save-profile";
 
@@ -48,7 +49,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
   }
 
-  const body = (await request.json()) as { profile?: unknown };
+  const body = (await request.json()) as { profile?: unknown; saveAsJobTarget?: unknown };
   const profile = parseInterviewContext(body.profile);
 
   if (!profile) {
@@ -67,8 +68,11 @@ export async function PUT(request: Request) {
 
   try {
     const savedProfile = await saveProfile(appSession.user.id, profile);
+    const target = body.saveAsJobTarget
+      ? await saveJobTargetFromContext(appSession.user.id, savedProfile)
+      : undefined;
 
-    return NextResponse.json({ profile: savedProfile });
+    return NextResponse.json({ profile: savedProfile, target });
   } catch (error) {
     console.error("Profile context save failed.", error);
 

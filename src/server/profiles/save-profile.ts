@@ -38,6 +38,7 @@ export async function saveProfile(
 
   return {
     jobDescription: profile.jobDescription,
+    jobTargetId: context.jobTargetId,
     preferredName: profile.preferredName,
     resumeName: profile.resumeName ?? undefined,
     resumeParsedAt: profile.resumeParsedAt?.toISOString(),

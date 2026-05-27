@@ -7,6 +7,7 @@ import { getUpNextRecommendation } from "@/product/up-next";
 import type { InterviewContext } from "@/product/interview-types";
 import type {
   CoachingMemoryRecord,
+  JobTargetRecord,
   ProgressionSummaryRecord,
   SessionHistoryItem,
   StoryRecord,
@@ -15,6 +16,7 @@ import type {
 type DashboardProps = {
   contextReady: boolean;
   interviewContext: InterviewContext;
+  jobTargets: JobTargetRecord[];
   onDebrief: (session: SessionHistoryItem) => void;
   onOnboarding: () => void;
   onPractice: () => void;
@@ -25,6 +27,7 @@ type DashboardProps = {
 export function Dashboard({
   contextReady,
   interviewContext,
+  jobTargets,
   onDebrief,
   onOnboarding,
   onPractice,
@@ -240,6 +243,7 @@ export function Dashboard({
     completedReviews,
     contextReady,
     interviewContext,
+    jobTargets,
     needsReview,
     progression,
     scoreAverages: allTimeScoreAverages,
@@ -333,6 +337,10 @@ export function Dashboard({
             <div>
               <dt>Company</dt>
               <dd>{interviewContext.targetCompany || "Optional"}</dd>
+            </div>
+            <div>
+              <dt>Saved targets</dt>
+              <dd>{jobTargets.length}</dd>
             </div>
           </dl>
           <button className="secondary" onClick={onOnboarding} type="button">

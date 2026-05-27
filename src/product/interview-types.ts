@@ -93,12 +93,24 @@ export type FeedbackRecord = {
 
 export type InterviewContext = {
   jobDescription: string;
+  jobTargetId?: string;
   preferredName: string;
   resumeName?: string;
   resumeParsedAt?: string;
   resumeText?: string;
   targetCompany: string;
   targetRole: string;
+};
+
+export type JobTargetRecord = {
+  createdAt: string;
+  id: string;
+  jobDescription: string;
+  label: string;
+  lastUsedAt?: string;
+  targetCompany: string;
+  targetRole: string;
+  updatedAt: string;
 };
 
 export type PracticeStep = "mode" | "question" | "style" | "ready";

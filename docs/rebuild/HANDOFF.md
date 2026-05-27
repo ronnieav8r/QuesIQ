@@ -19,8 +19,9 @@ The latest Bubble-reference work moved three high-value gaps forward: richer
 post-session review scaffolding, coaching memory, and verbal Debrief. Written
 Debrief is no longer a separate user flow; written reflection belongs inside
 the structured practice review, while Debrief now means a Realtime voice
-conversation tied to a completed session. Saved Job Targets remain the next
-major personalization gap. Avoid treating Bubble parity as the goal; carry
+conversation tied to a completed session. Saved Job Targets have their first
+owned slice now; the remaining personalization work is deeper target-aware
+recommendations and controls. Avoid treating Bubble parity as the goal; carry
 forward only features that improve practice, feedback, retention, or beta
 learning.
 
@@ -199,6 +200,10 @@ path until Phase 2 navigation is completed unless the product direction changes.
   recent coaching summaries. Normal practice and evaluation prompt context now
   also includes a compact saved-story library so Que can suggest a better-fit
   story when the candidate answers with weaker material.
+- Added the first saved Job Targets slice: onboarding/profile context can save
+  the current role/company/job description as a reusable target, Practice setup
+  can choose a saved target before launch, Sessions remember the selected target
+  id, and Home can recommend saving or practicing against targets.
 - Added Story Lab prompt visibility in Admin: Story Conversation Realtime,
   follow-up, outline generation, Story Practice Realtime guidance, and Story
   Practice Evaluation guidance are now versioned prompt configs under Admin >
@@ -342,8 +347,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 1. Deploy/user-confirm QA the latest prompt/debrief/progression changes on
    `quesiq-web`. Confirm migrations through
-   `0033_add_story_conversation_realtime_prompt.sql` run before testing verbal
-   Debrief, Story Practice coaching history, and Tell Que story capture.
+   `0034_add_job_targets.sql` run before testing verbal Debrief, Story Practice
+   coaching history, Tell Que story capture, and saved Job Targets.
 2. Run/user-confirm database migration QA for the imported levels and quests:
    Progression > Levels shows Rookie through Master, Progression > Quests shows
    37 active quest definitions, level/quest edits save from Admin, and Home
@@ -366,8 +371,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
    Practice Story voice flow, hideable navigation, and saved coaching history
    on Story records.
 9. Work the remaining highest-value Bubble reference gaps into upcoming phases:
-   saved job targets, richer coaching memory controls, job-target-aware Up Next
-   routing, beta tuning for XP rules, and AI-backed Quira support.
+   richer coaching memory controls, deeper job-target-aware Up Next routing,
+   beta tuning for XP rules, and AI-backed Quira support.
 10. Defer or avoid lower-value parity work until the beta needs it: standalone
    anonymous bug-report page, in-app marketing/blog pages, payments, industry
    packs, mascot work, and VAPI parity.

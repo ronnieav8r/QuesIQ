@@ -1,5 +1,6 @@
 import type {
   InterviewContext,
+  JobTargetRecord,
   ProgressionSummaryRecord,
   SessionHistoryItem,
   StoryRecord,
@@ -54,6 +55,7 @@ type UpNextInput = {
   completedReviews: SessionHistoryItem[];
   contextReady: boolean;
   interviewContext: InterviewContext;
+  jobTargets: JobTargetRecord[];
   needsReview: SessionHistoryItem[];
   progression?: ProgressionSummaryRecord;
   scoreAverages: ScoreAverage[];
@@ -95,6 +97,7 @@ export function getUpNextRecommendation({
   completedReviews,
   contextReady,
   interviewContext,
+  jobTargets,
   needsReview,
   progression,
   scoreAverages,
@@ -127,6 +130,15 @@ export function getUpNextRecommendation({
       body: "A parsed resume helps Que ask better role-relevant questions and helps reviews judge relevance.",
       kind: "missing_resume",
       title: "Add your resume for sharper practice.",
+    };
+  }
+
+  if (jobTargets.length === 0 && interviewContext.targetRole.trim()) {
+    return {
+      actionLabel: "Save Target",
+      body: "Save your current role and company as a job target so future practice can stay tied to a specific opportunity.",
+      kind: "missing_context",
+      title: "Create your first job target.",
     };
   }
 
@@ -182,8 +194,14 @@ export function getUpNextRecommendation({
 
   return {
     actionLabel: "Start Practice",
-    body: `Que can use your ${interviewContext.targetRole} context while you keep building consistency.`,
+    body:
+      jobTargets.length > 0
+        ? `Practice against ${jobTargets[0].label} while Que keeps the role context in view.`
+        : `Que can use your ${interviewContext.targetRole} context while you keep building consistency.`,
     kind: "default_practice",
-    title: `Practice your ${interviewContext.targetRole} next.`,
+    title:
+      jobTargets.length > 0
+        ? `Practice for ${jobTargets[0].targetRole} next.`
+        : `Practice your ${interviewContext.targetRole} next.`,
   };
 }
