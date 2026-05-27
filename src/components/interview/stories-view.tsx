@@ -124,31 +124,11 @@ type IntroDraft = {
   background: string;
   proofPoint: string;
   roleInterest: string;
+  script: string;
   strength: string;
+  title: string;
   transition: string;
 };
-
-const introAudienceOptions: Array<{
-  description: string;
-  key: IntroAudience;
-  label: string;
-}> = [
-  {
-    description: "Best for screening calls where the listener wants a quick fit check.",
-    key: "hr_phone",
-    label: "HR phone screening",
-  },
-  {
-    description: "Best when you need energy, clarity, and enough detail for follow-ups.",
-    key: "virtual",
-    label: "Virtual interview",
-  },
-  {
-    description: "Best when the room has more time and may include several stakeholders.",
-    key: "in_person",
-    label: "In person",
-  },
-];
 
 const introLengthOptions: Array<{
   bestFor: string;
@@ -187,8 +167,16 @@ function getIntroLengthGuidance(length: IntroLength) {
   return introLengthOptions.find((option) => option.key === length) ?? introLengthOptions[1];
 }
 
-function getAudienceGuidance(audience: IntroAudience) {
-  return introAudienceOptions.find((option) => option.key === audience) ?? introAudienceOptions[1];
+function getAudienceForLength(length: IntroLength): IntroAudience {
+  if (length === "short") {
+    return "hr_phone";
+  }
+
+  if (length === "long") {
+    return "in_person";
+  }
+
+  return "virtual";
 }
 
 export function StoriesView({
@@ -223,13 +211,17 @@ export function StoriesView({
     background: "",
     proofPoint: "",
     roleInterest: "",
+    script: "",
     strength: "",
+    title: "",
     transition: "",
   });
+  const [editingIntroductionId, setEditingIntroductionId] = useState<string>();
   const [introLength, setIntroLength] = useState<IntroLength>("medium");
   const [introMaterial, setIntroMaterial] = useState("");
   const [introPending, setIntroPending] = useState(false);
   const [introductions, setIntroductions] = useState<IntroductionRecord[]>([]);
+  const [selectedIntroductionId, setSelectedIntroductionId] = useState<string>();
   const [listStatus, setListStatus] = useState<"idle" | "loaded" | "loading">("idle");
   const [pendingAction, setPendingAction] = useState<"follow_up" | "save">();
   const [recording, setRecording] = useState(false);
@@ -292,25 +284,18 @@ export function StoriesView({
         : "Writing";
   const activeTarget = selectedJobTarget ?? jobTargets[0];
   const targetRole = activeTarget?.targetRole || interviewContext.targetRole;
-  const targetCompany = activeTarget?.targetCompany || interviewContext.targetCompany;
   const introLengthGuidance = getIntroLengthGuidance(introLength);
-  const audienceGuidance = getAudienceGuidance(introAudience);
+  const selectedIntroduction =
+    introductions.find((introduction) => introduction.id === selectedIntroductionId) ??
+    introductions[0];
   const introDraftText = joinIntroParts([
-    introDraft.background ||
-      (targetRole
-        ? `I have been building experience that connects directly to ${targetRole} work.`
-        : "I have been building experience across roles that require clear judgment, communication, and follow-through."),
-    introDraft.strength
-      ? `My strongest lane is ${introDraft.strength}.`
-      : "I am strongest when I can connect the goal, the people, and the execution details.",
+    introDraft.background,
+    introDraft.strength ? `My strongest lane is ${introDraft.strength}.` : "",
     introDraft.proofPoint ? `For example, ${introDraft.proofPoint}.` : "",
-    introDraft.roleInterest ||
-      (targetRole || targetCompany
-        ? `That is why I am interested in ${targetCompany ? `${targetCompany} ` : ""}${targetRole || "this opportunity"}.`
-        : "That is why I am looking for a role where I can make a practical impact quickly."),
-    introDraft.transition ||
-      "I would be happy to walk through the parts of my background that are most relevant.",
+    introDraft.roleInterest,
+    introDraft.transition,
   ]);
+  const introScript = introDraft.script.trim() || introDraftText || introMaterial.trim();
 
   useEffect(() => {
     let ignore = false;
@@ -347,6 +332,9 @@ export function StoriesView({
         if (!ignore) {
           setStories(body.stories ?? []);
           setIntroductions(introductionsBody.introductions ?? []);
+          setSelectedIntroductionId(
+            (current) => current ?? introductionsBody.introductions?.[0]?.id,
+          );
           setSelectedStoryId((current) => current ?? body.stories?.[0]?.id);
           setListStatus("loaded");
         }
@@ -667,11 +655,12 @@ export function StoriesView({
         body: JSON.stringify({
           introduction: {
             ...introDraft,
-            audience: introAudience,
+            audience: getAudienceForLength(introLength),
             length: introLength,
             rawNotes: introMaterial,
-            script: introDraftText,
-            title: [introLengthGuidance.label, targetRole || "Interview", "Introduction"]
+            script: introScript,
+            title: introDraft.title.trim() ||
+              [introLengthGuidance.label, targetRole || "Interview", "Introduction"]
               .filter(Boolean)
               .join(" "),
           },
@@ -692,11 +681,126 @@ export function StoriesView({
       }
 
       setIntroductions((current) => [body.introduction as IntroductionRecord, ...current]);
+      setSelectedIntroductionId(body.introduction.id);
       setIntroMaterial("");
+      setIntroDraft({
+        background: "",
+        proofPoint: "",
+        roleInterest: "",
+        script: "",
+        strength: "",
+        title: "",
+        transition: "",
+      });
     } catch (error) {
       setError(error instanceof Error ? error.message : "Introduction could not be saved.");
     } finally {
       setIntroPending(false);
+    }
+  }
+
+  function startEditingIntroduction(introduction: IntroductionRecord) {
+    setEditingIntroductionId(introduction.id);
+    setSelectedIntroductionId(introduction.id);
+    setIntroLength(introduction.length);
+    setIntroAudience(introduction.audience);
+    setIntroMaterial(introduction.rawNotes);
+    setIntroDraft({
+      background: introduction.background,
+      proofPoint: introduction.proofPoint,
+      roleInterest: introduction.roleInterest,
+      script: introduction.script,
+      strength: introduction.strength,
+      title: introduction.title,
+      transition: introduction.transition,
+    });
+  }
+
+  function cancelEditingIntroduction() {
+    setEditingIntroductionId(undefined);
+    setIntroMaterial("");
+    setIntroDraft({
+      background: "",
+      proofPoint: "",
+      roleInterest: "",
+      script: "",
+      strength: "",
+      title: "",
+      transition: "",
+    });
+  }
+
+  async function updateSavedIntroduction() {
+    if (!editingIntroductionId) {
+      return;
+    }
+
+    try {
+      setError(undefined);
+      setIntroPending(true);
+      const response = await fetch(`/api/introductions/${editingIntroductionId}`, {
+        body: JSON.stringify({
+          introduction: {
+            ...introDraft,
+            audience: introAudience,
+            length: introLength,
+            rawNotes: introMaterial,
+            script: introScript,
+            title: introDraft.title.trim() || "Interview Introduction",
+          },
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "PUT",
+      });
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        introduction?: IntroductionRecord;
+      };
+
+      if (!response.ok || !body.introduction) {
+        throw new Error(body.detail || body.error || "Introduction could not be updated.");
+      }
+
+      setIntroductions((current) =>
+        current.map((introduction) =>
+          introduction.id === body.introduction?.id ? body.introduction : introduction,
+        ),
+      );
+      setSelectedIntroductionId(body.introduction.id);
+      cancelEditingIntroduction();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Introduction could not be updated.");
+    } finally {
+      setIntroPending(false);
+    }
+  }
+
+  async function removeIntroduction(introduction: IntroductionRecord) {
+    try {
+      setError(undefined);
+      const response = await fetch(`/api/introductions/${introduction.id}`, {
+        method: "DELETE",
+      });
+      const body = (await response.json()) as { detail?: string; error?: string };
+
+      if (!response.ok) {
+        throw new Error(body.detail || body.error || "Introduction could not be deleted.");
+      }
+
+      setIntroductions((current) =>
+        current.filter((currentIntro) => currentIntro.id !== introduction.id),
+      );
+      setSelectedIntroductionId((current) =>
+        current === introduction.id ? undefined : current,
+      );
+      if (editingIntroductionId === introduction.id) {
+        cancelEditingIntroduction();
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Introduction could not be deleted.");
     }
   }
 
@@ -906,165 +1010,184 @@ export function StoriesView({
               <span className="inline-status">{introCaptureStatusLabel}</span>
             </div>
 
-            <div className="intro-option-grid">
-              <section>
-                <h3>Interview setting</h3>
-                <div className="target-chip-list">
-                  {introAudienceOptions.map((option) => (
-                    <button
-                      className={introAudience === option.key ? "target-chip active" : "target-chip"}
-                      key={option.key}
-                      onClick={() => setIntroAudience(option.key)}
-                      type="button"
-                    >
-                      <strong>{option.label}</strong>
-                      <span>{option.description}</span>
-                    </button>
-                  ))}
-                </div>
-              </section>
+            <section className="intro-option-grid">
+              <h3>Length</h3>
+              <div className="target-chip-list intro-length-list">
+                {introLengthOptions.map((option) => (
+                  <button
+                    className={introLength === option.key ? "target-chip active" : "target-chip"}
+                    key={option.key}
+                    onClick={() => setIntroLength(option.key)}
+                    type="button"
+                  >
+                    <strong>{option.label}</strong>
+                    <span>{option.range}</span>
+                    <small>{option.bestFor}</small>
+                  </button>
+                ))}
+              </div>
+            </section>
 
-              <section>
-                <h3>Length</h3>
-                <div className="target-chip-list intro-length-list">
-                  {introLengthOptions.map((option) => (
-                    <button
-                      className={introLength === option.key ? "target-chip active" : "target-chip"}
-                      key={option.key}
-                      onClick={() => setIntroLength(option.key)}
-                      type="button"
-                    >
-                      <strong>{option.label}</strong>
-                      <span>{option.range}</span>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            </div>
-
-            <div className="field-grid">
-              <label>
-                <span>Background in one line</span>
-                <input
-                  onChange={(event) =>
-                    setIntroDraft({ ...introDraft, background: event.target.value })
-                  }
-                  placeholder="Example: I am an operations leader with eight years in..."
-                  value={introDraft.background}
-                />
-              </label>
-              <label>
-                <span>Core strength</span>
-                <input
-                  onChange={(event) =>
-                    setIntroDraft({ ...introDraft, strength: event.target.value })
-                  }
-                  placeholder="Example: building calm process around messy growth"
-                  value={introDraft.strength}
-                />
-              </label>
-            </div>
-
-            <label>
-              <span>Proof point</span>
-              <textarea
-                onChange={(event) =>
-                  setIntroDraft({ ...introDraft, proofPoint: event.target.value })
-                }
-                placeholder="Example: I helped reduce onboarding time by 30% while improving manager visibility."
-                value={introDraft.proofPoint}
-              />
-            </label>
-
-            <div className="field-grid">
-              <label>
-                <span>Why this role</span>
-                <textarea
-                  onChange={(event) =>
-                    setIntroDraft({ ...introDraft, roleInterest: event.target.value })
-                  }
-                  placeholder="Connect your background to this role, company, or team."
-                  value={introDraft.roleInterest}
-                />
-              </label>
-              <label>
-                <span>Closing handoff</span>
-                <textarea
-                  onChange={(event) =>
-                    setIntroDraft({ ...introDraft, transition: event.target.value })
-                  }
-                  placeholder="Example: I can start with the role most similar to this one."
-                  value={introDraft.transition}
-                />
-              </label>
-            </div>
+            {editingIntroductionId && (
+              <>
+                <label>
+                  <span>Title</span>
+                  <input
+                    onChange={(event) =>
+                      setIntroDraft({ ...introDraft, title: event.target.value })
+                    }
+                    value={introDraft.title}
+                  />
+                </label>
+                <label>
+                  <span>Introduction script</span>
+                  <textarea
+                    onChange={(event) =>
+                      setIntroDraft({ ...introDraft, script: event.target.value })
+                    }
+                    value={introDraft.script}
+                  />
+                </label>
+              </>
+            )}
 
             <div className="inline-actions">
-              <button disabled={introPending || !introDraftText.trim()} onClick={saveIntroduction} type="button">
-                {introPending ? "Saving" : "Save Introduction"}
-              </button>
+              {editingIntroductionId ? (
+                <>
+                  <button
+                    disabled={introPending || !introScript.trim()}
+                    onClick={updateSavedIntroduction}
+                    type="button"
+                  >
+                    {introPending ? "Saving" : "Save Changes"}
+                  </button>
+                  <button className="secondary" onClick={cancelEditingIntroduction} type="button">
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button disabled={introPending || !introScript.trim()} onClick={saveIntroduction} type="button">
+                  {introPending ? "Saving" : "Save Introduction"}
+                </button>
+              )}
             </div>
           </section>
 
           <aside className="panel intro-preview" aria-labelledby="intro-preview-title">
             <div className="section-head">
               <div>
-                <p className="eyebrow">Draft</p>
-                <h2 id="intro-preview-title">Tell me about yourself.</h2>
+                <p className="eyebrow">Saved Introductions</p>
+                <h2 id="intro-preview-title">Your opening answers.</h2>
               </div>
+              <span>{introductions.length} saved</span>
             </div>
-            <div className="intro-guidance">
-              <span>{audienceGuidance.label}</span>
-              <p>{audienceGuidance.description}</p>
-              <span>{introLengthGuidance.label}: {introLengthGuidance.range}</span>
-              <p>{introLengthGuidance.bestFor}</p>
-              {(targetRole || targetCompany) && (
-                <>
-                  <span>Target context</span>
-                  <p>
-                    Aim the intro toward {targetCompany ? `${targetCompany} ` : ""}
-                    {targetRole || "this role"} without sounding like a cover letter.
-                  </p>
-                </>
-              )}
-            </div>
-            <article className="intro-script">
-              <p>{introDraftText}</p>
-            </article>
             <section className="intro-library" aria-labelledby="intro-library-title">
-              <div className="section-head">
-                <h2 id="intro-library-title">Saved Introductions</h2>
-                <span>{introductions.length} saved</span>
-              </div>
+              <h3 id="intro-library-title">Library</h3>
               {introductions.length === 0 ? (
                 <p>Saved intros will appear here so you can practice each version.</p>
               ) : (
                 <div className="story-card-list">
                   {introductions.map((introduction) => (
-                    <article className="story-card" key={introduction.id}>
-                      <div>
-                        <strong>{introduction.title}</strong>
-                        <span>
-                          {introduction.lastPracticedAt
-                            ? `Practiced ${new Date(introduction.lastPracticedAt).toLocaleDateString()}`
-                            : new Date(introduction.updatedAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <p>{introduction.script}</p>
-                      <div className="story-tags">
-                        <span>{getAudienceGuidance(introduction.audience).label}</span>
-                        <span>{getIntroLengthGuidance(introduction.length).range}</span>
-                        <span>{introduction.practiceCount} practices</span>
-                      </div>
-                      <div className="inline-actions">
-                        <button
-                          onClick={() => onPracticeIntroduction(introduction)}
-                          type="button"
-                        >
-                          Practice Intro
-                        </button>
-                      </div>
-                    </article>
+                    <div className="story-card-group" key={introduction.id}>
+                      <article
+                        className={
+                          selectedIntroduction?.id === introduction.id
+                            ? "story-card active"
+                            : "story-card"
+                        }
+                        onClick={() => setSelectedIntroductionId(introduction.id)}
+                      >
+                        <div>
+                          <strong>{introduction.title}</strong>
+                          <span>
+                            {introduction.lastPracticedAt
+                              ? `Practiced ${new Date(introduction.lastPracticedAt).toLocaleDateString()}`
+                              : new Date(introduction.updatedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <p>{introduction.script}</p>
+                        <div className="story-tags">
+                          <span>{getIntroLengthGuidance(introduction.length).range}</span>
+                          <span>{introduction.practiceCount} practices</span>
+                        </div>
+                      </article>
+
+                      {selectedIntroduction?.id === introduction.id && (
+                        <article className="story-detail">
+                          <div className="section-head">
+                            <div>
+                              <p className="eyebrow">Intro Detail</p>
+                              <h2>{introduction.title}</h2>
+                            </div>
+                          </div>
+                          <p>{introduction.script}</p>
+                          <div className="inline-actions">
+                            <button
+                              onClick={() => onPracticeIntroduction(introduction)}
+                              type="button"
+                            >
+                              Practice Intro
+                            </button>
+                            <button
+                              className="secondary"
+                              onClick={() => startEditingIntroduction(introduction)}
+                              type="button"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="secondary"
+                              onClick={() => void removeIntroduction(introduction)}
+                              type="button"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                          <dl>
+                            <div>
+                              <dt>Length</dt>
+                              <dd>{getIntroLengthGuidance(introduction.length).range}</dd>
+                            </div>
+                            <div>
+                              <dt>Background</dt>
+                              <dd>{introduction.background || "Not generated yet"}</dd>
+                            </div>
+                            <div>
+                              <dt>Core strength</dt>
+                              <dd>{introduction.strength || "Not generated yet"}</dd>
+                            </div>
+                            <div>
+                              <dt>Proof point</dt>
+                              <dd>{introduction.proofPoint || "Not generated yet"}</dd>
+                            </div>
+                            <div>
+                              <dt>Why this role</dt>
+                              <dd>{introduction.roleInterest || "Not generated yet"}</dd>
+                            </div>
+                            <div>
+                              <dt>Closing handoff</dt>
+                              <dd>{introduction.transition || "Not generated yet"}</dd>
+                            </div>
+                          </dl>
+                          {introduction.practiceCoaching.length > 0 && (
+                            <section>
+                              <h3>Practice Feedback</h3>
+                              <div className="story-spin-list">
+                                {introduction.practiceCoaching.slice(0, 3).map((coaching) => (
+                                  <article key={coaching.sessionId}>
+                                    <strong>
+                                      {new Date(coaching.practicedAt).toLocaleDateString()}
+                                    </strong>
+                                    <p>{coaching.summary}</p>
+                                    <small>{coaching.nextAction}</small>
+                                  </article>
+                                ))}
+                              </div>
+                            </section>
+                          )}
+                        </article>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}

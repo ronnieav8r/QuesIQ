@@ -72,6 +72,36 @@ export async function saveIntroduction(
   return toIntroductionRecord(introduction);
 }
 
+export async function updateIntroduction(
+  userId: string,
+  introductionId: string,
+  input: IntroductionInput,
+): Promise<IntroductionRecord | undefined> {
+  const now = new Date();
+  const [introduction] = await getDb()
+    .update(introductions)
+    .set({
+      ...input,
+      updatedAt: now,
+    })
+    .where(and(eq(introductions.id, introductionId), eq(introductions.userId, userId)))
+    .returning();
+
+  return introduction ? toIntroductionRecord(introduction) : undefined;
+}
+
+export async function deleteIntroduction(
+  userId: string,
+  introductionId: string,
+): Promise<boolean> {
+  const deleted = await getDb()
+    .delete(introductions)
+    .where(and(eq(introductions.id, introductionId), eq(introductions.userId, userId)))
+    .returning({ id: introductions.id });
+
+  return deleted.length > 0;
+}
+
 export async function recordIntroductionPracticeCoaching({
   introductionId,
   result,
