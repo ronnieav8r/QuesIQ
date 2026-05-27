@@ -225,11 +225,13 @@ export function Dashboard({
   const derivedXp = derivedCompletedCount * 100;
   const derivedLevel = Math.floor(derivedXp / 300) + 1;
   const derivedLevelXp = derivedXp % 300;
-  const completedCount = progression?.completedReviews ?? derivedCompletedCount;
-  const xp = progression?.totalXp ?? derivedXp;
-  const level = progression?.level ?? derivedLevel;
+  const progressionLoading = progressionStatus !== "loaded" && !progression;
+  const useDerivedProgression = progressionStatus === "loaded" && !progression;
+  const completedCount = progression?.completedReviews ?? (useDerivedProgression ? derivedCompletedCount : 0);
+  const xp = progression?.totalXp ?? (useDerivedProgression ? derivedXp : 0);
+  const level = progression?.level ?? (useDerivedProgression ? derivedLevel : 1);
   const levelName = progression?.levelName;
-  const levelXp = progression?.currentLevelXp ?? derivedLevelXp;
+  const levelXp = progression?.currentLevelXp ?? (useDerivedProgression ? derivedLevelXp : 0);
   const nextLevelXp = progression?.nextLevelXp ?? 300;
   const levelProgress = Math.min(100, Math.round((levelXp / nextLevelXp) * 100));
   const quests = progression?.quests ?? [];
@@ -241,6 +243,7 @@ export function Dashboard({
     (session) => session.hasEvaluation || session.transcript.length > 0,
   );
   const latestCompleted = completedReviews[0];
+  const activeJobTarget = selectedJobTarget ?? jobTargets[0];
   const recommendation = getUpNextRecommendation({
     completedReviews,
     contextReady,
@@ -282,10 +285,11 @@ export function Dashboard({
         <div className="home-stat-row" aria-label="Progress snapshot">
           <div className="level-chip">
             <span>
-              Level {level}
-              {levelName ? `: ${levelName}` : ""}
+              {progressionLoading
+                ? "Loading progress"
+                : `Level ${level}${levelName ? `: ${levelName}` : ""}`}
             </span>
-            <strong>{xp} XP</strong>
+            <strong>{progressionLoading ? "Loading XP" : `${xp} XP`}</strong>
           </div>
           <div className="streak-chip">
             <div className="streak-mark">
@@ -324,34 +328,35 @@ export function Dashboard({
 
         <section aria-labelledby="context-title" className="context-panel">
           <div className="section-head">
-            <h2 id="context-title">Me & Targets</h2>
-            <span>{contextReady ? "Ready" : "Fast start"}</span>
+            <h2 id="context-title">Active Job Target</h2>
+            <span>{activeJobTarget ? "Ready" : "Add target"}</span>
           </div>
-          <dl>
-            <div>
-              <dt>Name</dt>
-              <dd>{interviewContext.preferredName || "Add name"}</dd>
-            </div>
-            <div>
-              <dt>Resume</dt>
-              <dd>{interviewContext.resumeName ? "Added" : "Optional"}</dd>
-            </div>
-            <div>
-              <dt>Active target</dt>
-              <dd>
-                {selectedJobTarget?.label ||
-                  jobTargets[0]?.label ||
-                  interviewContext.targetRole ||
-                  "Add target"}
-              </dd>
-            </div>
-            <div>
-              <dt>Saved targets</dt>
-              <dd>{jobTargets.length}</dd>
-            </div>
-          </dl>
+          {activeJobTarget ? (
+            <dl>
+              <div>
+                <dt>Target</dt>
+                <dd>{activeJobTarget.label}</dd>
+              </div>
+              <div>
+                <dt>Role</dt>
+                <dd>{activeJobTarget.targetRole}</dd>
+              </div>
+              <div>
+                <dt>Company</dt>
+                <dd>{activeJobTarget.targetCompany || "Open role"}</dd>
+              </div>
+              <div>
+                <dt>Saved targets</dt>
+                <dd>{jobTargets.length}</dd>
+              </div>
+            </dl>
+          ) : (
+            <p>
+              Save the role or opportunity you want Que to use during practice.
+            </p>
+          )}
           <button className="secondary" onClick={onOnboarding} type="button">
-            Manage Me & Targets
+            Manage Job Targets
           </button>
         </section>
       </div>
@@ -418,7 +423,7 @@ export function Dashboard({
           <div className="section-head">
             <h2 id="progress-title">Progress</h2>
           <span>
-            {progressionStatus === "loading" ? "Loading" : `${completedCount} completed`}
+            {progressionLoading ? "Loading" : `${completedCount} completed`}
           </span>
           </div>
           <div
@@ -428,7 +433,9 @@ export function Dashboard({
             <span style={{ width: `${Math.max(levelProgress, 4)}%` }} />
           </div>
           <p>
-            {lastPracticed
+            {progressionLoading
+              ? "Loading your saved XP and level."
+              : lastPracticed
               ? `Last practiced ${
                   progression?.lastPracticedAt
                     ? new Date(progression.lastPracticedAt).toLocaleDateString()
