@@ -288,8 +288,9 @@ Last updated: 2026-05-27
   - the voice debrief uses a dedicated Realtime endpoint with the saved
     transcript, written review, review detail, score evidence, and coaching
     memory as context
-  - voice debriefs do not currently create a new scored practice session or a
-    saved written debrief record
+  - voice debriefs save a transcript/event artifact in `voice_debriefs` after
+    the call ends without creating a new scored practice session or written
+    debrief record
 - Admin navigation moved out of Me and into the hamburger menu while staying
   visible only to admins.
 - Coaching memory started:
@@ -317,9 +318,9 @@ Last updated: 2026-05-27
   - default review rewards are intentionally less completion-heavy: small base
     completion XP, highest-only duration tiers, highest-only overall-score
     tiers, and a small first-practice-today bonus
-  - resume upload rewards are rule-driven; Debrief completion rules currently
-    refer to legacy saved written debrief records until verbal debrief
-    persistence is deliberately added
+  - resume upload rewards are rule-driven; Debrief completion rules now award
+    from saved verbal Debrief artifacts, while legacy written debrief rows still
+    count for old/demo data
   - Admin XP Events now expose event metadata so individual rule awards can be
     inspected
 - Admin demo data seeding started:
@@ -375,11 +376,10 @@ The current coded app has passed:
 Ignored local/generated paths currently include `.env.local`, `.next/`,
 `.tools/`, `node_modules/`, and `tsconfig.tsbuildinfo`.
 
-Legacy written-debrief backend pieces still exist (`/api/debriefs`, the
-`debriefs` table, and old debrief XP/quest checks), but the active user flow is
-verbal Debrief through `/api/realtime/debrief`. Treat saved written debrief data
-as legacy/demo/reference until verbal Debrief persistence is deliberately
-designed.
+Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
+`debriefs` table), but the active user flow is verbal Debrief through
+`/api/realtime/debrief`. New verbal Debrief artifacts persist in
+`voice_debriefs`; saved written debrief data is legacy/demo/reference.
 
 ## Current Product Direction
 
@@ -413,7 +413,7 @@ designed.
 
 1. Deploy and user-confirm QA the latest prompt/debrief/progression changes on
    `quesiq-web`, making sure migrations through
-   `0029_refine_verbal_debrief_prompt.sql` run.
+   `0030_add_voice_debriefs.sql` run.
 2. Run/user-confirm migration QA for Bubble levels and quests: Admin >
    Progression > Levels shows Rookie through Master, Admin > Progression >
    Quests shows 37 active definitions, Admin level/quest edits save, and Home
@@ -437,9 +437,8 @@ designed.
    by a maintained QuesIQ product knowledge base.
 9. Product gap backlog from the Bubble reference, ordered by current user value:
    saved job targets, persist story-practice coaching history back onto Story
-   records, verbal Debrief transcript/persistence decisions, richer coaching
-   memory controls, job-target-aware Up Next routing, tuning XP rules from beta
-   behavior, and AI-backed Quira support.
+   records, richer coaching memory controls, job-target-aware Up Next routing,
+   tuning XP rules from beta behavior, and AI-backed Quira support.
 10. Treat standalone anonymous bug reports, in-app marketing/blog pages,
    payments, industry packs, mascot work, and VAPI parity as lower-priority
    until the core practice loop and retention features are stronger.

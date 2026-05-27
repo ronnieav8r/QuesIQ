@@ -24,6 +24,9 @@ Last updated: 2026-05-27
   model call.
 - Coaching memory is stored per user and is passed quietly into future practice
   sessions and verbal Debriefs.
+- Completed verbal Debriefs now persist transcript/event artifacts in
+  `voice_debriefs` and can award debrief XP/count debrief quests once per
+  source session.
 - Home has richer Up Next routing for pending reviews, missing context/resume,
   verbal Debrief, weak-score practice, Story Lab, quests, and default practice.
 - XP rules are editable in Admin > Progression > XP Rules, with review rewards
@@ -95,14 +98,14 @@ Last updated: 2026-05-27
 
 1. Deploy the current branch and confirm Render runs the newest migrations,
    especially `drizzle/0028_refine_session_evaluation_prompt.sql` and
-   `drizzle/0029_refine_verbal_debrief_prompt.sql`.
+   `drizzle/0030_add_voice_debriefs.sql`.
 2. User-confirm the new review output on production: a new completed practice
    session should show score evidence/next steps in the stored JSON and visible
    review-detail sections on the review page.
 3. User-confirm verbal Debrief on production: History > Voice Debrief and saved
    review > Start Voice Debrief should open a Realtime call that uses the
    selected session transcript/review without creating a new scored practice
-   session.
+   session, then save a verbal Debrief artifact after the call ends.
 4. Confirm Admin > Prompts shows one active Post-Session Evaluation prompt
    version and one active Session Debrief prompt version after migrations.
 5. Confirm Admin > Progression > XP Rules reflects the newer score/duration
@@ -118,8 +121,6 @@ Last updated: 2026-05-27
   slice proves useful
 - Add richer owned session history filters if the 50-session list becomes too
   noisy
-- Add persistence/accounting for verbal Debrief completions if the product still
-  wants debrief-count quests or XP tied to voice debrief usage
 - Add saved Job Targets and route practice/Up Next through a selected target
 - Add daily Google Sheets export for AI run rows once the Admin run data is
   confirmed useful
@@ -139,8 +140,9 @@ Last updated: 2026-05-27
 - Capture transcript/events for app-owned session artifacts
 - Decide whether to store audio, transcript only, or derived excerpts for beta
 - Tune the first-turn, transcript, and review handoff after beta testing
-- Tune the verbal Debrief first turn and decide whether debrief transcripts
-  should be saved as separate artifacts
+- Tune the verbal Debrief first turn and decide whether multiple debrief
+  attempts per source session should be retained instead of replacing the latest
+  saved artifact
 - Keep VAPI as fallback, not the default implementation path
 
 ## Things Not To Do First

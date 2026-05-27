@@ -1,9 +1,15 @@
 "use client";
 
+import { useCallback, useRef, useState } from "react";
+
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import { ReviewDetailSections } from "@/components/interview/review-detail-sections";
 import { withOverallScore } from "@/product/scoring";
-import type { InterviewCatalog, SessionHistoryItem } from "@/product/interview-types";
+import type {
+  InterviewCatalog,
+  SessionHistoryItem,
+  VoiceSessionArtifactDraft,
+} from "@/product/interview-types";
 
 type DebriefViewProps = {
   catalog: InterviewCatalog;
@@ -13,6 +19,9 @@ type DebriefViewProps = {
 };
 
 export function DebriefView({ catalog, onBack, onReview, session }: DebriefViewProps) {
+  const savedArtifactKeyRef = useRef<string | undefined>(undefined);
+  const [saveError, setSaveError] = useState<string>();
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "saving">("idle");
   const mode = catalog.practiceModes.find(
     (practiceMode) => practiceMode.key === session?.modeKey,
   );
@@ -21,6 +30,48 @@ export function DebriefView({ catalog, onBack, onReview, session }: DebriefViewP
   );
   const style = catalog.interviewStyles.find(
     (interviewStyle) => interviewStyle.key === session?.styleKey,
+  );
+  const saveDebriefArtifact = useCallback(
+    async (artifact: VoiceSessionArtifactDraft) => {
+      if (!session || artifact.transcript.length === 0) {
+        return;
+      }
+
+      const artifactKey = `${session.id}:${artifact.endedAt}:${artifact.transcript.length}`;
+
+      if (savedArtifactKeyRef.current === artifactKey) {
+        return;
+      }
+
+      savedArtifactKeyRef.current = artifactKey;
+      setSaveError(undefined);
+      setSaveStatus("saving");
+
+      try {
+        const response = await fetch(`/api/debriefs/${session.id}/artifact`, {
+          body: JSON.stringify({ artifact }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          method: "PUT",
+        });
+
+        if (!response.ok) {
+          const body = (await response.json()) as { detail?: string; error?: string };
+
+          throw new Error(body.detail || body.error || "Voice debrief could not be saved.");
+        }
+
+        setSaveStatus("saved");
+      } catch (error) {
+        savedArtifactKeyRef.current = undefined;
+        setSaveError(
+          error instanceof Error ? error.message : "Voice debrief could not be saved.",
+        );
+        setSaveStatus("idle");
+      }
+    },
+    [session],
   );
 
   if (!session) {
@@ -117,6 +168,7 @@ export function DebriefView({ catalog, onBack, onReview, session }: DebriefViewP
         <RealtimeVoiceSession
           endpoint="/api/realtime/debrief"
           firstTurnInstructions="Speak in English only. Start by briefly saying you have the session review and transcript ready. Ask what the candidate wants to dig into first: scores, a specific answer, or how to improve the next attempt. Ask only one question."
+          onArtifactFinalized={saveDebriefArtifact}
           sessionId={session.id}
           startButtonLabel="Start Debrief"
           title="Talk through this session with Que"
@@ -124,6 +176,16 @@ export function DebriefView({ catalog, onBack, onReview, session }: DebriefViewP
       ) : (
         <section className="panel">
           <p>This session does not have a saved transcript yet, so Que cannot debrief it.</p>
+        </section>
+      )}
+
+      {(saveStatus === "saving" || saveStatus === "saved" || saveError) && (
+        <section className="panel">
+          {saveStatus === "saving" && <p>Saving voice debrief...</p>}
+          {saveStatus === "saved" && (
+            <p>Voice debrief saved. Debrief progress and XP can now count this session.</p>
+          )}
+          {saveError && <p className="form-error">{saveError}</p>}
         </section>
       )}
 

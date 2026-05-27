@@ -409,6 +409,24 @@ export type SessionDebriefRecord = {
   userNote: string;
 };
 
+export type VoiceDebriefStatus = "completed";
+
+export type VoiceDebriefRecord = {
+  createdAt: string;
+  durationSeconds: number;
+  endedAt?: string;
+  id: string;
+  model: string;
+  promptConfigKey?: string;
+  promptConfigVersion?: number;
+  sessionId: string;
+  startedAt?: string;
+  status: VoiceDebriefStatus;
+  transcript: VoiceTranscriptTurn[];
+  updatedAt: string;
+  voice?: string;
+};
+
 export type VoiceSessionPhase =
   | "ready"
   | "requesting_microphone"

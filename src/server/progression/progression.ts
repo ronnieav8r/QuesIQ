@@ -30,6 +30,7 @@ import {
   userProgression,
   userQuests,
   users,
+  voiceDebriefs,
 } from "@/server/db/schema";
 
 const xpPerLevel = 300;
@@ -698,7 +699,13 @@ async function getQuestProgress(
     checkType: QuestCheckType;
   },
 ) {
-  const [sessionRows, evaluationRows, profileRows, debriefRows] = await Promise.all([
+  const [
+    sessionRows,
+    evaluationRows,
+    profileRows,
+    legacyDebriefRows,
+    voiceDebriefRows,
+  ] = await Promise.all([
     getDb()
       .select({
         modeKey: sessions.modeKey,
@@ -729,6 +736,12 @@ async function getQuestProgress(
       })
       .from(debriefs)
       .where(eq(debriefs.userId, userId)),
+    getDb()
+      .select({
+        id: voiceDebriefs.id,
+      })
+      .from(voiceDebriefs)
+      .where(eq(voiceDebriefs.userId, userId)),
   ]);
   const completedSessions = sessionRows.filter((session) => session.status !== "created");
   const modeKeys = completedSessions.map((session) => session.modeKey);
@@ -755,7 +768,7 @@ async function getQuestProgress(
         ? threshold
         : 0;
     case "debrief_count":
-      return debriefRows.length;
+      return legacyDebriefRows.length + voiceDebriefRows.length;
     case "job_target_set":
       return profile?.targetCompany?.trim() && profile.targetRole.trim() ? 1 : 0;
     case "level_reached":

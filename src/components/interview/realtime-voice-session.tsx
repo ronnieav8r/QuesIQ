@@ -15,6 +15,7 @@ type RealtimeVoiceSessionProps = {
   endpoint?: string;
   firstTurnInstructions?: string;
   onArtifactChange?: (artifact: VoiceSessionArtifactDraft) => void;
+  onArtifactFinalized?: (artifact: VoiceSessionArtifactDraft) => void;
   sessionId: string;
   snapshot?: SessionSetupSnapshot;
   startButtonLabel?: string;
@@ -74,6 +75,7 @@ export function RealtimeVoiceSession({
   endpoint = "/api/realtime/session",
   firstTurnInstructions,
   onArtifactChange,
+  onArtifactFinalized,
   sessionId,
   snapshot,
   startButtonLabel = "Start Session",
@@ -160,12 +162,18 @@ export function RealtimeVoiceSession({
       ? Math.max(0, Math.round((Date.now() - sessionStartedAtMsRef.current) / 1000))
       : undefined;
 
-    setArtifactDraft((current) => ({
-      ...current,
-      durationSeconds: current.durationSeconds ?? durationSeconds,
-      endedAt: current.endedAt || new Date().toISOString(),
-      endReason,
-    }));
+    setArtifactDraft((current) => {
+      const finalizedArtifact = {
+        ...current,
+        durationSeconds: current.durationSeconds ?? durationSeconds,
+        endedAt: current.endedAt || new Date().toISOString(),
+        endReason,
+      };
+
+      onArtifactFinalized?.(finalizedArtifact);
+
+      return finalizedArtifact;
+    });
     setPhase(nextPhase);
   }
 

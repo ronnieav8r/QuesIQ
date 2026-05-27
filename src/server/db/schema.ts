@@ -27,6 +27,7 @@ import type {
   SessionDebriefResult,
   SessionSetupSnapshot,
   SessionStatus,
+  VoiceDebriefStatus,
   VoiceSessionArtifactDraft,
 } from "@/product/interview-types";
 
@@ -265,6 +266,37 @@ export const debriefs = pgTable(
     createdAtIdx: index("debriefs_created_at_idx").on(debrief.createdAt),
     sessionIdx: index("debriefs_session_idx").on(debrief.sessionId),
     userIdx: index("debriefs_user_idx").on(debrief.userId),
+  }),
+);
+
+export const voiceDebriefs = pgTable(
+  "voice_debriefs",
+  {
+    artifact: jsonb("artifact").$type<VoiceSessionArtifactDraft>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    durationSeconds: integer("duration_seconds").default(0).notNull(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    id: uuid("id").defaultRandom().primaryKey(),
+    model: text("model").notNull(),
+    promptConfigKey: text("prompt_config_key"),
+    promptConfigVersion: integer("prompt_config_version"),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    status: text("status").$type<VoiceDebriefStatus>().default("completed").notNull(),
+    transcript: jsonb("transcript")
+      .$type<VoiceSessionArtifactDraft["transcript"]>()
+      .default([])
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    voice: text("voice"),
+  },
+  (debrief) => ({
+    createdAtIdx: index("voice_debriefs_created_at_idx").on(debrief.createdAt),
+    sessionIdx: uniqueIndex("voice_debriefs_session_idx").on(debrief.sessionId),
+    userIdx: index("voice_debriefs_user_idx").on(debrief.userId),
   }),
 );
 

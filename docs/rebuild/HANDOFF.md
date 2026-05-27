@@ -217,6 +217,10 @@ path until Phase 2 navigation is completed unless the product direction changes.
   voice debrief that uses the original transcript, written review, score
   evidence, review detail, and coaching memory as context without creating a
   new scored practice session.
+- Added verbal Debrief persistence: completed voice debrief calls save a
+  transcript/event artifact in `voice_debriefs`, update debrief XP rules
+  idempotently per session, and count toward debrief-count quests alongside
+  legacy written debrief rows.
 - Moved Admin out of Me and into the hamburger menu while keeping it visible
   only for admin users.
 - Added the first coaching memory slice without a second memory API call:
@@ -232,9 +236,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
 - Added editable XP rules under Admin > Progression > XP Rules. Review XP now
   comes from rule awards instead of a hardcoded flat reward, with a smaller
   completion base and larger highest-only duration/score tiers. Resume upload
-  rewards also use the rules table. Debrief completion rules still refer to
-  legacy saved written debrief records until verbal Debrief persistence is
-  deliberately added, and XP Events show rule metadata for visibility.
+  rewards also use the rules table. Debrief completion rules now use saved
+  verbal Debrief artifacts, and XP Events show rule metadata for visibility.
 - Added an admin-only demo data seed endpoint/button for the Ronnie account:
   Admin > Data can create representative profile, story, session, evaluation,
   debrief, coaching memory, feedback, and progression rows when missing.
@@ -332,7 +335,7 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 1. Deploy/user-confirm QA the latest prompt/debrief/progression changes on
    `quesiq-web`. Confirm migrations through
-   `0029_refine_verbal_debrief_prompt.sql` run before testing verbal Debrief.
+   `0030_add_voice_debriefs.sql` run before testing verbal Debrief.
 2. Run/user-confirm database migration QA for the imported levels and quests:
    Progression > Levels shows Rookie through Master, Progression > Quests shows
    37 active quest definitions, level/quest edits save from Admin, and Home
@@ -356,9 +359,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
    story-practice feedback back onto the Story record as durable story coaching
    history.
 9. Work the remaining highest-value Bubble reference gaps into upcoming phases:
-   saved job targets, verbal Debrief persistence/transcript decisions, richer
-   coaching memory controls, job-target-aware Up Next routing, beta tuning for
-   XP rules, and AI-backed Quira support.
+   saved job targets, richer coaching memory controls, job-target-aware Up Next
+   routing, beta tuning for XP rules, and AI-backed Quira support.
 10. Defer or avoid lower-value parity work until the beta needs it: standalone
    anonymous bug-report page, in-app marketing/blog pages, payments, industry
    packs, mascot work, and VAPI parity.
