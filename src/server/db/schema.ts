@@ -16,6 +16,9 @@ import type {
   FeedbackKind,
   PricingReviewResult,
   ProgressionEventType,
+  XpRuleAwardMode,
+  XpRuleConditionType,
+  XpRuleEventType,
   QuestCheckType,
   CoachingMemorySnapshot,
   StoryCategory,
@@ -486,13 +489,29 @@ export const progressionEvents = pgTable(
   },
   (event) => ({
     occurredAtIdx: index("progression_events_occurred_at_idx").on(event.occurredAt),
-    sessionEventIdx: uniqueIndex("progression_events_session_event_idx").on(
+    sessionEventIdx: index("progression_events_session_event_idx").on(
       event.sessionId,
       event.eventType,
     ),
     userIdx: index("progression_events_user_idx").on(event.userId),
   }),
 );
+
+export const progressionXpRules = pgTable("progression_xp_rules", {
+  active: boolean("active").default(true).notNull(),
+  awardMode: text("award_mode").$type<XpRuleAwardMode>().default("stack").notNull(),
+  conditionType: text("condition_type").$type<XpRuleConditionType>().notNull(),
+  conditionValue: integer("condition_value").default(0).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  description: text("description").notNull(),
+  displayOrder: integer("display_order").default(0).notNull(),
+  eventType: text("event_type").$type<XpRuleEventType>().notNull(),
+  groupKey: text("group_key").default("general").notNull(),
+  key: text("key").primaryKey(),
+  label: text("label").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  xp: integer("xp").default(0).notNull(),
+});
 
 export const userProgression = pgTable(
   "user_progression",

@@ -489,7 +489,7 @@ export async function createSessionEvaluation(
       updatedAt: now,
     })
     .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
-  await recordReviewProgression(userId, sessionId, result);
+  await recordReviewProgression(userId, sessionId, result, session.voiceArtifact);
 
   return evaluation;
 }

@@ -186,7 +186,40 @@ export type EvaluationScoreKey =
   | "impact"
   | "authenticity";
 
-export type ProgressionEventType = "quest_completed" | "review_completed";
+export type ProgressionEventType =
+  | "debrief_completed"
+  | "quest_completed"
+  | "resume_uploaded"
+  | "review_completed"
+  | "xp_rule_awarded";
+
+export type XpRuleConditionType =
+  | "always"
+  | "duration_min_seconds"
+  | "debrief_created"
+  | "first_practice_of_day"
+  | "overall_score_min"
+  | "resume_uploaded";
+
+export type XpRuleEventType = "debrief_completed" | "resume_uploaded" | "review_completed";
+
+export type XpRuleAwardMode = "highest_only" | "stack";
+
+export type ProgressionXpRuleRecord = {
+  active: boolean;
+  awardMode: XpRuleAwardMode;
+  conditionType: XpRuleConditionType;
+  conditionValue: number;
+  createdAt: string;
+  description: string;
+  displayOrder: number;
+  eventType: XpRuleEventType;
+  groupKey: string;
+  key: string;
+  label: string;
+  updatedAt: string;
+  xp: number;
+};
 
 export type QuestCheckType =
   | "all_modes_used"
@@ -254,6 +287,7 @@ export type ProgressionEventRecord = {
   createdAt: string;
   eventType: ProgressionEventType;
   id: string;
+  metadata?: Record<string, unknown>;
   occurredAt: string;
   sessionId?: string;
   userEmail?: string;

@@ -16,12 +16,16 @@ import type {
   ProgressionEventRecord,
   ProgressionLevelThresholdRecord,
   ProgressionQuestRecord,
+  ProgressionXpRuleRecord,
   PricingReviewRecord,
   PromptComponentRecord,
   PromptConfigKey,
   PromptConfigRecord,
   RealtimeSessionUsageRecord,
   QuestCheckType,
+  XpRuleAwardMode,
+  XpRuleConditionType,
+  XpRuleEventType,
 } from "@/product/interview-types";
 
 type PromptDraft = {
@@ -59,6 +63,20 @@ type QuestDraft = {
   questKey: string;
   title: string;
   xpReward: string;
+};
+
+type XpRuleDraft = {
+  active: boolean;
+  awardMode: XpRuleAwardMode;
+  conditionType: XpRuleConditionType;
+  conditionValue: string;
+  description: string;
+  displayOrder: string;
+  eventType: XpRuleEventType;
+  groupKey: string;
+  key: string;
+  label: string;
+  xp: string;
 };
 
 type SortDirection = "asc" | "desc";
@@ -140,6 +158,21 @@ const questCheckTypes: QuestCheckType[] = [
   "avg_score_min",
   "level_reached",
 ];
+
+const xpRuleEventTypes: XpRuleEventType[] = [
+  "review_completed",
+  "debrief_completed",
+  "resume_uploaded",
+];
+const xpRuleConditionTypes: XpRuleConditionType[] = [
+  "always",
+  "debrief_created",
+  "duration_min_seconds",
+  "first_practice_of_day",
+  "overall_score_min",
+  "resume_uploaded",
+];
+const xpRuleAwardModes: XpRuleAwardMode[] = ["stack", "highest_only"];
 
 const runtimeContextByTarget = {
   debrief: [
@@ -448,6 +481,22 @@ function questToDraft(quest?: ProgressionQuestRecord): QuestDraft {
   };
 }
 
+function xpRuleToDraft(rule?: ProgressionXpRuleRecord): XpRuleDraft {
+  return {
+    active: rule?.active ?? true,
+    awardMode: rule?.awardMode ?? "stack",
+    conditionType: rule?.conditionType ?? "always",
+    conditionValue: rule?.conditionValue.toString() ?? "0",
+    description: rule?.description ?? "",
+    displayOrder: rule?.displayOrder.toString() ?? "1",
+    eventType: rule?.eventType ?? "review_completed",
+    groupKey: rule?.groupKey ?? "general",
+    key: rule?.key ?? "",
+    label: rule?.label ?? "",
+    xp: rule?.xp.toString() ?? "25",
+  };
+}
+
 export function AdminView() {
   const [configs, setConfigs] = useState<PromptConfigRecord[]>([]);
   const [components, setComponents] = useState<PromptComponentRecord[]>([]);
@@ -479,6 +528,8 @@ export function AdminView() {
   >([]);
   const [progressionQuests, setProgressionQuests] = useState<ProgressionQuestRecord[]>([]);
   const [questDraft, setQuestDraft] = useState<QuestDraft>(questToDraft());
+  const [progressionXpRules, setProgressionXpRules] = useState<ProgressionXpRuleRecord[]>([]);
+  const [xpRuleDraft, setXpRuleDraft] = useState<XpRuleDraft>(xpRuleToDraft());
   const [pricingDraft, setPricingDraft] = useState<PricingDraft>(pricingToDraft());
   const [realtimeUsage, setRealtimeUsage] = useState<RealtimeSessionUsageRecord[]>([]);
   const [componentDraft, setComponentDraft] = useState("");
@@ -506,7 +557,7 @@ export function AdminView() {
     key: "started",
   });
   const [progressionSection, setProgressionSection] =
-    useState<"events" | "levels" | "quests" | "summaries">("summaries");
+    useState<"events" | "levels" | "quests" | "rules" | "summaries">("summaries");
   const [progressionEventSort, setProgressionEventSort] =
     useState<SortState<ProgressionEventSortKey>>({
       direction: "desc",
@@ -794,6 +845,7 @@ export function AdminView() {
         levels?: ProgressionLevelThresholdRecord[];
         quests?: ProgressionQuestRecord[];
         summaries?: AdminProgressionSummaryRecord[];
+        xpRules?: ProgressionXpRuleRecord[];
       };
 
       if (!response.ok) {
@@ -804,6 +856,7 @@ export function AdminView() {
       setProgressionLevels(body.levels ?? []);
       setProgressionQuests(body.quests ?? []);
       setProgressionSummaries(body.summaries ?? []);
+      setProgressionXpRules(body.xpRules ?? []);
     } catch (loadError) {
       setError(
         loadError instanceof Error ? loadError.message : "Progression could not be loaded.",
@@ -897,6 +950,89 @@ export function AdminView() {
       await loadProgression();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Quest could not be saved.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function saveXpRule() {
+    const conditionValue = Number(xpRuleDraft.conditionValue);
+    const displayOrder = Number(xpRuleDraft.displayOrder);
+    const xp = Number(xpRuleDraft.xp);
+
+    if (
+      !xpRuleDraft.key.trim() ||
+      !xpRuleDraft.label.trim() ||
+      !xpRuleDraft.description.trim() ||
+      !Number.isInteger(conditionValue) ||
+      conditionValue < 0 ||
+      !Number.isInteger(displayOrder) ||
+      !Number.isInteger(xp) ||
+      xp < 0
+    ) {
+      setError("XP rule key, label, description, condition value, order, and XP are required.");
+      return;
+    }
+
+    try {
+      setPending(true);
+      setError(undefined);
+      const response = await fetch("/api/admin/progression", {
+        body: JSON.stringify({
+          kind: "xp_rule",
+          ...xpRuleDraft,
+          conditionValue,
+          displayOrder,
+          xp,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "PATCH",
+      });
+      const body = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(body.error || "XP rule could not be saved.");
+      }
+
+      await loadProgression();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "XP rule could not be saved.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function seedDemoData() {
+    try {
+      setPending(true);
+      setError(undefined);
+      const response = await fetch("/api/admin/demo-data", {
+        method: "POST",
+      });
+      const body = (await response.json()) as {
+        error?: string;
+        result?: {
+          created: string[];
+          userId: string;
+        };
+      };
+
+      if (!response.ok || !body.result) {
+        throw new Error(body.error || "Demo data could not be created.");
+      }
+
+      setError(
+        body.result.created.length > 0
+          ? `Demo data added: ${body.result.created.join(", ")}.`
+          : "Demo data already exists for this account.",
+      );
+      await Promise.all([loadAdminData(), loadProgression()]);
+    } catch (seedError) {
+      setError(
+        seedError instanceof Error ? seedError.message : "Demo data could not be created.",
+      );
     } finally {
       setPending(false);
     }
@@ -1617,7 +1753,9 @@ export function AdminView() {
                       ? `${sortedProgressionEvents.length} events`
                       : progressionSection === "levels"
                         ? `${progressionLevels.length} levels`
-                        : `${progressionQuests.length} quests`}
+                        : progressionSection === "quests"
+                          ? `${progressionQuests.length} quests`
+                          : `${progressionXpRules.length} rules`}
                 </span>
               </div>
               <div className="component-tabs" aria-label="Progression section">
@@ -1648,6 +1786,13 @@ export function AdminView() {
                   type="button"
                 >
                   Quests ({progressionQuests.length})
+                </button>
+                <button
+                  className={progressionSection === "rules" ? "active" : ""}
+                  onClick={() => setProgressionSection("rules")}
+                  type="button"
+                >
+                  XP Rules ({progressionXpRules.length})
                 </button>
               </div>
 
@@ -1819,6 +1964,7 @@ export function AdminView() {
                             sort={progressionEventSort}
                             sortKey="session"
                           />
+                          <th>Details</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1832,6 +1978,15 @@ export function AdminView() {
                             <td>{event.xp}</td>
                             <td className="narrow-column">
                               <ExpandableCell className="mono-cell" value={event.sessionId} />
+                            </td>
+                            <td>
+                              <ExpandableCell
+                                value={
+                                  event.metadata
+                                    ? JSON.stringify(event.metadata, null, 2)
+                                    : undefined
+                                }
+                              />
                             </td>
                           </tr>
                         ))}
@@ -2103,6 +2258,214 @@ export function AdminView() {
                 ) : (
                   <p>No quests have been seeded yet.</p>
                 ))}
+              {progressionSection === "rules" &&
+                (progressionXpRules.length > 0 ? (
+                  <div className="admin-layout component-admin-layout">
+                    <aside className="prompt-version-list" aria-label="XP rules">
+                      <section>
+                        <div className="section-head">
+                          <h2>XP Rules</h2>
+                          <button
+                            className="secondary"
+                            onClick={() => setXpRuleDraft(xpRuleToDraft())}
+                            type="button"
+                          >
+                            New
+                          </button>
+                        </div>
+                        {progressionXpRules.map((rule) => (
+                          <button
+                            key={rule.key}
+                            onClick={() => setXpRuleDraft(xpRuleToDraft(rule))}
+                            type="button"
+                          >
+                            <span>
+                              {rule.displayOrder}. {rule.label}
+                            </span>
+                            <small>
+                              {rule.eventType} / {rule.conditionType} / {rule.xp} XP
+                            </small>
+                          </button>
+                        ))}
+                      </section>
+                    </aside>
+                    <form className="prompt-editor" onSubmit={(event) => event.preventDefault()}>
+                      <div className="section-head">
+                        <h2>{xpRuleDraft.key ? "Edit XP Rule" : "Add XP Rule"}</h2>
+                        <span>{xpRuleDraft.active ? "Active" : "Off"}</span>
+                      </div>
+                      <div className="field-grid">
+                        <label>
+                          <span>Rule key</span>
+                          <input
+                            onChange={(event) =>
+                              setXpRuleDraft((current) => ({
+                                ...current,
+                                key: event.target.value,
+                              }))
+                            }
+                            placeholder="duration_8_min"
+                            value={xpRuleDraft.key}
+                          />
+                        </label>
+                        <label>
+                          <span>Label</span>
+                          <input
+                            onChange={(event) =>
+                              setXpRuleDraft((current) => ({
+                                ...current,
+                                label: event.target.value,
+                              }))
+                            }
+                            value={xpRuleDraft.label}
+                          />
+                        </label>
+                        <label>
+                          <span>Description</span>
+                          <input
+                            onChange={(event) =>
+                              setXpRuleDraft((current) => ({
+                                ...current,
+                                description: event.target.value,
+                              }))
+                            }
+                            value={xpRuleDraft.description}
+                          />
+                        </label>
+                        <label>
+                          <span>Event type</span>
+                          <select
+                            onChange={(event) =>
+                              setXpRuleDraft((current) => ({
+                                ...current,
+                                eventType: event.target.value as XpRuleEventType,
+                              }))
+                            }
+                            value={xpRuleDraft.eventType}
+                          >
+                            {xpRuleEventTypes.map((eventType) => (
+                              <option key={eventType} value={eventType}>
+                                {eventType}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          <span>Condition</span>
+                          <select
+                            onChange={(event) =>
+                              setXpRuleDraft((current) => ({
+                                ...current,
+                                conditionType: event.target.value as XpRuleConditionType,
+                              }))
+                            }
+                            value={xpRuleDraft.conditionType}
+                          >
+                            {xpRuleConditionTypes.map((conditionType) => (
+                              <option key={conditionType} value={conditionType}>
+                                {conditionType}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          <span>Condition value</span>
+                          <input
+                            onChange={(event) =>
+                              setXpRuleDraft((current) => ({
+                                ...current,
+                                conditionValue: event.target.value,
+                              }))
+                            }
+                            type="number"
+                            value={xpRuleDraft.conditionValue}
+                          />
+                        </label>
+                        <label>
+                          <span>Group key</span>
+                          <input
+                            onChange={(event) =>
+                              setXpRuleDraft((current) => ({
+                                ...current,
+                                groupKey: event.target.value,
+                              }))
+                            }
+                            value={xpRuleDraft.groupKey}
+                          />
+                        </label>
+                        <label>
+                          <span>Award mode</span>
+                          <select
+                            onChange={(event) =>
+                              setXpRuleDraft((current) => ({
+                                ...current,
+                                awardMode: event.target.value as XpRuleAwardMode,
+                              }))
+                            }
+                            value={xpRuleDraft.awardMode}
+                          >
+                            {xpRuleAwardModes.map((awardMode) => (
+                              <option key={awardMode} value={awardMode}>
+                                {awardMode}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          <span>XP</span>
+                          <input
+                            onChange={(event) =>
+                              setXpRuleDraft((current) => ({
+                                ...current,
+                                xp: event.target.value,
+                              }))
+                            }
+                            type="number"
+                            value={xpRuleDraft.xp}
+                          />
+                        </label>
+                        <label>
+                          <span>Display order</span>
+                          <input
+                            onChange={(event) =>
+                              setXpRuleDraft((current) => ({
+                                ...current,
+                                displayOrder: event.target.value,
+                              }))
+                            }
+                            type="number"
+                            value={xpRuleDraft.displayOrder}
+                          />
+                        </label>
+                      </div>
+                      <label className="checkbox-row">
+                        <input
+                          checked={xpRuleDraft.active}
+                          onChange={(event) =>
+                            setXpRuleDraft((current) => ({
+                              ...current,
+                              active: event.target.checked,
+                            }))
+                          }
+                          type="checkbox"
+                        />
+                        <span>Rule is active</span>
+                      </label>
+                      <div className="inline-actions">
+                        <button disabled={pending} onClick={saveXpRule} type="button">
+                          Save XP Rule
+                        </button>
+                      </div>
+                      <p>
+                        Duration and score tiers use the same group key with
+                        highest_only so only the strongest matching tier is awarded.
+                        Score thresholds use tenths: 35 means 3.5, 40 means 4.0.
+                      </p>
+                    </form>
+                  </div>
+                ) : (
+                  <p>No XP rules have been seeded yet.</p>
+                ))}
               {error && <p className="form-error">{error}</p>}
             </section>
           )}
@@ -2128,6 +2491,14 @@ export function AdminView() {
               <div className="inline-actions">
                 <button className="secondary" onClick={loadAdminData} type="button">
                   Refresh Data
+                </button>
+                <button
+                  className="secondary"
+                  disabled={pending}
+                  onClick={seedDemoData}
+                  type="button"
+                >
+                  Seed Ronnie Demo Data
                 </button>
               </div>
               {dataError && <p className="form-error">{dataError}</p>}

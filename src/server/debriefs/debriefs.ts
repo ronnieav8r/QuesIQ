@@ -6,6 +6,7 @@ import { getDb } from "@/server/db/client";
 import { debriefs, evaluations, sessions } from "@/server/db/schema";
 import { generateSessionDebrief } from "@/server/debriefs/debrief-ai";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
+import { recordDebriefProgression } from "@/server/progression/progression";
 
 function toSessionHistoryItem(row: {
   contextSnapshot: typeof sessions.$inferSelect.contextSnapshot;
@@ -144,6 +145,7 @@ export async function createSessionDebrief({
       userNote,
     })
     .returning();
+  await recordDebriefProgression(userId, sessionId);
 
   return toDebriefRecord({
     contextSnapshot: sessionRow.contextSnapshot,

@@ -7,10 +7,16 @@ import type {
   ProgressionLevelThresholdRecord,
   ProgressionQuestRecord,
   ProgressionSummaryRecord,
+  ProgressionXpRuleRecord,
   QuestCheckType,
   SessionEvaluationResult,
+  VoiceSessionArtifactDraft,
   UserQuestRecord,
+  XpRuleAwardMode,
+  XpRuleConditionType,
+  XpRuleEventType,
 } from "@/product/interview-types";
+import { getOverallScore } from "@/product/scoring";
 import { getDb } from "@/server/db/client";
 import {
   debriefs,
@@ -19,13 +25,13 @@ import {
   progressionEvents,
   progressionLevelThresholds,
   progressionQuests,
+  progressionXpRules,
   sessions,
   userProgression,
   userQuests,
   users,
 } from "@/server/db/schema";
 
-const reviewCompletedXp = 100;
 const xpPerLevel = 300;
 
 const defaultThresholds = [
@@ -223,7 +229,7 @@ export async function getProgressionSummary(
 }
 
 async function backfillReviewProgression(userId: string) {
-  const rows = await getDb()
+  const legacyRows = await getDb()
     .select({
       createdAt: evaluations.createdAt,
       result: evaluations.result,
@@ -232,60 +238,303 @@ async function backfillReviewProgression(userId: string) {
     .from(evaluations)
     .where(eq(evaluations.userId, userId));
 
-  if (rows.length === 0) {
+  if (legacyRows.length === 0) {
     return;
   }
 
-  await Promise.all(
-    rows.map((row) =>
-      getDb()
-        .insert(progressionEvents)
-        .values({
-          eventType: "review_completed",
-          metadata: {
-            nextAction: row.result.nextAction,
-            scores: row.result.scores,
-            summary: row.result.summary,
-          },
-          occurredAt: row.createdAt,
-          sessionId: row.sessionId,
-          userId,
-          xp: reviewCompletedXp,
-        })
-        .onConflictDoNothing({
-          target: [progressionEvents.sessionId, progressionEvents.eventType],
-        }),
-    ),
+  for (const row of legacyRows) {
+    const existingRows = await getDb()
+      .select({
+        metadata: progressionEvents.metadata,
+      })
+      .from(progressionEvents)
+      .where(
+        and(
+          eq(progressionEvents.sessionId, row.sessionId),
+          eq(progressionEvents.eventType, "xp_rule_awarded"),
+        ),
+      );
+
+    if (existingRows.some((event) => getRuleKey(event.metadata))) {
+      continue;
+    }
+
+    await getDb().insert(progressionEvents).values({
+      eventType: "xp_rule_awarded",
+      metadata: {
+        label: "Legacy scored review completed",
+        nextAction: row.result.nextAction,
+        ruleKey: "legacy_review_completed_base",
+        scores: row.result.scores,
+        sourceEventType: "review_completed",
+        summary: row.result.summary,
+      },
+      occurredAt: row.createdAt,
+      sessionId: row.sessionId,
+      userId,
+      xp: 100,
+    });
+  }
+}
+
+function toXpRuleRecord(row: typeof progressionXpRules.$inferSelect): ProgressionXpRuleRecord {
+  return {
+    active: row.active,
+    awardMode: row.awardMode,
+    conditionType: row.conditionType,
+    conditionValue: row.conditionValue,
+    createdAt: row.createdAt.toISOString(),
+    description: row.description,
+    displayOrder: row.displayOrder,
+    eventType: row.eventType,
+    groupKey: row.groupKey,
+    key: row.key,
+    label: row.label,
+    updatedAt: row.updatedAt.toISOString(),
+    xp: row.xp,
+  };
+}
+
+function normalizeScoreThreshold(value: number) {
+  return value > 5 ? value / 10 : value;
+}
+
+function ruleMatchesReview(
+  rule: typeof progressionXpRules.$inferSelect,
+  context: {
+    durationSeconds?: number;
+    firstPracticeOfDay: boolean;
+    overallScore: number;
+  },
+) {
+  switch (rule.conditionType) {
+    case "always":
+      return true;
+    case "duration_min_seconds":
+      return (context.durationSeconds ?? 0) >= rule.conditionValue;
+    case "first_practice_of_day":
+      return context.firstPracticeOfDay;
+    case "overall_score_min":
+      return context.overallScore >= normalizeScoreThreshold(rule.conditionValue);
+    default:
+      return false;
+  }
+}
+
+function ruleMatchesSimpleEvent(
+  rule: typeof progressionXpRules.$inferSelect,
+  eventType: XpRuleEventType,
+) {
+  if (rule.conditionType === "always") {
+    return true;
+  }
+
+  if (eventType === "debrief_completed") {
+    return rule.conditionType === "debrief_created";
+  }
+
+  if (eventType === "resume_uploaded") {
+    return rule.conditionType === "resume_uploaded";
+  }
+
+  return false;
+}
+
+function selectAwardedRules(rules: Array<typeof progressionXpRules.$inferSelect>) {
+  const stackRules = rules.filter((rule) => rule.awardMode === "stack");
+  const groupedHighest = rules
+    .filter((rule) => rule.awardMode === "highest_only")
+    .reduce<Record<string, typeof progressionXpRules.$inferSelect[]>>((groups, rule) => {
+      groups[rule.groupKey] = groups[rule.groupKey] || [];
+      groups[rule.groupKey].push(rule);
+      return groups;
+    }, {});
+  const highestRules = Object.values(groupedHighest).flatMap((group) =>
+    group.sort((left, right) => right.conditionValue - left.conditionValue)[0]
+      ? [group.sort((left, right) => right.conditionValue - left.conditionValue)[0]]
+      : [],
   );
 
+  return [...stackRules, ...highestRules].sort(
+    (left, right) => left.displayOrder - right.displayOrder,
+  );
+}
+
+function getRuleKey(metadata: unknown) {
+  if (!metadata || typeof metadata !== "object" || !("ruleKey" in metadata)) {
+    return undefined;
+  }
+
+  const value = (metadata as { ruleKey?: unknown }).ruleKey;
+
+  return typeof value === "string" ? value : undefined;
+}
+
+async function getFirstPracticeOfDay(userId: string, now: Date) {
+  const day = toPracticeDate(now);
+  const [row] = await getDb()
+    .select({ id: progressionEvents.id })
+    .from(progressionEvents)
+    .where(eq(progressionEvents.userId, userId))
+    .orderBy(desc(progressionEvents.occurredAt))
+    .limit(50);
+
+  if (!row) {
+    return true;
+  }
+
+  const recentRows = await getDb()
+    .select({
+      occurredAt: progressionEvents.occurredAt,
+    })
+    .from(progressionEvents)
+    .where(eq(progressionEvents.userId, userId))
+    .orderBy(desc(progressionEvents.occurredAt))
+    .limit(50);
+
+  return !recentRows.some((event) => toPracticeDate(event.occurredAt) === day);
 }
 
 export async function recordReviewProgression(
   userId: string,
   sessionId: string,
   result: SessionEvaluationResult,
+  artifact?: VoiceSessionArtifactDraft,
 ) {
   const now = new Date();
+  const rules = await getDb()
+    .select()
+    .from(progressionXpRules)
+    .where(and(eq(progressionXpRules.active, true), eq(progressionXpRules.eventType, "review_completed")))
+    .orderBy(asc(progressionXpRules.displayOrder));
+  const overallScore = getOverallScore(result.scores) ?? 0;
+  const firstPracticeOfDay = await getFirstPracticeOfDay(userId, now);
+  const matchingRules = rules.filter((rule) =>
+    ruleMatchesReview(rule, {
+      durationSeconds: artifact?.durationSeconds,
+      firstPracticeOfDay,
+      overallScore,
+    }),
+  );
+  const awardedRules = selectAwardedRules(matchingRules);
+  const existingRuleRows = await getDb()
+    .select({
+      metadata: progressionEvents.metadata,
+    })
+    .from(progressionEvents)
+    .where(
+      and(
+        eq(progressionEvents.sessionId, sessionId),
+        eq(progressionEvents.eventType, "xp_rule_awarded"),
+      ),
+    );
+  const existingRuleKeys = new Set(
+    existingRuleRows.map((row) => getRuleKey(row.metadata)).filter(Boolean),
+  );
 
-  await getDb()
-    .insert(progressionEvents)
-    .values({
-      eventType: "review_completed",
+  for (const rule of awardedRules) {
+    if (existingRuleKeys.has(rule.key)) {
+      continue;
+    }
+
+    await getDb().insert(progressionEvents).values({
+      eventType: "xp_rule_awarded",
       metadata: {
+        durationSeconds: artifact?.durationSeconds,
+        label: rule.label,
         nextAction: result.nextAction,
+        overallScore,
+        ruleKey: rule.key,
         scores: result.scores,
+        sourceEventType: "review_completed",
         summary: result.summary,
       },
       occurredAt: now,
       sessionId,
       userId,
-      xp: reviewCompletedXp,
-    })
-    .onConflictDoNothing({
-      target: [progressionEvents.sessionId, progressionEvents.eventType],
+      xp: rule.xp,
     });
+  }
 
   return rebuildProgressionSummary(userId);
+}
+
+async function recordConfiguredXpRules({
+  eventType,
+  metadata,
+  sessionId,
+  userId,
+}: {
+  eventType: XpRuleEventType;
+  metadata: Record<string, unknown>;
+  sessionId?: string;
+  userId: string;
+}) {
+  const now = new Date();
+  const rules = await getDb()
+    .select()
+    .from(progressionXpRules)
+    .where(and(eq(progressionXpRules.active, true), eq(progressionXpRules.eventType, eventType)))
+    .orderBy(asc(progressionXpRules.displayOrder));
+  const awardedRules = selectAwardedRules(
+    rules.filter((rule) => ruleMatchesSimpleEvent(rule, eventType)),
+  );
+  const existingRuleRows = await getDb()
+    .select({
+      metadata: progressionEvents.metadata,
+      sessionId: progressionEvents.sessionId,
+    })
+    .from(progressionEvents)
+    .where(and(eq(progressionEvents.userId, userId), eq(progressionEvents.eventType, "xp_rule_awarded")));
+  const existingRuleKeys = new Set(
+    existingRuleRows
+      .filter((row) => (sessionId ? row.sessionId === sessionId : true))
+      .map((row) => getRuleKey(row.metadata))
+      .filter(Boolean),
+  );
+
+  for (const rule of awardedRules) {
+    if (existingRuleKeys.has(rule.key)) {
+      continue;
+    }
+
+    await getDb().insert(progressionEvents).values({
+      eventType: "xp_rule_awarded",
+      metadata: {
+        ...metadata,
+        label: rule.label,
+        ruleKey: rule.key,
+        sourceEventType: eventType,
+      },
+      occurredAt: now,
+      sessionId,
+      userId,
+      xp: rule.xp,
+    });
+  }
+
+  return rebuildProgressionSummary(userId);
+}
+
+export async function recordDebriefProgression(userId: string, sessionId: string) {
+  return recordConfiguredXpRules({
+    eventType: "debrief_completed",
+    metadata: {
+      sessionId,
+    },
+    sessionId,
+    userId,
+  });
+}
+
+export async function recordResumeProgression(userId: string, resumeName?: string) {
+  return recordConfiguredXpRules({
+    eventType: "resume_uploaded",
+    metadata: {
+      resumeName,
+    },
+    userId,
+  });
 }
 
 async function rebuildProgressionSummarySnapshot(userId: string) {
@@ -698,6 +947,7 @@ export async function listProgressionEvents(
       createdAt: progressionEvents.createdAt,
       eventType: progressionEvents.eventType,
       id: progressionEvents.id,
+      metadata: progressionEvents.metadata,
       occurredAt: progressionEvents.occurredAt,
       sessionId: progressionEvents.sessionId,
       userEmail: users.email,
@@ -713,6 +963,7 @@ export async function listProgressionEvents(
     createdAt: row.createdAt.toISOString(),
     eventType: row.eventType,
     id: row.id,
+    metadata: row.metadata ?? undefined,
     occurredAt: row.occurredAt.toISOString(),
     sessionId: row.sessionId ?? undefined,
     userEmail: row.userEmail ?? undefined,
@@ -764,6 +1015,55 @@ export async function listProgressionQuests(): Promise<ProgressionQuestRecord[]>
     title: row.title,
     xpReward: row.xpReward,
   }));
+}
+
+export async function listProgressionXpRules(): Promise<ProgressionXpRuleRecord[]> {
+  const rows = await getDb()
+    .select()
+    .from(progressionXpRules)
+    .orderBy(asc(progressionXpRules.displayOrder));
+
+  return rows.map(toXpRuleRecord);
+}
+
+export async function saveProgressionXpRule(input: {
+  active: boolean;
+  awardMode: XpRuleAwardMode;
+  conditionType: XpRuleConditionType;
+  conditionValue: number;
+  description: string;
+  displayOrder: number;
+  eventType: XpRuleEventType;
+  groupKey: string;
+  key: string;
+  label: string;
+  xp: number;
+}): Promise<ProgressionXpRuleRecord> {
+  const now = new Date();
+  const values = {
+    active: input.active,
+    awardMode: input.awardMode,
+    conditionType: input.conditionType,
+    conditionValue: input.conditionValue,
+    description: input.description,
+    displayOrder: input.displayOrder,
+    eventType: input.eventType,
+    groupKey: input.groupKey,
+    key: input.key,
+    label: input.label,
+    updatedAt: now,
+    xp: input.xp,
+  };
+  const [rule] = await getDb()
+    .insert(progressionXpRules)
+    .values(values)
+    .onConflictDoUpdate({
+      set: values,
+      target: progressionXpRules.key,
+    })
+    .returning();
+
+  return toXpRuleRecord(rule);
 }
 
 export async function saveProgressionLevelThreshold(input: {

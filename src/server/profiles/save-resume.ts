@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import type { InterviewContext } from "@/product/interview-types";
 import { getDb } from "@/server/db/client";
 import { profiles } from "@/server/db/schema";
+import { recordResumeProgression } from "@/server/progression/progression";
 
 type SaveResumeInput = {
   mimeType: string;
@@ -38,6 +39,8 @@ export async function saveResume(
       resumeParsedAt: profiles.resumeParsedAt,
       resumeText: profiles.resumeText,
     });
+
+  await recordResumeProgression(userId, profile.resumeName ?? undefined);
 
   return {
     resumeName: profile.resumeName ?? undefined,

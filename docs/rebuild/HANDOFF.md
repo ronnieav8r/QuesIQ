@@ -216,6 +216,14 @@ path until Phase 2 navigation is completed unless the product direction changes.
   waterfall: pending reviews, missing context, missing parsed resume, debriefing
   the latest reviewed session, weakest score practice, Story Lab, near-complete
   quests, and default practice now route the primary recommendation action.
+- Added editable XP rules under Admin > Progression > XP Rules. Review XP now
+  comes from rule awards instead of a hardcoded flat reward, with a smaller
+  completion base and larger highest-only duration/score tiers. Resume upload
+  and Debrief completion rewards also use the rules table, and XP Events show
+  rule metadata for visibility.
+- Added an admin-only demo data seed endpoint/button for the Ronnie account:
+  Admin > Data can create representative profile, story, session, evaluation,
+  debrief, coaching memory, feedback, and progression rows when missing.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,

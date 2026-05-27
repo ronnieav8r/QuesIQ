@@ -291,6 +291,21 @@ Last updated: 2026-05-26
     score practice, Story Lab, near-complete quests, and default practice
   - the primary recommendation button routes directly to review retry,
     onboarding, debrief, Story Lab, or practice depending on the selected nudge
+- XP/reward refinement started:
+  - Admin > Progression now includes editable XP Rules
+  - review XP is awarded by rule rows instead of a single hardcoded flat reward
+  - default review rewards are intentionally less completion-heavy: small base
+    completion XP, highest-only duration tiers, highest-only overall-score
+    tiers, and a small first-practice-today bonus
+  - resume upload and Debrief completion rewards are also rule-driven
+  - Admin XP Events now expose event metadata so individual rule awards can be
+    inspected
+- Admin demo data seeding started:
+  - Admin > Data includes a "Seed Ronnie Demo Data" button
+  - the seed targets a user whose email/name/id contains `ronnieav8r`, falling
+    back to the current admin user
+  - it creates representative rows for empty/missing profile, story, session,
+    evaluation, debrief, coaching memory, feedback, and progression data
 
 ## Verification
 
@@ -391,6 +406,7 @@ Ignored local/generated paths currently include `.env.local`, `.next/`,
 9. Product gap backlog from the Bubble reference, ordered by current user value:
    persist story-practice coaching history back onto Story records, saved job
    targets, deeper Debrief conversation UX, richer coaching memory controls, job-target-aware Up Next routing,
+   and tuning XP rules from beta behavior,
    refined XP rewards, and AI-backed Quira support.
 10. Treat standalone anonymous bug reports, in-app marketing/blog pages,
    payments, industry packs, mascot work, and VAPI parity as lower-priority
