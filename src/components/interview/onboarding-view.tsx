@@ -23,7 +23,6 @@ export function OnboardingView({
   const [resumeUploadError, setResumeUploadError] = useState<string>();
   const [resumeUploadPending, setResumeUploadPending] = useState(false);
   const [resumeUploadWarning, setResumeUploadWarning] = useState<string>();
-  const [saveAsJobTarget, setSaveAsJobTarget] = useState(true);
   const [selectedResumeFile, setSelectedResumeFile] = useState<File>();
 
   async function saveContext(event: FormEvent<HTMLFormElement>) {
@@ -78,7 +77,7 @@ export function OnboardingView({
     await onSave({
       ...nextContext,
       jobTargetId: undefined,
-    }, saveAsJobTarget);
+    }, false);
   }
 
   return (
@@ -94,7 +93,7 @@ export function OnboardingView({
         </button>
         <div>
           <p className="eyebrow">Onboarding</p>
-          <h1 id="onboarding-title">Give Que your interview context</h1>
+          <h1 id="onboarding-title">Set up your first practice</h1>
         </div>
       </div>
 
@@ -185,15 +184,6 @@ export function OnboardingView({
             </small>
           </label>
 
-          <label className="checkbox-row">
-            <input
-              checked={saveAsJobTarget}
-              onChange={(event) => setSaveAsJobTarget(event.target.checked)}
-              type="checkbox"
-            />
-            <span>Save this role as a reusable job target</span>
-          </label>
-
           <div className="inline-actions">
             <button disabled={savePending || resumeUploadPending} type="submit">
               {savePending || resumeUploadPending ? "Saving Context" : "Save Context"}
@@ -212,7 +202,7 @@ export function OnboardingView({
           <h2>Only your name and target role are required.</h2>
           <p>
             Company details, a job description, and a parsed resume help Que shape
-            sharper interview questions without blocking the first voice session.
+            sharper interview questions. After this, manage reusable roles in Me.
           </p>
           <div className="context-checklist">
             <span>Required context first</span>

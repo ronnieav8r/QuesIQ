@@ -130,14 +130,17 @@ Last updated: 2026-05-27
   - resume upload currently parses TXT, MD, DOCX, and most PDFs with a 2 MB beta
     limit; raw file binaries are not retained yet
 - Saved Job Targets started:
-  - signed-in users can save their current role/company/job description as a
-    reusable Job Target from onboarding/profile context
+  - Me now separates the user's Profile from Job Targets: name/resume stay in
+    Profile, while reusable targets hold role, company, label, and job
+    description/notes
+  - signed-in users can add/update reusable Job Targets from Me
   - Practice setup lets users choose the profile target or a saved Job Target
     before selecting mode/style
   - launched Sessions store the selected target id in the setup snapshot and
     mark that target as recently used
-  - Home's Recommended Next can nudge users to save a first target and defaults
-    practice copy toward the most recently used saved target
+  - Home's Me & Targets panel and Recommended Next can route users into the
+    clearer profile/target management screen, and default practice copy points
+    toward the most recently used saved target
 - Thin review hardening:
   - Sessions track evaluation status and last evaluation error
   - saved transcript artifacts mark reviews pending
@@ -426,7 +429,8 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 
 ## Next Work
 
-1. Deploy and user-confirm QA the latest prompt/debrief/progression changes on
+1. Deploy and user-confirm QA the latest prompt/debrief/progression/job-target
+   UI changes on
    `quesiq-web`, making sure migrations through
    `0034_add_job_targets.sql` run.
 2. Run/user-confirm migration QA for Bubble levels and quests: Admin >
@@ -452,7 +456,8 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
    by a maintained QuesIQ product knowledge base.
 9. Product gap backlog from the Bubble reference, ordered by current user value:
    richer coaching memory controls, deeper job-target-aware Up Next routing,
-   tuning XP rules from beta behavior, and AI-backed Quira support.
+   job target edit/delete/active-target polish, tuning XP rules from beta
+   behavior, and AI-backed Quira support.
 10. Treat standalone anonymous bug reports, in-app marketing/blog pages,
    payments, industry packs, mascot work, and VAPI parity as lower-priority
    until the core practice loop and retention features are stronger.

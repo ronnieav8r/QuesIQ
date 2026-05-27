@@ -19,11 +19,13 @@ The latest Bubble-reference work moved three high-value gaps forward: richer
 post-session review scaffolding, coaching memory, and verbal Debrief. Written
 Debrief is no longer a separate user flow; written reflection belongs inside
 the structured practice review, while Debrief now means a Realtime voice
-conversation tied to a completed session. Saved Job Targets have their first
-owned slice now; the remaining personalization work is deeper target-aware
-recommendations and controls. Avoid treating Bubble parity as the goal; carry
-forward only features that improve practice, feedback, retention, or beta
-learning.
+conversation tied to a completed session. Saved Job Targets now have a clearer
+owned slice: Me separates the user's coaching profile from reusable
+role/company targets, while Practice uses the selected target as the situation
+for a session. The remaining personalization work is deeper target-aware
+recommendations, editing/deleting target controls, and clearer active-target
+behavior. Avoid treating Bubble parity as the goal; carry forward only features
+that improve practice, feedback, retention, or beta learning.
 
 Quira now has only a baseline embedded support launcher in QuesIQ. The desired
 future Quira experience is a true AI chat assistant that can hold a
@@ -200,10 +202,12 @@ path until Phase 2 navigation is completed unless the product direction changes.
   recent coaching summaries. Normal practice and evaluation prompt context now
   also includes a compact saved-story library so Que can suggest a better-fit
   story when the candidate answers with weaker material.
-- Added the first saved Job Targets slice: onboarding/profile context can save
-  the current role/company/job description as a reusable target, Practice setup
-  can choose a saved target before launch, Sessions remember the selected target
-  id, and Home can recommend saving or practicing against targets.
+- Added the first saved Job Targets slice and separated its UI from Profile:
+  Me now has a Profile panel for name/resume and a Job Targets panel for
+  reusable role/company/job-description targets, Practice setup can choose a
+  saved target before launch, Sessions remember the selected target id, and
+  Home points users to Me & Targets instead of treating everything as one
+  interview-context object.
 - Added Story Lab prompt visibility in Admin: Story Conversation Realtime,
   follow-up, outline generation, Story Practice Realtime guidance, and Story
   Practice Evaluation guidance are now versioned prompt configs under Admin >
@@ -345,7 +349,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 ## Next Best Work
 
-1. Deploy/user-confirm QA the latest prompt/debrief/progression changes on
+1. Deploy/user-confirm QA the latest prompt/debrief/progression/job-target UI
+   changes on
    `quesiq-web`. Confirm migrations through
    `0034_add_job_targets.sql` run before testing verbal Debrief, Story Practice
    coaching history, Tell Que story capture, and saved Job Targets.
@@ -372,7 +377,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
    on Story records.
 9. Work the remaining highest-value Bubble reference gaps into upcoming phases:
    richer coaching memory controls, deeper job-target-aware Up Next routing,
-   beta tuning for XP rules, and AI-backed Quira support.
+   job target edit/delete/active-target polish, beta tuning for XP rules, and
+   AI-backed Quira support.
 10. Defer or avoid lower-value parity work until the beta needs it: standalone
    anonymous bug-report page, in-app marketing/blog pages, payments, industry
    packs, mascot work, and VAPI parity.

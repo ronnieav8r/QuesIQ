@@ -398,6 +398,8 @@ label span {
 .home-workspace,
 .dashboard-grid,
 .review-history,
+.job-target-list,
+.me-layout,
 .quest-list,
 .target-chip-list,
 .mode-list,
@@ -832,8 +834,51 @@ label span {
   min-width: 0;
 }
 
+.profile-grid.compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .profile-grid strong {
   overflow-wrap: anywhere;
+}
+
+.profile-editor,
+.target-editor {
+  align-self: start;
+}
+
+.job-target-card {
+  background:
+    linear-gradient(135deg, rgba(109, 59, 255, 0.1), transparent 72%),
+    var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.job-target-card.active {
+  border-color: var(--focus);
+  box-shadow: var(--shadow-brand);
+}
+
+.job-target-card > div:first-child {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.job-target-card > div:first-child span {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}
+
+.job-target-card p {
+  display: -webkit-box;
+  margin-bottom: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .context-form {
@@ -2321,6 +2366,15 @@ textarea::placeholder {
 
   .dashboard-grid,
   .profile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .me-layout {
+    align-items: start;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  }
+
+  .job-target-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

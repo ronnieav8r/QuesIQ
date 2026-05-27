@@ -212,14 +212,16 @@ High-value gaps to carry forward:
 - Story library: reusable STARR-style stories with coach notes, last-practiced
   state, and practice hooks.
 - Saved job targets: multiple roles/companies/job descriptions a user can pick
-  from when starting mock interviews or first-impression sessions.
+  from when starting mock interviews or first-impression sessions. Keep these
+  separate from the user's Profile; name/resume/background describe the person,
+  while targets describe the role/company situation.
 - Debrief mode: a follow-up conversation tied to an existing session, with its
   own transcript or notes, without creating a scored new practice session.
 - Coaching memory: an AI-generated user context summary that evolves from
   resume, job targets, reviewed sessions, stories, and repeated coaching themes.
 - Richer Up Next logic: a clearer recommendation waterfall that can route users
-  into pending reviews, weak-skill drills, job-target practice, story work, or
-  debrief.
+  into pending reviews, weak-skill drills, job-target practice, target cleanup,
+  story work, or debrief.
 - XP/reward refinement: consider restoring a more nuanced session XP breakdown
   based on review completion, duration, quality, streak, and quest completion.
 - Quira AI support: replace the curated help panel with a real product-support

@@ -22,6 +22,7 @@ type DashboardProps = {
   onPractice: () => void;
   onReview: (session: SessionHistoryItem) => void;
   onStories: () => void;
+  selectedJobTarget?: JobTargetRecord;
 };
 
 export function Dashboard({
@@ -33,6 +34,7 @@ export function Dashboard({
   onPractice,
   onReview,
   onStories,
+  selectedJobTarget,
 }: DashboardProps) {
   const history = useSessionHistory();
   const [coachingMemory, setCoachingMemory] = useState<CoachingMemoryRecord>();
@@ -313,7 +315,7 @@ export function Dashboard({
             </button>
             {recommendation.kind !== "missing_context" && !contextReady && (
               <button className="secondary" onClick={onOnboarding} type="button">
-                Add Context
+                Open Me
               </button>
             )}
           </div>
@@ -322,7 +324,7 @@ export function Dashboard({
 
         <section aria-labelledby="context-title" className="context-panel">
           <div className="section-head">
-            <h2 id="context-title">Interview Context</h2>
+            <h2 id="context-title">Me & Targets</h2>
             <span>{contextReady ? "Ready" : "Fast start"}</span>
           </div>
           <dl>
@@ -331,12 +333,17 @@ export function Dashboard({
               <dd>{interviewContext.preferredName || "Add name"}</dd>
             </div>
             <div>
-              <dt>Target role</dt>
-              <dd>{interviewContext.targetRole || "Add role"}</dd>
+              <dt>Resume</dt>
+              <dd>{interviewContext.resumeName ? "Added" : "Optional"}</dd>
             </div>
             <div>
-              <dt>Company</dt>
-              <dd>{interviewContext.targetCompany || "Optional"}</dd>
+              <dt>Active target</dt>
+              <dd>
+                {selectedJobTarget?.label ||
+                  jobTargets[0]?.label ||
+                  interviewContext.targetRole ||
+                  "Add target"}
+              </dd>
             </div>
             <div>
               <dt>Saved targets</dt>
@@ -344,7 +351,7 @@ export function Dashboard({
             </div>
           </dl>
           <button className="secondary" onClick={onOnboarding} type="button">
-            {contextReady ? "Update Context" : "Start Onboarding"}
+            Manage Me & Targets
           </button>
         </section>
       </div>

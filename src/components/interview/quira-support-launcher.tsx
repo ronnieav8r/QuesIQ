@@ -47,7 +47,7 @@ const helpTopics: Array<{
   },
   {
     answer:
-      "Open Me to update your name, target role, target company, job description, or resume. That context is reused in future practice sessions.",
+      "Open Me to update your profile, resume, and saved job targets. Your profile is about you; job targets are the roles or companies you want Que to practice against.",
     key: "profile",
     label: "Update profile",
   },

@@ -93,7 +93,8 @@ export default function Home() {
     (style) => style.key === selectedStyleKey,
   );
   const contextReady = Boolean(
-    interviewContext.preferredName.trim() && interviewContext.targetRole.trim(),
+    interviewContext.preferredName.trim() &&
+      (interviewContext.targetRole.trim() || jobTargets.length > 0),
   );
   const feedbackSessionId =
     activeView === "session"
@@ -253,6 +254,7 @@ export default function Home() {
   async function saveProfileContext(
     nextContext: typeof interviewContext,
     saveAsJobTarget = false,
+    returnView: AppView = "home",
   ) {
     try {
       setProfileSaveError(undefined);
@@ -284,11 +286,51 @@ export default function Home() {
         ]);
         setSelectedJobTarget(body.target);
       }
-      setActiveView("home");
+      setActiveView(returnView);
     } catch (error) {
       setProfileSaveError(
         error instanceof Error ? error.message : "Profile context could not be saved.",
       );
+    } finally {
+      setProfileSavePending(false);
+    }
+  }
+
+  async function saveJobTargetContext(
+    target: Pick<JobTargetRecord, "jobDescription" | "label" | "targetCompany" | "targetRole">,
+  ) {
+    try {
+      setProfileSaveError(undefined);
+      setProfileSavePending(true);
+
+      const response = await fetch("/api/job-targets", {
+        body: JSON.stringify({ target }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        target?: JobTargetRecord;
+      };
+
+      if (!response.ok || !body.target) {
+        throw new Error(body.detail || body.error || "Job target could not be saved.");
+      }
+
+      setJobTargets((current) => [
+        body.target as JobTargetRecord,
+        ...current.filter((currentTarget) => currentTarget.id !== body.target?.id),
+      ]);
+      setSelectedJobTarget(body.target);
+      setActiveView("me");
+    } catch (error) {
+      setProfileSaveError(
+        error instanceof Error ? error.message : "Job target could not be saved.",
+      );
+      throw error;
     } finally {
       setProfileSavePending(false);
     }
@@ -548,7 +590,7 @@ export default function Home() {
                 setSelectedDebriefSession(session);
                 setActiveView("debrief");
               }}
-              onOnboarding={() => setActiveView("onboarding")}
+              onOnboarding={() => setActiveView("me")}
               onPractice={openPractice}
               onReview={(session) => {
                 setSelectedReview(session);
@@ -556,6 +598,7 @@ export default function Home() {
                 setActiveView("review");
               }}
               onStories={() => setActiveView("stories")}
+              selectedJobTarget={selectedJobTarget}
             />
           )}
           {signedIn && activeView === "practice" && (
@@ -640,9 +683,19 @@ export default function Home() {
             <MeView
               contextReady={contextReady}
               interviewContext={interviewContext}
-              onOnboarding={() => setActiveView("onboarding")}
+              jobTargets={jobTargets}
+              key={[
+                interviewContext.preferredName,
+                interviewContext.resumeName,
+                interviewContext.resumeParsedAt,
+              ].join(":")}
+              onJobTarget={setSelectedJobTarget}
               onPractice={openPractice}
-              onStories={() => setActiveView("stories")}
+              onSaveProfile={(nextContext) => saveProfileContext(nextContext, false, "me")}
+              onSaveTarget={saveJobTargetContext}
+              saveError={profileSaveError}
+              savePending={profileSavePending}
+              selectedJobTarget={selectedJobTarget}
             />
           )}
           {signedIn && activeView === "admin" && adminAccess && <AdminView />}

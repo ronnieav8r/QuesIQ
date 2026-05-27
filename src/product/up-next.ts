@@ -117,10 +117,10 @@ export function getUpNextRecommendation({
 
   if (!contextReady) {
     return {
-      actionLabel: "Add Context",
-      body: "Give Que your name and target role so practice can feel specific instead of generic.",
+      actionLabel: "Open Me",
+      body: "Add your name and at least one job target so Que knows who you are and what role to practice for.",
       kind: "missing_context",
-      title: "Add your interview context.",
+      title: "Set up Me and job targets.",
     };
   }
 
@@ -136,7 +136,7 @@ export function getUpNextRecommendation({
   if (jobTargets.length === 0 && interviewContext.targetRole.trim()) {
     return {
       actionLabel: "Save Target",
-      body: "Save your current role and company as a job target so future practice can stay tied to a specific opportunity.",
+      body: "Move your current role and company into a saved job target so future practice can stay tied to a specific opportunity.",
       kind: "missing_context",
       title: "Create your first job target.",
     };
