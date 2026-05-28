@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     promptSnapshot: promptConfig.instructions,
     rawJson: {
       endpoint: "/api/realtime/story",
-      hasRealtimeInstructions: Boolean(body.realtimeInstructions),
+      capturePurpose: body.realtimeInstructions,
       sessionKind: "story_lab_capture",
     },
     runType: "realtime",
@@ -67,8 +67,8 @@ export async function POST(request: Request) {
     instructions: [
       promptConfig.instructions,
       body.realtimeInstructions ||
-        "Start by asking the user to tell you what happened, in their own words. Ask only one question at a time. The goal is to gather the raw story for a later outline, not to grade them.",
-    ].join(" "),
+        "Capture purpose: TMAAT Story Lab.",
+    ].join("\n\n"),
     model: promptConfig.model,
     type: "realtime",
   };

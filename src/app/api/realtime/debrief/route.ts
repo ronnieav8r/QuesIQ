@@ -76,9 +76,7 @@ function buildDebriefInstructions({
 
   return [
     promptConfig.instructions,
-    "This is a live voice debrief for one completed QuesIQ practice session. Do not score the session again. Do not create or update written review fields. Use the saved review and transcript as context for a focused coaching conversation.",
-    "Start by helping the candidate choose what to inspect: a score, a specific answer, or the next practice attempt. If they want to retry an answer, re-ask the original or closest relevant question, listen to their improved answer, and give concise feedback on what changed.",
-    "Do not read the whole transcript aloud. Use short examples from it only when they help explain a point. Keep turns concise and conversational.",
+    "Runtime context for this debrief:",
     `Target role: ${snapshot.interviewContext.targetRole || "General practice"}.`,
     `Target company: ${snapshot.interviewContext.targetCompany || "Optional"}.`,
     `Practice mode: ${snapshot.modeKey}.`,

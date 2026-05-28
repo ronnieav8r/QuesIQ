@@ -167,7 +167,7 @@ export function DebriefView({ catalog, onBack, onReview, session }: DebriefViewP
       {canDebrief ? (
         <RealtimeVoiceSession
           endpoint="/api/realtime/debrief"
-          firstTurnInstructions="Speak in English only. Start by briefly saying you have the session review and transcript ready. Ask what the candidate wants to dig into first: scores, a specific answer, or how to improve the next attempt. Ask only one question."
+          firstTurnInstructions="Speak in English only. Start this debrief using the active Admin-visible Session Debrief prompt and the saved session context already provided. Ask exactly one opening question."
           onArtifactFinalized={saveDebriefArtifact}
           sessionId={session.id}
           startButtonLabel="Start Debrief"

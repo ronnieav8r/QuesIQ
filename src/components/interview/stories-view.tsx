@@ -1164,9 +1164,9 @@ export function StoriesView({
               <div className="story-live-panel">
                 <RealtimeVoiceSession
                   endpoint="/api/realtime/story"
-                  firstTurnInstructions="Speak in English only. Start like an interviewer opening a real interview: ask the user to tell you about themself. Keep it concise and ask only that one opening question."
+                  firstTurnInstructions="Speak in English only. Start this Story Lab capture using the active Admin-visible Story Conversation Realtime prompt and the provided capture-purpose context. Ask exactly one opening question."
                   onArtifactFinalized={saveIntroConversationArtifact}
-                  realtimeInstructions="This is an Introduction Builder conversation. Begin as an interviewer asking a natural 'tell me about yourself' opening question. After the user answers, switch into a warm coaching probe to gather only missing raw material: background, current target role, one real strength, one specific proof point, why this role or company matters, and the first impression they want to leave. Ask one question at a time. Do not grade them yet. Do not invent details for them. If they only test the microphone or give filler, ask for real background details before ending."
+                  realtimeInstructions="Capture purpose: Introduction Builder."
                   sessionId="intro-builder"
                   startButtonLabel="Start Conversation"
                   surfaceClassName="realtime-session story-realtime-session"
@@ -1507,9 +1507,9 @@ export function StoriesView({
             <div className="story-live-panel">
               <RealtimeVoiceSession
                 endpoint="/api/realtime/story"
-                firstTurnInstructions="Speak in English only. Ask the user to tell you what happened in their own words. Reassure them that it does not need to sound polished yet. Ask only one question, then wait for the user to finish before speaking again."
+                firstTurnInstructions="Speak in English only. Start this Story Lab capture using the active Admin-visible Story Conversation Realtime prompt and the provided capture-purpose context. Ask exactly one opening question."
                 onArtifactFinalized={saveConversationArtifact}
-                realtimeInstructions="This is a TMAAT Story Lab capture conversation. The user may speak for a while. Do not interrupt or coach mid-answer. Wait for a clear pause before responding. Ask one short follow-up question at a time to gather Situation, Task, Action, and Result details. Do not grade them yet. The goal is raw material for a later STAR story outline."
+                realtimeInstructions="Capture purpose: TMAAT Story Lab."
                 sessionId="story-lab"
                 startButtonLabel="Start Conversation"
                 surfaceClassName="realtime-session story-realtime-session"

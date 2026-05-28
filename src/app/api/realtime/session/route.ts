@@ -49,8 +49,7 @@ function buildQueInstructions(
     : "Question focus: choose questions appropriate for this mode.";
   const storyContext = snapshot?.storyContext
     ? [
-        storyPracticeConfig?.instructions ||
-          "This is a Story Lab practice session. Ask one behavioral question that lets the candidate practice this saved story. Do not read the outline back to them. Let them answer naturally, then coach whether the story was clear, relevant, specific, and strong enough for the question.",
+        storyPracticeConfig?.instructions,
         `Saved story title: ${snapshot.storyContext.title}.`,
         `Story summary: ${snapshot.storyContext.summary}.`,
         `Situation: ${snapshot.storyContext.situation}.`,
@@ -67,7 +66,7 @@ function buildQueInstructions(
     : undefined;
   const introductionContext = snapshot?.introductionContext
     ? [
-        "This is an Introduction Builder practice session. Start with a concise 'tell me about yourself' prompt. The candidate is practicing a saved introduction. Do not read the saved script aloud. Let them answer naturally, then coach whether it matched the target length, sounded specific, connected to the role, and gave the interviewer a useful next thread.",
+        "Intro Practice context: the candidate is practicing a saved introduction. Use this context according to the active Admin-visible Realtime Interviewer prompt.",
         `Saved introduction title: ${snapshot.introductionContext.title}.`,
         `Intended setting: ${snapshot.introductionContext.audience}.`,
         `Intended length: ${snapshot.introductionContext.length}.`,

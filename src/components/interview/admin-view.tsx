@@ -185,7 +185,7 @@ const runtimeContextByTarget = {
     "Saved practice review: summary, coaching insight, next action, score summaries, score evidence, and review detail sections when available",
     "Prior coaching memory when available for continuity",
     "Transcript: speaker and text for each saved turn",
-    "Realtime voice instructions: conversational debrief only, no written JSON response and no rescoring",
+    "Realtime voice behavior comes from the active Admin-visible Session Debrief prompt",
   ],
   evaluation: [
     "Session: mode, question focus, interviewer style, target role, target company",
@@ -208,7 +208,7 @@ const runtimeContextByTarget = {
   ],
   story: [
     "Active Story Lab Admin prompt instructions",
-    "Story Lab currently also sends screen-level kickoff guidance for Introduction/TMAAT capture; migrate this into Admin prompt configs before broader prompt QA",
+    "Capture-purpose context: Introduction Builder or TMAAT Story Lab",
     "Story-building conversation turns",
     "Response format when needed: strict JSON story outline with categories, spins, coach notes, and practice prompt",
     "User-authenticated Story Lab ownership is enforced by the API route",

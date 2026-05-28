@@ -117,12 +117,15 @@ Last updated: 2026-05-28
   - Realtime endpoints prefer `OPENAI_REALTIME_API_KEY` for voice-only cost
     tracking and fall back to `OPENAI_API_KEY` when the dedicated voice key is
     not configured
-  - Realtime Interviewer prompt v2 and the client first-turn templates now
+  - Realtime Interviewer prompt v3 and the client first-turn templates now
     specify a realistic interview opening: short welcome, one role-relevant
     question, no setup narration, and no mid-answer interruption
   - Regular practice first-turn mode behavior now lives in the Admin-visible
     Realtime Interviewer prompt; the client sends only a minimal kickoff that
     tells the model to start using the active Admin prompt and runtime context
+  - Story Lab Introduction/TMAAT capture and verbal Debrief first-turn behavior
+    now live in Admin-visible prompt configs; client/server code passes capture
+    purpose and saved session context instead of behavior instructions
   - End Session now stops the mic, commits pending audio for transcription,
     waits briefly for transcript completion, and finalizes the artifact without
     asking Que for another response; if Que is already speaking, End cancels
@@ -477,6 +480,8 @@ The current coded app has passed:
   passed ESLint, TypeScript check, and production build on 2026-05-28.
 - Realtime End Session transcript-drain fix passed ESLint, TypeScript check,
   and production build on 2026-05-28.
+- Story Lab/Debrief prompt visibility migration passed ESLint, TypeScript
+  check, and production build on 2026-05-28.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran
@@ -555,7 +560,7 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 
 1. Deploy and user-confirm QA the latest Story Lab, prompt, debrief,
    progression, and job-target UI changes on `quesiq-web`, making sure
-   migrations through `0041_refine_realtime_interviewer_prompt.sql` run before using
+   migrations through `0042_move_voice_kickoffs_into_prompt_configs.sql` run before using
    the updated Story Lab in production.
 2. Run/user-confirm migration QA for Bubble levels and quests: Admin >
    Progression > Levels shows Rookie through Master, Admin > Progression >

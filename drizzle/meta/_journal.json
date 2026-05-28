@@ -288,6 +288,13 @@
       "when": 1779944400000,
       "tag": "0041_refine_realtime_interviewer_prompt",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1779948000000,
+      "tag": "0042_move_voice_kickoffs_into_prompt_configs",
+      "breakpoints": true
     }
   ]
 }
