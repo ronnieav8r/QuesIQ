@@ -22,6 +22,8 @@ Last updated: 2026-05-28
     capture stays focused, resets draft/transcript state when switching between
     Introduction and TMAAT, fixes the mobile tab overflow, and shows TMAAT
     story detail in STAR order.
+  - Realtime voice calls now prefer `OPENAI_REALTIME_API_KEY`, falling back to
+    `OPENAI_API_KEY`; non-voice Responses API calls stay on `OPENAI_API_KEY`.
   - AI Usage now logs prompt config links/snapshots/raw JSON metadata, and
     Realtime exchange setup calls are represented in AI Usage.
   - Admin Diagnostics captures failed API/client/Realtime events.
@@ -381,6 +383,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
 - Story Lab Build/Library split, mobile tab cleanup, TMAAT STAR detail order,
   and patient TMAAT capture tuning passed ESLint, TypeScript check, and
   production build on 2026-05-28.
+- Dedicated Realtime voice API key routing passed ESLint, TypeScript check, and
+  production build on 2026-05-28.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
   succeeded, Drizzle migrations applied successfully, and Next started.
 - Live `quesiq.com` QA passed across the owned practice loop and tonight's
@@ -530,6 +534,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 - A test `OPENAI_API_KEY` is currently stored locally in ignored `.env.local`;
   rotate the key after the spike/test cycle because it was shared in chat.
+- For cleaner voice cost tracking, set `OPENAI_REALTIME_API_KEY` in `.env.local`
+  and Render. Leave non-voice OpenAI calls on `OPENAI_API_KEY`.
 - The Render Postgres connection URL was pasted during setup; rotate that
   database credential after the wiring test and replace `DATABASE_URL`.
 - Owned practice launch now requires Auth.js sign-in by design.

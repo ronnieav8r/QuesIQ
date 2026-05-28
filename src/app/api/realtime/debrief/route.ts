@@ -13,6 +13,7 @@ import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
 import { getCoachingMemory } from "@/server/coaching-memory/coaching-memory";
 import { getDb } from "@/server/db/client";
 import { evaluations, sessions } from "@/server/db/schema";
+import { getOpenAiRealtimeApiKey } from "@/server/openai/keys";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 import { buildRealtimeAudioInputConfig } from "@/server/realtime/audio-config";
 
@@ -107,11 +108,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = getOpenAiRealtimeApiKey();
 
   if (!apiKey) {
     return NextResponse.json(
-      { error: "OPENAI_API_KEY is not configured on the server." },
+      { error: "OPENAI_REALTIME_API_KEY or OPENAI_API_KEY is not configured on the server." },
       { status: 500 },
     );
   }

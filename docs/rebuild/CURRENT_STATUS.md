@@ -114,6 +114,9 @@ Last updated: 2026-05-28
   - shared Realtime audio input config uses near-field noise reduction,
     stricter server VAD, longer silence detection, and disabled automatic
     response interruption to reduce false interruptions from headset/cable noise
+  - Realtime endpoints prefer `OPENAI_REALTIME_API_KEY` for voice-only cost
+    tracking and fall back to `OPENAI_API_KEY` when the dedicated voice key is
+    not configured
 - Postgres Session launch persistence slice:
   - Drizzle ORM schema and first Session migration
   - `/api/sessions` creation route with setup-snapshot validation
@@ -455,6 +458,8 @@ The current coded app has passed:
   check on 2026-05-28.
 - Story Lab Build/Library split, mobile tab cleanup, TMAAT STAR detail order,
   and patient TMAAT capture tuning passed ESLint, TypeScript check, and
+  production build on 2026-05-28.
+- Dedicated Realtime voice API key routing passed ESLint, TypeScript check, and
   production build on 2026-05-28.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit

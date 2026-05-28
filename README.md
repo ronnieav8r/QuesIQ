@@ -136,7 +136,8 @@ approved preview path. After prompt config records are migrated, model and voice
 come from the active admin-managed prompt config unless the code fallback is
 used.
 
-- `OPENAI_API_KEY` - required server-side OpenAI API key
+- `OPENAI_API_KEY` - required server-side OpenAI API key for text/evaluation/story calls
+- `OPENAI_REALTIME_API_KEY` - optional dedicated key for Realtime voice calls; falls back to `OPENAI_API_KEY` when unset
 - `OPENAI_REALTIME_MODEL` - optional model override, defaults to `gpt-realtime`
 - `OPENAI_REALTIME_VOICE` - optional voice override, defaults to `marin`
 
