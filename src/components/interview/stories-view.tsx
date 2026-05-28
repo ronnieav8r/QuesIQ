@@ -975,6 +975,40 @@ export function StoriesView({
     }
   }
 
+  async function removeStory(story: StoryRecord) {
+    const confirmed = window.confirm(
+      `Delete ${story.title}? This removes the saved story, but not past practice sessions.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setEditError(undefined);
+      const response = await fetch(`/api/stories/${story.id}`, {
+        method: "DELETE",
+      });
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        ok?: boolean;
+      };
+
+      if (!response.ok || !body.ok) {
+        throw new Error(body.detail || body.error || "Story could not be deleted.");
+      }
+
+      setStories((current) => current.filter((currentStory) => currentStory.id !== story.id));
+      setSelectedStoryId((current) => (current === story.id ? undefined : current));
+      if (editingStoryId === story.id) {
+        cancelEditing();
+      }
+    } catch (error) {
+      setEditError(error instanceof Error ? error.message : "Story could not be deleted.");
+    }
+  }
+
   return (
     <section className="screen story-lab-screen" aria-labelledby="stories-title">
       <div className="screen-toolbar">
@@ -1474,6 +1508,16 @@ export function StoriesView({
                         >
                           Edit Story
                         </button>
+                        <button
+                          className="secondary danger"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void removeStory(story);
+                          }}
+                          type="button"
+                        >
+                          Delete
+                        </button>
                       </div>
                     </article>
 
@@ -1643,6 +1687,13 @@ export function StoriesView({
                             <div className="inline-actions">
                               <button onClick={() => onPracticeStory(story)} type="button">
                                 Practice Story
+                              </button>
+                              <button
+                                className="secondary danger"
+                                onClick={() => void removeStory(story)}
+                                type="button"
+                              >
+                                Delete
                               </button>
                             </div>
                             <dl>

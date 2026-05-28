@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 import "./globals.css";
 
@@ -9,6 +9,11 @@ export const metadata: Metadata = {
     apple: "/brand/quesiq-icon.png",
     icon: "/brand/quesiq-icon.png",
   },
+  manifest: "/manifest.webmanifest",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#f7f4ee",
 };
 
 export default function RootLayout({

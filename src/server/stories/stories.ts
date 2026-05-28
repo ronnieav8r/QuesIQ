@@ -135,6 +135,15 @@ export async function updateStory(
   return story ? toStoryRecord(story) : undefined;
 }
 
+export async function deleteStory(userId: string, storyId: string): Promise<boolean> {
+  const [deleted] = await getDb()
+    .delete(stories)
+    .where(and(eq(stories.id, storyId), eq(stories.userId, userId)))
+    .returning({ id: stories.id });
+
+  return Boolean(deleted);
+}
+
 export async function recordStoryPracticeCoaching({
   result,
   sessionId,

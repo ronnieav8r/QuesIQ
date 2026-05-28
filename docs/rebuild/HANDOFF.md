@@ -212,7 +212,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
   categories, alternate spins, coach notes, and a practice prompt.
 - Started Story Lab Phase 2 library polish: saved stories can be selected into
   a detail panel and edited after generation, with owner-scoped updates through
-  `/api/stories/[storyId]`.
+  `/api/stories/[storyId]`. Saved TMAAT stories can also be deleted from the
+  card or detail view without removing historical practice sessions.
 - Started Story Lab Phase 3 practice hooks: saved story cards open directly,
   the explicit action is now Edit Story, and saved story details can launch a
   Practice Story voice session with the story outline included in Que's Realtime
@@ -240,6 +241,9 @@ path until Phase 2 navigation is completed unless the product direction changes.
 - Added hideable mobile navigation: Story Lab is a primary nav item, the bottom
   nav can collapse into a small chevron Menu handle, the preference is stored
   locally, and desktop keeps the left navigation rail.
+- Added the installable app baseline: QuesIQ publishes a web app manifest with
+  the existing brand icon, standalone display mode, app colors, and root start
+  URL so supported mobile browsers can launch it without browser chrome.
 - Started Debrief mode as a written debrief, then pivoted it after review:
   written debrief generation duplicated the saved practice review, so Debrief
   now means a Realtime voice conversation tied to an existing transcript-backed
@@ -339,6 +343,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
   TypeScript check on 2026-05-28.
 - Saved Job Targets edit/delete/active-target and target-aware Up Next polish
   passed ESLint and TypeScript check on 2026-05-28.
+- TMAAT story deletion and installable app manifest baseline passed ESLint and
+  TypeScript check on 2026-05-28.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
   succeeded, Drizzle migrations applied successfully, and Next started.
 - Live `quesiq.com` QA passed across the owned practice loop and tonight's
@@ -460,8 +466,9 @@ path until Phase 2 navigation is completed unless the product direction changes.
 11. Investigate any production `client.session.error` from the Story Lab
    Realtime entry points, starting with the Introduction Builder conversation
    endpoint.
-12. Add PWA/installable app support soon so QuesIQ can run from a mobile home
-   screen in standalone app mode with browser UI hidden where supported.
+12. QA installable app behavior on iOS and Android: add QuesIQ to the home
+   screen, launch it, and confirm standalone mode uses the expected icon,
+   splash/background color, and app start URL.
 13. Consider mobile bottom-nav auto-hide later as a guarded UX experiment:
    visible by default, hide only on meaningful downward scroll, show
    immediately on upward scroll, and never hide during active voice/session,

@@ -268,6 +268,8 @@ Last updated: 2026-05-28
   - saved outlines can be edited after generation, including title, summary,
     STARR fields, action bullets, coach notes, raw notes, practice prompt, and
     categories
+  - saved TMAAT stories can be deleted from the card or detail view without
+    deleting historical practice sessions
   - story updates are owner-scoped through a protected `/api/stories/[storyId]`
     route
 - Story Lab Phase 3 practice hook started:
@@ -330,6 +332,10 @@ Last updated: 2026-05-28
     and expanded again with a chevron
   - the collapsed/expanded nav preference is remembered locally
   - desktop keeps the persistent left navigation rail
+- Installable app baseline:
+  - QuesIQ now publishes a web app manifest using the existing brand icon,
+    standalone display mode, app colors, and root start URL so supported mobile
+    browsers can add it to the home screen without browser chrome
 - Debrief mode pivot:
   - written debrief generation was deprecated because it duplicated the saved
     practice review
@@ -431,6 +437,8 @@ The current coded app has passed:
   TypeScript check on 2026-05-28.
 - Saved Job Targets edit/delete/active-target and target-aware Up Next polish
   passed ESLint and TypeScript check on 2026-05-28.
+- TMAAT story deletion and installable app manifest baseline passed ESLint and
+  TypeScript check on 2026-05-28.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran
@@ -539,8 +547,9 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
    notes retained.
 10. QA the Story Lab Talk with Que entry points in production, especially any
    `client.session.error` behavior on the Introduction conversation endpoint.
-11. Add PWA/installable app support soon so QuesIQ can run from a mobile home
-   screen in standalone app mode with browser UI hidden where supported.
+11. QA installable app behavior on iOS and Android: add QuesIQ to the home
+   screen, launch it, and confirm standalone mode uses the expected icon,
+   splash/background color, and app start URL.
 12. Consider mobile bottom-nav auto-hide later as a guarded UX experiment:
    visible by default, hide only on meaningful downward scroll, show
    immediately on upward scroll, and never hide during active voice/session,
