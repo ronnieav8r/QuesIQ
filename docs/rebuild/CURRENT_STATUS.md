@@ -315,6 +315,9 @@ Last updated: 2026-05-28
     with Que transcripts, dictated notes, or typed notes can produce a polished
     script plus background, core strength, proof point, role interest, and
     closing handoff before save
+  - Introduction Draft is now guarded against low-signal test/filler material
+    and its active prompt is stricter about extracting only user-provided facts
+    instead of inventing details from target role/company context
 - Story Lab prompts are now Admin-visible:
   - Story Conversation Realtime, Story Lab follow-up, story outline generation,
     Introduction Draft, Story Practice Realtime guidance, and Story Practice
@@ -439,6 +442,8 @@ The current coded app has passed:
   passed ESLint and TypeScript check on 2026-05-28.
 - TMAAT story deletion and installable app manifest baseline passed ESLint and
   TypeScript check on 2026-05-28.
+- Introduction Draft hallucination guard and interviewer-style intro capture
+  prompt pass passed ESLint and TypeScript check on 2026-05-28.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran
@@ -517,7 +522,7 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 
 1. Deploy and user-confirm QA the latest Story Lab, prompt, debrief,
    progression, and job-target UI changes on `quesiq-web`, making sure
-   migrations through `0039_add_active_job_target.sql` run before using
+   migrations through `0040_tighten_introduction_draft_prompt.sql` run before using
    the updated Story Lab in production.
 2. Run/user-confirm migration QA for Bubble levels and quests: Admin >
    Progression > Levels shows Rookie through Master, Admin > Progression >

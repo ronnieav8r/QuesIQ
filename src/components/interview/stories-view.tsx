@@ -1084,9 +1084,9 @@ export function StoriesView({
               <div className="story-live-panel">
                 <RealtimeVoiceSession
                   endpoint="/api/realtime/story"
-                  firstTurnInstructions="Speak in English only. Help the user gather raw material for a 'tell me about yourself' introduction. Ask about their background, strongest proof point, target role, and the first impression they want to leave. Ask only one question at a time."
+                  firstTurnInstructions="Speak in English only. Start like an interviewer opening a real interview: ask the user to tell you about themself. Keep it concise and ask only that one opening question."
                   onArtifactFinalized={saveIntroConversationArtifact}
-                  realtimeInstructions="This is an Introduction Builder conversation. Help the user gather raw material for a strong 'tell me about yourself' answer. Ask about their background, strongest proof point, target role, why this role matters, and the first impression they want to leave. Ask one question at a time. Do not grade them yet. The goal is raw material for a later intro draft."
+                  realtimeInstructions="This is an Introduction Builder conversation. Begin as an interviewer asking a natural 'tell me about yourself' opening question. After the user answers, switch into a warm coaching probe to gather only missing raw material: background, current target role, one real strength, one specific proof point, why this role or company matters, and the first impression they want to leave. Ask one question at a time. Do not grade them yet. Do not invent details for them. If they only test the microphone or give filler, ask for real background details before ending."
                   sessionId="intro-builder"
                   startButtonLabel="Start Conversation"
                   surfaceClassName="realtime-session story-realtime-session"

@@ -130,9 +130,55 @@ function audienceGuidance(audience: IntroAudience) {
   return "virtual interview or hiring-manager opening";
 }
 
+const lowSignalWords = new Set([
+  "check",
+  "checking",
+  "hello",
+  "mic",
+  "one",
+  "test",
+  "testing",
+  "three",
+  "two",
+]);
+
+function extractCandidateMaterial(rawNotes: string) {
+  const lines = rawNotes
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const labeledUserLines = lines
+    .filter((line) => /^(you|user|candidate):/i.test(line))
+    .map((line) => line.replace(/^(you|user|candidate):\s*/i, ""));
+
+  if (labeledUserLines.length > 0) {
+    return labeledUserLines.join(" ");
+  }
+
+  return lines
+    .filter((line) => !/^(que|assistant|coach):/i.test(line))
+    .join(" ");
+}
+
+function hasEnoughCandidateMaterial(rawNotes: string) {
+  const candidateMaterial = extractCandidateMaterial(rawNotes);
+  const words = candidateMaterial
+    .toLowerCase()
+    .match(/[a-z][a-z'-]{2,}/g)
+    ?.filter((word) => !lowSignalWords.has(word));
+
+  return (words?.length ?? 0) >= 8;
+}
+
 export async function generateIntroductionDraft(
   input: IntroductionDraftInput,
 ): Promise<IntroductionDraftResult> {
+  if (!hasEnoughCandidateMaterial(input.rawNotes)) {
+    throw new Error(
+      "Add a few real details first: your background, one strength, one proof point, and why the role matters.",
+    );
+  }
+
   const promptConfig = await getActivePromptConfig("introduction_draft");
   const pricing = await getActiveAiPricing(promptConfig.model, "text");
   const aiRun = await startAiRun({
