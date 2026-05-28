@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-05-27
+Last updated: 2026-05-28
 
 ## Current Focus
 
@@ -26,6 +26,14 @@ for a session. The remaining personalization work is deeper target-aware
 recommendations, editing/deleting target controls, and clearer active-target
 behavior. Avoid treating Bubble parity as the goal; carry forward only features
 that improve practice, feedback, retention, or beta learning.
+
+Story Lab is the current active product surface. It now has separate
+Introduction and TMAAT tabs, both using Talk with Que, Dictate, or Type entry
+points. Introduction comes first, saved introductions are durable, and saved
+intros can launch focused Intro Practice. The creation workflow is intentionally
+lighter now: collect conversation/notes first, then save or edit the resulting
+script. The structured intro fields belong in the saved detail view and still
+need a stronger AI draft/extraction pass before they feel complete.
 
 Quira now has only a baseline embedded support launcher in QuesIQ. The desired
 future Quira experience is a true AI chat assistant that can hold a
@@ -257,6 +265,23 @@ path until Phase 2 navigation is completed unless the product direction changes.
 - Added an admin-only demo data seed endpoint/button for the Ronnie account:
   Admin > Data can create representative profile, story, session, evaluation,
   debrief, coaching memory, feedback, and progression rows when missing.
+- Added Story Lab Introduction Builder as a second Story Lab tab before TMAAT:
+  users can Talk with Que, Dictate, or Type, choose a Short/Medium/Long timing
+  range, save multiple introductions, expand saved intro details, edit/delete
+  saved intros, and launch Intro Practice with the selected intro in Que's
+  Realtime context.
+- Added durable saved Introduction storage in migration
+  `0035_add_introductions.sql`, owner-scoped introduction API routes, intro
+  practice evaluation context, intro practice coaching history, and progression
+  quest checks for first saved Introduction and first saved TMAAT Story.
+- Cleaned up Story Lab creation UX after review: removed the up-front editable
+  intro context fields from the initial builder, kept detail fields inside
+  saved intro cards, moved Introduction before TMAAT, centered the top selector
+  with dedicated styles, and made the TMAAT Talk with Que side mirror the
+  transcript-first capture format.
+- Added representative saved TMAAT stories and saved introductions to the Admin
+  demo data seed so the library/detail/practice flows can be inspected without
+  manually going through capture first.
 - Deployed the evaluation handoff to `quesiq-web` and manually verified it on
   `quesiq.com`.
 - Updated `render.yaml` with a free Blueprint path that provisions Postgres,
@@ -278,6 +303,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
 - Latest local review/debrief prompt work passed ESLint, TypeScript check, and
   production build. Build output includes `/api/realtime/debrief`.
 - Local `npm` is now available on PATH, and latest checks passed with it.
+- Latest Story Lab Introduction/TMAAT cleanup passed ESLint, TypeScript check,
+  and production build on 2026-05-28.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
   succeeded, Drizzle migrations applied successfully, and Next started.
 - Live `quesiq.com` QA passed across the owned practice loop and tonight's
@@ -349,11 +376,11 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 ## Next Best Work
 
-1. Deploy/user-confirm QA the latest prompt/debrief/progression/job-target UI
-   changes on
-   `quesiq-web`. Confirm migrations through
-   `0034_add_job_targets.sql` run before testing verbal Debrief, Story Practice
-   coaching history, Tell Que story capture, and saved Job Targets.
+1. Deploy/user-confirm QA the latest Story Lab, prompt, debrief, progression,
+   and job-target UI changes on `quesiq-web`. Confirm migrations through
+   `0035_add_introductions.sql` run before testing Introduction Builder, Intro
+   Practice, verbal Debrief, Story Practice coaching history, Tell Que story
+   capture, and saved Job Targets.
 2. Run/user-confirm database migration QA for the imported levels and quests:
    Progression > Levels shows Rookie through Master, Progression > Quests shows
    37 active quest definitions, level/quest edits save from Admin, and Home
@@ -372,22 +399,29 @@ path until Phase 2 navigation is completed unless the product direction changes.
 7. Expand prompted micro-feedback beyond the first review-usefulness popup by
    rotating specific questions about voice realism, transcript accuracy, and
    scoring fairness.
-8. Continue Story Lab after the first Phase 3 hook: deploy/user-confirm QA the
-   Practice Story voice flow, hideable navigation, and saved coaching history
-   on Story records.
-9. Work the remaining highest-value Bubble reference gaps into upcoming phases:
+8. Continue Story Lab QA: deploy/user-confirm the Practice Story voice flow,
+   Intro Practice voice flow, hideable navigation, saved coaching history on
+   Story records, saved intro coaching history, and top Introduction/TMAAT
+   selector alignment across desktop and mobile.
+9. Add the missing Introduction Builder AI draft/extraction step so Talk with
+   Que, Dictate, and Type can produce a polished script plus background, core
+   strength, proof point, why-this-role, and closing handoff fields before save.
+10. Investigate any production `client.session.error` from the Story Lab
+   Realtime entry points, starting with the Introduction Builder conversation
+   endpoint.
+11. Work the remaining highest-value Bubble reference gaps into upcoming phases:
    richer coaching memory controls, deeper job-target-aware Up Next routing,
    job target edit/delete/active-target polish, beta tuning for XP rules, and
    AI-backed Quira support.
-10. Defer or avoid lower-value parity work until the beta needs it: standalone
+12. Defer or avoid lower-value parity work until the beta needs it: standalone
    anonymous bug-report page, in-app marketing/blog pages, payments, industry
    packs, mascot work, and VAPI parity.
-11. Later Quira work: replace the curated Help panel with an AI chat assistant
+13. Later Quira work: replace the curated Help panel with an AI chat assistant
    that uses a maintained QuesIQ knowledge base and can submit structured bugs,
    feedback, screenshots, and current screen/session context.
-12. Continue deploy/user-confirmed QA for changes because localhost preview is
+14. Continue deploy/user-confirmed QA for changes because localhost preview is
    deprecated in this environment.
-13. Keep verifying that `Launch Voice Session` creates a Session id before direct
+15. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
 
 ## Watch Outs
@@ -414,3 +448,7 @@ path until Phase 2 navigation is completed unless the product direction changes.
   `/api/realtime/debrief`. Do not build new written debrief UX unless product
   direction changes.
 - `tsconfig.tsbuildinfo` is generated TypeScript cache and intentionally ignored.
+- `0035_add_introductions.sql` must be applied before using the updated Story
+  Lab in production. The Render start command currently runs Drizzle migrations
+  before `npm start`, so it should apply automatically on deploy, but verify it
+  in Render logs before QA.

@@ -1,6 +1,6 @@
 # Current Status
 
-Last updated: 2026-05-27
+Last updated: 2026-05-28
 
 ## Rebuild Location
 
@@ -265,14 +265,20 @@ Last updated: 2026-05-27
   - Story Lab now has separate TMAAT and Introduction tabs
   - TMAAT keeps the existing Tell Que, Dictate, Type, saved story library, edit,
     and Practice Story flow
-  - Introduction Builder gathers setting, length range, raw intro material,
-    background, strength, proof point, role interest, and closing handoff context
-    through Talk with Que, Dictate, or Type entry points
+  - the tab selector now puts Introduction first and uses dedicated centered
+    layout styles so the Introduction/TMAAT choices are centered inside the
+    group instead of inheriting the generic segmented-control grid behavior
+  - Introduction Builder now starts with Talk with Que, Dictate, or Type entry
+    points and timing guidance; raw context fields are not shown up front
+  - Talk with Que uses a transcript-style live conversation surface, while
+    Dictate and Type use a simple notes/script entry surface
+  - saved introductions hold the durable detail fields: background, strength,
+    proof point, role interest, closing handoff, practice count, and recent
+    practice coaching
   - users can save multiple introductions and launch a focused Intro Practice
     session from a saved introduction
-  - Intro guidance uses the active saved job target or profile role/company when
-    available, with Short, Medium, and Long timing ranges for HR phone screens,
-    virtual interviews, and in-person interviews
+  - Intro timing guidance uses Short, Medium, and Long ranges with notes about
+    likely use cases instead of a separate interview-setting chooser
   - Intro Practice carries the saved intro into Que's Realtime context and stores
     review coaching back on the introduction after evaluation; short intro
     practice sessions can score after a lower minimum duration
@@ -363,8 +369,9 @@ Last updated: 2026-05-27
   - Admin > Data includes a "Seed Ronnie Demo Data" button
   - the seed targets a user whose email/name/id contains `ronnieav8r`, falling
     back to the current admin user
-  - it creates representative rows for empty/missing profile, story, session,
-    evaluation, legacy debrief, coaching memory, feedback, and progression data
+  - it creates representative rows for empty/missing profile, story,
+    introduction, session, evaluation, legacy debrief, coaching memory,
+    feedback, and progression data
 
 ## Verification
 
@@ -381,6 +388,8 @@ The current coded app has passed:
 - Latest local checks passed with local `npm` available on PATH.
 - Story Lab Phase 1, Phase 2, and Phase 3 practice-hook local checks passed:
   ESLint, TypeScript, and production build.
+- Latest Story Lab Introduction/TMAAT cleanup passed ESLint, TypeScript check,
+  and production build on 2026-05-28.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran
@@ -447,10 +456,10 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 
 ## Next Work
 
-1. Deploy and user-confirm QA the latest prompt/debrief/progression/job-target
-   UI changes on
-   `quesiq-web`, making sure migrations through
-   `0034_add_job_targets.sql` run.
+1. Deploy and user-confirm QA the latest Story Lab, prompt, debrief,
+   progression, and job-target UI changes on `quesiq-web`, making sure
+   migrations through `0035_add_introductions.sql` run before using the updated
+   Story Lab in production.
 2. Run/user-confirm migration QA for Bubble levels and quests: Admin >
    Progression > Levels shows Rookie through Master, Admin > Progression >
    Quests shows 37 active definitions, Admin level/quest edits save, and Home
@@ -470,16 +479,22 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 7. Expand prompted micro-feedback beyond the first review-usefulness popup by
    rotating specific questions about AI voice realism, transcript accuracy, and
    scoring fairness.
-8. Later Quira work: replace the curated Help panel with an AI chat bot backed
+8. Add the AI draft/extraction step for Introduction Builder: after Talk with
+   Que, Dictate, or Type, have Que generate the polished introduction script and
+   fill background, core strength, proof point, role interest, and closing
+   handoff before save/edit.
+9. QA the Story Lab Talk with Que entry points in production, especially any
+   `client.session.error` behavior on the Introduction conversation endpoint.
+10. Later Quira work: replace the curated Help panel with an AI chat bot backed
    by a maintained QuesIQ product knowledge base.
-9. Product gap backlog from the Bubble reference, ordered by current user value:
+11. Product gap backlog from the Bubble reference, ordered by current user value:
    richer coaching memory controls, deeper job-target-aware Up Next routing,
    job target edit/delete/active-target polish, tuning XP rules from beta
    behavior, and AI-backed Quira support.
-10. Treat standalone anonymous bug reports, in-app marketing/blog pages,
+12. Treat standalone anonymous bug reports, in-app marketing/blog pages,
    payments, industry packs, mascot work, and VAPI parity as lower-priority
    until the core practice loop and retention features are stronger.
-11. Continue deploy-based QA on `quesiq-web` while localhost preview is
+13. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
 
 ## Reference Inputs
