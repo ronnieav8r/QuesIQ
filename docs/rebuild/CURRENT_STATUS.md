@@ -120,6 +120,9 @@ Last updated: 2026-05-28
   - Realtime Interviewer prompt v2 and the client first-turn templates now
     specify a realistic interview opening: short welcome, one role-relevant
     question, no setup narration, and no mid-answer interruption
+  - Regular practice first-turn mode behavior now lives in the Admin-visible
+    Realtime Interviewer prompt; the client sends only a minimal kickoff that
+    tells the model to start using the active Admin prompt and runtime context
 - Postgres Session launch persistence slice:
   - Drizzle ORM schema and first Session migration
   - `/api/sessions` creation route with setup-snapshot validation
@@ -466,6 +469,8 @@ The current coded app has passed:
   production build on 2026-05-28.
 - Realtime Interviewer v2 prompt and first-turn template refinement passed
   ESLint, TypeScript check, and production build on 2026-05-28.
+- Admin prompt visibility cleanup for regular practice first-turn behavior
+  passed ESLint, TypeScript check, and production build on 2026-05-28.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran

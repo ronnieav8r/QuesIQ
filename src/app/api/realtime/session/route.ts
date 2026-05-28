@@ -202,7 +202,11 @@ export async function POST(request: Request) {
       storyLibrary,
     ),
     audio: {
-      input: buildRealtimeAudioInputConfig(),
+      input: buildRealtimeAudioInputConfig({
+        createResponse: false,
+        silenceDurationMs: 1500,
+        threshold: 0.78,
+      }),
       output: {
         voice: activeRealtimeConfig.voice || process.env.OPENAI_REALTIME_VOICE || "marin",
       },

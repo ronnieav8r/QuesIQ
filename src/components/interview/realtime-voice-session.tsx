@@ -31,24 +31,8 @@ const emptyArtifactDraft: VoiceSessionArtifactDraft = {
   transcript: [],
 };
 
-const firstTurnInstructions: Record<SessionSetupSnapshot["modeKey"], string> = {
-  coaching:
-    "Speak in English only. Start like a real interviewer: give one short welcome sentence, then ask one focused interview question for the selected question focus. Ask only one question and wait for the full answer.",
-  first_impression:
-    "Speak in English only. Start like the first minute of a real interview: give one short welcome sentence, then ask the candidate to tell you about themself as it relates to the target role. Ask only that one opening question.",
-  mock_interview:
-    "Speak in English only. Start like a real mock interview: give one short welcome sentence, then ask one realistic first interview question appropriate to the selected context. Ask only one question.",
-  rapid_fire:
-    "Speak in English only. Start like a paced interview drill: give one short welcome sentence, then ask one short role-relevant question for the selected question focus. Ask only one question.",
-};
-
-function getFirstTurnInstructions(snapshot: SessionSetupSnapshot) {
-  if (snapshot.storyContext) {
-    return `Speak in English only. Start like a behavioral interviewer: give one short welcome sentence, then ask one behavioral interview question that is a good fit for practicing the saved story titled "${snapshot.storyContext.title}". Do not summarize the story first. Ask only one question.`;
-  }
-
-  return firstTurnInstructions[snapshot.modeKey];
-}
+const defaultFirstTurnInstruction =
+  "Speak in English only. Start the live voice session now using the active Admin prompt, mode instructions, question-focus instructions, style instructions, and session context already provided. Ask exactly one opening question.";
 
 function toErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Voice session failed.";
@@ -224,9 +208,7 @@ export function RealtimeVoiceSession({
         response: {
           instructions:
             firstTurnInstructions ||
-            (snapshot
-              ? getFirstTurnInstructions(snapshot)
-              : "Speak in English only. Open with one short question. Ask only one question."),
+            defaultFirstTurnInstruction,
         },
       }),
     );
@@ -332,6 +314,16 @@ export function RealtimeVoiceSession({
 
         if (message.type === "conversation.item.input_audio_transcription.completed") {
           addTranscriptTurn("You", "user", message.transcript);
+          if (endpoint === "/api/realtime/session" && dataChannel.readyState === "open") {
+            window.setTimeout(() => {
+              if (dataChannel.readyState !== "open") {
+                return;
+              }
+
+              dataChannel.send(JSON.stringify({ type: "response.create" }));
+              addEvent("client.response.create.after_user_turn");
+            }, 500);
+          }
         }
 
         if (message.type === "response.output_audio_transcript.done") {

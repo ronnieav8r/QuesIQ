@@ -27,6 +27,10 @@ Last updated: 2026-05-28
   - Realtime Interviewer prompt v2 and first-turn templates now push Que to
     open like a real interview: one short welcome sentence, one role-relevant
     question, no setup narration, and no mid-answer interruption.
+  - Regular practice first-turn mode behavior now lives in Admin-visible prompt
+    text instead of hidden client templates. Keep this as the prompt principle:
+    behavior instructions belong in Admin prompt/config surfaces; code may pass
+    context and minimal kickoff only.
   - AI Usage now logs prompt config links/snapshots/raw JSON metadata, and
     Realtime exchange setup calls are represented in AI Usage.
   - Admin Diagnostics captures failed API/client/Realtime events.
@@ -390,6 +394,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
   production build on 2026-05-28.
 - Realtime Interviewer v2 prompt and first-turn template refinement passed
   ESLint, TypeScript check, and production build on 2026-05-28.
+- Admin prompt visibility cleanup for regular practice first-turn behavior
+  passed ESLint, TypeScript check, and production build on 2026-05-28.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
   succeeded, Drizzle migrations applied successfully, and Next started.
 - Live `quesiq.com` QA passed across the owned practice loop and tonight's
@@ -541,6 +547,11 @@ path until Phase 2 navigation is completed unless the product direction changes.
   rotate the key after the spike/test cycle because it was shared in chat.
 - For cleaner voice cost tracking, set `OPENAI_REALTIME_API_KEY` in `.env.local`
   and Render. Leave non-voice OpenAI calls on `OPENAI_API_KEY`.
+- Prompt visibility principle: avoid meaningful hidden prompts in client/server
+  code. Put behavior instructions in Admin prompt configs or Admin-visible
+  component prompts; code should mainly pass runtime context and a minimal
+  kickoff. Story Lab capture and Debrief still have screen-level first-turn
+  strings to migrate into Admin-visible prompt configs in a follow-up pass.
 - The Render Postgres connection URL was pasted during setup; rotate that
   database credential after the wiring test and replace `DATABASE_URL`.
 - Owned practice launch now requires Auth.js sign-in by design.

@@ -1,9 +1,11 @@
 type RealtimeAudioInputOptions = {
+  createResponse?: boolean;
   silenceDurationMs?: number;
   threshold?: number;
 };
 
 export function buildRealtimeAudioInputConfig({
+  createResponse = true,
   silenceDurationMs = 800,
   threshold = 0.72,
 }: RealtimeAudioInputOptions = {}) {
@@ -15,7 +17,7 @@ export function buildRealtimeAudioInputConfig({
       model: "gpt-4o-mini-transcribe",
     },
     turn_detection: {
-      create_response: true,
+      create_response: createResponse,
       interrupt_response: false,
       prefix_padding_ms: 300,
       silence_duration_ms: silenceDurationMs,
