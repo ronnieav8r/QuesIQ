@@ -8,6 +8,7 @@ export async function saveProfile(
 ): Promise<InterviewContext> {
   const now = new Date();
   const values = {
+    activeJobTargetId: context.jobTargetId ?? null,
     jobDescription: context.jobDescription,
     preferredName: context.preferredName,
     resumeName: context.resumeName ?? null,
@@ -27,6 +28,7 @@ export async function saveProfile(
       target: profiles.userId,
     })
     .returning({
+      jobTargetId: profiles.activeJobTargetId,
       jobDescription: profiles.jobDescription,
       preferredName: profiles.preferredName,
       resumeName: profiles.resumeName,
@@ -38,7 +40,7 @@ export async function saveProfile(
 
   return {
     jobDescription: profile.jobDescription,
-    jobTargetId: context.jobTargetId,
+    jobTargetId: profile.jobTargetId ?? undefined,
     preferredName: profile.preferredName,
     resumeName: profile.resumeName ?? undefined,
     resumeParsedAt: profile.resumeParsedAt?.toISOString(),

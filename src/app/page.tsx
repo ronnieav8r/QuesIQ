@@ -98,6 +98,8 @@ export default function Home() {
     interviewContext.preferredName.trim() &&
       (interviewContext.targetRole.trim() || jobTargets.length > 0),
   );
+  const activeJobTarget =
+    selectedJobTarget ?? jobTargets.find((target) => target.id === interviewContext.jobTargetId);
   const feedbackSessionId =
     activeView === "session"
       ? sessionLaunchRecord?.id
@@ -210,7 +212,16 @@ export default function Home() {
         throw new Error(body.detail || body.error || "Job targets could not be loaded.");
       }
 
-      setJobTargets(body.targets ?? []);
+      const targets = body.targets ?? [];
+
+      setJobTargets(targets);
+      setSelectedJobTarget((current) => {
+        if (current && targets.some((target) => target.id === current.id)) {
+          return targets.find((target) => target.id === current.id) ?? current;
+        }
+
+        return targets.find((target) => target.id === interviewContext.jobTargetId);
+      });
     } catch (error) {
       console.error("Job target load failed.", error);
     }
@@ -286,7 +297,7 @@ export default function Home() {
           body.target as JobTargetRecord,
           ...current.filter((target) => target.id !== body.target?.id),
         ]);
-        setSelectedJobTarget(body.target);
+        await setActiveJobTargetContext(body.target);
       }
       setActiveView(returnView);
     } catch (error) {
@@ -326,7 +337,7 @@ export default function Home() {
         body.target as JobTargetRecord,
         ...current.filter((currentTarget) => currentTarget.id !== body.target?.id),
       ]);
-      setSelectedJobTarget(body.target);
+      await setActiveJobTargetContext(body.target);
       setActiveView("me");
     } catch (error) {
       setProfileSaveError(
@@ -335,6 +346,123 @@ export default function Home() {
       throw error;
     } finally {
       setProfileSavePending(false);
+    }
+  }
+
+  async function updateJobTargetContext(
+    targetId: string,
+    target: Pick<JobTargetRecord, "jobDescription" | "label" | "targetCompany" | "targetRole">,
+  ) {
+    try {
+      setProfileSaveError(undefined);
+      setProfileSavePending(true);
+
+      const response = await fetch(`/api/job-targets/${targetId}`, {
+        body: JSON.stringify({ target }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "PUT",
+      });
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        target?: JobTargetRecord;
+      };
+
+      if (!response.ok || !body.target) {
+        throw new Error(body.detail || body.error || "Job target could not be updated.");
+      }
+
+      setJobTargets((current) =>
+        current.map((currentTarget) =>
+          currentTarget.id === body.target?.id ? (body.target as JobTargetRecord) : currentTarget,
+        ),
+      );
+      setSelectedJobTarget((current) =>
+        current?.id === body.target?.id ? body.target : current,
+      );
+      setActiveView("me");
+    } catch (error) {
+      setProfileSaveError(
+        error instanceof Error ? error.message : "Job target could not be updated.",
+      );
+      throw error;
+    } finally {
+      setProfileSavePending(false);
+    }
+  }
+
+  async function deleteJobTargetContext(target: JobTargetRecord) {
+    try {
+      setProfileSaveError(undefined);
+      setProfileSavePending(true);
+
+      const response = await fetch(`/api/job-targets/${target.id}`, {
+        method: "DELETE",
+      });
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        ok?: boolean;
+      };
+
+      if (!response.ok || !body.ok) {
+        throw new Error(body.detail || body.error || "Job target could not be deleted.");
+      }
+
+      setJobTargets((current) =>
+        current.filter((currentTarget) => currentTarget.id !== target.id),
+      );
+      setSelectedJobTarget((current) => (current?.id === target.id ? undefined : current));
+      setInterviewContext((current) =>
+        current.jobTargetId === target.id
+          ? {
+              ...current,
+              jobTargetId: undefined,
+            }
+          : current,
+      );
+    } catch (error) {
+      setProfileSaveError(
+        error instanceof Error ? error.message : "Job target could not be deleted.",
+      );
+    } finally {
+      setProfileSavePending(false);
+    }
+  }
+
+  async function setActiveJobTargetContext(target: JobTargetRecord) {
+    try {
+      setProfileSaveError(undefined);
+
+      const response = await fetch(`/api/job-targets/${target.id}`, {
+        body: JSON.stringify({ active: true }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "PATCH",
+      });
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        target?: JobTargetRecord;
+      };
+
+      if (!response.ok || !body.target) {
+        throw new Error(body.detail || body.error || "Active job target could not be saved.");
+      }
+
+      setSelectedJobTarget(body.target);
+      setInterviewContext((current) => ({
+        ...current,
+        jobTargetId: body.target?.id,
+      }));
+    } catch (error) {
+      setProfileSaveError(
+        error instanceof Error ? error.message : "Active job target could not be saved.",
+      );
+      throw error;
     }
   }
 
@@ -347,7 +475,7 @@ export default function Home() {
     setSelectedModeKey(undefined);
     setSelectedQuestionKey(undefined);
     setSelectedStyleKey(undefined);
-    setSelectedJobTarget((current) => current ?? jobTargets[0]);
+    setSelectedJobTarget((current) => current ?? activeJobTarget ?? jobTargets[0]);
   }
 
   function chooseMode(mode: PracticeMode) {
@@ -646,7 +774,7 @@ export default function Home() {
                 setActiveView("review");
               }}
               onStories={() => setActiveView("stories")}
-              selectedJobTarget={selectedJobTarget}
+              selectedJobTarget={activeJobTarget}
             />
           )}
           {signedIn && activeView === "practice" && (
@@ -661,7 +789,7 @@ export default function Home() {
               onQuestion={chooseQuestion}
               onStyle={chooseStyle}
               selectedMode={selectedMode}
-              selectedJobTarget={selectedJobTarget}
+              selectedJobTarget={activeJobTarget}
               selectedQuestion={selectedQuestion}
               selectedStyle={selectedStyle}
               sessionLaunchError={sessionLaunchError}
@@ -690,7 +818,7 @@ export default function Home() {
               jobTargets={jobTargets}
               onPracticeIntroduction={launchIntroductionPractice}
               onPracticeStory={launchStoryPractice}
-              selectedJobTarget={selectedJobTarget}
+              selectedJobTarget={activeJobTarget}
             />
           )}
           {signedIn && activeView === "debrief" && (
@@ -740,16 +868,20 @@ export default function Home() {
               jobTargets={jobTargets}
               key={[
                 interviewContext.preferredName,
+                interviewContext.jobTargetId,
                 interviewContext.resumeName,
                 interviewContext.resumeParsedAt,
               ].join(":")}
               onJobTarget={setSelectedJobTarget}
+              onDeleteTarget={deleteJobTargetContext}
               onPractice={openPractice}
               onSaveProfile={(nextContext) => saveProfileContext(nextContext, false, "me")}
               onSaveTarget={saveJobTargetContext}
+              onSetActiveTarget={setActiveJobTargetContext}
+              onUpdateTarget={updateJobTargetContext}
               saveError={profileSaveError}
               savePending={profileSavePending}
-              selectedJobTarget={selectedJobTarget}
+              selectedJobTarget={activeJobTarget}
             />
           )}
           {signedIn && activeView === "admin" && adminAccess && <AdminView />}

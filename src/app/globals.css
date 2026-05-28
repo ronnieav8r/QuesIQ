@@ -864,13 +864,37 @@ label span {
 }
 
 .job-target-card > div:first-child {
-  display: grid;
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-1);
 }
 
 .job-target-card > div:first-child span {
+  flex-basis: 100%;
   color: var(--muted);
   font-size: var(--font-size-sm);
+}
+
+.active-target-label {
+  background: rgba(46, 125, 78, 0.12);
+  border: 1px solid rgba(46, 125, 78, 0.35);
+  border-radius: var(--radius-full);
+  color: #2e7d4e;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  padding: 0.1rem 0.45rem;
+  text-transform: uppercase;
+}
+
+button.secondary.danger {
+  border-color: rgba(183, 66, 66, 0.35);
+  color: #b74242;
+}
+
+button.secondary.danger:hover {
+  background: rgba(183, 66, 66, 0.08);
+  border-color: rgba(183, 66, 66, 0.55);
 }
 
 .job-target-card p {

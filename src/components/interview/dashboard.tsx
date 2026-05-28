@@ -271,6 +271,7 @@ export function Dashboard({
     needsReview,
     progression,
     scoreAverages: allTimeScoreAverages,
+    selectedJobTarget,
     stories,
   });
 
@@ -281,6 +282,8 @@ export function Dashboard({
         return;
       case "missing_context":
       case "missing_resume":
+      case "target_notes":
+      case "target_select":
         onOnboarding();
         return;
       case "debrief_recent":

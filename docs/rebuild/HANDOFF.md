@@ -22,10 +22,11 @@ the structured practice review, while Debrief now means a Realtime voice
 conversation tied to a completed session. Saved Job Targets now have a clearer
 owned slice: Me separates the user's coaching profile from reusable
 role/company targets, while Practice uses the selected target as the situation
-for a session. The remaining personalization work is deeper target-aware
-recommendations, editing/deleting target controls, and clearer active-target
-behavior. Avoid treating Bubble parity as the goal; carry forward only features
-that improve practice, feedback, retention, or beta learning.
+for a session. Users can now edit/delete saved targets, persist an active
+target preference, and receive target-aware Home nudges for choosing the active
+opportunity, adding notes, or practicing a target with no reviewed sessions yet.
+Avoid treating Bubble parity as the goal; carry forward only features that
+improve practice, feedback, retention, or beta learning.
 
 Story Lab is the current active product surface. It now has separate
 Introduction and TMAAT tabs, both using Talk with Que, Dictate, or Type entry
@@ -227,6 +228,9 @@ path until Phase 2 navigation is completed unless the product direction changes.
   saved target before launch, Sessions remember the selected target id, and
   Home points users to Me & Targets instead of treating everything as one
   interview-context object.
+- Polished saved Job Targets with true edit-by-id, delete, persisted active
+  target preference on Profile, and target-aware Up Next nudges for selecting an
+  active target, adding missing notes, and practicing the active opportunity.
 - Added Story Lab prompt visibility in Admin: Story Conversation Realtime,
   follow-up, outline generation, Story Practice Realtime guidance, and Story
   Practice Evaluation guidance are now versioned prompt configs under Admin >
@@ -333,6 +337,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
   check on 2026-05-28.
 - AI run prompt link/snapshot/raw JSON metadata pass passed ESLint and
   TypeScript check on 2026-05-28.
+- Saved Job Targets edit/delete/active-target and target-aware Up Next polish
+  passed ESLint and TypeScript check on 2026-05-28.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
   succeeded, Drizzle migrations applied successfully, and Next started.
 - Live `quesiq.com` QA passed across the owned practice loop and tonight's
@@ -418,7 +424,7 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 1. Deploy/user-confirm QA the latest Story Lab, prompt, debrief, progression,
    and job-target UI changes on `quesiq-web`. Confirm migrations through
-   `0038_add_ai_run_prompt_and_raw_json.sql` run before testing Introduction
+   `0039_add_active_job_target.sql` run before testing Introduction
    Builder, Intro Practice, verbal Debrief, Story Practice coaching history,
    Tell Que story capture, saved Job Targets, Admin Diagnostics, and AI Usage
    prompt links/raw metadata.
@@ -461,9 +467,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
    immediately on upward scroll, and never hide during active voice/session,
    error, modal, save, or onboarding states.
 14. Work the remaining highest-value Bubble reference gaps into upcoming phases:
-   richer coaching memory controls, deeper job-target-aware Up Next routing,
-   job target edit/delete/active-target polish, beta tuning for XP rules, and
-   AI-backed Quira support.
+   richer coaching memory controls, beta tuning for XP rules, and AI-backed
+   Quira support.
 15. Defer or avoid lower-value parity work until the beta needs it: standalone
    anonymous bug-report page, in-app marketing/blog pages, payments, industry
    packs, mascot work, and VAPI parity.
@@ -502,7 +507,7 @@ path until Phase 2 navigation is completed unless the product direction changes.
   `/api/realtime/debrief`. Do not build new written debrief UX unless product
   direction changes.
 - `tsconfig.tsbuildinfo` is generated TypeScript cache and intentionally ignored.
-- Migrations through `0038_add_ai_run_prompt_and_raw_json.sql` must be applied
+- Migrations through `0039_add_active_job_target.sql` must be applied
   before using the updated Story Lab in production. The Render start command
   currently runs Drizzle migrations before `npm start`, so it should apply
   automatically on deploy, but verify it in Render logs before QA.

@@ -2,7 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 
 import type { InterviewContext, JobTargetRecord } from "@/product/interview-types";
 import { getDb } from "@/server/db/client";
-import { jobTargets } from "@/server/db/schema";
+import { jobTargets, profiles } from "@/server/db/schema";
 
 function defaultLabel(input: Pick<JobTargetRecord, "targetCompany" | "targetRole">) {
   return input.targetCompany
@@ -96,6 +96,85 @@ export async function saveJobTarget(
       ],
     })
     .returning();
+
+  return toRecord(target);
+}
+
+export async function updateJobTarget(
+  userId: string,
+  targetId: string,
+  input: {
+    jobDescription: string;
+    label?: string;
+    targetCompany: string;
+    targetRole: string;
+  },
+): Promise<JobTargetRecord | undefined> {
+  const now = new Date();
+  const targetRole = input.targetRole.trim();
+  const targetCompany = input.targetCompany.trim();
+  const [target] = await getDb()
+    .update(jobTargets)
+    .set({
+      jobDescription: input.jobDescription.trim(),
+      label: input.label?.trim() || defaultLabel({ targetCompany, targetRole }),
+      targetCompany,
+      targetRole,
+      updatedAt: now,
+    })
+    .where(and(eq(jobTargets.id, targetId), eq(jobTargets.userId, userId)))
+    .returning();
+
+  return target ? toRecord(target) : undefined;
+}
+
+export async function deleteJobTarget(userId: string, targetId: string): Promise<boolean> {
+  await getDb()
+    .update(profiles)
+    .set({
+      activeJobTargetId: null,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(profiles.userId, userId), eq(profiles.activeJobTargetId, targetId)));
+
+  const [deleted] = await getDb()
+    .delete(jobTargets)
+    .where(and(eq(jobTargets.id, targetId), eq(jobTargets.userId, userId)))
+    .returning({ id: jobTargets.id });
+
+  return Boolean(deleted);
+}
+
+export async function setActiveJobTarget(
+  userId: string,
+  targetId: string,
+): Promise<JobTargetRecord | undefined> {
+  const [target] = await getDb()
+    .select()
+    .from(jobTargets)
+    .where(and(eq(jobTargets.id, targetId), eq(jobTargets.userId, userId)))
+    .limit(1);
+
+  if (!target) {
+    return undefined;
+  }
+
+  const now = new Date();
+
+  await getDb()
+    .insert(profiles)
+    .values({
+      activeJobTargetId: targetId,
+      updatedAt: now,
+      userId,
+    })
+    .onConflictDoUpdate({
+      set: {
+        activeJobTargetId: targetId,
+        updatedAt: now,
+      },
+      target: profiles.userId,
+    });
 
   return toRecord(target);
 }

@@ -267,6 +267,13 @@
       "when": 1779933600000,
       "tag": "0038_add_ai_run_prompt_and_raw_json",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1779937200000,
+      "tag": "0039_add_active_job_target",
+      "breakpoints": true
     }
   ]
 }

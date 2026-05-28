@@ -24,6 +24,8 @@ export type UpNextRecommendation =
         | "missing_context"
         | "missing_resume"
         | "story_build"
+        | "target_notes"
+        | "target_select"
         | "default_practice";
       title: string;
     }
@@ -66,6 +68,7 @@ type UpNextInput = {
   needsReview: SessionHistoryItem[];
   progression?: ProgressionSummaryRecord;
   scoreAverages: ScoreAverage[];
+  selectedJobTarget?: JobTargetRecord;
   stories: StoryRecord[];
 };
 
@@ -109,9 +112,13 @@ export function getUpNextRecommendation({
   needsReview,
   progression,
   scoreAverages,
+  selectedJobTarget,
   stories,
 }: UpNextInput): UpNextRecommendation {
   const pendingReview = needsReview[0];
+  const activeTarget =
+    selectedJobTarget ??
+    jobTargets.find((target) => target.id === interviewContext.jobTargetId);
 
   if (pendingReview) {
     return {
@@ -150,6 +157,24 @@ export function getUpNextRecommendation({
     };
   }
 
+  if (jobTargets.length > 0 && !activeTarget) {
+    return {
+      actionLabel: "Choose Target",
+      body: "Pick the saved opportunity Que should treat as the active context before the next practice session.",
+      kind: "target_select",
+      title: "Choose your active job target.",
+    };
+  }
+
+  if (activeTarget && !activeTarget.jobDescription.trim()) {
+    return {
+      actionLabel: "Add Notes",
+      body: `Add posting details or interview notes for ${activeTarget.label} so Que can route questions and reviews toward that opportunity.`,
+      kind: "target_notes",
+      title: "Sharpen the active target.",
+    };
+  }
+
   if (introductions.length === 0) {
     return {
       actionLabel: "Open Story Lab",
@@ -160,6 +185,22 @@ export function getUpNextRecommendation({
   }
 
   const latestCompleted = completedReviews[0];
+  const activeTargetReview = activeTarget
+    ? completedReviews.find(
+        (session) =>
+          session.targetRole === activeTarget.targetRole &&
+          session.targetCompany === activeTarget.targetCompany,
+      )
+    : undefined;
+
+  if (activeTarget && completedReviews.length > 0 && !activeTargetReview) {
+    return {
+      actionLabel: "Start Practice",
+      body: `You have reviews saved, but none for ${activeTarget.label} yet. Start one target-specific session so Que can build signal for this opportunity.`,
+      kind: "default_practice",
+      title: `Practice for ${activeTarget.targetRole} next.`,
+    };
+  }
 
   if (latestCompleted) {
     const overall = latestCompleted.evaluation
@@ -212,13 +253,13 @@ export function getUpNextRecommendation({
   return {
     actionLabel: "Start Practice",
     body:
-      jobTargets.length > 0
-        ? `Practice against ${jobTargets[0].label} while Que keeps the role context in view.`
+      activeTarget
+        ? `Practice against ${activeTarget.label} while Que keeps the role context in view.`
         : `Que can use your ${interviewContext.targetRole} context while you keep building consistency.`,
     kind: "default_practice",
     title:
-      jobTargets.length > 0
-        ? `Practice for ${jobTargets[0].targetRole} next.`
+      activeTarget
+        ? `Practice for ${activeTarget.targetRole} next.`
         : `Practice your ${interviewContext.targetRole} next.`,
   };
 }

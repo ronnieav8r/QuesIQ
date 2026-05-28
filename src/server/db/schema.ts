@@ -157,6 +157,7 @@ export const profiles = pgTable(
   {
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     id: uuid("id").defaultRandom().primaryKey(),
+    activeJobTargetId: uuid("active_job_target_id"),
     jobDescription: text("job_description").default("").notNull(),
     preferredName: text("preferred_name").default("").notNull(),
     resumeMimeType: text("resume_mime_type"),
@@ -172,6 +173,7 @@ export const profiles = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
   },
   (profile) => ({
+    activeJobTargetIdx: index("profiles_active_job_target_idx").on(profile.activeJobTargetId),
     userIdIdx: uniqueIndex("profiles_user_id_idx").on(profile.userId),
   }),
 );

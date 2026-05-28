@@ -7,6 +7,7 @@ import { profiles } from "@/server/db/schema";
 export async function getProfile(userId: string): Promise<InterviewContext | undefined> {
   const [profile] = await getDb()
     .select({
+      jobTargetId: profiles.activeJobTargetId,
       jobDescription: profiles.jobDescription,
       preferredName: profiles.preferredName,
       resumeName: profiles.resumeName,
@@ -25,6 +26,7 @@ export async function getProfile(userId: string): Promise<InterviewContext | und
 
   return {
     jobDescription: profile.jobDescription,
+    jobTargetId: profile.jobTargetId ?? undefined,
     preferredName: profile.preferredName,
     resumeName: profile.resumeName ?? undefined,
     resumeParsedAt: profile.resumeParsedAt?.toISOString(),

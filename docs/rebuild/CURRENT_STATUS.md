@@ -150,18 +150,21 @@ Last updated: 2026-05-28
     snapshots
   - resume upload currently parses TXT, MD, DOCX, and most PDFs with a 2 MB beta
     limit; raw file binaries are not retained yet
-- Saved Job Targets started:
+- Saved Job Targets:
   - Me now separates the user's Profile from Job Targets: name/resume stay in
     Profile, while reusable targets hold role, company, label, and job
     description/notes
-  - signed-in users can add/update reusable Job Targets from Me
+  - signed-in users can add, edit, and delete reusable Job Targets from Me
+  - active target preference is saved on the user's Profile, so Home, Practice,
+    and future sessions agree on the current opportunity
   - Practice setup lets users choose the profile target or a saved Job Target
     before selecting mode/style
   - launched Sessions store the selected target id in the setup snapshot and
     mark that target as recently used
   - Home's Me & Targets panel and Recommended Next can route users into the
-    clearer profile/target management screen, and default practice copy points
-    toward the most recently used saved target
+    clearer profile/target management screen, with target-aware nudges for
+    choosing an active target, adding target notes, or starting a first practice
+    for the active opportunity
 - Thin review hardening:
   - Sessions track evaluation status and last evaluation error
   - saved transcript artifacts mark reviews pending
@@ -426,6 +429,8 @@ The current coded app has passed:
   check on 2026-05-28.
 - AI run prompt link/snapshot/raw JSON metadata pass passed ESLint and
   TypeScript check on 2026-05-28.
+- Saved Job Targets edit/delete/active-target and target-aware Up Next polish
+  passed ESLint and TypeScript check on 2026-05-28.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran
@@ -504,7 +509,7 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 
 1. Deploy and user-confirm QA the latest Story Lab, prompt, debrief,
    progression, and job-target UI changes on `quesiq-web`, making sure
-   migrations through `0038_add_ai_run_prompt_and_raw_json.sql` run before using
+   migrations through `0039_add_active_job_target.sql` run before using
    the updated Story Lab in production.
 2. Run/user-confirm migration QA for Bubble levels and quests: Admin >
    Progression > Levels shows Rookie through Master, Admin > Progression >
@@ -543,9 +548,8 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 13. Later Quira work: replace the curated Help panel with an AI chat bot backed
    by a maintained QuesIQ product knowledge base.
 14. Product gap backlog from the Bubble reference, ordered by current user value:
-   richer coaching memory controls, deeper job-target-aware Up Next routing,
-   job target edit/delete/active-target polish, tuning XP rules from beta
-   behavior, and AI-backed Quira support.
+   richer coaching memory controls, tuning XP rules from beta behavior, and
+   AI-backed Quira support.
 15. Treat standalone anonymous bug reports, in-app marketing/blog pages,
    payments, industry packs, mascot work, and VAPI parity as lower-priority
    until the core practice loop and retention features are stronger.

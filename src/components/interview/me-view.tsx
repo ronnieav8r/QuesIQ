@@ -6,10 +6,16 @@ type MeViewProps = {
   contextReady: boolean;
   interviewContext: InterviewContext;
   jobTargets: JobTargetRecord[];
+  onDeleteTarget: (target: JobTargetRecord) => Promise<void> | void;
   onJobTarget: (target?: JobTargetRecord) => void;
   onPractice: () => void;
   onSaveProfile: (nextContext: InterviewContext) => Promise<void> | void;
   onSaveTarget: (
+    target: Pick<JobTargetRecord, "jobDescription" | "label" | "targetCompany" | "targetRole">,
+  ) => Promise<void> | void;
+  onSetActiveTarget: (target: JobTargetRecord) => Promise<void> | void;
+  onUpdateTarget: (
+    targetId: string,
     target: Pick<JobTargetRecord, "jobDescription" | "label" | "targetCompany" | "targetRole">,
   ) => Promise<void> | void;
   saveError?: string;
@@ -21,10 +27,13 @@ export function MeView({
   contextReady,
   interviewContext,
   jobTargets,
+  onDeleteTarget,
   onJobTarget,
   onPractice,
   onSaveProfile,
   onSaveTarget,
+  onSetActiveTarget,
+  onUpdateTarget,
   saveError,
   savePending = false,
   selectedJobTarget,
@@ -34,6 +43,7 @@ export function MeView({
   const [resumeUploadPending, setResumeUploadPending] = useState(false);
   const [resumeUploadWarning, setResumeUploadWarning] = useState<string>();
   const [selectedResumeFile, setSelectedResumeFile] = useState<File>();
+  const [editingTargetId, setEditingTargetId] = useState<string>();
   const [targetDraft, setTargetDraft] = useState({
     jobDescription: "",
     label: "",
@@ -101,19 +111,19 @@ export function MeView({
     };
 
     try {
-      await onSaveTarget(nextTarget);
-      setTargetDraft({
-        jobDescription: "",
-        label: "",
-        targetCompany: "",
-        targetRole: "",
-      });
+      if (editingTargetId) {
+        await onUpdateTarget(editingTargetId, nextTarget);
+      } else {
+        await onSaveTarget(nextTarget);
+      }
+      clearTargetDraft();
     } catch {
       // The parent owns the user-facing save error.
     }
   }
 
   function editTarget(target: JobTargetRecord) {
+    setEditingTargetId(target.id);
     setTargetDraft({
       jobDescription: target.jobDescription,
       label: target.label,
@@ -122,9 +132,37 @@ export function MeView({
     });
   }
 
-  function practiceTarget(target: JobTargetRecord) {
-    onJobTarget(target);
+  async function practiceTarget(target: JobTargetRecord) {
+    await setActiveTarget(target);
     onPractice();
+  }
+
+  function clearTargetDraft() {
+    setEditingTargetId(undefined);
+    setTargetDraft({
+      jobDescription: "",
+      label: "",
+      targetCompany: "",
+      targetRole: "",
+    });
+  }
+
+  async function setActiveTarget(target: JobTargetRecord) {
+    await onSetActiveTarget(target);
+    onJobTarget(target);
+  }
+
+  async function deleteTarget(target: JobTargetRecord) {
+    const confirmed = window.confirm(
+      `Delete ${target.label}? This removes the saved target, but not your profile or practice history.`,
+    );
+
+    if (confirmed) {
+      await onDeleteTarget(target);
+      if (editingTargetId === target.id) {
+        clearTargetDraft();
+      }
+    }
   }
 
   return (
@@ -278,21 +316,18 @@ export function MeView({
 
           <div className="inline-actions">
             <button disabled={savePending} type="submit">
-              {savePending ? "Saving Target" : "Save Job Target"}
+              {savePending
+                ? "Saving Target"
+                : editingTargetId
+                  ? "Save Changes"
+                  : "Save Job Target"}
             </button>
             <button
               className="secondary"
-              onClick={() =>
-                setTargetDraft({
-                  jobDescription: "",
-                  label: "",
-                  targetCompany: "",
-                  targetRole: "",
-                })
-              }
+              onClick={clearTargetDraft}
               type="button"
             >
-              Clear
+              {editingTargetId ? "Cancel Edit" : "Clear"}
             </button>
           </div>
         </form>
@@ -319,6 +354,9 @@ export function MeView({
               >
                 <div>
                   <strong>{target.label}</strong>
+                  {selectedJobTarget?.id === target.id && (
+                    <small className="active-target-label">Active</small>
+                  )}
                   <span>
                     {target.targetCompany
                       ? `${target.targetRole} at ${target.targetCompany}`
@@ -330,15 +368,16 @@ export function MeView({
                     "No job description yet. Que can still use the role and company."}
                 </p>
                 <div className="inline-actions">
-                  <button onClick={() => practiceTarget(target)} type="button">
+                  <button onClick={() => void practiceTarget(target)} type="button">
                     Use for Practice
                   </button>
                   <button
                     className="secondary"
-                    onClick={() => onJobTarget(target)}
+                    disabled={selectedJobTarget?.id === target.id}
+                    onClick={() => void setActiveTarget(target)}
                     type="button"
                   >
-                    Set Active
+                    {selectedJobTarget?.id === target.id ? "Active" : "Set Active"}
                   </button>
                   <button
                     className="secondary"
@@ -346,6 +385,13 @@ export function MeView({
                     type="button"
                   >
                     Edit
+                  </button>
+                  <button
+                    className="secondary danger"
+                    onClick={() => void deleteTarget(target)}
+                    type="button"
+                  >
+                    Delete
                   </button>
                 </div>
               </article>
