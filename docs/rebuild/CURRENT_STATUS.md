@@ -33,6 +33,8 @@ Last updated: 2026-05-28
 - Seeded backend Interview catalog records for practice modes, question types,
   and interviewer styles, exposed through `/api/catalog` with frontend fallback
   defaults
+  - practice mode prompt instructions are now differentiated for First
+    Impression, Coaching, Rapid Fire, and Mock Interview behavior
 - Admin-only prompt config slice:
   - `ADMIN_EMAILS` gates admin access by signed-in email
   - Realtime interviewer and post-session evaluation prompts are stored as
@@ -482,6 +484,8 @@ The current coded app has passed:
   and production build on 2026-05-28.
 - Story Lab/Debrief prompt visibility migration passed ESLint, TypeScript
   check, and production build on 2026-05-28.
+- Practice mode prompt refinement passed ESLint, TypeScript check, and
+  production build on 2026-05-28.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran
@@ -560,7 +564,7 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 
 1. Deploy and user-confirm QA the latest Story Lab, prompt, debrief,
    progression, and job-target UI changes on `quesiq-web`, making sure
-   migrations through `0042_move_voice_kickoffs_into_prompt_configs.sql` run before using
+   migrations through `0043_refine_practice_mode_prompts.sql` run before using
    the updated Story Lab in production.
 2. Run/user-confirm migration QA for Bubble levels and quests: Admin >
    Progression > Levels shows Rookie through Master, Admin > Progression >

@@ -295,6 +295,13 @@
       "when": 1779948000000,
       "tag": "0042_move_voice_kickoffs_into_prompt_configs",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1779951600000,
+      "tag": "0043_refine_practice_mode_prompts",
+      "breakpoints": true
     }
   ]
 }

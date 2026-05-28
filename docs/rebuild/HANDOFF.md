@@ -7,7 +7,7 @@ Last updated: 2026-05-28
 - Latest local work is ready for deploy QA, not yet user-confirmed in
   production.
 - New migrations to verify on deploy through
-  `0042_move_voice_kickoffs_into_prompt_configs.sql`.
+  `0043_refine_practice_mode_prompts.sql`.
 - Recent completed local slices:
   - Job Targets now support true edit, delete, persisted active target, and
     target-aware Home nudges.
@@ -35,6 +35,11 @@ Last updated: 2026-05-28
   - Story Lab Introduction/TMAAT capture and verbal Debrief first-turn behavior
     now also live in Admin-visible prompt configs. Client/server code passes
     capture purpose and saved session context, not behavioral prompt text.
+  - Practice mode prompt instructions are now more differentiated: First
+    Impression is a first-minute opening drill, Coaching is a
+    question-answer-coach-retry loop, Rapid Fire is paced repetition with
+    minimal between-answer coaching, and Mock Interview avoids coaching until
+    the post-session review.
   - Realtime End Session now stops the mic, commits pending audio for
     transcription, waits briefly for transcript completion, and finalizes
     without asking Que for a fresh response. If Que is already speaking, the
@@ -44,7 +49,7 @@ Last updated: 2026-05-28
   - Admin Diagnostics captures failed API/client/Realtime events.
 - Local verification passed on 2026-05-28 with `npm run typecheck`,
   `npm run lint`, and `npm run build`.
-- Best next move: deploy to `quesiq-web`, confirm migrations through `0042`,
+- Best next move: deploy to `quesiq-web`, confirm migrations through `0043`,
   then QA Story Lab, saved Job Targets, AI Usage, Diagnostics, and installable
   app behavior on real devices.
 
@@ -408,6 +413,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
   and production build on 2026-05-28.
 - Story Lab/Debrief prompt visibility migration passed ESLint, TypeScript
   check, and production build on 2026-05-28.
+- Practice mode prompt refinement passed ESLint, TypeScript check, and
+  production build on 2026-05-28.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
   succeeded, Drizzle migrations applied successfully, and Next started.
 - Live `quesiq.com` QA passed across the owned practice loop and tonight's
@@ -493,7 +500,7 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 1. Deploy/user-confirm QA the latest Story Lab, prompt, debrief, progression,
    and job-target UI changes on `quesiq-web`. Confirm migrations through
-   `0042_move_voice_kickoffs_into_prompt_configs.sql` run before testing Introduction
+   `0043_refine_practice_mode_prompts.sql` run before testing Introduction
    Builder, Intro Practice, verbal Debrief, Story Practice coaching history,
    Tell Que story capture, saved Job Targets, Admin Diagnostics, and AI Usage
    prompt links/raw metadata.
@@ -583,7 +590,7 @@ path until Phase 2 navigation is completed unless the product direction changes.
   `/api/realtime/debrief`. Do not build new written debrief UX unless product
   direction changes.
 - `tsconfig.tsbuildinfo` is generated TypeScript cache and intentionally ignored.
-- Migrations through `0042_move_voice_kickoffs_into_prompt_configs.sql` must be applied
+- Migrations through `0043_refine_practice_mode_prompts.sql` must be applied
   before using the updated Story Lab in production. The Render start command
   currently runs Drizzle migrations before `npm start`, so it should apply
   automatically on deploy, but verify it in Render logs before QA.
