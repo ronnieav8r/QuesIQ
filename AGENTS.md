@@ -1,5 +1,6 @@
 # Agent Notes
 
+Use `docs/README.md` for the document map.
 Read `docs/rebuild/HANDOFF.md` and `docs/rebuild/CURRENT_STATUS.md` before
 broad resume exploration.
 Read `docs/rebuild/REBUILD_PLAN.md` before major product or architecture work.

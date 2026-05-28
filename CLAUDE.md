@@ -1,11 +1,20 @@
-# Claude Notes
+# Claude Reference Pointer
 
-Start with `docs/rebuild/REBUILD_PLAN.md` and `docs/rebuild/ARCHITECTURE.md`.
+The original Claude startup notes for this rebuild are preserved as reference
+material in `docs/reference/CLAUDE-starting-notes.md`.
 
-This repo is the coded QuesIQ Interview rebuild:
+Those notes are not current working instructions. For current agent direction,
+use:
 
-- Que is the in-app interview coach.
-- Quira is the separate public/support chat assistant.
-- VAPI remains the first voice runtime.
-- The app should own its data model, UI, session lifecycle, evaluation, and
-  progression outside Bubble.
+- `AGENTS.md`
+- `docs/rebuild/HANDOFF.md`
+- `docs/rebuild/CURRENT_STATUS.md`
+- `docs/rebuild/DECISIONS.md`
+- `docs/rebuild/REBUILD_PLAN.md`
+
+Important current direction:
+
+- Direct OpenAI Realtime is the preferred browser voice runtime.
+- VAPI is a fallback path, not the default path.
+- Bubble and older handoffs are reference material, not implementation
+  constraints.

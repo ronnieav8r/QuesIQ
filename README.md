@@ -37,6 +37,10 @@ and voice API work can fit without changing deployment type.
 
 Start with `docs/rebuild/REBUILD_PLAN.md`.
 
+See `docs/README.md` for the docs map. In short: `docs/rebuild/` is the current
+source of truth, `docs/strategy/` is future planning, and `docs/reference/` is
+preserved historical context.
+
 ## Data
 
 The first app-owned data slice uses Postgres with Drizzle ORM and checked-in
