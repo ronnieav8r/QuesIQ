@@ -820,16 +820,9 @@ export function StoriesView({
 
       setIntroductions((current) => [body.introduction as IntroductionRecord, ...current]);
       setSelectedIntroductionId(body.introduction.id);
+      setStoryLabView("library");
       setIntroMaterial("");
-      setIntroDraft({
-        background: "",
-        proofPoint: "",
-        roleInterest: "",
-        script: "",
-        strength: "",
-        title: "",
-        transition: "",
-      });
+      setIntroDraft(createEmptyIntroDraft());
     } catch (error) {
       setError(error instanceof Error ? error.message : "Introduction could not be saved.");
     } finally {
@@ -1279,6 +1272,7 @@ export function StoriesView({
                 </button>
               )}
             </div>
+            {error && <p className="form-error">{error}</p>}
           </section>
           )}
 
