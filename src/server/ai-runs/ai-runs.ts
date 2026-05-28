@@ -6,9 +6,12 @@ import { aiRuns, users } from "@/server/db/schema";
 
 type StartAiRunInput = {
   model: string;
+  promptConfigId?: string;
   promptConfigKey?: string;
   promptConfigVersion?: number;
+  promptSnapshot?: string;
   providerRequestId?: string;
+  rawJson?: Record<string, unknown>;
   runType: AiRunRecord["runType"];
   sessionId?: string;
   userId?: string;
@@ -23,9 +26,19 @@ type CompleteAiRunInput = {
   outputAudioTokens?: number;
   outputTokens?: number;
   providerRequestId?: string;
+  rawJson?: Record<string, unknown>;
   status: "failed" | "succeeded";
   totalTokens?: number;
 };
+
+function uuidOrUndefined(value?: string) {
+  return value &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    )
+    ? value
+    : undefined;
+}
 
 function toRecord(row: {
   completedAt: Date | null;
@@ -39,10 +52,13 @@ function toRecord(row: {
   model: string;
   outputAudioTokens: number | null;
   outputTokens: number | null;
+  promptConfigId: string | null;
   promptConfigKey: string | null;
   promptConfigVersion: number | null;
+  promptSnapshot: string | null;
   provider: string;
   providerRequestId: string | null;
+  rawJson: Record<string, unknown> | null;
   runType: AiRunRecord["runType"];
   sessionId: string | null;
   startedAt: Date;
@@ -63,10 +79,13 @@ function toRecord(row: {
     model: row.model,
     outputAudioTokens: row.outputAudioTokens ?? undefined,
     outputTokens: row.outputTokens ?? undefined,
+    promptConfigId: row.promptConfigId ?? undefined,
     promptConfigKey: row.promptConfigKey ?? undefined,
     promptConfigVersion: row.promptConfigVersion ?? undefined,
+    promptSnapshot: row.promptSnapshot ?? undefined,
     provider: "openai",
     providerRequestId: row.providerRequestId ?? undefined,
+    rawJson: row.rawJson ?? undefined,
     runType: row.runType,
     sessionId: row.sessionId ?? undefined,
     startedAt: row.startedAt.toISOString(),
@@ -82,9 +101,12 @@ export async function startAiRun(input: StartAiRunInput) {
     .insert(aiRuns)
     .values({
       model: input.model,
+      promptConfigId: uuidOrUndefined(input.promptConfigId),
       promptConfigKey: input.promptConfigKey,
       promptConfigVersion: input.promptConfigVersion,
+      promptSnapshot: input.promptSnapshot,
       providerRequestId: input.providerRequestId,
+      rawJson: input.rawJson,
       runType: input.runType,
       sessionId: input.sessionId,
       status: "started",
@@ -120,6 +142,7 @@ export async function completeAiRun(id: string, input: CompleteAiRunInput) {
       outputAudioTokens: input.outputAudioTokens,
       outputTokens: input.outputTokens,
       providerRequestId: input.providerRequestId,
+      rawJson: input.rawJson,
       status: input.status,
       totalTokens: input.totalTokens,
       updatedAt: now,
@@ -141,10 +164,13 @@ export async function listAiRuns(limit = 100): Promise<AiRunRecord[]> {
       model: aiRuns.model,
       outputAudioTokens: aiRuns.outputAudioTokens,
       outputTokens: aiRuns.outputTokens,
+      promptConfigId: aiRuns.promptConfigId,
       promptConfigKey: aiRuns.promptConfigKey,
       promptConfigVersion: aiRuns.promptConfigVersion,
+      promptSnapshot: aiRuns.promptSnapshot,
       provider: aiRuns.provider,
       providerRequestId: aiRuns.providerRequestId,
+      rawJson: aiRuns.rawJson,
       runType: aiRuns.runType,
       sessionId: aiRuns.sessionId,
       startedAt: aiRuns.startedAt,

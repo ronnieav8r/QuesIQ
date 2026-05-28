@@ -137,8 +137,18 @@ export async function generateIntroductionDraft(
   const pricing = await getActiveAiPricing(promptConfig.model, "text");
   const aiRun = await startAiRun({
     model: promptConfig.model,
+    promptConfigId: promptConfig.id,
     promptConfigKey: promptConfig.key,
     promptConfigVersion: promptConfig.version,
+    promptSnapshot: promptConfig.instructions,
+    rawJson: {
+      audience: input.audience,
+      length: input.length,
+      rawNotesCharacters: input.rawNotes.length,
+      schema: "quesiq_introduction_draft",
+      targetCompanyPresent: Boolean(input.targetCompany),
+      targetRolePresent: Boolean(input.targetRole),
+    },
     runType: "introduction_draft",
     userId: input.userId,
   });
@@ -207,6 +217,11 @@ export async function generateIntroductionDraft(
       inputTokens: body.usage?.input_tokens,
       outputTokens: body.usage?.output_tokens,
       providerRequestId: body.id,
+      rawJson: {
+        providerRequestId: body.id,
+        schema: "quesiq_introduction_draft",
+        usage: body.usage,
+      },
       status: "succeeded",
       totalTokens: body.usage?.total_tokens,
     });
@@ -218,6 +233,12 @@ export async function generateIntroductionDraft(
         error instanceof Error
           ? error.message
           : "Introduction draft could not be generated.",
+      rawJson: {
+        audience: input.audience,
+        length: input.length,
+        rawNotesCharacters: input.rawNotes.length,
+        schema: "quesiq_introduction_draft",
+      },
       status: "failed",
     });
     throw error;

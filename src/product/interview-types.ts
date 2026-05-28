@@ -591,10 +591,13 @@ export type AiRunRecord = {
   model: string;
   outputAudioTokens?: number;
   outputTokens?: number;
+  promptConfigId?: string;
   promptConfigKey?: string;
   promptConfigVersion?: number;
+  promptSnapshot?: string;
   provider: "openai";
   providerRequestId?: string;
+  rawJson?: Record<string, unknown>;
   runType:
     | "debrief"
     | "evaluation"

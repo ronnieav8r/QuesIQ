@@ -140,6 +140,9 @@ path until Phase 2 navigation is completed unless the product direction changes.
   Introduction Draft, legacy written Debrief, and Realtime exchange endpoints
   create `ai_runs` rows. App-owned practice sessions continue to save richer
   Realtime usage after the voice artifact is persisted.
+- AI run records now retain prompt config id, prompt key/version, prompt
+  instruction snapshot, and safe raw JSON metadata. Admin AI Usage shows a
+  Prompt column that can open the matching prompt config version.
 - Added Admin Diagnostics visibility for failed same-origin API calls, rejected
   fetches, client browser errors, unhandled promise rejections, and Realtime
   connection/error events. The diagnostic log stores sanitized metadata only and
@@ -328,6 +331,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
 - AI usage instrumentation audit for Story Lab, Introduction Builder, Realtime
   exchange endpoints, and legacy written Debrief passed ESLint and TypeScript
   check on 2026-05-28.
+- AI run prompt link/snapshot/raw JSON metadata pass passed ESLint and
+  TypeScript check on 2026-05-28.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
   succeeded, Drizzle migrations applied successfully, and Next started.
 - Live `quesiq.com` QA passed across the owned practice loop and tonight's
@@ -413,9 +418,10 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 1. Deploy/user-confirm QA the latest Story Lab, prompt, debrief, progression,
    and job-target UI changes on `quesiq-web`. Confirm migrations through
-   `0037_add_diagnostic_events.sql` run before testing Introduction Builder,
-   Intro Practice, verbal Debrief, Story Practice coaching history, Tell Que
-   story capture, saved Job Targets, and Admin Diagnostics.
+   `0038_add_ai_run_prompt_and_raw_json.sql` run before testing Introduction
+   Builder, Intro Practice, verbal Debrief, Story Practice coaching history,
+   Tell Que story capture, saved Job Targets, Admin Diagnostics, and AI Usage
+   prompt links/raw metadata.
 2. Run/user-confirm database migration QA for the imported levels and quests:
    Progression > Levels shows Rookie through Master, Progression > Quests shows
    37 active quest definitions, level/quest edits save from Admin, and Home
@@ -496,7 +502,7 @@ path until Phase 2 navigation is completed unless the product direction changes.
   `/api/realtime/debrief`. Do not build new written debrief UX unless product
   direction changes.
 - `tsconfig.tsbuildinfo` is generated TypeScript cache and intentionally ignored.
-- Migrations through `0037_add_diagnostic_events.sql` must be applied
+- Migrations through `0038_add_ai_run_prompt_and_raw_json.sql` must be applied
   before using the updated Story Lab in production. The Render start command
   currently runs Drizzle migrations before `npm start`, so it should apply
   automatically on deploy, but verify it in Render logs before QA.

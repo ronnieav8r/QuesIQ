@@ -1908,6 +1908,17 @@ textarea::placeholder {
   border-bottom: 0;
 }
 
+.stacked-cell {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.stacked-cell .quiet-button {
+  min-height: 2rem;
+  padding: var(--space-1) var(--space-2);
+  width: max-content;
+}
+
 .table-cell-truncate,
 .expandable-cell summary {
   cursor: pointer;

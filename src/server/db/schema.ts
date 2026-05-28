@@ -418,10 +418,15 @@ export const aiRuns = pgTable(
     model: text("model").notNull(),
     outputAudioTokens: integer("output_audio_tokens"),
     outputTokens: integer("output_tokens"),
+    promptConfigId: uuid("prompt_config_id").references(() => promptConfigs.id, {
+      onDelete: "set null",
+    }),
     promptConfigKey: text("prompt_config_key"),
     promptConfigVersion: integer("prompt_config_version"),
+    promptSnapshot: text("prompt_snapshot"),
     provider: text("provider").default("openai").notNull(),
     providerRequestId: text("provider_request_id"),
+    rawJson: jsonb("raw_json").$type<Record<string, unknown>>(),
     runType: text("run_type")
       .$type<
         | "debrief"
@@ -443,6 +448,7 @@ export const aiRuns = pgTable(
   (aiRun) => ({
     createdAtIdx: index("ai_runs_created_at_idx").on(aiRun.createdAt),
     sessionIdx: index("ai_runs_session_idx").on(aiRun.sessionId),
+    promptConfigIdx: index("ai_runs_prompt_config_idx").on(aiRun.promptConfigId),
     statusIdx: index("ai_runs_status_idx").on(aiRun.status),
     typeIdx: index("ai_runs_type_idx").on(aiRun.runType),
   }),

@@ -154,8 +154,14 @@ export async function POST(request: Request) {
   ]);
   const aiRun = await startAiRun({
     model: promptConfig.model,
+    promptConfigId: promptConfig.id,
     promptConfigKey: promptConfig.key,
     promptConfigVersion: promptConfig.version,
+    promptSnapshot: promptConfig.instructions,
+    rawJson: {
+      endpoint: "/api/realtime/debrief",
+      transcriptTurns: session.voiceArtifact.transcript.length,
+    },
     runType: "realtime",
     sessionId: body.sessionId,
     userId: appSession.user.id,
@@ -199,6 +205,10 @@ export async function POST(request: Request) {
       await completeAiRun(aiRun.id, {
         costSource: "unavailable",
         errorMessage: detail,
+        rawJson: {
+          endpoint: "/api/realtime/debrief",
+          status: realtimeResponse.status,
+        },
         status: "failed",
       });
 
@@ -215,6 +225,10 @@ export async function POST(request: Request) {
     await completeAiRun(aiRun.id, {
       costSource: "unavailable",
       providerRequestId: realtimeCallId,
+      rawJson: {
+        endpoint: "/api/realtime/debrief",
+        providerRequestId: realtimeCallId,
+      },
       status: "succeeded",
     });
 
@@ -227,6 +241,9 @@ export async function POST(request: Request) {
     await completeAiRun(aiRun.id, {
       costSource: "unavailable",
       errorMessage: error instanceof Error ? error.message : "Unknown network error.",
+      rawJson: {
+        endpoint: "/api/realtime/debrief",
+      },
       status: "failed",
     });
     return NextResponse.json(

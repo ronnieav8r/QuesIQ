@@ -124,8 +124,14 @@ export async function generateStoryFollowUp(turns: StoryBuilderTurn[], userId?: 
   const pricing = await getActiveAiPricing(promptConfig.model, "text");
   const aiRun = await startAiRun({
     model: promptConfig.model,
+    promptConfigId: promptConfig.id,
     promptConfigKey: promptConfig.key,
     promptConfigVersion: promptConfig.version,
+    promptSnapshot: promptConfig.instructions,
+    rawJson: {
+      inputTurnCount: turns.length,
+      maxOutputTokens: 120,
+    },
     runType: "story_follow_up",
     userId,
   });
@@ -170,6 +176,11 @@ export async function generateStoryFollowUp(turns: StoryBuilderTurn[], userId?: 
       inputTokens: body.usage?.input_tokens,
       outputTokens: body.usage?.output_tokens,
       providerRequestId: body.id,
+      rawJson: {
+        inputTurnCount: turns.length,
+        providerRequestId: body.id,
+        usage: body.usage,
+      },
       status: "succeeded",
       totalTokens: body.usage?.total_tokens,
     });
@@ -179,6 +190,9 @@ export async function generateStoryFollowUp(turns: StoryBuilderTurn[], userId?: 
     await completeAiRun(aiRun.id, {
       errorMessage:
         error instanceof Error ? error.message : "Story follow-up could not be generated.",
+      rawJson: {
+        inputTurnCount: turns.length,
+      },
       status: "failed",
     });
     throw error;
@@ -193,8 +207,15 @@ export async function generateStoryOutline(
   const pricing = await getActiveAiPricing(promptConfig.model, "text");
   const aiRun = await startAiRun({
     model: promptConfig.model,
+    promptConfigId: promptConfig.id,
     promptConfigKey: promptConfig.key,
     promptConfigVersion: promptConfig.version,
+    promptSnapshot: promptConfig.instructions,
+    rawJson: {
+      inputTurnCount: turns.length,
+      maxOutputTokens: 1200,
+      schema: "quesiq_story_outline",
+    },
     runType: "story_outline",
     userId,
   });
@@ -248,6 +269,12 @@ export async function generateStoryOutline(
       inputTokens: body.usage?.input_tokens,
       outputTokens: body.usage?.output_tokens,
       providerRequestId: body.id,
+      rawJson: {
+        inputTurnCount: turns.length,
+        providerRequestId: body.id,
+        schema: "quesiq_story_outline",
+        usage: body.usage,
+      },
       status: "succeeded",
       totalTokens: body.usage?.total_tokens,
     });
@@ -257,6 +284,10 @@ export async function generateStoryOutline(
     await completeAiRun(aiRun.id, {
       errorMessage:
         error instanceof Error ? error.message : "Story outline could not be generated.",
+      rawJson: {
+        inputTurnCount: turns.length,
+        schema: "quesiq_story_outline",
+      },
       status: "failed",
     });
     throw error;

@@ -107,8 +107,15 @@ export async function generateSessionDebrief({
   const pricing = await getActiveAiPricing(promptConfig.model, "text");
   const aiRun = await startAiRun({
     model: promptConfig.model,
+    promptConfigId: promptConfig.id,
     promptConfigKey: promptConfig.key,
     promptConfigVersion: promptConfig.version,
+    promptSnapshot: promptConfig.instructions,
+    rawJson: {
+      schema: "quesiq_session_debrief",
+      transcriptTurns: session.transcript.length,
+      userNoteCharacters: userNote.length,
+    },
     runType: "debrief",
     sessionId: session.id,
     userId,
@@ -192,6 +199,11 @@ export async function generateSessionDebrief({
       inputTokens: body.usage?.input_tokens,
       outputTokens: body.usage?.output_tokens,
       providerRequestId: body.id,
+      rawJson: {
+        providerRequestId: body.id,
+        schema: "quesiq_session_debrief",
+        usage: body.usage,
+      },
       status: "succeeded",
       totalTokens: body.usage?.total_tokens,
     });
@@ -201,6 +213,11 @@ export async function generateSessionDebrief({
     await completeAiRun(aiRun.id, {
       errorMessage:
         error instanceof Error ? error.message : "Session debrief could not be generated.",
+      rawJson: {
+        schema: "quesiq_session_debrief",
+        transcriptTurns: session.transcript.length,
+        userNoteCharacters: userNote.length,
+      },
       status: "failed",
     });
     throw error;

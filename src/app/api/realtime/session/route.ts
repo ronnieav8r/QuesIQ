@@ -174,8 +174,16 @@ export async function POST(request: Request) {
   const activeRealtimeConfig = storyPracticeConfig ?? promptConfig;
   const aiRun = await startAiRun({
     model: activeRealtimeConfig.model,
+    promptConfigId: activeRealtimeConfig.id,
     promptConfigKey: activeRealtimeConfig.key,
     promptConfigVersion: activeRealtimeConfig.version,
+    promptSnapshot: activeRealtimeConfig.instructions,
+    rawJson: {
+      endpoint: "/api/realtime/session",
+      modeKey: body.snapshot?.modeKey,
+      questionTypeKey: body.snapshot?.questionTypeKey,
+      storyContextPresent: Boolean(body.snapshot?.storyContext),
+    },
     runType: "realtime",
     sessionId: body.sessionId,
     userId: appSession.user.id,
@@ -221,6 +229,10 @@ export async function POST(request: Request) {
       await completeAiRun(aiRun.id, {
         costSource: "unavailable",
         errorMessage: detail,
+        rawJson: {
+          endpoint: "/api/realtime/session",
+          status: realtimeResponse.status,
+        },
         status: "failed",
       });
 
@@ -262,6 +274,10 @@ export async function POST(request: Request) {
     await completeAiRun(aiRun.id, {
       costSource: "unavailable",
       providerRequestId: realtimeCallId,
+      rawJson: {
+        endpoint: "/api/realtime/session",
+        providerRequestId: realtimeCallId,
+      },
       status: "succeeded",
     });
 
@@ -274,6 +290,9 @@ export async function POST(request: Request) {
     await completeAiRun(aiRun.id, {
       costSource: "unavailable",
       errorMessage: error instanceof Error ? error.message : "Unknown network error.",
+      rawJson: {
+        endpoint: "/api/realtime/session",
+      },
       status: "failed",
     });
     return NextResponse.json(

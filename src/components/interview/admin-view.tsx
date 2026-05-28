@@ -505,6 +505,10 @@ function diagnosticMetadataText(event: DiagnosticEventRecord) {
   return event.metadata ? JSON.stringify(event.metadata) : "";
 }
 
+function aiRunRawJsonText(run: AiRunRecord) {
+  return run.rawJson ? JSON.stringify(run.rawJson) : "";
+}
+
 export function AdminView() {
   const [configs, setConfigs] = useState<PromptConfigRecord[]>([]);
   const [components, setComponents] = useState<PromptComponentRecord[]>([]);
@@ -1443,6 +1447,24 @@ export function AdminView() {
     }
 
     void loadComponents();
+  }
+
+  function openPromptFromRun(run: AiRunRecord) {
+    const prompt =
+      configs.find((config) => config.id === run.promptConfigId) ||
+      configs.find(
+        (config) =>
+          config.key === run.promptConfigKey &&
+          config.version === run.promptConfigVersion,
+      );
+
+    if (!prompt) {
+      return;
+    }
+
+    setAdminSection("prompts");
+    setPromptSection("base");
+    applySelectedConfig(prompt);
   }
 
   async function savePricing() {
@@ -2995,6 +3017,7 @@ export function AdminView() {
                       sort={aiRunSort}
                       sortKey="model"
                     />
+                    <th>Prompt</th>
                     <SortHeader
                       label="Tokens"
                       onSort={(key) => setAiRunSort(nextSort(aiRunSort, key))}
@@ -3026,6 +3049,7 @@ export function AdminView() {
                       sort={aiRunSort}
                       sortKey="error"
                     />
+                    <th>Raw JSON</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -3041,6 +3065,30 @@ export function AdminView() {
                         <ExpandableCell value={run.model} />
                       </td>
                       <td>
+                        {run.promptConfigKey ? (
+                          <div className="stacked-cell">
+                            <button
+                              className="quiet-button"
+                              disabled={
+                                !configs.some(
+                                  (config) =>
+                                    config.id === run.promptConfigId ||
+                                    (config.key === run.promptConfigKey &&
+                                      config.version === run.promptConfigVersion),
+                                )
+                              }
+                              onClick={() => openPromptFromRun(run)}
+                              type="button"
+                            >
+                              {run.promptConfigKey} v{run.promptConfigVersion ?? "--"}
+                            </button>
+                            <ExpandableCell value={run.promptSnapshot} />
+                          </div>
+                        ) : (
+                          "--"
+                        )}
+                      </td>
+                      <td>
                         {run.totalTokens !== undefined
                           ? `${run.inputTokens ?? 0} / ${run.outputTokens ?? 0} / ${run.totalTokens}`
                           : "--"}
@@ -3052,6 +3100,9 @@ export function AdminView() {
                       </td>
                       <td>
                         <ExpandableCell value={run.errorMessage} />
+                      </td>
+                      <td>
+                        <ExpandableCell value={aiRunRawJsonText(run)} />
                       </td>
                     </tr>
                   ))}

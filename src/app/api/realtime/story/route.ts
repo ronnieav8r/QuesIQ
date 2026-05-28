@@ -40,8 +40,15 @@ export async function POST(request: Request) {
   const promptConfig = await getActivePromptConfig("story_conversation_realtime");
   const aiRun = await startAiRun({
     model: promptConfig.model,
+    promptConfigId: promptConfig.id,
     promptConfigKey: promptConfig.key,
     promptConfigVersion: promptConfig.version,
+    promptSnapshot: promptConfig.instructions,
+    rawJson: {
+      endpoint: "/api/realtime/story",
+      hasRealtimeInstructions: Boolean(body.realtimeInstructions),
+      sessionKind: "story_lab_capture",
+    },
     runType: "realtime",
     userId: appSession.user.id,
   });
@@ -83,6 +90,10 @@ export async function POST(request: Request) {
       await completeAiRun(aiRun.id, {
         costSource: "unavailable",
         errorMessage: detail,
+        rawJson: {
+          endpoint: "/api/realtime/story",
+          status: realtimeResponse.status,
+        },
         status: "failed",
       });
 
@@ -106,6 +117,11 @@ export async function POST(request: Request) {
     await completeAiRun(aiRun.id, {
       costSource: "unavailable",
       providerRequestId: realtimeCallId,
+      rawJson: {
+        endpoint: "/api/realtime/story",
+        providerRequestId: realtimeCallId,
+        sessionKind: "story_lab_capture",
+      },
       status: "succeeded",
     });
 
@@ -118,6 +134,9 @@ export async function POST(request: Request) {
     await completeAiRun(aiRun.id, {
       costSource: "unavailable",
       errorMessage: error instanceof Error ? error.message : "Unknown network error.",
+      rawJson: {
+        endpoint: "/api/realtime/story",
+      },
       status: "failed",
     });
     return NextResponse.json(

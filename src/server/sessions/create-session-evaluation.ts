@@ -504,8 +504,16 @@ export async function createSessionEvaluation(
   const pricing = await getActiveAiPricing(model, "text");
   const aiRun = await startAiRun({
     model,
+    promptConfigId: promptConfig.id,
     promptConfigKey: promptConfig.key,
     promptConfigVersion: promptConfig.version,
+    promptSnapshot: promptConfig.instructions,
+    rawJson: {
+      modeKey: session.contextSnapshot.modeKey,
+      questionTypeKey: session.contextSnapshot.questionTypeKey,
+      storyContextPresent: Boolean(session.contextSnapshot.storyContext),
+      transcriptTurns: session.voiceArtifact.transcript.length,
+    },
     runType: "evaluation",
     sessionId,
     userId,
@@ -539,6 +547,10 @@ export async function createSessionEvaluation(
       inputTokens: evaluationResponse.usage?.input_tokens,
       outputTokens: evaluationResponse.usage?.output_tokens,
       providerRequestId: evaluationResponse.providerRequestId,
+      rawJson: {
+        providerRequestId: evaluationResponse.providerRequestId,
+        usage: evaluationResponse.usage,
+      },
       status: "succeeded",
       totalTokens: evaluationResponse.usage?.total_tokens,
     });
@@ -556,6 +568,10 @@ export async function createSessionEvaluation(
       inputTokens: usage?.input_tokens,
       outputTokens: usage?.output_tokens,
       providerRequestId: getProviderRequestId(error),
+      rawJson: {
+        providerRequestId: getProviderRequestId(error),
+        usage,
+      },
       status: "failed",
       totalTokens: usage?.total_tokens,
     });

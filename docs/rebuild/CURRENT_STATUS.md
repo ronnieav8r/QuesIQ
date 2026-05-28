@@ -59,6 +59,9 @@ Last updated: 2026-05-28
     verbal Debrief now create AI run rows for setup success/failure; app-owned
     practice sessions still save fuller Realtime usage after the voice artifact
     is persisted
+  - AI run records now retain prompt config id, prompt config key/version,
+    prompt instruction snapshot, and safe raw JSON metadata; Admin AI Usage
+    shows a Prompt column that can open the matching prompt config version
   - Realtime voice sessions create compact usage records from saved artifacts:
     duration, transcript split, model, voice, prompt version, estimated audio
     tokens, estimated cost, pricing version, and estimation method
@@ -421,6 +424,8 @@ The current coded app has passed:
 - AI usage instrumentation audit for Story Lab, Introduction Builder, Realtime
   exchange endpoints, and legacy written Debrief passed ESLint and TypeScript
   check on 2026-05-28.
+- AI run prompt link/snapshot/raw JSON metadata pass passed ESLint and
+  TypeScript check on 2026-05-28.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran
@@ -499,7 +504,7 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 
 1. Deploy and user-confirm QA the latest Story Lab, prompt, debrief,
    progression, and job-target UI changes on `quesiq-web`, making sure
-   migrations through `0037_add_diagnostic_events.sql` run before using
+   migrations through `0038_add_ai_run_prompt_and_raw_json.sql` run before using
    the updated Story Lab in production.
 2. Run/user-confirm migration QA for Bubble levels and quests: Admin >
    Progression > Levels shows Rookie through Master, Admin > Progression >

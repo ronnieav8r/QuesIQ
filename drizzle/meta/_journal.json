@@ -260,6 +260,13 @@
       "when": 1779930000000,
       "tag": "0037_add_diagnostic_events",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1779933600000,
+      "tag": "0038_add_ai_run_prompt_and_raw_json",
+      "breakpoints": true
     }
   ]
 }
