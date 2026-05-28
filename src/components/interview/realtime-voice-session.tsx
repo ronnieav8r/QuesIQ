@@ -89,6 +89,7 @@ export function RealtimeVoiceSession({
   title = "Direct browser voice session",
 }: RealtimeVoiceSessionProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const queStartedRef = useRef(false);
@@ -150,6 +151,7 @@ export function RealtimeVoiceSession({
 
   function closeMedia() {
     peerConnectionRef.current?.close();
+    dataChannelRef.current = null;
     mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
     peerConnectionRef.current = null;
     mediaStreamRef.current = null;
@@ -238,6 +240,14 @@ export function RealtimeVoiceSession({
     }
 
     addEvent("client.session.end");
+    if (dataChannelRef.current?.readyState === "open") {
+      dataChannelRef.current.send(JSON.stringify({ type: "input_audio_buffer.commit" }));
+      dataChannelRef.current.send(JSON.stringify({ type: "response.create" }));
+      addEvent("client.input_audio_buffer.commit");
+      window.setTimeout(() => finishSession("user_ended", "ended"), 1200);
+      return;
+    }
+
     finishSession("user_ended", "ended");
   }
 
@@ -256,6 +266,7 @@ export function RealtimeVoiceSession({
 
       mediaStreamRef.current = mediaStream;
       peerConnectionRef.current = peerConnection;
+      dataChannelRef.current = dataChannel;
       mediaStream.getTracks().forEach((track) => peerConnection.addTrack(track, mediaStream));
       peerConnection.ontrack = (event) => {
         if (audioRef.current) {

@@ -175,7 +175,7 @@ export async function generateIntroductionDraft(
 ): Promise<IntroductionDraftResult> {
   if (!hasEnoughCandidateMaterial(input.rawNotes)) {
     throw new Error(
-      "Add a few real details first: your background, one strength, one proof point, and why the role matters.",
+      "I need more usable transcript detail first: your background, one strength, one proof point, and why the role matters.",
     );
   }
 

@@ -471,11 +471,20 @@ export function StoriesView({
     }
 
     introConversationArtifactKeyRef.current = artifactKey;
-    const rawMaterial = artifact.transcript
+    const userTurnsOnly = artifact.transcript.filter((turn) => turn.role === "user");
+    const turnsForDraft = userTurnsOnly.length > 0 ? userTurnsOnly : artifact.transcript;
+    const rawMaterial = turnsForDraft
       .map((turn) => `${turn.speaker}: ${turn.text}`)
       .join("\n");
 
     setIntroMaterial(rawMaterial);
+    if (userTurnsOnly.length === 0) {
+      setError(
+        "I did not get a usable transcript of your answer. Please try again or use Dictate/Type so the intro has your actual details.",
+      );
+      return;
+    }
+
     void draftCapturedIntroduction(rawMaterial);
   }
 
