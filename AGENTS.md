@@ -4,6 +4,10 @@ Use `docs/README.md` for the document map.
 Read `docs/rebuild/HANDOFF.md` and `docs/rebuild/CURRENT_STATUS.md` before
 broad resume exploration.
 Read `docs/rebuild/REBUILD_PLAN.md` before major product or architecture work.
+Read `docs/rebuild/PLATFORM_READINESS.md` before shared-platform, Study,
+billing, auth-boundary, or design-system extraction work.
+Read `docs/rebuild/BRANCHING_AND_RELEASES.md` before changing production branch
+or deploy flow.
 
 ## Working Direction
 

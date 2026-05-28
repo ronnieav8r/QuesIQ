@@ -7,6 +7,7 @@ Last updated: 2026-05-28
 - Local repo: `C:\Users\weeks\Documents\GitHub\QuesIQ`
 - GitHub repo: `ronnieav8r/QuesIQ`
 - Living rebuild docs: `docs/rebuild/`
+- Docs map: `docs/README.md`
 - Active Render web service: `quesiq-web`
   - now points at `ronnieav8r/QuesIQ`
   - Render URL: `https://quesiq-web.onrender.com`
@@ -429,6 +430,10 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 ## Current Product Direction
 
 - Replace Bubble for the core QuesIQ Interview app.
+- Keep QuesIQ Interview as the lead coded product. QuesIQ Study, shared billing,
+  cross-product account dashboards, a shared platform shell, and shared
+  product-level Quira service boundaries are later platform work, not current
+  implementation constraints.
 - Use direct OpenAI Realtime first for the coded browser voice beta.
 - Keep VAPI as a fallback if direct voice testing reveals a quality,
   reliability, transcript, or tooling gap.
@@ -443,6 +448,12 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
   design tokens/base styling. Phase 1B cleaned up core user-screen rhythm,
   small-screen behavior, and user-facing copy. Phase 2A completed text-first
   navigation refinement, and Phase 2B added lucide icons to the primary nav.
+- Keep design tokens and reusable UI patterns clean enough to extract later, but
+  do not create a separate design-system package until there is a second active
+  product that needs it.
+- Preserve Auth.js identity as the generic user/account root. Keep
+  Interview-specific profile, session, story, job-target, progression, feedback,
+  and coaching-memory data in product tables keyed by `user_id`.
 - Progression now combines reviewed-session XP with imported Bubble quest XP.
   Quest completion is idempotent through `user_quests`; XP accounting remains in
   `progression_events`.
@@ -496,6 +507,9 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
    until the core practice loop and retention features are stronger.
 13. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
+14. Before broader live traffic, establish the documented branch/release flow:
+   scoped `codex/*` work branches, `main` as stable integration, and `live` as
+   the exact production branch after the current production commit is confirmed.
 
 ## Reference Inputs
 
@@ -507,3 +521,5 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
   `docs/rebuild/PRODUCT_SCOPE.md`
   `docs/rebuild/DECISIONS.md`
   `docs/rebuild/HANDOFF.md`
+  `docs/rebuild/PLATFORM_READINESS.md`
+  `docs/rebuild/BRANCHING_AND_RELEASES.md`

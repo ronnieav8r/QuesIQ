@@ -13,6 +13,8 @@ Start here for broad resume work:
 - `docs/rebuild/CURRENT_STATUS.md`
 - `docs/rebuild/DECISIONS.md`
 - `docs/rebuild/REBUILD_PLAN.md`
+- `docs/rebuild/PLATFORM_READINESS.md`
+- `docs/rebuild/BRANCHING_AND_RELEASES.md`
 
 ## Strategy Docs
 

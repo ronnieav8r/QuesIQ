@@ -41,6 +41,11 @@ See `docs/README.md` for the docs map. In short: `docs/rebuild/` is the current
 source of truth, `docs/strategy/` is future planning, and `docs/reference/` is
 preserved historical context.
 
+For current platform and release guardrails, see:
+
+- `docs/rebuild/PLATFORM_READINESS.md`
+- `docs/rebuild/BRANCHING_AND_RELEASES.md`
+
 ## Data
 
 The first app-owned data slice uses Postgres with Drizzle ORM and checked-in

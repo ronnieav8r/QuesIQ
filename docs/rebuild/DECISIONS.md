@@ -96,6 +96,34 @@ or feedback with screen/session/screenshot/device context. Quira can return to
 its own deploy boundary later if reuse across multiple products or operational
 scale justifies it.
 
+### Keep Interview First, Platform-Ready Later
+
+QuesIQ Interview remains the lead coded product. Do not merge QuesIQ Study or
+build a shared QuesIQ platform shell until Interview's beta practice loop is
+stable enough that platform work is more valuable than core product iteration.
+
+The current platform stance is documented in `docs/rebuild/PLATFORM_READINESS.md`:
+
+- Auth.js identity tables are the generic account root.
+- Interview-specific records stay in Interview product tables keyed by `user_id`.
+- Avoid adding product-specific fields to the generic `user` table.
+- Keep design tokens and reusable components clean, but do not extract a shared
+  design-system package until a second active product needs it.
+- Treat shared billing, entitlements, cross-product navigation, Study merge
+  work, and shared Quira service boundaries as later platform work.
+
+### Use A Main/Live Release Flow Before Broader Traffic
+
+Use `main` as the stable integration branch. Establish a `live` branch as the
+exact production branch for `quesiq.com` after the current production commit is
+confirmed. Feature and fix work should happen on scoped `codex/*` branches and
+promote through `main` before `live`, except urgent production hotfixes that
+branch from `live` and are merged back into `main`.
+
+Do not repoint Render production to a `live` branch until the branch is created
+from the confirmed production state. Keep the release workflow details in
+`docs/rebuild/BRANCHING_AND_RELEASES.md`.
+
 ### Store Beta Voice Transcript Artifacts Before Audio
 
 The first direct voice beta stores the app-owned Session launch snapshot,

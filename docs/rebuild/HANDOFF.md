@@ -342,8 +342,20 @@ path until Phase 2 navigation is completed unless the product direction changes.
 ## Important Current Decisions
 
 - Living rebuild docs live in this Git repo under `docs/rebuild/`.
+- Use `docs/README.md` as the docs map. `docs/rebuild/` is current truth,
+  `docs/strategy/` is future planning, and `docs/reference/` is preserved
+  historical context.
 - Older OneDrive Bubble/rebuild files are reference copies, not a second source
   of truth unless intentionally resynced.
+- QuesIQ Interview remains the lead coded product. Keep QuesIQ Study, shared
+  billing, cross-product platform shell work, and shared Quira service-boundary
+  work as later platform work unless `docs/rebuild/DECISIONS.md` changes.
+- Auth.js identity is the generic account root. Keep Interview-specific product
+  data in Interview tables keyed by `user_id`, and avoid adding
+  product-specific fields to the generic `user` table.
+- Keep design tokens and reusable UI patterns clean for future extraction, but
+  do not create a separate design-system package before a second active product
+  needs it.
 - Direct OpenAI Realtime is the preferred first browser voice path.
 - Default prompt configs are seeded with `gpt-realtime`/`marin` for interview
   voice and verbal Debrief, and `gpt-5.4-mini` for evaluation. After migration,
@@ -423,6 +435,9 @@ path until Phase 2 navigation is completed unless the product direction changes.
    deprecated in this environment.
 15. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
+16. Establish the branch/release flow before broader live traffic: keep `main` as
+    stable integration, create/confirm `live` from the actual production commit,
+    and promote intentional releases from `main` to `live`.
 
 ## Watch Outs
 
