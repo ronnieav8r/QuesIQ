@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Mic } from "lucide-react";
 
+import { logDiagnosticEvent } from "@/components/interview/diagnostics-client";
 import type {
   SessionSetupSnapshot,
   VoiceSessionArtifactDraft,
@@ -272,6 +273,19 @@ export function RealtimeVoiceSession({
           peerConnection.connectionState === "disconnected" ||
           peerConnection.connectionState === "failed"
         ) {
+          logDiagnosticEvent({
+            endpoint,
+            eventType: `realtime.peer.${peerConnection.connectionState}`,
+            message: "The realtime peer connection ended unexpectedly.",
+            metadata: {
+              iceConnectionState: peerConnection.iceConnectionState,
+              signalingState: peerConnection.signalingState,
+            },
+            screen: "session",
+            sessionId,
+            severity: "error",
+            source: "realtime",
+          });
           finishSession("connection_lost", "error");
           setErrorMessage("The live voice connection ended unexpectedly.");
         }
@@ -287,6 +301,15 @@ export function RealtimeVoiceSession({
           message = JSON.parse(event.data) as { transcript?: string; type?: string };
         } catch {
           addEvent("data_channel.invalid_message");
+          logDiagnosticEvent({
+            endpoint,
+            eventType: "realtime.data_channel.invalid_message",
+            message: "Realtime data channel sent a message that could not be parsed.",
+            screen: "session",
+            sessionId,
+            severity: "warning",
+            source: "realtime",
+          });
           return;
         }
 
@@ -337,6 +360,15 @@ export function RealtimeVoiceSession({
 
       setErrorMessage(nextErrorMessage);
       addEvent("client.session.error");
+      logDiagnosticEvent({
+        endpoint,
+        eventType: "realtime.client.session.error",
+        message: nextErrorMessage,
+        screen: "session",
+        sessionId,
+        severity: "error",
+        source: "realtime",
+      });
       finishSession("start_failed", "error");
     }
   }

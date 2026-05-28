@@ -123,6 +123,31 @@ export type FeedbackRecord = {
   viewport?: string;
 };
 
+export type DiagnosticEventSeverity = "error" | "info" | "warning";
+
+export type DiagnosticEventSource = "api" | "client" | "realtime";
+
+export type DiagnosticEventRecord = {
+  createdAt: string;
+  durationMs?: number;
+  endpoint?: string;
+  eventType: string;
+  id: string;
+  message?: string;
+  metadata?: Record<string, unknown>;
+  method?: string;
+  route?: string;
+  screen?: string;
+  sessionId?: string;
+  severity: DiagnosticEventSeverity;
+  source: DiagnosticEventSource;
+  statusCode?: number;
+  userAgent?: string;
+  userEmail?: string;
+  userId?: string;
+  viewport?: string;
+};
+
 export type InterviewContext = {
   jobDescription: string;
   jobTargetId?: string;

@@ -253,6 +253,13 @@
       "when": 1779926400000,
       "tag": "0036_add_introduction_draft_prompt",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1779930000000,
+      "tag": "0037_add_diagnostic_events",
+      "breakpoints": true
     }
   ]
 }

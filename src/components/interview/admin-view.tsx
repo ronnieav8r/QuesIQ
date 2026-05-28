@@ -11,6 +11,7 @@ import type {
   AdminProgressionSummaryRecord,
   AiRunRecord,
   AiPricingRecord,
+  DiagnosticEventRecord,
   FeedbackKind,
   FeedbackRecord,
   ProgressionEventRecord,
@@ -500,10 +501,15 @@ function xpRuleToDraft(rule?: ProgressionXpRuleRecord): XpRuleDraft {
   };
 }
 
+function diagnosticMetadataText(event: DiagnosticEventRecord) {
+  return event.metadata ? JSON.stringify(event.metadata) : "";
+}
+
 export function AdminView() {
   const [configs, setConfigs] = useState<PromptConfigRecord[]>([]);
   const [components, setComponents] = useState<PromptComponentRecord[]>([]);
   const [aiRuns, setAiRuns] = useState<AiRunRecord[]>([]);
+  const [diagnostics, setDiagnostics] = useState<DiagnosticEventRecord[]>([]);
   const [feedback, setFeedback] = useState<FeedbackRecord[]>([]);
   const [adminData, setAdminData] = useState<{
     evaluations: AdminEvaluationRecord[];
@@ -543,7 +549,9 @@ export function AdminView() {
     key: "started",
   });
   const [adminSection, setAdminSection] =
-    useState<"ai_usage" | "data" | "feedback" | "progression" | "prompts">("prompts");
+    useState<
+      "ai_usage" | "data" | "diagnostics" | "feedback" | "progression" | "prompts"
+    >("prompts");
   const [componentType, setComponentType] =
     useState<PromptComponentRecord["type"]>("mode");
   const [promptSection, setPromptSection] =
@@ -800,6 +808,32 @@ export function AdminView() {
     } catch (loadError) {
       setError(
         loadError instanceof Error ? loadError.message : "Feedback could not be loaded.",
+      );
+    }
+  }
+
+  async function loadDiagnostics() {
+    try {
+      setError(undefined);
+      const response = await fetch("/api/admin/diagnostics");
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        events?: DiagnosticEventRecord[];
+      };
+
+      if (!response.ok) {
+        throw new Error(
+          body.detail || body.error || "Diagnostic events could not be loaded.",
+        );
+      }
+
+      setDiagnostics(body.events ?? []);
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Diagnostic events could not be loaded.",
       );
     }
   }
@@ -1090,6 +1124,7 @@ export function AdminView() {
           configResponse,
           componentResponse,
           aiRunsResponse,
+          diagnosticsResponse,
           feedbackResponse,
           progressionResponse,
           realtimeUsageResponse,
@@ -1098,6 +1133,7 @@ export function AdminView() {
           fetch("/api/admin/prompt-configs"),
           fetch("/api/admin/prompt-components"),
           fetch("/api/admin/ai-runs"),
+          fetch("/api/admin/diagnostics"),
           fetch("/api/admin/feedback"),
           fetch("/api/admin/progression"),
           fetch("/api/admin/realtime-usage"),
@@ -1116,6 +1152,10 @@ export function AdminView() {
         const aiRunsBody = (await aiRunsResponse.json()) as {
           error?: string;
           runs?: AiRunRecord[];
+        };
+        const diagnosticsBody = (await diagnosticsResponse.json()) as {
+          error?: string;
+          events?: DiagnosticEventRecord[];
         };
         const feedbackBody = (await feedbackResponse.json()) as {
           error?: string;
@@ -1156,6 +1196,12 @@ export function AdminView() {
           throw new Error(aiRunsBody.error || "AI runs could not be loaded.");
         }
 
+        if (!diagnosticsResponse.ok) {
+          throw new Error(
+            diagnosticsBody.error || "Diagnostic events could not be loaded.",
+          );
+        }
+
         if (!feedbackResponse.ok) {
           throw new Error(feedbackBody.error || "Feedback could not be loaded.");
         }
@@ -1183,6 +1229,7 @@ export function AdminView() {
           setConfigs(nextConfigs);
           setComponents(nextComponents);
           setAiRuns(aiRunsBody.runs ?? []);
+          setDiagnostics(diagnosticsBody.events ?? []);
           setFeedback(feedbackBody.feedback ?? []);
           setProgressionEvents(progressionBody.events ?? []);
           setProgressionLevels(progressionBody.levels ?? []);
@@ -1370,6 +1417,11 @@ export function AdminView() {
       return;
     }
 
+    if (adminSection === "diagnostics") {
+      void loadDiagnostics();
+      return;
+    }
+
     if (adminSection === "ai_usage") {
       if (usageSection === "api_calls") {
         void loadAiRuns();
@@ -1532,6 +1584,13 @@ export function AdminView() {
               type="button"
             >
               Feedback
+            </button>
+            <button
+              className={adminSection === "diagnostics" ? "active" : ""}
+              onClick={() => setAdminSection("diagnostics")}
+              type="button"
+            >
+              Diagnostics
             </button>
             <button
               className={adminSection === "progression" ? "active" : ""}
@@ -1740,6 +1799,79 @@ export function AdminView() {
                 </div>
               ) : (
                 <p>No feedback has been recorded yet.</p>
+              )}
+              {error && <p className="form-error">{error}</p>}
+            </section>
+          )}
+
+          {adminSection === "diagnostics" && (
+            <section className="ai-runs-panel" aria-labelledby="diagnostics-admin-title">
+              <div className="section-head">
+                <h2 id="diagnostics-admin-title">Diagnostics</h2>
+                <span>{diagnostics.length} recent events</span>
+              </div>
+              {diagnostics.length > 0 ? (
+                <div className="usage-table-wrap">
+                  <table className="usage-table">
+                    <thead>
+                      <tr>
+                        <th>Created</th>
+                        <th>Severity</th>
+                        <th>Source</th>
+                        <th>Event</th>
+                        <th>Status</th>
+                        <th>Endpoint</th>
+                        <th>Screen</th>
+                        <th className="narrow-column">Session</th>
+                        <th>User</th>
+                        <th>Message</th>
+                        <th>Metadata</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {diagnostics.map((event) => (
+                        <tr key={event.id}>
+                          <td>{new Date(event.createdAt).toLocaleString()}</td>
+                          <td>{event.severity}</td>
+                          <td>{event.source}</td>
+                          <td>
+                            <ExpandableCell value={event.eventType} />
+                          </td>
+                          <td>
+                            {event.statusCode
+                              ? `${event.statusCode}${
+                                  event.durationMs ? ` / ${event.durationMs}ms` : ""
+                                }`
+                              : event.durationMs
+                                ? `${event.durationMs}ms`
+                                : "--"}
+                          </td>
+                          <td>
+                            <ExpandableCell
+                              className="mono-cell"
+                              value={[event.method, event.endpoint].filter(Boolean).join(" ")}
+                            />
+                          </td>
+                          <td>{event.screen || "--"}</td>
+                          <td className="narrow-column">
+                            <ExpandableCell className="mono-cell" value={event.sessionId} />
+                          </td>
+                          <td>
+                            <ExpandableCell value={event.userEmail || event.userId} />
+                          </td>
+                          <td>
+                            <ExpandableCell value={event.message} />
+                          </td>
+                          <td>
+                            <ExpandableCell value={diagnosticMetadataText(event)} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p>No diagnostic events have been recorded yet.</p>
               )}
               {error && <p className="form-error">{error}</p>}
             </section>

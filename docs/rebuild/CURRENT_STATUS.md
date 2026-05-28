@@ -67,6 +67,14 @@ Last updated: 2026-05-28
   - Render monthly cron `quesiq-monthly-pricing-review` is suspended/deprecated
     for now because it was not working cleanly and redeployed after every build;
     use manual Admin pricing review only if needed
+- Admin Diagnostics visibility:
+  - client-side diagnostics capture failed same-origin `/api/*` calls, rejected
+    fetches, uncaught browser errors, and unhandled promise rejections
+  - Realtime voice sessions log connection failures, invalid data-channel
+    messages, and `client.session.error` events with session/screen context
+  - Admin now has a Diagnostics tab showing recent sanitized events with
+    severity, source, endpoint, status, duration, user, session, message, and
+    metadata
 - First global beta feedback slice:
   - signed-in users can open a Feedback button from any screen
   - the lightweight dialog supports bug or feedback, 1-5 rating, and an
@@ -400,6 +408,8 @@ The current coded app has passed:
   on 2026-05-28.
 - Rotating beta feedback prompts passed ESLint and TypeScript check on
   2026-05-28.
+- Admin Diagnostics event logging slice passed ESLint and TypeScript check on
+  2026-05-28.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran
@@ -478,7 +488,7 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 
 1. Deploy and user-confirm QA the latest Story Lab, prompt, debrief,
    progression, and job-target UI changes on `quesiq-web`, making sure
-   migrations through `0036_add_introduction_draft_prompt.sql` run before using
+   migrations through `0037_add_diagnostic_events.sql` run before using
    the updated Story Lab in production.
 2. Run/user-confirm migration QA for Bubble levels and quests: Admin >
    Progression > Levels shows Rookie through Master, Admin > Progression >
@@ -499,10 +509,9 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 7. QA rotating post-review beta feedback prompts in production and confirm Admin
    Feedback stores the exact `rating_prompt` for review usefulness, voice
    realism, transcript accuracy, and scoring fairness.
-8. Add Admin-visible diagnostics for app/API/realtime issues: capture client
-   errors, failed API responses, Realtime lifecycle/error events, cache/storage
-   issues, route, screen, session id, user id, and sanitized request/response
-   metadata without storing secrets or raw audio.
+8. QA Admin Diagnostics in production: trigger or observe a failed API response
+   and a Realtime connection issue, then confirm the Diagnostics tab shows
+   sanitized event rows without secrets, raw audio, or large transcripts.
 9. QA the Introduction Builder AI draft/extraction flow in production: after
    Talk with Que transcript capture, verify `/api/introductions/draft` runs,
    fills the structured intro fields, and saves the polished intro with raw

@@ -17,6 +17,7 @@ import {
 
 import { AuthControl, AuthView, useAuthSession } from "@/components/auth-control";
 import { AdminView } from "@/components/interview/admin-view";
+import { ClientDiagnostics } from "@/components/interview/client-diagnostics";
 import { Dashboard } from "@/components/interview/dashboard";
 import { DebriefView } from "@/components/interview/debrief-view";
 import { HistoryView } from "@/components/interview/history-view";
@@ -808,6 +809,9 @@ export default function Home() {
         )}
         {signedIn && (
           <QuiraSupportLauncher screen={activeView} sessionId={feedbackSessionId} />
+        )}
+        {signedIn && (
+          <ClientDiagnostics screen={activeView} sessionId={feedbackSessionId} />
         )}
       </section>
     </main>

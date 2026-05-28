@@ -14,6 +14,8 @@ import {
 import type {
   EvaluationScoreKey,
   FeedbackKind,
+  DiagnosticEventSeverity,
+  DiagnosticEventSource,
   PricingReviewResult,
   ProgressionEventType,
   XpRuleAwardMode,
@@ -570,6 +572,38 @@ export const userFeedback = pgTable(
     sessionIdx: index("user_feedback_session_idx").on(feedback.sessionId),
     statusIdx: index("user_feedback_status_idx").on(feedback.status),
     userIdx: index("user_feedback_user_idx").on(feedback.userId),
+  }),
+);
+
+export const diagnosticEvents = pgTable(
+  "diagnostic_events",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    durationMs: integer("duration_ms"),
+    endpoint: text("endpoint"),
+    eventType: text("event_type").notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    message: text("message"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    method: text("method"),
+    route: text("route"),
+    screen: text("screen"),
+    sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "set null" }),
+    severity: text("severity").$type<DiagnosticEventSeverity>().notNull(),
+    source: text("source").$type<DiagnosticEventSource>().notNull(),
+    statusCode: integer("status_code"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userAgent: text("user_agent"),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    viewport: text("viewport"),
+  },
+  (event) => ({
+    createdAtIdx: index("diagnostic_events_created_at_idx").on(event.createdAt),
+    eventTypeIdx: index("diagnostic_events_event_type_idx").on(event.eventType),
+    sessionIdx: index("diagnostic_events_session_idx").on(event.sessionId),
+    severityIdx: index("diagnostic_events_severity_idx").on(event.severity),
+    sourceIdx: index("diagnostic_events_source_idx").on(event.source),
+    userIdx: index("diagnostic_events_user_idx").on(event.userId),
   }),
 );
 

@@ -136,6 +136,10 @@ path until Phase 2 navigation is completed unless the product direction changes.
   accuracy, and scoring fairness after a newly generated practice review.
 - Added sortable Admin table headers for Feedback, API Calls, and Realtime
   Sessions, and split Admin Feedback into Feedback and Bugs subtabs.
+- Added Admin Diagnostics visibility for failed same-origin API calls, rejected
+  fetches, client browser errors, unhandled promise rejections, and Realtime
+  connection/error events. The diagnostic log stores sanitized metadata only and
+  is visible under Admin > Diagnostics.
 - Tightened Admin spreadsheet-style tables so headers stay on one line and long
   values truncate by default but can expand inline when clicked.
 - Added durable progression: reviewed sessions now create idempotent
@@ -315,6 +319,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
   on 2026-05-28.
 - Rotating beta feedback prompts passed ESLint and TypeScript check on
   2026-05-28.
+- Admin Diagnostics event logging slice passed ESLint and TypeScript check on
+  2026-05-28.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
   succeeded, Drizzle migrations applied successfully, and Next started.
 - Live `quesiq.com` QA passed across the owned practice loop and tonight's
@@ -400,9 +406,9 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 1. Deploy/user-confirm QA the latest Story Lab, prompt, debrief, progression,
    and job-target UI changes on `quesiq-web`. Confirm migrations through
-   `0036_add_introduction_draft_prompt.sql` run before testing Introduction
-   Builder, Intro Practice, verbal Debrief, Story Practice coaching history,
-   Tell Que story capture, and saved Job Targets.
+   `0037_add_diagnostic_events.sql` run before testing Introduction Builder,
+   Intro Practice, verbal Debrief, Story Practice coaching history, Tell Que
+   story capture, saved Job Targets, and Admin Diagnostics.
 2. Run/user-confirm database migration QA for the imported levels and quests:
    Progression > Levels shows Rookie through Master, Progression > Quests shows
    37 active quest definitions, level/quest edits save from Admin, and Home
@@ -425,10 +431,9 @@ path until Phase 2 navigation is completed unless the product direction changes.
    Intro Practice voice flow, hideable navigation, saved coaching history on
    Story records, saved intro coaching history, and top Introduction/TMAAT
    selector alignment across desktop and mobile.
-9. Add Admin-visible diagnostics for app/API/realtime issues: capture client
-   errors, failed API responses, Realtime lifecycle/error events, cache/storage
-   issues, route, screen, session id, user id, and sanitized request/response
-   metadata without storing secrets or raw audio.
+9. QA Admin Diagnostics in production: trigger or observe a failed API response
+   and a Realtime connection issue, then confirm the Diagnostics tab shows
+   sanitized event rows without secrets, raw audio, or large transcripts.
 10. QA the Introduction Builder AI draft/extraction step in production: after
    Talk with Que transcript capture, verify `/api/introductions/draft` runs,
    fills structured intro fields, and saves the polished introduction with raw
@@ -484,7 +489,7 @@ path until Phase 2 navigation is completed unless the product direction changes.
   `/api/realtime/debrief`. Do not build new written debrief UX unless product
   direction changes.
 - `tsconfig.tsbuildinfo` is generated TypeScript cache and intentionally ignored.
-- Migrations through `0036_add_introduction_draft_prompt.sql` must be applied
+- Migrations through `0037_add_diagnostic_events.sql` must be applied
   before using the updated Story Lab in production. The Render start command
   currently runs Drizzle migrations before `npm start`, so it should apply
   automatically on deploy, but verify it in Render logs before QA.
