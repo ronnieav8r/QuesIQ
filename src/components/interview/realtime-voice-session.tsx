@@ -74,13 +74,19 @@ export function RealtimeVoiceSession({
 }: RealtimeVoiceSessionProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
+  const endFinalizeTimeoutRef = useRef<number | undefined>(undefined);
+  const endingRef = useRef(false);
+  const finishingRef = useRef(false);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const pendingUserTranscriptRef = useRef("");
+  const responseActiveRef = useRef(false);
   const queStartedRef = useRef(false);
   const sessionStartedAtMsRef = useRef<number | undefined>(undefined);
   const [artifactDraft, setArtifactDraft] =
     useState<VoiceSessionArtifactDraft>(emptyArtifactDraft);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [ending, setEnding] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
   const [phase, setPhase] = useState<VoiceSessionPhase>("ready");
 
@@ -124,8 +130,14 @@ export function RealtimeVoiceSession({
   }
 
   function beginArtifactDraft() {
+    endingRef.current = false;
+    finishingRef.current = false;
+    pendingUserTranscriptRef.current = "";
+    responseActiveRef.current = false;
+    window.clearTimeout(endFinalizeTimeoutRef.current);
     sessionStartedAtMsRef.current = Date.now();
     setElapsedSeconds(0);
+    setEnding(false);
     setArtifactDraft({
       events: [],
       startedAt: new Date().toISOString(),
@@ -134,12 +146,14 @@ export function RealtimeVoiceSession({
   }
 
   function closeMedia() {
+    window.clearTimeout(endFinalizeTimeoutRef.current);
     peerConnectionRef.current?.close();
     dataChannelRef.current = null;
     mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
     peerConnectionRef.current = null;
     mediaStreamRef.current = null;
     queStartedRef.current = false;
+    responseActiveRef.current = false;
 
     if (audioRef.current) {
       audioRef.current.srcObject = null;
@@ -150,23 +164,45 @@ export function RealtimeVoiceSession({
     endReason: VoiceSessionArtifactDraft["endReason"],
     nextPhase: VoiceSessionPhase,
   ) {
+    if (finishingRef.current) {
+      return;
+    }
+
+    finishingRef.current = true;
     closeMedia();
     const durationSeconds = sessionStartedAtMsRef.current
       ? Math.max(0, Math.round((Date.now() - sessionStartedAtMsRef.current) / 1000))
       : undefined;
+    const pendingUserTranscript = pendingUserTranscriptRef.current.trim();
+    pendingUserTranscriptRef.current = "";
 
     setArtifactDraft((current) => {
+      const transcript = pendingUserTranscript
+        ? [
+            ...current.transcript,
+            {
+              createdAt: new Date().toISOString(),
+              id: createRecordId("user"),
+              role: "user" as const,
+              speaker: "You" as const,
+              text: pendingUserTranscript,
+            },
+          ]
+        : current.transcript;
       const finalizedArtifact = {
         ...current,
         durationSeconds: current.durationSeconds ?? durationSeconds,
         endedAt: current.endedAt || new Date().toISOString(),
         endReason,
+        transcript,
       };
 
       onArtifactFinalized?.(finalizedArtifact);
 
       return finalizedArtifact;
     });
+    endingRef.current = false;
+    setEnding(false);
     setPhase(nextPhase);
   }
 
@@ -217,16 +253,25 @@ export function RealtimeVoiceSession({
   }
 
   function endSession() {
-    if (phase === "ready" || phase === "ended") {
+    if (phase === "ready" || phase === "ended" || endingRef.current) {
       return;
     }
 
+    endingRef.current = true;
+    setEnding(true);
     addEvent("client.session.end");
     if (dataChannelRef.current?.readyState === "open") {
+      if (responseActiveRef.current) {
+        dataChannelRef.current.send(JSON.stringify({ type: "response.cancel" }));
+        addEvent("client.response.cancel");
+      }
       dataChannelRef.current.send(JSON.stringify({ type: "input_audio_buffer.commit" }));
-      dataChannelRef.current.send(JSON.stringify({ type: "response.create" }));
+      mediaStreamRef.current?.getAudioTracks().forEach((track) => track.stop());
       addEvent("client.input_audio_buffer.commit");
-      window.setTimeout(() => finishSession("user_ended", "ended"), 1200);
+      endFinalizeTimeoutRef.current = window.setTimeout(
+        () => finishSession("user_ended", "ended"),
+        2800,
+      );
       return;
     }
 
@@ -288,10 +333,14 @@ export function RealtimeVoiceSession({
         startQue(dataChannel);
       });
       dataChannel.addEventListener("message", (event) => {
-        let message: { transcript?: string; type?: string };
+        let message: { delta?: string; transcript?: string; type?: string };
 
         try {
-          message = JSON.parse(event.data) as { transcript?: string; type?: string };
+          message = JSON.parse(event.data) as {
+            delta?: string;
+            transcript?: string;
+            type?: string;
+          };
         } catch {
           addEvent("data_channel.invalid_message");
           logDiagnosticEvent({
@@ -312,11 +361,36 @@ export function RealtimeVoiceSession({
 
         addEvent(message.type);
 
+        if (message.type === "response.created") {
+          responseActiveRef.current = true;
+        }
+
+        if (
+          message.type === "response.done" ||
+          message.type === "response.cancelled" ||
+          message.type === "response.output_audio.done"
+        ) {
+          responseActiveRef.current = false;
+        }
+
+        if (message.type === "conversation.item.input_audio_transcription.delta") {
+          pendingUserTranscriptRef.current += message.delta || "";
+        }
+
         if (message.type === "conversation.item.input_audio_transcription.completed") {
-          addTranscriptTurn("You", "user", message.transcript);
-          if (endpoint === "/api/realtime/session" && dataChannel.readyState === "open") {
+          addTranscriptTurn(
+            "You",
+            "user",
+            message.transcript || pendingUserTranscriptRef.current,
+          );
+          pendingUserTranscriptRef.current = "";
+          if (
+            endpoint === "/api/realtime/session" &&
+            dataChannel.readyState === "open" &&
+            !endingRef.current
+          ) {
             window.setTimeout(() => {
-              if (dataChannel.readyState !== "open") {
+              if (dataChannel.readyState !== "open" || endingRef.current) {
                 return;
               }
 
@@ -378,7 +452,9 @@ export function RealtimeVoiceSession({
 
   const latestEvents = artifactDraft.events.slice(-6).reverse();
   const canStart = phase === "ready" || phase === "ended" || phase === "error";
-  const canEnd = phase === "requesting_microphone" || phase === "connecting" || phase === "live";
+  const canEnd =
+    !ending &&
+    (phase === "requesting_microphone" || phase === "connecting" || phase === "live");
   const recordingActive = canEnd;
   const displayedDuration = artifactDraft.durationSeconds ?? elapsedSeconds;
   const minutes = Math.floor(displayedDuration / 60)
@@ -412,7 +488,7 @@ export function RealtimeVoiceSession({
           {phase === "ended" || phase === "error" ? "Start Again" : startButtonLabel}
         </button>
         <button className="secondary" disabled={!canEnd} onClick={endSession} type="button">
-          End Session
+          {ending ? "Ending" : "End Session"}
         </button>
       </div>
       {errorMessage && <p className="form-error">{errorMessage}</p>}

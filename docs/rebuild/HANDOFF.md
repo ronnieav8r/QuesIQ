@@ -31,6 +31,10 @@ Last updated: 2026-05-28
     text instead of hidden client templates. Keep this as the prompt principle:
     behavior instructions belong in Admin prompt/config surfaces; code may pass
     context and minimal kickoff only.
+  - Realtime End Session now stops the mic, commits pending audio for
+    transcription, waits briefly for transcript completion, and finalizes
+    without asking Que for a fresh response. If Que is already speaking, the
+    End click cancels that active response.
   - AI Usage now logs prompt config links/snapshots/raw JSON metadata, and
     Realtime exchange setup calls are represented in AI Usage.
   - Admin Diagnostics captures failed API/client/Realtime events.
@@ -396,6 +400,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
   ESLint, TypeScript check, and production build on 2026-05-28.
 - Admin prompt visibility cleanup for regular practice first-turn behavior
   passed ESLint, TypeScript check, and production build on 2026-05-28.
+- Realtime End Session transcript-drain fix passed ESLint, TypeScript check,
+  and production build on 2026-05-28.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
   succeeded, Drizzle migrations applied successfully, and Next started.
 - Live `quesiq.com` QA passed across the owned practice loop and tonight's
