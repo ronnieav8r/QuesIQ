@@ -2,6 +2,25 @@
 
 Last updated: 2026-05-28
 
+## Immediate Handoff Snapshot
+
+- Latest local work is ready for deploy QA, not yet user-confirmed in
+  production.
+- New migration to verify on deploy: `0039_add_active_job_target.sql`.
+- Recent completed local slices:
+  - Job Targets now support true edit, delete, persisted active target, and
+    target-aware Home nudges.
+  - TMAAT saved stories now support delete from card/detail views.
+  - QuesIQ now has an installable app manifest for standalone mobile launch.
+  - AI Usage now logs prompt config links/snapshots/raw JSON metadata, and
+    Realtime exchange setup calls are represented in AI Usage.
+  - Admin Diagnostics captures failed API/client/Realtime events.
+- Local verification passed on 2026-05-28 with `npm run typecheck` and
+  `npm run lint`.
+- Best next move: deploy to `quesiq-web`, confirm migrations through `0039`,
+  then QA Story Lab, saved Job Targets, AI Usage, Diagnostics, and installable
+  app behavior on real devices.
+
 ## Current Focus
 
 QuesIQ Interview now has the first owned practice loop live on `quesiq.com`:

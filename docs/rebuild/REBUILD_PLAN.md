@@ -196,6 +196,20 @@ Deliverables:
 - Debrief mode for revisiting an existing completed session
 - Evolving coaching memory/context summary that improves recommendations
 
+Current status:
+
+- Story Lab now includes TMAAT story capture, AI shaping, saved story library,
+  edit/delete controls, practice hooks, and saved story practice coaching.
+- Introduction Builder is part of Story Lab with Talk with Que, Dictate, and
+  Type inputs, AI draft/extraction, saved introductions, edit/delete controls,
+  and Intro Practice.
+- Saved Job Targets are separate from Profile, support add/edit/delete, persist
+  an active target preference, and feed Practice/Home context.
+- Debrief has pivoted from written debrief to a Realtime voice conversation tied
+  to an existing reviewed session.
+- Coaching memory exists as one compact per-user row updated through review
+  generation and reused in future Realtime sessions/debriefs.
+
 Exit test:
 
 - Users can prepare reusable interview stories and practice against saved job
@@ -207,25 +221,24 @@ The Bubble app remains useful as product reference, but parity is not the goal.
 Prioritize the gaps that make practice more personal, easier to repeat, or more
 useful after a session.
 
-High-value gaps to carry forward:
+High-value gaps carried forward or now in progress:
 
-- Story library: reusable STARR-style stories with coach notes, last-practiced
-  state, and practice hooks.
-- Saved job targets: multiple roles/companies/job descriptions a user can pick
-  from when starting mock interviews or first-impression sessions. Keep these
-  separate from the user's Profile; name/resume/background describe the person,
-  while targets describe the role/company situation.
-- Debrief mode: a follow-up conversation tied to an existing session, with its
-  own transcript or notes, without creating a scored new practice session.
-- Coaching memory: an AI-generated user context summary that evolves from
-  resume, job targets, reviewed sessions, stories, and repeated coaching themes.
-- Richer Up Next logic: a clearer recommendation waterfall that can route users
-  into pending reviews, weak-skill drills, job-target practice, target cleanup,
-  story work, or debrief.
-- XP/reward refinement: consider restoring a more nuanced session XP breakdown
-  based on review completion, duration, quality, streak, and quest completion.
-- Quira AI support: replace the curated help panel with a real product-support
-  assistant only after the core QuesIQ practice loop is stable.
+- Story library is implemented for TMAAT stories with coach notes,
+  last-practiced state, edit/delete controls, and practice hooks.
+- Saved job targets are implemented as Profile-separated role/company/job
+  description records, with active-target persistence and target-aware Home
+  routing.
+- Debrief mode is implemented as a Realtime voice conversation tied to an
+  existing reviewed session, with verbal debrief artifacts persisted.
+- Coaching memory has a first durable implementation; future work should add
+  clearer user/admin controls and tuning.
+- Richer Up Next logic is implemented as a deterministic recommendation
+  waterfall; future work should tune prioritization from beta behavior.
+- XP/reward refinement is implemented through editable XP rules; future work
+  should tune rule values from beta behavior.
+- Quira AI support remains future work: replace the curated help panel with a
+  real product-support assistant only after the core QuesIQ practice loop is
+  stable.
 
 Lower-priority or likely-not-now gaps:
 
