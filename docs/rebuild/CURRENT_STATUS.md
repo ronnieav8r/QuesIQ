@@ -76,7 +76,8 @@ Last updated: 2026-05-28
   - the rating prompt is shown above the stars so each submission preserves what
     the user was asked to rate
   - a one-time popup now appears when a newly completed practice review is ready
-    and asks the user to rate review usefulness
+    and rotates specific beta questions about review usefulness, voice realism,
+    transcript accuracy, and scoring fairness
   - submissions store user ownership, current screen, optional session id,
     browser language, viewport, user agent, rating prompt, and screenshot
     metadata/data in Postgres
@@ -286,11 +287,15 @@ Last updated: 2026-05-28
   - progression quests now include first saved Introduction and first saved TMAAT
     Story checks, and Home's Recommended Next can route users to Story Lab when
     no saved introduction exists
+  - Introduction Builder now has an AI draft/extraction slice: captured Talk
+    with Que transcripts, dictated notes, or typed notes can produce a polished
+    script plus background, core strength, proof point, role interest, and
+    closing handoff before save
 - Story Lab prompts are now Admin-visible:
   - Story Conversation Realtime, Story Lab follow-up, story outline generation,
-    Story Practice Realtime guidance, and Story Practice Evaluation guidance are
-    versioned prompt configs alongside the existing Realtime interviewer and
-    session evaluation prompts
+    Introduction Draft, Story Practice Realtime guidance, and Story Practice
+    Evaluation guidance are versioned prompt configs alongside the existing
+    Realtime interviewer and session evaluation prompts
   - Admin > Prompts > Base can view, draft, and activate these prompts
 - Mobile chrome was tightened:
   - removed the app-header readiness line
@@ -391,6 +396,10 @@ The current coded app has passed:
   ESLint, TypeScript, and production build.
 - Latest Story Lab Introduction/TMAAT cleanup passed ESLint, TypeScript check,
   and production build on 2026-05-28.
+- Introduction Builder draft/extraction slice passed ESLint and TypeScript check
+  on 2026-05-28.
+- Rotating beta feedback prompts passed ESLint and TypeScript check on
+  2026-05-28.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran
@@ -469,8 +478,8 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 
 1. Deploy and user-confirm QA the latest Story Lab, prompt, debrief,
    progression, and job-target UI changes on `quesiq-web`, making sure
-   migrations through `0035_add_introductions.sql` run before using the updated
-   Story Lab in production.
+   migrations through `0036_add_introduction_draft_prompt.sql` run before using
+   the updated Story Lab in production.
 2. Run/user-confirm migration QA for Bubble levels and quests: Admin >
    Progression > Levels shows Rookie through Master, Admin > Progression >
    Quests shows 37 active definitions, Admin level/quest edits save, and Home
@@ -487,27 +496,37 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 6. QA scoring polish: Recent Scores uses the latest 10 reviews, Skill Scores is
    all-time, Overall is highlighted, and sub-120-second sessions appear in
    History without scoring or XP.
-7. Expand prompted micro-feedback beyond the first review-usefulness popup by
-   rotating specific questions about AI voice realism, transcript accuracy, and
-   scoring fairness.
-8. Add the AI draft/extraction step for Introduction Builder: after Talk with
-   Que, Dictate, or Type, have Que generate the polished introduction script and
-   fill background, core strength, proof point, role interest, and closing
-   handoff before save/edit.
-9. QA the Story Lab Talk with Que entry points in production, especially any
+7. QA rotating post-review beta feedback prompts in production and confirm Admin
+   Feedback stores the exact `rating_prompt` for review usefulness, voice
+   realism, transcript accuracy, and scoring fairness.
+8. Add Admin-visible diagnostics for app/API/realtime issues: capture client
+   errors, failed API responses, Realtime lifecycle/error events, cache/storage
+   issues, route, screen, session id, user id, and sanitized request/response
+   metadata without storing secrets or raw audio.
+9. QA the Introduction Builder AI draft/extraction flow in production: after
+   Talk with Que transcript capture, verify `/api/introductions/draft` runs,
+   fills the structured intro fields, and saves the polished intro with raw
+   notes retained.
+10. QA the Story Lab Talk with Que entry points in production, especially any
    `client.session.error` behavior on the Introduction conversation endpoint.
-10. Later Quira work: replace the curated Help panel with an AI chat bot backed
+11. Add PWA/installable app support soon so QuesIQ can run from a mobile home
+   screen in standalone app mode with browser UI hidden where supported.
+12. Consider mobile bottom-nav auto-hide later as a guarded UX experiment:
+   visible by default, hide only on meaningful downward scroll, show
+   immediately on upward scroll, and never hide during active voice/session,
+   error, modal, save, or onboarding states.
+13. Later Quira work: replace the curated Help panel with an AI chat bot backed
    by a maintained QuesIQ product knowledge base.
-11. Product gap backlog from the Bubble reference, ordered by current user value:
+14. Product gap backlog from the Bubble reference, ordered by current user value:
    richer coaching memory controls, deeper job-target-aware Up Next routing,
    job target edit/delete/active-target polish, tuning XP rules from beta
    behavior, and AI-backed Quira support.
-12. Treat standalone anonymous bug reports, in-app marketing/blog pages,
+15. Treat standalone anonymous bug reports, in-app marketing/blog pages,
    payments, industry packs, mascot work, and VAPI parity as lower-priority
    until the core practice loop and retention features are stronger.
-13. Continue deploy-based QA on `quesiq-web` while localhost preview is
+16. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
-14. Before broader live traffic, establish the documented branch/release flow:
+17. Before broader live traffic, establish the documented branch/release flow:
    scoped `codex/*` work branches, `main` as stable integration, and `live` as
    the exact production branch after the current production commit is confirmed.
 

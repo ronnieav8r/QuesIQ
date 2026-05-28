@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { FeedbackButton } from "@/components/interview/feedback-button";
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import { ReviewDetailSections } from "@/components/interview/review-detail-sections";
+import { getPostReviewFeedbackPrompt } from "@/product/beta-feedback-prompts";
 import { withOverallScore } from "@/product/scoring";
 import type {
   InterviewCatalog,
@@ -43,6 +44,7 @@ export function SessionView({
     "idle" | "ready" | "reviewing" | "unavailable"
   >("idle");
   const evaluationRequestedRef = useRef(false);
+  const reviewFeedbackPrompt = getPostReviewFeedbackPrompt(session.id);
   const savedArtifactRef = useRef<string | undefined>(undefined);
   const mode = catalog.practiceModes.find(
     (practiceMode) => practiceMode.key === snapshot.modeKey,
@@ -183,10 +185,10 @@ export function SessionView({
           <FeedbackButton
             autoOpenKey={`review-ready:${session.id}`}
             hideLauncher
-            ratingPrompt="Rate this practice review."
+            ratingPrompt={reviewFeedbackPrompt}
             screen="session"
             sessionId={session.id}
-            title="How useful was this review?"
+            title={reviewFeedbackPrompt}
           />
         )}
 
