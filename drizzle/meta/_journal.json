@@ -302,6 +302,13 @@
       "when": 1779951600000,
       "tag": "0043_refine_practice_mode_prompts",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1779955200000,
+      "tag": "0044_refine_question_type_prompts",
+      "breakpoints": true
     }
   ]
 }
