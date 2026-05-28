@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
+import { buildRealtimeAudioInputConfig } from "@/server/realtime/audio-config";
 
 export const runtime = "nodejs";
 
@@ -54,11 +55,7 @@ export async function POST(request: Request) {
   });
   const sessionConfig = {
     audio: {
-      input: {
-        transcription: {
-          model: "gpt-4o-mini-transcribe",
-        },
-      },
+      input: buildRealtimeAudioInputConfig(),
       output: {
         voice: promptConfig.voice || process.env.OPENAI_REALTIME_VOICE || "marin",
       },

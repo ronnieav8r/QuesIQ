@@ -14,6 +14,7 @@ import { getCoachingMemory } from "@/server/coaching-memory/coaching-memory";
 import { getDb } from "@/server/db/client";
 import { evaluations, sessions } from "@/server/db/schema";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
+import { buildRealtimeAudioInputConfig } from "@/server/realtime/audio-config";
 
 export const runtime = "nodejs";
 
@@ -168,11 +169,7 @@ export async function POST(request: Request) {
   });
   const sessionConfig = {
     audio: {
-      input: {
-        transcription: {
-          model: "gpt-4o-mini-transcribe",
-        },
-      },
+      input: buildRealtimeAudioInputConfig(),
       output: {
         voice: promptConfig.voice || process.env.OPENAI_REALTIME_VOICE || "marin",
       },

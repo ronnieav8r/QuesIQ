@@ -111,6 +111,9 @@ Last updated: 2026-05-28
   - Que first-turn kickoff
   - transcript and recent-event session surfaces
   - typed client artifact draft for transcript and lifecycle-event handoff
+  - shared Realtime audio input config uses near-field noise reduction,
+    stricter server VAD, longer silence detection, and disabled automatic
+    response interruption to reduce false interruptions from headset/cable noise
 - Postgres Session launch persistence slice:
   - Drizzle ORM schema and first Session migration
   - `/api/sessions` creation route with setup-snapshot validation
@@ -444,6 +447,8 @@ The current coded app has passed:
   TypeScript check on 2026-05-28.
 - Introduction Draft hallucination guard and interviewer-style intro capture
   prompt pass passed ESLint and TypeScript check on 2026-05-28.
+- Realtime headset-noise/false-interruption tuning passed ESLint and TypeScript
+  check on 2026-05-28.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran

@@ -9,6 +9,7 @@ import type { SessionPromptComponents } from "@/server/catalog/get-session-promp
 import { getSessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
 import { getCoachingMemory } from "@/server/coaching-memory/coaching-memory";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
+import { buildRealtimeAudioInputConfig } from "@/server/realtime/audio-config";
 import { getOwnedSession } from "@/server/sessions/get-owned-session";
 import { saveRealtimeSessionConfig } from "@/server/sessions/save-realtime-call";
 import {
@@ -200,11 +201,7 @@ export async function POST(request: Request) {
       storyLibrary,
     ),
     audio: {
-      input: {
-        transcription: {
-          model: "gpt-4o-mini-transcribe",
-        },
-      },
+      input: buildRealtimeAudioInputConfig(),
       output: {
         voice: activeRealtimeConfig.voice || process.env.OPENAI_REALTIME_VOICE || "marin",
       },

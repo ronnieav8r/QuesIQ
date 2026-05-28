@@ -15,6 +15,9 @@ Last updated: 2026-05-28
   - Introduction Draft now refuses low-signal test/filler material before an AI
     call, and the active prompt is tightened to extract from user-provided facts
     instead of inventing role/company-specific background.
+  - Realtime voice input now uses near-field noise reduction, a stricter
+    server VAD threshold, longer silence detection, and disabled automatic
+    response interruption so headset/cable noise is less likely to cut Que off.
   - AI Usage now logs prompt config links/snapshots/raw JSON metadata, and
     Realtime exchange setup calls are represented in AI Usage.
   - Admin Diagnostics captures failed API/client/Realtime events.
@@ -369,6 +372,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
   TypeScript check on 2026-05-28.
 - Introduction Draft hallucination guard and interviewer-style intro capture
   prompt pass passed ESLint and TypeScript check on 2026-05-28.
+- Realtime headset-noise/false-interruption tuning passed ESLint and TypeScript
+  check on 2026-05-28.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
   succeeded, Drizzle migrations applied successfully, and Next started.
 - Live `quesiq.com` QA passed across the owned practice loop and tonight's
