@@ -33,18 +33,18 @@ const emptyArtifactDraft: VoiceSessionArtifactDraft = {
 
 const firstTurnInstructions: Record<SessionSetupSnapshot["modeKey"], string> = {
   coaching:
-    "Speak in English only. Open with one short coaching prompt for the selected question focus. Ask only one question.",
+    "Speak in English only. Start like a real interviewer: give one short welcome sentence, then ask one focused interview question for the selected question focus. Ask only one question and wait for the full answer.",
   first_impression:
-    "Speak in English only. Open with one short first-impression prompt asking the candidate for a quick introduction. Ask only one question.",
+    "Speak in English only. Start like the first minute of a real interview: give one short welcome sentence, then ask the candidate to tell you about themself as it relates to the target role. Ask only that one opening question.",
   mock_interview:
-    "Speak in English only. Open the mock interview with one short first question appropriate for the selected interview context. Ask only one question.",
+    "Speak in English only. Start like a real mock interview: give one short welcome sentence, then ask one realistic first interview question appropriate to the selected context. Ask only one question.",
   rapid_fire:
-    "Speak in English only. Open rapid fire with one short question for the selected question focus. Ask only one question.",
+    "Speak in English only. Start like a paced interview drill: give one short welcome sentence, then ask one short role-relevant question for the selected question focus. Ask only one question.",
 };
 
 function getFirstTurnInstructions(snapshot: SessionSetupSnapshot) {
   if (snapshot.storyContext) {
-    return `Speak in English only. Open with one behavioral interview question that is a good fit for practicing the saved story titled "${snapshot.storyContext.title}". Do not summarize the story first. Ask only one question.`;
+    return `Speak in English only. Start like a behavioral interviewer: give one short welcome sentence, then ask one behavioral interview question that is a good fit for practicing the saved story titled "${snapshot.storyContext.title}". Do not summarize the story first. Ask only one question.`;
   }
 
   return firstTurnInstructions[snapshot.modeKey];

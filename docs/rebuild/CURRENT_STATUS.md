@@ -117,6 +117,9 @@ Last updated: 2026-05-28
   - Realtime endpoints prefer `OPENAI_REALTIME_API_KEY` for voice-only cost
     tracking and fall back to `OPENAI_API_KEY` when the dedicated voice key is
     not configured
+  - Realtime Interviewer prompt v2 and the client first-turn templates now
+    specify a realistic interview opening: short welcome, one role-relevant
+    question, no setup narration, and no mid-answer interruption
 - Postgres Session launch persistence slice:
   - Drizzle ORM schema and first Session migration
   - `/api/sessions` creation route with setup-snapshot validation
@@ -461,6 +464,8 @@ The current coded app has passed:
   production build on 2026-05-28.
 - Dedicated Realtime voice API key routing passed ESLint, TypeScript check, and
   production build on 2026-05-28.
+- Realtime Interviewer v2 prompt and first-turn template refinement passed
+  ESLint, TypeScript check, and production build on 2026-05-28.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran
@@ -539,7 +544,7 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 
 1. Deploy and user-confirm QA the latest Story Lab, prompt, debrief,
    progression, and job-target UI changes on `quesiq-web`, making sure
-   migrations through `0040_tighten_introduction_draft_prompt.sql` run before using
+   migrations through `0041_refine_realtime_interviewer_prompt.sql` run before using
    the updated Story Lab in production.
 2. Run/user-confirm migration QA for Bubble levels and quests: Admin >
    Progression > Levels shows Rookie through Master, Admin > Progression >
