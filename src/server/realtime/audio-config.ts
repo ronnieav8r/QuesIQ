@@ -1,4 +1,12 @@
-export function buildRealtimeAudioInputConfig() {
+type RealtimeAudioInputOptions = {
+  silenceDurationMs?: number;
+  threshold?: number;
+};
+
+export function buildRealtimeAudioInputConfig({
+  silenceDurationMs = 800,
+  threshold = 0.72,
+}: RealtimeAudioInputOptions = {}) {
   return {
     noise_reduction: {
       type: "near_field",
@@ -10,8 +18,8 @@ export function buildRealtimeAudioInputConfig() {
       create_response: true,
       interrupt_response: false,
       prefix_padding_ms: 300,
-      silence_duration_ms: 800,
-      threshold: 0.72,
+      silence_duration_ms: silenceDurationMs,
+      threshold,
       type: "server_vad",
     },
   };

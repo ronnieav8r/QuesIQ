@@ -55,7 +55,10 @@ export async function POST(request: Request) {
   });
   const sessionConfig = {
     audio: {
-      input: buildRealtimeAudioInputConfig(),
+      input: buildRealtimeAudioInputConfig({
+        silenceDurationMs: 1300,
+        threshold: 0.78,
+      }),
       output: {
         voice: promptConfig.voice || process.env.OPENAI_REALTIME_VOICE || "marin",
       },

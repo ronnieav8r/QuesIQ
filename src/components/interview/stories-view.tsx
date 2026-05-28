@@ -118,6 +118,7 @@ type StoriesViewProps = {
 
 type StoryCaptureMode = "dictate" | "tell" | "type";
 type StoryLabTab = "intro" | "tmaat";
+type StoryLabView = "build" | "library";
 type IntroCaptureMode = "dictate" | "tell" | "type";
 
 type IntroDraft = {
@@ -191,6 +192,27 @@ function mergeIntroDraft(manualDraft: IntroDraft, generatedDraft: IntroDraft): I
   };
 }
 
+function createEmptyIntroDraft(): IntroDraft {
+  return {
+    background: "",
+    proofPoint: "",
+    roleInterest: "",
+    script: "",
+    strength: "",
+    title: "",
+    transition: "",
+  };
+}
+
+function createInitialStoryTurns() {
+  return [
+    createTurn(
+      "assistant",
+      "Tell me what happened. It does not need to sound like an interview answer yet.",
+    ),
+  ];
+}
+
 export function StoriesView({
   interviewContext,
   jobTargets,
@@ -219,15 +241,7 @@ export function StoriesView({
     useState<"idle" | "ready">("idle");
   const [introAudience, setIntroAudience] = useState<IntroAudience>("virtual");
   const [introCaptureMode, setIntroCaptureMode] = useState<IntroCaptureMode>("tell");
-  const [introDraft, setIntroDraft] = useState<IntroDraft>({
-    background: "",
-    proofPoint: "",
-    roleInterest: "",
-    script: "",
-    strength: "",
-    title: "",
-    transition: "",
-  });
+  const [introDraft, setIntroDraft] = useState<IntroDraft>(createEmptyIntroDraft);
   const [editingIntroductionId, setEditingIntroductionId] = useState<string>();
   const [introLength, setIntroLength] = useState<IntroLength>("medium");
   const [introMaterial, setIntroMaterial] = useState("");
@@ -242,12 +256,8 @@ export function StoriesView({
   const [saveEditPending, setSaveEditPending] = useState(false);
   const [stories, setStories] = useState<StoryRecord[]>([]);
   const [storyLabTab, setStoryLabTab] = useState<StoryLabTab>("intro");
-  const [turns, setTurns] = useState<StoryBuilderTurn[]>([
-    createTurn(
-      "assistant",
-      "Tell me what happened. It does not need to sound like an interview answer yet.",
-    ),
-  ]);
+  const [storyLabView, setStoryLabView] = useState<StoryLabView>("build");
+  const [turns, setTurns] = useState<StoryBuilderTurn[]>(createInitialStoryTurns);
 
   const userTurns = turns.filter((turn) => turn.role === "user");
   const canUseSpeech = useMemo(() => {
@@ -311,6 +321,8 @@ export function StoriesView({
     introDraft.transition,
   ]);
   const introScript = introDraft.script.trim() || introDraftText || introMaterial.trim();
+  const recentIntroductions = introductions.slice(0, 3);
+  const recentStories = stories.slice(0, 3);
 
   useEffect(() => {
     let ignore = false;
@@ -380,6 +392,50 @@ export function StoriesView({
 
     setTurns((current) => [...current, createTurn("user", cleanText)]);
     setDraftText("");
+  }
+
+  function resetStoryCapture() {
+    recordingWantedRef.current = false;
+    window.clearTimeout(restartTimeoutRef.current);
+    recognitionRef.current?.stop();
+    speechTranscriptRef.current = "";
+    draftTextRef.current = "";
+    conversationArtifactKeyRef.current = undefined;
+    setConversationStatus("idle");
+    setDraftText("");
+    setPendingAction(undefined);
+    setRecording(false);
+    setTurns(createInitialStoryTurns());
+  }
+
+  function resetIntroCapture() {
+    recordingWantedRef.current = false;
+    window.clearTimeout(restartTimeoutRef.current);
+    recognitionRef.current?.stop();
+    introSpeechTranscriptRef.current = "";
+    introMaterialRef.current = "";
+    introConversationArtifactKeyRef.current = undefined;
+    setEditingIntroductionId(undefined);
+    setIntroDraft(createEmptyIntroDraft());
+    setIntroMaterial("");
+    setIntroPending(false);
+    setIntroPendingStep(undefined);
+    setRecording(false);
+  }
+
+  function switchStoryLabTab(nextTab: StoryLabTab) {
+    if (nextTab === storyLabTab) {
+      return;
+    }
+
+    setError(undefined);
+    setStoryLabView("build");
+    if (nextTab === "intro") {
+      resetIntroCapture();
+    } else {
+      resetStoryCapture();
+    }
+    setStoryLabTab(nextTab);
   }
 
   function saveConversationArtifact(artifact: VoiceSessionArtifactDraft) {
@@ -1022,7 +1078,7 @@ export function StoriesView({
         <button
           aria-selected={storyLabTab === "intro"}
           className={storyLabTab === "intro" ? "active" : undefined}
-          onClick={() => setStoryLabTab("intro")}
+          onClick={() => switchStoryLabTab("intro")}
           role="tab"
           type="button"
         >
@@ -1031,7 +1087,7 @@ export function StoriesView({
         <button
           aria-selected={storyLabTab === "tmaat"}
           className={storyLabTab === "tmaat" ? "active" : undefined}
-          onClick={() => setStoryLabTab("tmaat")}
+          onClick={() => switchStoryLabTab("tmaat")}
           role="tab"
           type="button"
         >
@@ -1039,8 +1095,30 @@ export function StoriesView({
         </button>
       </div>
 
+      <div className="story-lab-view-tabs" role="tablist" aria-label="Story Lab view">
+        <button
+          aria-selected={storyLabView === "build"}
+          className={storyLabView === "build" ? "active" : undefined}
+          onClick={() => setStoryLabView("build")}
+          role="tab"
+          type="button"
+        >
+          Build
+        </button>
+        <button
+          aria-selected={storyLabView === "library"}
+          className={storyLabView === "library" ? "active" : undefined}
+          onClick={() => setStoryLabView("library")}
+          role="tab"
+          type="button"
+        >
+          Library
+        </button>
+      </div>
+
       {storyLabTab === "intro" ? (
         <div className="intro-builder-layout">
+          {storyLabView === "build" && (
           <section className="panel intro-builder" aria-labelledby="intro-builder-title">
             <div className="section-head">
               <div>
@@ -1202,8 +1280,49 @@ export function StoriesView({
               )}
             </div>
           </section>
+          )}
 
-          <aside className="panel intro-preview" aria-labelledby="intro-preview-title">
+          {storyLabView === "build" && (
+            <aside className="panel story-library-summary" aria-labelledby="intro-summary-title">
+              <div className="section-head">
+                <div>
+                  <p className="eyebrow">Library</p>
+                  <h2 id="intro-summary-title">Recent intros.</h2>
+                </div>
+                <span>{introductions.length} saved</span>
+              </div>
+              {recentIntroductions.length === 0 ? (
+                <p>Saved introductions will appear in the library.</p>
+              ) : (
+                <div className="compact-library-list">
+                  {recentIntroductions.map((introduction) => (
+                    <button
+                      className="compact-library-item"
+                      key={introduction.id}
+                      onClick={() => {
+                        setSelectedIntroductionId(introduction.id);
+                        setStoryLabView("library");
+                      }}
+                      type="button"
+                    >
+                      <strong>{introduction.title}</strong>
+                      <span>{getIntroLengthGuidance(introduction.length).range}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button
+                className="secondary"
+                onClick={() => setStoryLabView("library")}
+                type="button"
+              >
+                Open Library
+              </button>
+            </aside>
+          )}
+
+          {storyLabView === "library" && (
+          <aside className="panel intro-preview story-library-full" aria-labelledby="intro-preview-title">
             <div className="section-head">
               <div>
                 <p className="eyebrow">Saved Introductions</p>
@@ -1211,6 +1330,13 @@ export function StoriesView({
               </div>
               <span>{introductions.length} saved</span>
             </div>
+            <button
+              className="secondary back-button"
+              onClick={() => setStoryLabView("build")}
+              type="button"
+            >
+              Back to Builder
+            </button>
             <section className="intro-library" aria-labelledby="intro-library-title">
               <h3 id="intro-library-title">Library</h3>
               {introductions.length === 0 ? (
@@ -1323,9 +1449,11 @@ export function StoriesView({
               )}
             </section>
           </aside>
+          )}
         </div>
       ) : (
       <div className="story-lab-layout">
+        {storyLabView === "build" && (
         <section className="panel story-builder" aria-labelledby="story-builder-title">
           <div className="section-head">
             <div>
@@ -1376,8 +1504,9 @@ export function StoriesView({
             <div className="story-live-panel">
               <RealtimeVoiceSession
                 endpoint="/api/realtime/story"
-                firstTurnInstructions="Speak in English only. Ask the user to tell you what happened in their own words. Reassure them that it does not need to sound polished yet. Ask only one question."
+                firstTurnInstructions="Speak in English only. Ask the user to tell you what happened in their own words. Reassure them that it does not need to sound polished yet. Ask only one question, then wait for the user to finish before speaking again."
                 onArtifactFinalized={saveConversationArtifact}
+                realtimeInstructions="This is a TMAAT Story Lab capture conversation. The user may speak for a while. Do not interrupt or coach mid-answer. Wait for a clear pause before responding. Ask one short follow-up question at a time to gather Situation, Task, Action, and Result details. Do not grade them yet. The goal is raw material for a later STAR story outline."
                 sessionId="story-lab"
                 startButtonLabel="Start Conversation"
                 surfaceClassName="realtime-session story-realtime-session"
@@ -1457,8 +1586,49 @@ export function StoriesView({
           </div>
           {error && <p className="form-error">{error}</p>}
         </section>
+        )}
 
-        <section className="panel story-library" aria-labelledby="story-library-title">
+        {storyLabView === "build" && (
+          <aside className="panel story-library-summary" aria-labelledby="story-summary-title">
+            <div className="section-head">
+              <div>
+                <p className="eyebrow">Library</p>
+                <h2 id="story-summary-title">Recent stories.</h2>
+              </div>
+              <span>{listStatus === "loading" ? "Loading" : `${stories.length} saved`}</span>
+            </div>
+            {recentStories.length === 0 ? (
+              <p>Saved stories will appear in the library.</p>
+            ) : (
+              <div className="compact-library-list">
+                {recentStories.map((story) => (
+                  <button
+                    className="compact-library-item"
+                    key={story.id}
+                    onClick={() => {
+                      viewStory(story);
+                      setStoryLabView("library");
+                    }}
+                    type="button"
+                  >
+                    <strong>{story.title}</strong>
+                    <span>{story.categories.slice(0, 2).map(storyCategoryLabel).join(", ")}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <button
+              className="secondary"
+              onClick={() => setStoryLabView("library")}
+              type="button"
+            >
+              Open Library
+            </button>
+          </aside>
+        )}
+
+        {storyLabView === "library" && (
+        <section className="panel story-library story-library-full" aria-labelledby="story-library-title">
           <div className="section-head">
             <div>
               <p className="eyebrow">Saved Stories</p>
@@ -1466,6 +1636,9 @@ export function StoriesView({
             </div>
             <span>{listStatus === "loading" ? "Loading" : `${stories.length} saved`}</span>
           </div>
+          <button className="secondary back-button" onClick={() => setStoryLabView("build")} type="button">
+            Back to Builder
+          </button>
 
           {stories.length === 0 ? (
             <p>
@@ -1546,27 +1719,15 @@ export function StoriesView({
                                 />
                               </label>
                               <label>
-                                <span>Practice prompt</span>
+                                <span>Summary</span>
                                 <input
                                   onChange={(event) =>
-                                    setEditDraft({
-                                      ...editDraft,
-                                      practicePrompt: event.target.value,
-                                    })
+                                    setEditDraft({ ...editDraft, summary: event.target.value })
                                   }
-                                  value={editDraft.practicePrompt}
+                                  value={editDraft.summary}
                                 />
                               </label>
                             </div>
-                            <label>
-                              <span>Summary</span>
-                              <textarea
-                                onChange={(event) =>
-                                  setEditDraft({ ...editDraft, summary: event.target.value })
-                                }
-                                value={editDraft.summary}
-                              />
-                            </label>
                             <div className="field-grid">
                               <label>
                                 <span>Situation</span>
@@ -1606,6 +1767,18 @@ export function StoriesView({
                                   setEditDraft({ ...editDraft, result: event.target.value })
                                 }
                                 value={editDraft.result}
+                              />
+                            </label>
+                            <label>
+                              <span>Practice prompt</span>
+                              <input
+                                onChange={(event) =>
+                                  setEditDraft({
+                                    ...editDraft,
+                                    practicePrompt: event.target.value,
+                                  })
+                                }
+                                value={editDraft.practicePrompt}
                               />
                             </label>
                             <label>
@@ -1706,6 +1879,16 @@ export function StoriesView({
                                 <dd>{story.task}</dd>
                               </div>
                               <div>
+                                <dt>Actions</dt>
+                                <dd>
+                                  <ul>
+                                    {story.actions.map((action) => (
+                                      <li key={action}>{action}</li>
+                                    ))}
+                                  </ul>
+                                </dd>
+                              </div>
+                              <div>
                                 <dt>Result</dt>
                                 <dd>{story.result}</dd>
                               </div>
@@ -1714,14 +1897,6 @@ export function StoriesView({
                                 <dd>{story.practicePrompt}</dd>
                               </div>
                             </dl>
-                            <section>
-                              <h3>Actions</h3>
-                              <ul>
-                                {story.actions.map((action) => (
-                                  <li key={action}>{action}</li>
-                                ))}
-                              </ul>
-                            </section>
                             {story.coachNotes.length > 0 && (
                               <section>
                                 <h3>Coach Notes</h3>
@@ -1770,6 +1945,7 @@ export function StoriesView({
             </>
           )}
         </section>
+        )}
       </div>
       )}
     </section>

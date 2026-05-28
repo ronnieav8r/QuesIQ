@@ -304,6 +304,10 @@ Last updated: 2026-05-28
   - saved introductions hold the durable detail fields: background, strength,
     proof point, role interest, closing handoff, practice count, and recent
     practice coaching
+  - Story Lab now has a local Build/Library split so the Introduction and TMAAT
+    capture screens stay focused while saved intros/stories remain one tap away
+  - switching between Introduction and TMAAT resets draft/transcript capture
+    state so material from the previous tab does not leak into the next one
   - users can save multiple introductions and launch a focused Intro Practice
     session from a saved introduction
   - Intro timing guidance uses Short, Medium, and Long ranges with notes about
@@ -449,6 +453,9 @@ The current coded app has passed:
   prompt pass passed ESLint and TypeScript check on 2026-05-28.
 - Realtime headset-noise/false-interruption tuning passed ESLint and TypeScript
   check on 2026-05-28.
+- Story Lab Build/Library split, mobile tab cleanup, TMAAT STAR detail order,
+  and patient TMAAT capture tuning passed ESLint, TypeScript check, and
+  production build on 2026-05-28.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran

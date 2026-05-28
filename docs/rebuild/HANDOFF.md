@@ -18,6 +18,10 @@ Last updated: 2026-05-28
   - Realtime voice input now uses near-field noise reduction, a stricter
     server VAD threshold, longer silence detection, and disabled automatic
     response interruption so headset/cable noise is less likely to cut Que off.
+  - Story Lab now separates Build and Library views so Introduction/TMAAT
+    capture stays focused, resets draft/transcript state when switching between
+    Introduction and TMAAT, fixes the mobile tab overflow, and shows TMAAT
+    story detail in STAR order.
   - AI Usage now logs prompt config links/snapshots/raw JSON metadata, and
     Realtime exchange setup calls are represented in AI Usage.
   - Admin Diagnostics captures failed API/client/Realtime events.
@@ -374,6 +378,9 @@ path until Phase 2 navigation is completed unless the product direction changes.
   prompt pass passed ESLint and TypeScript check on 2026-05-28.
 - Realtime headset-noise/false-interruption tuning passed ESLint and TypeScript
   check on 2026-05-28.
+- Story Lab Build/Library split, mobile tab cleanup, TMAAT STAR detail order,
+  and patient TMAAT capture tuning passed ESLint, TypeScript check, and
+  production build on 2026-05-28.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
   succeeded, Drizzle migrations applied successfully, and Next started.
 - Live `quesiq.com` QA passed across the owned practice loop and tonight's
