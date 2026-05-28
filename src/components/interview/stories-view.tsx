@@ -138,19 +138,19 @@ const introLengthOptions: Array<{
   range: string;
 }> = [
   {
-    bestFor: "HR phone screens and early recruiter calls.",
+    bestFor: "Recruiter screens.",
     key: "short",
     label: "Short",
     range: "30-45 sec",
   },
   {
-    bestFor: "Most virtual interviews and hiring-manager openings.",
+    bestFor: "Most interviews.",
     key: "medium",
     label: "Medium",
     range: "60-90 sec",
   },
   {
-    bestFor: "In-person interviews, panels, or senior-level conversations.",
+    bestFor: "Panels or senior conversations.",
     key: "long",
     label: "Long",
     range: "90-120 sec",
