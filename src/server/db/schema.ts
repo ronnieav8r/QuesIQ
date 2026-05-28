@@ -423,7 +423,15 @@ export const aiRuns = pgTable(
     provider: text("provider").default("openai").notNull(),
     providerRequestId: text("provider_request_id"),
     runType: text("run_type")
-      .$type<"debrief" | "evaluation" | "pricing_review" | "realtime">()
+      .$type<
+        | "debrief"
+        | "evaluation"
+        | "introduction_draft"
+        | "pricing_review"
+        | "realtime"
+        | "story_follow_up"
+        | "story_outline"
+      >()
       .notNull(),
     sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "set null" }),
     startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),

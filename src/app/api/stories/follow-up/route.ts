@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const question = await generateStoryFollowUp(turns);
+    const question = await generateStoryFollowUp(turns, appSession.user.id);
 
     return NextResponse.json({ question });
   } catch (error) {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 
 export const runtime = "nodejs";
@@ -37,6 +38,13 @@ export async function POST(request: Request) {
   }
 
   const promptConfig = await getActivePromptConfig("story_conversation_realtime");
+  const aiRun = await startAiRun({
+    model: promptConfig.model,
+    promptConfigKey: promptConfig.key,
+    promptConfigVersion: promptConfig.version,
+    runType: "realtime",
+    userId: appSession.user.id,
+  });
   const sessionConfig = {
     audio: {
       input: {
@@ -72,6 +80,11 @@ export async function POST(request: Request) {
 
     if (!realtimeResponse.ok) {
       const detail = await realtimeResponse.text();
+      await completeAiRun(aiRun.id, {
+        costSource: "unavailable",
+        errorMessage: detail,
+        status: "failed",
+      });
 
       return NextResponse.json(
         {
@@ -90,6 +103,11 @@ export async function POST(request: Request) {
         userId: appSession.user.id,
       });
     }
+    await completeAiRun(aiRun.id, {
+      costSource: "unavailable",
+      providerRequestId: realtimeCallId,
+      status: "succeeded",
+    });
 
     return new Response(await realtimeResponse.text(), {
       headers: {
@@ -97,6 +115,11 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    await completeAiRun(aiRun.id, {
+      costSource: "unavailable",
+      errorMessage: error instanceof Error ? error.message : "Unknown network error.",
+      status: "failed",
+    });
     return NextResponse.json(
       {
         detail: error instanceof Error ? error.message : "Unknown network error.",

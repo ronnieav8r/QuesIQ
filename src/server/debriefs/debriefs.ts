@@ -129,6 +129,7 @@ export async function createSessionDebrief({
     memory,
     promptConfig,
     session,
+    userId,
     userNote,
   });
   const now = new Date();

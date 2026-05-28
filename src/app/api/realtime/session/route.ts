@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import type { CoachingMemoryRecord } from "@/product/interview-types";
 import type { SessionSetupSnapshot } from "@/product/interview-types";
 import type { PromptConfigRecord } from "@/product/interview-types";
+import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
 import type { SessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
 import { getSessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
 import { getCoachingMemory } from "@/server/coaching-memory/coaching-memory";
@@ -171,6 +172,14 @@ export async function POST(request: Request) {
     listStoryLibraryContext(appSession.user.id),
   ]);
   const activeRealtimeConfig = storyPracticeConfig ?? promptConfig;
+  const aiRun = await startAiRun({
+    model: activeRealtimeConfig.model,
+    promptConfigKey: activeRealtimeConfig.key,
+    promptConfigVersion: activeRealtimeConfig.version,
+    runType: "realtime",
+    sessionId: body.sessionId,
+    userId: appSession.user.id,
+  });
   const sessionConfig = {
     type: "realtime",
     model: activeRealtimeConfig.model,
@@ -209,6 +218,11 @@ export async function POST(request: Request) {
 
     if (!realtimeResponse.ok) {
       const detail = await realtimeResponse.text();
+      await completeAiRun(aiRun.id, {
+        costSource: "unavailable",
+        errorMessage: detail,
+        status: "failed",
+      });
 
       return NextResponse.json(
         {
@@ -245,6 +259,11 @@ export async function POST(request: Request) {
         console.error("Realtime prompt config save failed.", error);
       }
     }
+    await completeAiRun(aiRun.id, {
+      costSource: "unavailable",
+      providerRequestId: realtimeCallId,
+      status: "succeeded",
+    });
 
     return new Response(await realtimeResponse.text(), {
       headers: {
@@ -252,6 +271,11 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    await completeAiRun(aiRun.id, {
+      costSource: "unavailable",
+      errorMessage: error instanceof Error ? error.message : "Unknown network error.",
+      status: "failed",
+    });
     return NextResponse.json(
       {
         error: "OpenAI Realtime session exchange could not reach the API.",

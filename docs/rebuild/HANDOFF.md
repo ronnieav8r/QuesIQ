@@ -136,6 +136,10 @@ path until Phase 2 navigation is completed unless the product direction changes.
   accuracy, and scoring fairness after a newly generated practice review.
 - Added sortable Admin table headers for Feedback, API Calls, and Realtime
   Sessions, and split Admin Feedback into Feedback and Bugs subtabs.
+- Expanded AI Usage instrumentation so Story Lab follow-up, Story Lab outline,
+  Introduction Draft, legacy written Debrief, and Realtime exchange endpoints
+  create `ai_runs` rows. App-owned practice sessions continue to save richer
+  Realtime usage after the voice artifact is persisted.
 - Added Admin Diagnostics visibility for failed same-origin API calls, rejected
   fetches, client browser errors, unhandled promise rejections, and Realtime
   connection/error events. The diagnostic log stores sanitized metadata only and
@@ -321,6 +325,9 @@ path until Phase 2 navigation is completed unless the product direction changes.
   2026-05-28.
 - Admin Diagnostics event logging slice passed ESLint and TypeScript check on
   2026-05-28.
+- AI usage instrumentation audit for Story Lab, Introduction Builder, Realtime
+  exchange endpoints, and legacy written Debrief passed ESLint and TypeScript
+  check on 2026-05-28.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
   succeeded, Drizzle migrations applied successfully, and Next started.
 - Live `quesiq.com` QA passed across the owned practice loop and tonight's

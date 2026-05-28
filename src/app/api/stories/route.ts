@@ -76,7 +76,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const outline = await generateStoryOutline(turns);
+    const outline = await generateStoryOutline(turns, appSession.user.id);
     const rawNotes = turns
       .filter((turn) => turn.role === "user")
       .map((turn) => turn.text)

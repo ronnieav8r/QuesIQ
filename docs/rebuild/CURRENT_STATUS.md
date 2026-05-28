@@ -51,6 +51,14 @@ Last updated: 2026-05-28
   - post-session evaluation attempts create AI run records with status, model,
     prompt config version, provider response id, duration, errors, and exact
     token counts when OpenAI returns `usage`
+  - Story Lab follow-up, Story Lab outline, Introduction Draft, and legacy
+    written Debrief Responses API calls now create AI run records with prompt
+    config, run type, user/session context when available, provider response id,
+    status, token usage, and estimated cost when usage is returned
+  - Realtime exchange endpoints for practice sessions, Story Lab capture, and
+    verbal Debrief now create AI run rows for setup success/failure; app-owned
+    practice sessions still save fuller Realtime usage after the voice artifact
+    is persisted
   - Realtime voice sessions create compact usage records from saved artifacts:
     duration, transcript split, model, voice, prompt version, estimated audio
     tokens, estimated cost, pricing version, and estimation method
@@ -410,6 +418,9 @@ The current coded app has passed:
   2026-05-28.
 - Admin Diagnostics event logging slice passed ESLint and TypeScript check on
   2026-05-28.
+- AI usage instrumentation audit for Story Lab, Introduction Builder, Realtime
+  exchange endpoints, and legacy written Debrief passed ESLint and TypeScript
+  check on 2026-05-28.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran

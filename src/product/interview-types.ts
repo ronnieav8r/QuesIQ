@@ -595,7 +595,14 @@ export type AiRunRecord = {
   promptConfigVersion?: number;
   provider: "openai";
   providerRequestId?: string;
-  runType: "debrief" | "evaluation" | "pricing_review" | "realtime";
+  runType:
+    | "debrief"
+    | "evaluation"
+    | "introduction_draft"
+    | "pricing_review"
+    | "realtime"
+    | "story_follow_up"
+    | "story_outline";
   sessionId?: string;
   startedAt: string;
   status: "failed" | "started" | "succeeded";

@@ -283,6 +283,12 @@ These are strong defaults until we decide otherwise:
   they are truly static validation/schema text. Story Lab follow-up, outline,
   Story Practice Realtime, and Story Practice Evaluation prompts are admin
   versioned configs.
+- New AI features must include AI usage instrumentation as part of the feature
+  slice. Responses API calls should create `ai_runs` rows with prompt config,
+  run type, user/session context when available, provider request id, status,
+  token usage, and estimated/exact cost when OpenAI returns usage. Realtime
+  exchanges should create `ai_runs` rows for the call setup, and app-owned voice
+  sessions should also save Realtime usage after the artifact is persisted.
 - App chrome should stay minimal on mobile. The header keeps brand/account
   affordances, but screen-specific titles belong in the scrollable screen body
   instead of persistent header copy.

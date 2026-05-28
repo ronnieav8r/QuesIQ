@@ -19,3 +19,7 @@ or deploy flow.
 - Keep core session, evaluation, progression, and product data in this app.
 - Build thin runnable slices and keep the plan docs current when durable
   decisions change.
+- When adding a new AI feature or OpenAI call, include Admin AI Usage
+  instrumentation in the same slice: Responses API calls should create
+  `ai_runs` records, and app-owned Realtime voice sessions should save usage
+  after artifacts persist.

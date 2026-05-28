@@ -9,6 +9,7 @@ import type {
   SessionSetupSnapshot,
   VoiceSessionArtifactDraft,
 } from "@/product/interview-types";
+import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
 import { getCoachingMemory } from "@/server/coaching-memory/coaching-memory";
 import { getDb } from "@/server/db/client";
 import { evaluations, sessions } from "@/server/db/schema";
@@ -94,6 +95,10 @@ function buildDebriefInstructions({
     .join(" ");
 }
 
+function getRealtimeCallId(location?: string | null) {
+  return location?.split("/").filter(Boolean).at(-1);
+}
+
 export async function POST(request: Request) {
   const appSession = await auth();
 
@@ -147,6 +152,14 @@ export async function POST(request: Request) {
     getActivePromptConfig("session_debrief"),
     getCoachingMemory(appSession.user.id),
   ]);
+  const aiRun = await startAiRun({
+    model: promptConfig.model,
+    promptConfigKey: promptConfig.key,
+    promptConfigVersion: promptConfig.version,
+    runType: "realtime",
+    sessionId: body.sessionId,
+    userId: appSession.user.id,
+  });
   const sessionConfig = {
     audio: {
       input: {
@@ -183,6 +196,11 @@ export async function POST(request: Request) {
 
     if (!realtimeResponse.ok) {
       const detail = await realtimeResponse.text();
+      await completeAiRun(aiRun.id, {
+        costSource: "unavailable",
+        errorMessage: detail,
+        status: "failed",
+      });
 
       return NextResponse.json(
         {
@@ -192,6 +210,13 @@ export async function POST(request: Request) {
         { status: realtimeResponse.status },
       );
     }
+    const realtimeCallId = getRealtimeCallId(realtimeResponse.headers.get("Location"));
+
+    await completeAiRun(aiRun.id, {
+      costSource: "unavailable",
+      providerRequestId: realtimeCallId,
+      status: "succeeded",
+    });
 
     return new Response(await realtimeResponse.text(), {
       headers: {
@@ -199,6 +224,11 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    await completeAiRun(aiRun.id, {
+      costSource: "unavailable",
+      errorMessage: error instanceof Error ? error.message : "Unknown network error.",
+      status: "failed",
+    });
     return NextResponse.json(
       {
         detail: error instanceof Error ? error.message : "Unknown network error.",

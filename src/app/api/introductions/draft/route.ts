@@ -61,6 +61,7 @@ export async function POST(request: Request) {
       rawNotes,
       targetCompany: clean(body.targetCompany),
       targetRole: clean(body.targetRole),
+      userId: appSession.user.id,
     });
 
     return NextResponse.json({ draft });

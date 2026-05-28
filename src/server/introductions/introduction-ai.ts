@@ -1,4 +1,9 @@
 import type { IntroAudience, IntroLength } from "@/product/interview-types";
+import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
+import {
+  estimateTokenCostMicroUsd,
+  getActiveAiPricing,
+} from "@/server/pricing/ai-pricing";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 
 export type IntroductionDraftResult = {
@@ -18,18 +23,25 @@ type IntroductionDraftInput = {
   rawNotes: string;
   targetCompany?: string;
   targetRole?: string;
+  userId?: string;
 };
 
 type ResponsesApiBody = {
   error?: {
     message?: string;
   };
+  id?: string;
   output?: Array<{
     content?: Array<{
       text?: string;
     }>;
   }>;
   output_text?: string;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    total_tokens?: number;
+  };
 };
 
 const introductionDraftSchema = {
@@ -122,6 +134,14 @@ export async function generateIntroductionDraft(
   input: IntroductionDraftInput,
 ): Promise<IntroductionDraftResult> {
   const promptConfig = await getActivePromptConfig("introduction_draft");
+  const pricing = await getActiveAiPricing(promptConfig.model, "text");
+  const aiRun = await startAiRun({
+    model: promptConfig.model,
+    promptConfigKey: promptConfig.key,
+    promptConfigVersion: promptConfig.version,
+    runType: "introduction_draft",
+    userId: input.userId,
+  });
   const context = [
     `Requested length: ${lengthGuidance(input.length)}`,
     `Audience: ${audienceGuidance(input.audience)}`,
@@ -134,47 +154,72 @@ export async function generateIntroductionDraft(
     .filter(Boolean)
     .join("\n\n");
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    body: JSON.stringify({
-      input: [
-        {
-          content: promptConfig.instructions,
-          role: "system",
+  try {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      body: JSON.stringify({
+        input: [
+          {
+            content: promptConfig.instructions,
+            role: "system",
+          },
+          {
+            content: context,
+            role: "user",
+          },
+        ],
+        max_output_tokens: 1000,
+        model: promptConfig.model,
+        text: {
+          format: {
+            name: "quesiq_introduction_draft",
+            schema: introductionDraftSchema,
+            strict: true,
+            type: "json_schema",
+          },
         },
-        {
-          content: context,
-          role: "user",
-        },
-      ],
-      max_output_tokens: 1000,
-      model: promptConfig.model,
-      text: {
-        format: {
-          name: "quesiq_introduction_draft",
-          schema: introductionDraftSchema,
-          strict: true,
-          type: "json_schema",
-        },
+      }),
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
       },
-    }),
-    headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    method: "POST",
-  });
-  const body = (await response.json()) as ResponsesApiBody;
+      method: "POST",
+    });
+    const body = (await response.json()) as ResponsesApiBody;
 
-  if (!response.ok) {
-    throw new Error(body.error?.message || "Introduction draft could not be generated.");
+    if (!response.ok) {
+      throw new Error(body.error?.message || "Introduction draft could not be generated.");
+    }
+
+    const text = extractResponseText(body);
+    const draft = text ? parseIntroductionDraft(JSON.parse(text)) : undefined;
+
+    if (!draft) {
+      throw new Error("Introduction draft did not match the expected shape.");
+    }
+
+    await completeAiRun(aiRun.id, {
+      costSource: body.usage ? "exact" : "unavailable",
+      estimatedCostMicroUsd: estimateTokenCostMicroUsd(
+        pricing,
+        body.usage?.input_tokens,
+        body.usage?.output_tokens,
+      ),
+      inputTokens: body.usage?.input_tokens,
+      outputTokens: body.usage?.output_tokens,
+      providerRequestId: body.id,
+      status: "succeeded",
+      totalTokens: body.usage?.total_tokens,
+    });
+
+    return draft;
+  } catch (error) {
+    await completeAiRun(aiRun.id, {
+      errorMessage:
+        error instanceof Error
+          ? error.message
+          : "Introduction draft could not be generated.",
+      status: "failed",
+    });
+    throw error;
   }
-
-  const text = extractResponseText(body);
-  const draft = text ? parseIntroductionDraft(JSON.parse(text)) : undefined;
-
-  if (!draft) {
-    throw new Error("Introduction draft did not match the expected shape.");
-  }
-
-  return draft;
 }
