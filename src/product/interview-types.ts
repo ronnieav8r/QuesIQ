@@ -520,6 +520,7 @@ export type VoiceSessionArtifactDraft = {
 };
 
 export type PromptConfigKey =
+  | "introduction_draft"
   | "session_debrief"
   | "realtime_interviewer"
   | "session_evaluation"

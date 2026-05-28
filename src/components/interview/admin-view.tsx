@@ -134,6 +134,7 @@ type ProgressionSummarySortKey =
 type ProgressionEventSortKey = "event" | "occurred" | "session" | "user" | "xp";
 
 const promptLabels: Record<PromptConfigKey, string> = {
+  introduction_draft: "Introduction Draft",
   realtime_interviewer: "Live Voice Interviewer",
   session_debrief: "Session Debrief",
   session_evaluation: "Post-Session Evaluation",

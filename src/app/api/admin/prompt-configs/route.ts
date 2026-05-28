@@ -34,7 +34,12 @@ function targetForKey(key: PromptConfigKey): PromptConfigTarget {
     return "realtime";
   }
 
-  if (key === "story_follow_up" || key === "story_outline") {
+  if (
+    key === "introduction_draft" ||
+    key === "story_conversation_realtime" ||
+    key === "story_follow_up" ||
+    key === "story_outline"
+  ) {
     return "story";
   }
 

@@ -179,6 +179,18 @@ function getAudienceForLength(length: IntroLength): IntroAudience {
   return "virtual";
 }
 
+function mergeIntroDraft(manualDraft: IntroDraft, generatedDraft: IntroDraft): IntroDraft {
+  return {
+    background: manualDraft.background.trim() || generatedDraft.background,
+    proofPoint: manualDraft.proofPoint.trim() || generatedDraft.proofPoint,
+    roleInterest: manualDraft.roleInterest.trim() || generatedDraft.roleInterest,
+    script: manualDraft.script.trim() || generatedDraft.script,
+    strength: manualDraft.strength.trim() || generatedDraft.strength,
+    title: manualDraft.title.trim() || generatedDraft.title,
+    transition: manualDraft.transition.trim() || generatedDraft.transition,
+  };
+}
+
 export function StoriesView({
   interviewContext,
   jobTargets,
@@ -220,6 +232,7 @@ export function StoriesView({
   const [introLength, setIntroLength] = useState<IntroLength>("medium");
   const [introMaterial, setIntroMaterial] = useState("");
   const [introPending, setIntroPending] = useState(false);
+  const [introPendingStep, setIntroPendingStep] = useState<"drafting" | "saving">();
   const [introductions, setIntroductions] = useState<IntroductionRecord[]>([]);
   const [selectedIntroductionId, setSelectedIntroductionId] = useState<string>();
   const [listStatus, setListStatus] = useState<"idle" | "loaded" | "loading">("idle");
@@ -284,6 +297,8 @@ export function StoriesView({
         : "Writing";
   const activeTarget = selectedJobTarget ?? jobTargets[0];
   const targetRole = activeTarget?.targetRole || interviewContext.targetRole;
+  const targetCompany = activeTarget?.targetCompany || interviewContext.targetCompany;
+  const jobDescription = activeTarget?.jobDescription || interviewContext.jobDescription;
   const introLengthGuidance = getIntroLengthGuidance(introLength);
   const selectedIntroduction =
     introductions.find((introduction) => introduction.id === selectedIntroductionId) ??
@@ -400,11 +415,12 @@ export function StoriesView({
     }
 
     introConversationArtifactKeyRef.current = artifactKey;
-    setIntroMaterial(
-      artifact.transcript
-        .map((turn) => `${turn.speaker}: ${turn.text}`)
-        .join("\n"),
-    );
+    const rawMaterial = artifact.transcript
+      .map((turn) => `${turn.speaker}: ${turn.text}`)
+      .join("\n");
+
+    setIntroMaterial(rawMaterial);
+    void draftCapturedIntroduction(rawMaterial);
   }
 
   function commitSpeechTranscript() {
@@ -647,22 +663,88 @@ export function StoriesView({
     }
   }
 
+  async function draftIntroductionFromMaterial(rawNotes: string) {
+    const response = await fetch("/api/introductions/draft", {
+      body: JSON.stringify({
+        audience: getAudienceForLength(introLength),
+        jobDescription,
+        length: introLength,
+        rawNotes,
+        targetCompany,
+        targetRole,
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    });
+    const body = (await response.json()) as {
+      detail?: string;
+      draft?: IntroDraft;
+      error?: string;
+    };
+
+    if (!response.ok || !body.draft) {
+      throw new Error(body.detail || body.error || "Que could not draft the introduction.");
+    }
+
+    return body.draft;
+  }
+
+  async function draftCapturedIntroduction(rawNotes: string) {
+    try {
+      setError(undefined);
+      setIntroPending(true);
+      setIntroPendingStep("drafting");
+      const generatedDraft = await draftIntroductionFromMaterial(rawNotes);
+      setIntroDraft((current) => mergeIntroDraft(current, generatedDraft));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Que could not draft the introduction.");
+    } finally {
+      setIntroPendingStep(undefined);
+      setIntroPending(false);
+    }
+  }
+
   async function saveIntroduction() {
     try {
       setError(undefined);
       setIntroPending(true);
+      let finalDraft = introDraft;
+      const rawNotes = introMaterial.trim();
+
+      if (rawNotes && !introDraft.script.trim()) {
+        setIntroPendingStep("drafting");
+        finalDraft = mergeIntroDraft(introDraft, await draftIntroductionFromMaterial(rawNotes));
+        setIntroDraft(finalDraft);
+      }
+
+      const finalScript =
+        finalDraft.script.trim() ||
+        joinIntroParts([
+          finalDraft.background,
+          finalDraft.strength ? `My strongest lane is ${finalDraft.strength}.` : "",
+          finalDraft.proofPoint ? `For example, ${finalDraft.proofPoint}.` : "",
+          finalDraft.roleInterest,
+          finalDraft.transition,
+        ]) ||
+        rawNotes;
+      const finalTitle =
+        finalDraft.title.trim() ||
+        [introLengthGuidance.label, targetRole || "Interview", "Introduction"]
+          .filter(Boolean)
+          .join(" ");
+
+      setIntroPendingStep("saving");
       const response = await fetch("/api/introductions", {
         body: JSON.stringify({
           introduction: {
-            ...introDraft,
+            ...finalDraft,
             audience: getAudienceForLength(introLength),
             length: introLength,
-            rawNotes: introMaterial,
-            script: introScript,
-            title: introDraft.title.trim() ||
-              [introLengthGuidance.label, targetRole || "Interview", "Introduction"]
-              .filter(Boolean)
-              .join(" "),
+            rawNotes,
+            script: finalScript,
+            title: finalTitle,
           },
         }),
         headers: {
@@ -695,6 +777,7 @@ export function StoriesView({
     } catch (error) {
       setError(error instanceof Error ? error.message : "Introduction could not be saved.");
     } finally {
+      setIntroPendingStep(undefined);
       setIntroPending(false);
     }
   }
@@ -975,6 +1058,15 @@ export function StoriesView({
                   surfaceClassName="realtime-session story-realtime-session"
                   title="Talk with Que about your intro"
                 />
+                {introMaterial.trim() && (
+                  <p className="inline-status">
+                    {introPendingStep === "drafting"
+                      ? "Conversation captured. Que is drafting the structured version."
+                      : introDraft.script.trim()
+                        ? "Draft ready. Save Introduction to add it to your library."
+                        : "Conversation captured. Save Introduction to draft and store it."}
+                  </p>
+                )}
               </div>
             )}
 
@@ -1067,7 +1159,11 @@ export function StoriesView({
                 </>
               ) : (
                 <button disabled={introPending || !introScript.trim()} onClick={saveIntroduction} type="button">
-                  {introPending ? "Saving" : "Save Introduction"}
+                  {introPending
+                    ? introPendingStep === "drafting"
+                      ? "Drafting"
+                      : "Saving"
+                    : "Save Introduction"}
                 </button>
               )}
             </div>
