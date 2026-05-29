@@ -1,6 +1,6 @@
 # Current Status
 
-Last updated: 2026-05-28
+Last updated: 2026-05-29
 
 ## Rebuild Location
 
@@ -19,6 +19,9 @@ Last updated: 2026-05-28
   `quesiq-interview-rebuild` until we decide whether to keep that path.
 - Older Bubble handoffs and the older rebuild-doc copy in the OneDrive workspace
   are reference material unless deliberately resynced.
+- User is not expecting to manually review code for correctness. Future Codex
+  passes should own verification, explain outcomes plainly, and when requested
+  prepare the GitHub push/deploy path instead of leaving that work to the user.
 
 ## Built So Far
 

@@ -1,11 +1,15 @@
 # Handoff
 
-Last updated: 2026-05-28
+Last updated: 2026-05-29
 
 ## Immediate Handoff Snapshot
 
 - Latest local work is ready for deploy QA, not yet user-confirmed in
   production.
+- User preference for future work: Codex should handle the full edit, verify,
+  commit/push, and deploy-prep flow when requested. Do not assume the user will
+  manually inspect code or catch implementation mistakes in GitHub; explain
+  risks and verification in plain language and make the next action explicit.
 - New migrations to verify on deploy through
   `0046_refine_realtime_interviewer_base_prompt.sql`.
 - Recent completed local slices:
@@ -56,9 +60,9 @@ Last updated: 2026-05-28
   - Admin Diagnostics captures failed API/client/Realtime events.
 - Local verification passed on 2026-05-28 with `npm run typecheck`,
   `npm run lint`, and `npm run build`.
-- Best next move: deploy to `quesiq-web`, confirm migrations through `0046`,
-  then QA Story Lab, saved Job Targets, AI Usage, Diagnostics, and installable
-  app behavior on real devices.
+- Best next move: commit/push the verified local work, deploy to `quesiq-web`,
+  confirm migrations through `0046`, then QA Story Lab, saved Job Targets, AI
+  Usage, Diagnostics, and installable app behavior on real devices.
 
 ## Current Focus
 

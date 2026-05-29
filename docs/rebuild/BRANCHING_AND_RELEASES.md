@@ -1,6 +1,6 @@
 # Branching And Releases
 
-Last updated: 2026-05-28
+Last updated: 2026-05-29
 
 ## Goal
 
@@ -30,6 +30,14 @@ would make the branch name comforting but inaccurate.
 5. Promote `main` to `live` only when the release is intentionally approved for
    production.
 6. Deploy production from `live` after Render is configured for the branch.
+
+## User Preference
+
+The user wants Codex to handle commit/push/deploy-prep when requested rather
+than leaving manual GitHub work to them. The user is not a coder and should not
+be treated as the final line of code review. Codex should verify changes with
+the appropriate checks, summarize what changed and what risk remains in plain
+language, then make the next release action explicit.
 
 ## Hotfix Flow
 
