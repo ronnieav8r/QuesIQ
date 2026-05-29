@@ -552,6 +552,12 @@ p {
   min-width: 0;
 }
 
+.study-library-heading {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+}
+
 .study-deck-study-actions {
   align-items: center;
   display: flex;

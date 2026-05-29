@@ -35,6 +35,31 @@ export async function getStudyDecksWithStats(userId: string) {
     .orderBy(desc(studyDecks.updatedAt));
 }
 
+export async function getPublicStudyDecks(limit = 50) {
+  return getDb()
+    .select({
+      cardCount: studyDecks.cardCount,
+      createdAt: studyDecks.createdAt,
+      description: studyDecks.description,
+      dueCount: sql<number>`0::int`,
+      id: studyDecks.id,
+      isOfficial: studyDecks.isOfficial,
+      isPublic: studyDecks.isPublic,
+      lastStudiedAt: sql<Date | null>`NULL`,
+      masteredCount: sql<number>`0::int`,
+      subject: studyDecks.subject,
+      tags: studyDecks.tags,
+      title: studyDecks.title,
+      updatedAt: studyDecks.updatedAt,
+      userId: studyDecks.userId,
+      verifiedCardCount: studyDecks.verifiedCardCount,
+    })
+    .from(studyDecks)
+    .where(eq(studyDecks.isPublic, true))
+    .orderBy(desc(studyDecks.updatedAt))
+    .limit(limit);
+}
+
 export async function getStudyUserStats(userId: string) {
   const [totals] = await getDb()
     .select({
