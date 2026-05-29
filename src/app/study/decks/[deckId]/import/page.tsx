@@ -41,7 +41,7 @@ export default async function StudyImportPage({ params }: Props) {
       <div>
         <p className="eyebrow">QuesIQ Study</p>
         <h1>Import Cards</h1>
-        <p>Paste question and answer pairs. AI/PDF import will come in a later slice.</p>
+        <p>Paste question/answer pairs or upload a CSV, TSV, or TXT file.</p>
       </div>
       <section className="panel study-empty-panel">
         <StudyImportWizard deckId={deckId} />

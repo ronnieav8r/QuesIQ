@@ -43,6 +43,8 @@ The first Study slice is imported:
   cards into the user's private Study lane
 - `/study/history` shows cross-deck recent study sessions with mode, accuracy,
   and quick deck links
+- `/study/decks/[deckId]/import` now supports CSV/TSV/TXT file upload in
+  addition to pasted card text, with selectable preview rows before save
 - `/study/library` shows public Study decks with search, subject filter, and
   official-only filtering
 - signed-in users can create/edit decks, add/delete cards manually, and review

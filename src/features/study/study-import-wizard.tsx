@@ -78,6 +78,7 @@ export function StudyImportWizard({ deckId }: { deckId: string }) {
   const router = useRouter();
   const [drafts, setDrafts] = useState<DraftCard[]>([]);
   const [error, setError] = useState<string>();
+  const [parsingFile, setParsingFile] = useState(false);
   const [rawText, setRawText] = useState("");
   const [saving, setSaving] = useState(false);
   const selectedCount = useMemo(() => drafts.filter((draft) => draft.selected).length, [drafts]);
@@ -93,6 +94,37 @@ export function StudyImportWizard({ deckId }: { deckId: string }) {
 
     setError(undefined);
     setDrafts(parsed);
+  }
+
+  async function handleFileUpload(file: File) {
+    setError(undefined);
+    setParsingFile(true);
+
+    try {
+      const raw = await file.text();
+      const parsed = parseCards(raw);
+
+      if (parsed.length === 0) {
+        setError("No valid cards found in that file. Use question/answer columns.");
+        setParsingFile(false);
+        return;
+      }
+
+      setDrafts((current) => {
+        const existing = current.length;
+        const shifted = parsed.map((draft, index) => ({
+          ...draft,
+          id: `${existing + index}`,
+        }));
+
+        return [...current, ...shifted];
+      });
+      setRawText((current) => (current ? `${current}\n${raw}` : raw));
+    } catch {
+      setError("Could not read that file. Please try a CSV, TSV, or TXT file.");
+    } finally {
+      setParsingFile(false);
+    }
   }
 
   async function handleSave() {
@@ -141,16 +173,52 @@ export function StudyImportWizard({ deckId }: { deckId: string }) {
         />
       </label>
 
+      <label>
+        <span>Or upload file (CSV, TSV, TXT)</span>
+        <input
+          accept=".csv,.tsv,.txt,text/csv,text/plain"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (!file) {
+              return;
+            }
+            handleFileUpload(file);
+            event.currentTarget.value = "";
+          }}
+          type="file"
+        />
+      </label>
+
       <div className="inline-actions">
         <button className="secondary" onClick={handleParse} type="button">
           Preview Cards
         </button>
+        {drafts.length > 0 && (
+          <button
+            className="secondary"
+            onClick={() => setDrafts((current) => current.map((draft) => ({ ...draft, selected: true })))}
+            type="button"
+          >
+            Select All
+          </button>
+        )}
+        {drafts.length > 0 && (
+          <button
+            className="secondary"
+            onClick={() => setDrafts((current) => current.map((draft) => ({ ...draft, selected: false })))}
+            type="button"
+          >
+            Select None
+          </button>
+        )}
         {drafts.length > 0 && (
           <button disabled={saving} onClick={handleSave} type="button">
             {saving ? "Saving" : `Save ${selectedCount} Cards`}
           </button>
         )}
       </div>
+
+      {parsingFile && <p>Reading file...</p>}
 
       {error && <p className="form-error">{error}</p>}
 
