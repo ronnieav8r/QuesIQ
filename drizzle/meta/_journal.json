@@ -344,6 +344,13 @@
       "when": 1780056000000,
       "tag": "0049_seed_study_library_taxonomy",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1780063200000,
+      "tag": "0050_add_dpe_baseline_tables",
+      "breakpoints": true
     }
   ]
 }
