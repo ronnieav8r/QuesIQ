@@ -18,6 +18,17 @@ export type StudyLibraryScope = "all" | "mine" | "official";
 type StudyPublicDeck = Awaited<ReturnType<typeof getPublicStudyDecks>>[number];
 export type StudyLibraryDeck = StudyPublicDeck & { audienceTags: string[] };
 
+function isMissingStudyTaxonomyError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const withCode = error as Error & { code?: string };
+  return (
+    withCode.code === "42P01" ||
+    /study_(subjects|audience_tags|deck_audience_tags)/i.test(error.message)
+  );
+}
+
 export function filterStudyCardsByLevel<T extends { level: string | null }>(
   cards: T[],
   level: StudyLevel | undefined,
@@ -86,27 +97,42 @@ export async function getPublicStudyDecks(limit = 50) {
 }
 
 export async function getStudyRootSubjects() {
-  return getDb()
-    .select({
-      id: studySubjects.id,
-      name: studySubjects.name,
-      slug: studySubjects.slug,
-    })
-    .from(studySubjects)
-    .where(isNull(studySubjects.parentId))
-    .orderBy(asc(studySubjects.sortOrder), asc(studySubjects.name));
+  try {
+    return await getDb()
+      .select({
+        id: studySubjects.id,
+        name: studySubjects.name,
+        slug: studySubjects.slug,
+      })
+      .from(studySubjects)
+      .where(isNull(studySubjects.parentId))
+      .orderBy(asc(studySubjects.sortOrder), asc(studySubjects.name));
+  } catch (error) {
+    if (isMissingStudyTaxonomyError(error)) {
+      return [];
+    }
+    throw error;
+  }
 }
 
 export async function getStudySubjectOptions() {
-  const rows = await getDb()
-    .select({
-      id: studySubjects.id,
-      name: studySubjects.name,
-      parentId: studySubjects.parentId,
-      sortOrder: studySubjects.sortOrder,
-    })
-    .from(studySubjects)
-    .orderBy(asc(studySubjects.sortOrder), asc(studySubjects.name));
+  let rows: Array<{ id: string; name: string; parentId: string | null; sortOrder: number }>;
+  try {
+    rows = await getDb()
+      .select({
+        id: studySubjects.id,
+        name: studySubjects.name,
+        parentId: studySubjects.parentId,
+        sortOrder: studySubjects.sortOrder,
+      })
+      .from(studySubjects)
+      .orderBy(asc(studySubjects.sortOrder), asc(studySubjects.name));
+  } catch (error) {
+    if (isMissingStudyTaxonomyError(error)) {
+      return [];
+    }
+    throw error;
+  }
 
   const byParent = rows.reduce((map, row) => {
     const key = row.parentId ?? "root";
@@ -130,14 +156,21 @@ export async function getStudySubjectOptions() {
 }
 
 export async function getStudyAudienceTags() {
-  return getDb()
-    .select({
-      id: studyAudienceTags.id,
-      label: studyAudienceTags.label,
-      slug: studyAudienceTags.slug,
-    })
-    .from(studyAudienceTags)
-    .orderBy(asc(studyAudienceTags.sortOrder), asc(studyAudienceTags.label));
+  try {
+    return await getDb()
+      .select({
+        id: studyAudienceTags.id,
+        label: studyAudienceTags.label,
+        slug: studyAudienceTags.slug,
+      })
+      .from(studyAudienceTags)
+      .orderBy(asc(studyAudienceTags.sortOrder), asc(studyAudienceTags.label));
+  } catch (error) {
+    if (isMissingStudyTaxonomyError(error)) {
+      return [];
+    }
+    throw error;
+  }
 }
 
 export async function getStudyLibraryDecks(options?: {
@@ -154,21 +187,27 @@ export async function getStudyLibraryDecks(options?: {
   let audienceTagByDeckId = new Map<string, string[]>();
 
   if (deckIds.length > 0) {
-    const rows = await getDb()
-      .select({
-        deckId: studyDeckAudienceTags.deckId,
-        label: studyAudienceTags.label,
-      })
-      .from(studyDeckAudienceTags)
-      .innerJoin(studyAudienceTags, eq(studyAudienceTags.id, studyDeckAudienceTags.audienceTagId))
-      .where(inArray(studyDeckAudienceTags.deckId, deckIds));
+    try {
+      const rows = await getDb()
+        .select({
+          deckId: studyDeckAudienceTags.deckId,
+          label: studyAudienceTags.label,
+        })
+        .from(studyDeckAudienceTags)
+        .innerJoin(studyAudienceTags, eq(studyAudienceTags.id, studyDeckAudienceTags.audienceTagId))
+        .where(inArray(studyDeckAudienceTags.deckId, deckIds));
 
-    audienceTagByDeckId = rows.reduce((map, row) => {
-      const next = map.get(row.deckId) ?? [];
-      next.push(row.label);
-      map.set(row.deckId, next);
-      return map;
-    }, new Map<string, string[]>());
+      audienceTagByDeckId = rows.reduce((map, row) => {
+        const next = map.get(row.deckId) ?? [];
+        next.push(row.label);
+        map.set(row.deckId, next);
+        return map;
+      }, new Map<string, string[]>());
+    } catch (error) {
+      if (!isMissingStudyTaxonomyError(error)) {
+        throw error;
+      }
+    }
   }
 
   const enrichedDecks: StudyLibraryDeck[] = decks.map((deck) => ({
