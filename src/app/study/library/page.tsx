@@ -20,6 +20,10 @@ function normalize(value: string | null | undefined) {
   return value?.trim().toLowerCase() ?? "";
 }
 
+function cleanParam(value: string | null | undefined) {
+  return value?.trim() || undefined;
+}
+
 export default async function StudyLibraryPage({ searchParams }: Props) {
   const { official, q, scope, subject, tag } = await searchParams;
   const session = await auth();
@@ -33,7 +37,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
       ? scope
       : "all";
 
-  const [filteredDecks, subjectTaxonomyOptions, audienceTags] = await Promise.all([
+  const [filteredDecks, optionDecks, subjectTaxonomyOptions, audienceTags] = await Promise.all([
     getStudyLibraryDecks({
       officialOnly,
       query,
@@ -42,18 +46,22 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
       tag: tagFilter || undefined,
       userId,
     }),
+    getStudyLibraryDecks({
+      scope: scopeFilter,
+      userId,
+    }),
     getStudySubjectOptions(),
     getStudyAudienceTags(),
   ]);
 
   const deckSubjects = Array.from(
-    new Set(filteredDecks.map((deck) => deck.subject?.trim()).filter((value): value is string => Boolean(value))),
+    new Set(optionDecks.map((deck) => deck.subject?.trim()).filter((value): value is string => Boolean(value))),
   );
   const taxonomyNames = new Set(subjectTaxonomyOptions.map((item) => item.name));
   const extraDeckSubjects = deckSubjects.filter((value) => !taxonomyNames.has(value));
   const tags = Array.from(
     new Set(
-      filteredDecks
+      optionDecks
         .flatMap((deck) => deck.tags ?? [])
         .map((value) => value.trim())
         .filter((value): value is string => Boolean(value)),
@@ -62,6 +70,40 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
 
   const hasFilters = Boolean(query || subjectFilter || tagFilter || officialOnly || scopeFilter !== "all");
   const resultLabel = `${filteredDecks.length} result${filteredDecks.length === 1 ? "" : "s"}`;
+  const subjectOptions = [
+    ...subjectTaxonomyOptions.map((value) => ({ label: value.label, value: value.name })),
+    ...extraDeckSubjects.map((value) => ({ label: value, value })),
+  ];
+  const tagOptions = [
+    ...audienceTags.map((value) => ({ label: value.label, value: value.label })),
+    ...tags
+      .filter((value) => !audienceTags.some((audienceTag) => audienceTag.label.toLowerCase() === value.toLowerCase()))
+      .map((value) => ({ label: value, value })),
+  ];
+
+  function libraryHref(next: {
+    official?: string | null;
+    q?: string | null;
+    scope?: StudyLibraryScope | null;
+    subject?: string | null;
+    tag?: string | null;
+  }) {
+    const params = new URLSearchParams();
+    const nextScope = next.scope === undefined ? scopeFilter : next.scope;
+    const nextQuery = next.q === undefined ? cleanParam(q) : cleanParam(next.q);
+    const nextSubject = next.subject === undefined ? cleanParam(subject) : cleanParam(next.subject);
+    const nextTag = next.tag === undefined ? cleanParam(tag) : cleanParam(next.tag);
+    const nextOfficial = next.official === undefined ? official : next.official;
+
+    if (nextScope && nextScope !== "all") params.set("scope", nextScope);
+    if (nextQuery) params.set("q", nextQuery);
+    if (nextSubject) params.set("subject", nextSubject);
+    if (nextTag) params.set("tag", nextTag);
+    if (nextOfficial === "1") params.set("official", "1");
+
+    const suffix = params.toString();
+    return suffix ? `/study/library?${suffix}` : "/study/library";
+  }
 
   return (
     <div className="screen study-dashboard-screen">
@@ -87,50 +129,8 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
       <section className="panel">
         <form action="/study/library" className="study-library-search">
           <label>
-            <span>Scope</span>
-            <select defaultValue={scopeFilter} name="scope">
-              <option value="all">All public decks</option>
-              <option value="official">Official decks</option>
-              {userId && <option value="mine">My public decks</option>}
-            </select>
-          </label>
-
-          <label>
             <span>Search</span>
             <input defaultValue={q ?? ""} name="q" placeholder="Search title, description, subject, tags..." type="search" />
-          </label>
-
-          <label>
-            <span>Subject</span>
-            <select defaultValue={subjectFilter || ""} name="subject">
-              <option value="">All subjects</option>
-              {subjectTaxonomyOptions.map((value) => (
-                <option key={value.id} value={value.name}>
-                  {value.label}
-                </option>
-              ))}
-              {extraDeckSubjects.map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Tag</span>
-            <select defaultValue={tagFilter || ""} name="tag">
-              <option value="">All tags</option>
-              {audienceTags.map((value) => (
-                <option key={value.id} value={value.label}>
-                  {value.label}
-                </option>
-              ))}
-              {tags.map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
           </label>
 
           <label className="study-check-label">
@@ -148,6 +148,61 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
             <span>{resultLabel}</span>
           </div>
         </form>
+
+        <div className="study-library-filter-groups">
+          <div className="study-library-filter-group">
+            <span>Scope</span>
+            <div className="study-filter-pills">
+              <Link className={scopeFilter === "all" ? "active" : ""} href={libraryHref({ scope: "all" })}>
+                All public
+              </Link>
+              <Link className={scopeFilter === "official" ? "active" : ""} href={libraryHref({ scope: "official" })}>
+                Official
+              </Link>
+              {userId && (
+                <Link className={scopeFilter === "mine" ? "active" : ""} href={libraryHref({ scope: "mine" })}>
+                  Mine
+                </Link>
+              )}
+            </div>
+          </div>
+
+          <div className="study-library-filter-group">
+            <span>Subject</span>
+            <div className="study-filter-pills">
+              <Link className={!subjectFilter ? "active" : ""} href={libraryHref({ subject: null })}>
+                All
+              </Link>
+              {subjectOptions.map((value) => (
+                <Link
+                  className={subjectFilter === value.value.toLowerCase() ? "active" : ""}
+                  href={libraryHref({ subject: value.value })}
+                  key={value.value}
+                >
+                  {value.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="study-library-filter-group">
+            <span>Audience & Tags</span>
+            <div className="study-filter-pills">
+              <Link className={!tagFilter ? "active" : ""} href={libraryHref({ tag: null })}>
+                All
+              </Link>
+              {tagOptions.map((value) => (
+                <Link
+                  className={tagFilter === value.value.toLowerCase() ? "active" : ""}
+                  href={libraryHref({ tag: value.value })}
+                  key={value.value}
+                >
+                  {value.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
       </section>
 
       {filteredDecks.length === 0 ? (
