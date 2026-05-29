@@ -9,10 +9,21 @@ export default async function StudyHome() {
   const session = await auth();
   const userId = session?.user?.id;
 
-  const [userDecks, userStats] = await Promise.all([
-    userId ? getStudyDecksWithStats(userId) : Promise.resolve([]),
-    userId ? getStudyUserStats(userId) : Promise.resolve(null),
-  ]);
+  let studyDataError = false;
+  let userDecks: Awaited<ReturnType<typeof getStudyDecksWithStats>> = [];
+  let userStats: Awaited<ReturnType<typeof getStudyUserStats>> | null = null;
+
+  if (userId) {
+    try {
+      [userDecks, userStats] = await Promise.all([
+        getStudyDecksWithStats(userId),
+        getStudyUserStats(userId),
+      ]);
+    } catch (error) {
+      studyDataError = true;
+      console.error("Study dashboard data could not be loaded.", error);
+    }
+  }
 
   const totalDue = userDecks.reduce((sum, deck) => sum + (deck.dueCount ?? 0), 0);
   const topDueDeck = [...userDecks]
@@ -39,7 +50,17 @@ export default async function StudyHome() {
         </Link>
       </div>
 
-      {userId ? (
+      {studyDataError && (
+        <section className="panel study-empty-panel">
+          <h2>Study setup is almost ready.</h2>
+          <p>
+            The Study dashboard route is live, but the Study database tables have not been
+            applied in this environment yet. Deploy with migrations, then reload this page.
+          </p>
+        </section>
+      )}
+
+      {userId && !studyDataError ? (
         <>
           <section className="study-stat-strip" aria-label="Study stats">
             <div className={totalDue > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
@@ -98,7 +119,7 @@ export default async function StudyHome() {
             </section>
           )}
         </>
-      ) : (
+      ) : !studyDataError ? (
         <section className="panel study-empty-panel">
           <h2>Study smarter with Que</h2>
           <p>Sign in from the product selector to create decks and track study progress.</p>
@@ -106,7 +127,7 @@ export default async function StudyHome() {
             Sign In
           </Link>
         </section>
-      )}
+      ) : null}
 
       <section className="panel study-library-cta">
         <div>
