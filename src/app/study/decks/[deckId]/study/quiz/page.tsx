@@ -29,7 +29,7 @@ function resolveLevel(value: string | undefined): StudyLevel | undefined {
 
 export default async function StudyQuizPage({ params, searchParams }: Props) {
   const { deckId } = await params;
-  const { filter, level: rawLevel, mode: modeParam, srs } = await searchParams;
+  const { filter, hf, level: rawLevel, mode: modeParam, srs } = await searchParams;
   const level = resolveLevel(rawLevel);
   const session = await auth();
   const userId = session?.user?.id;
@@ -81,6 +81,7 @@ export default async function StudyQuizPage({ params, searchParams }: Props) {
         allCards={filteredAllCards}
         deckId={deckId}
         filter={filter}
+        handsFree={hf === "1"}
         mode={mode}
         srs={srs === "1"}
       />

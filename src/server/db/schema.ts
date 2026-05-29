@@ -437,6 +437,7 @@ export const aiRuns = pgTable(
         | "introduction_draft"
         | "pricing_review"
         | "realtime"
+        | "study_tts"
         | "story_follow_up"
         | "story_outline"
       >()

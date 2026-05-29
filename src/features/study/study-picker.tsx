@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import {
   CheckCircle2,
+  Headphones,
   ChevronRight,
   ClipboardList,
+  Eye,
   Layers,
   ListChecks,
   PenLine,
@@ -15,6 +17,7 @@ import {
 } from "lucide-react";
 
 type Filter = "all" | "due" | "weak";
+type Modality = "handsfree" | "visual";
 type QueueMode = "once" | "srs";
 type Level = "all" | "beginner" | "intermediate" | "advanced";
 
@@ -37,6 +40,7 @@ type ResumeInfo = { filter: Filter; remaining: number };
 function buildUrl(
   deckId: string,
   filter: Filter,
+  modality: Modality,
   queueMode: QueueMode,
   level: Level,
   mode: "flashcards" | "match" | "quiz" | "test" | "truefalse" | "written",
@@ -51,10 +55,17 @@ function buildUrl(
   }
 
   if (mode === "flashcards") {
+    if (modality === "handsfree") {
+      search.set("hf", "1");
+      return `/study/decks/${deckId}/study/verbal?${search.toString()}`;
+    }
     return `/study/decks/${deckId}/study?${search.toString()}`;
   }
   if (mode === "quiz" || mode === "truefalse") {
     search.set("mode", mode === "truefalse" ? "truefalse" : "quiz");
+    if (modality === "handsfree") {
+      search.set("hf", "1");
+    }
     return `/study/decks/${deckId}/study/quiz?${search.toString()}`;
   }
   return `/study/decks/${deckId}/study/${mode}?${search.toString()}`;
@@ -63,6 +74,7 @@ function buildUrl(
 export function StudyPicker({ deckId, dueCount, levelCounts, totalCount, weakCount }: Props) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<Filter>(dueCount > 0 ? "due" : "all");
+  const [modality, setModality] = useState<Modality | null>(null);
   const [queueMode, setQueueMode] = useState<QueueMode>("once");
   const [level, setLevel] = useState<Level>("all");
   const [resumeInfo] = useState<ResumeInfo | null>(() => {
@@ -92,14 +104,16 @@ export function StudyPicker({ deckId, dueCount, levelCounts, totalCount, weakCou
     icon: ReactNode;
     key: "flashcards" | "match" | "quiz" | "test" | "truefalse" | "written";
     label: string;
+    visualOnly?: boolean;
   }> = [
     { key: "flashcards", label: "Flashcards", icon: <Layers size={18} />, desc: "Flip and rate cards" },
     { key: "quiz", label: "Quiz Me", icon: <ListChecks size={18} />, desc: "Multiple choice mode" },
     { key: "truefalse", label: "True / False", icon: <span className="study-picker__tf-icons"><CheckCircle2 size={14} /><XCircle size={14} /></span>, desc: "Quick binary checks" },
-    { key: "written", label: "Written", icon: <PenLine size={18} />, desc: "Type answers and self/AI rate" },
-    { key: "match", label: "Match", icon: <Shuffle size={18} />, desc: "Match terms and definitions" },
-    { key: "test", label: "Test", icon: <ClipboardList size={18} />, desc: "Full test with final review" },
+    { key: "written", label: "Written", icon: <PenLine size={18} />, desc: "Type answers and self/AI rate", visualOnly: true },
+    { key: "match", label: "Match", icon: <Shuffle size={18} />, desc: "Match terms and definitions", visualOnly: true },
+    { key: "test", label: "Test", icon: <ClipboardList size={18} />, desc: "Full test with final review", visualOnly: true },
   ];
+  const visibleModes = modality === "handsfree" ? modes.filter((mode) => !mode.visualOnly) : modes;
 
   if (!open) {
     return (
@@ -123,17 +137,31 @@ export function StudyPicker({ deckId, dueCount, levelCounts, totalCount, weakCou
     );
   }
 
+  if (!modality) {
+    return (
+      <section className="study-picker study-picker--open panel">
+        <div className="study-picker__header">
+          <h3>Choose Study Mode</h3>
+          <button className="secondary" onClick={() => { setOpen(false); }} type="button"><X size={14} /></button>
+        </div>
+        <div className="study-picker__modalities">
+          <button onClick={() => setModality("handsfree")} type="button"><Headphones size={16} /> Hands-Free</button>
+          <button className="secondary" onClick={() => setModality("visual")} type="button"><Eye size={16} /> Visual</button>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="study-picker study-picker--open panel">
       <div className="study-picker__header">
-        <h3>Choose Study Mode</h3>
+        <h3>{modality === "handsfree" ? "Hands-Free Modes" : "Visual Modes"}</h3>
         <button className="secondary" onClick={() => { setOpen(false); }} type="button"><X size={14} /></button>
       </div>
       <div className="study-picker__queue-toggle">
         <button className={queueMode === "once" ? "" : "secondary"} onClick={() => setQueueMode("once")} type="button">Once</button>
         <button className={queueMode === "srs" ? "" : "secondary"} onClick={() => setQueueMode("srs")} type="button">SRS</button>
       </div>
-      <p className="text-muted">Hands-free voice routes are hidden until full support is imported.</p>
       {hasLevels && (
         <div className="study-picker__filters">
           {(["all", "beginner", "intermediate", "advanced"] as const).map((option) => (
@@ -144,12 +172,12 @@ export function StudyPicker({ deckId, dueCount, levelCounts, totalCount, weakCou
         </div>
       )}
       <div className="study-picker__mode-cards">
-        {modes.map((mode) => (
+        {visibleModes.map((mode) => (
           <Link
             className="study-picker__mode-card"
-            href={buildUrl(deckId, filter, queueMode, level, mode.key)}
+            href={buildUrl(deckId, filter, modality, queueMode, level, mode.key)}
             key={mode.key}
-            onClick={() => { setOpen(false); }}
+            onClick={() => { setOpen(false); setModality(null); }}
           >
             <span className="study-picker__mode-card-icon">{mode.icon}</span>
             <span className="study-picker__mode-card-info">

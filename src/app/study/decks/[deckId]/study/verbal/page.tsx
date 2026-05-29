@@ -29,7 +29,7 @@ function resolveLevel(value: string | undefined): StudyLevel | undefined {
 
 export default async function StudyVerbalPage({ params, searchParams }: Props) {
   const { deckId } = await params;
-  const { filter, level: rawLevel } = await searchParams;
+  const { filter, hf, level: rawLevel, resume, srs } = await searchParams;
   const level = resolveLevel(rawLevel);
   const session = await auth();
   const userId = session?.user?.id;
@@ -67,7 +67,15 @@ export default async function StudyVerbalPage({ params, searchParams }: Props) {
           {deck.title}
         </Link>
       </div>
-      <StudyVerbal cards={cards} deckId={deckId} filter={filter} />
+      <StudyVerbal
+        cards={cards}
+        deckId={deckId}
+        deckTitle={deck.title}
+        filter={filter}
+        hf={hf === "1"}
+        resume={resume === "1"}
+        srs={srs === "1"}
+      />
     </div>
   );
 }
