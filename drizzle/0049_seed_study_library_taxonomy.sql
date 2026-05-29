@@ -228,10 +228,35 @@ VALUES
   ('Estates & Trusts', 'estates-trusts', 'property-law', 754);
 
 INSERT INTO study_subjects (name, slug, parent_id, sort_order)
+SELECT seed.name, seed.slug, NULL, seed.sort_order
+FROM study_subject_seed seed
+WHERE seed.parent_slug IS NULL
+ON CONFLICT (slug) DO UPDATE
+SET name = EXCLUDED.name,
+    parent_id = EXCLUDED.parent_id,
+    sort_order = EXCLUDED.sort_order,
+    updated_at = now();
+
+INSERT INTO study_subjects (name, slug, parent_id, sort_order)
 SELECT seed.name, seed.slug, parent.id, seed.sort_order
 FROM study_subject_seed seed
-LEFT JOIN study_subjects parent ON parent.slug = seed.parent_slug
-WHERE seed.parent_slug IS NULL OR parent.id IS NOT NULL
+JOIN study_subject_seed parent_seed
+  ON parent_seed.slug = seed.parent_slug
+  AND parent_seed.parent_slug IS NULL
+JOIN study_subjects parent ON parent.slug = seed.parent_slug
+ON CONFLICT (slug) DO UPDATE
+SET name = EXCLUDED.name,
+    parent_id = EXCLUDED.parent_id,
+    sort_order = EXCLUDED.sort_order,
+    updated_at = now();
+
+INSERT INTO study_subjects (name, slug, parent_id, sort_order)
+SELECT seed.name, seed.slug, parent.id, seed.sort_order
+FROM study_subject_seed seed
+JOIN study_subject_seed parent_seed
+  ON parent_seed.slug = seed.parent_slug
+  AND parent_seed.parent_slug IS NOT NULL
+JOIN study_subjects parent ON parent.slug = seed.parent_slug
 ON CONFLICT (slug) DO UPDATE
 SET name = EXCLUDED.name,
     parent_id = EXCLUDED.parent_id,

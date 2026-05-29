@@ -128,7 +128,7 @@ export function StudyPicker({ deckId, dueCount, levelCounts, totalCount, weakCou
             </Link>
           </div>
         )}
-        <div className="study-picker__presets">
+        <div className="study-picker__presets pill-grid">
           <button className="secondary" disabled={dueCount === 0} onClick={() => { setFilter("due"); setOpen(true); }} type="button">Due ({dueCount})</button>
           <button className="secondary" disabled={weakCount === 0} onClick={() => { setFilter("weak"); setOpen(true); }} type="button">Weak ({weakCount})</button>
           <button className="secondary" onClick={() => { setFilter("all"); setOpen(true); }} type="button">All ({totalCount})</button>
@@ -144,9 +144,9 @@ export function StudyPicker({ deckId, dueCount, levelCounts, totalCount, weakCou
           <h3>Choose Study Mode</h3>
           <button className="secondary" onClick={() => { setOpen(false); }} type="button"><X size={14} /></button>
         </div>
-        <div className="study-picker__modalities">
-          <button onClick={() => setModality("handsfree")} type="button"><Headphones size={16} /> Hands-Free</button>
-          <button className="secondary" onClick={() => setModality("visual")} type="button"><Eye size={16} /> Visual</button>
+        <div className="study-picker__modalities segmented-control">
+          <button className={modality === "handsfree" ? "active" : ""} onClick={() => setModality("handsfree")} type="button"><Headphones size={16} /> Hands-Free</button>
+          <button className={modality === "visual" ? "active" : ""} onClick={() => setModality("visual")} type="button"><Eye size={16} /> Visual</button>
         </div>
       </section>
     );
@@ -158,12 +158,12 @@ export function StudyPicker({ deckId, dueCount, levelCounts, totalCount, weakCou
         <h3>{modality === "handsfree" ? "Hands-Free Modes" : "Visual Modes"}</h3>
         <button className="secondary" onClick={() => { setOpen(false); }} type="button"><X size={14} /></button>
       </div>
-      <div className="study-picker__queue-toggle">
-        <button className={queueMode === "once" ? "" : "secondary"} onClick={() => setQueueMode("once")} type="button">Once</button>
-        <button className={queueMode === "srs" ? "" : "secondary"} onClick={() => setQueueMode("srs")} type="button">SRS</button>
+      <div className="study-picker__queue-toggle segmented-control">
+        <button className={queueMode === "once" ? "active" : ""} onClick={() => setQueueMode("once")} type="button">Once</button>
+        <button className={queueMode === "srs" ? "active" : ""} onClick={() => setQueueMode("srs")} type="button">SRS</button>
       </div>
       {hasLevels && (
-        <div className="study-picker__filters">
+        <div className="study-picker__filters pill-grid">
           {(["all", "beginner", "intermediate", "advanced"] as const).map((option) => (
             <button className={level === option ? "" : "secondary"} key={option} onClick={() => setLevel(option)} type="button">
               {option}
