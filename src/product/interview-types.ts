@@ -600,6 +600,7 @@ export type AiRunRecord = {
   rawJson?: Record<string, unknown>;
   runType:
     | "debrief"
+    | "dpe_review"
     | "evaluation"
     | "introduction_draft"
     | "pricing_review"

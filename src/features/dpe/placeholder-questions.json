@@ -1,0 +1,152 @@
+[
+  {
+    "id": "PLACEHOLDER-PA-I-A-001",
+    "acsTitle": "Private Pilot Airplane",
+    "acsArea": "I",
+    "acsTask": "A",
+    "acsElementType": "K",
+    "acsElementReference": "PA.I.A.K1",
+    "questionMode": "verbal",
+    "questionText": "Placeholder: What documents must a private pilot have available to act as pilot in command?",
+    "difficulty": "Placeholder",
+    "keywords": "placeholder||pilot certificate||medical||photo identification",
+    "primarySubject": "Placeholder Content",
+    "visualImage": null,
+    "active": true,
+    "aiContext": {
+      "answerKeyStatus": "placeholder",
+      "taskTitle": "Pilot Qualifications",
+      "promptType": "recall",
+      "practiceLane": "oral",
+      "supportsHandsFree": true,
+      "provisionalAnswerKey": "Placeholder answer key: expected answer should cover pilot certificate, government photo identification, and medical certificate or BasicMed qualification when required. This is not final product content.",
+      "scoringRubric": {
+        "knowledge": "Placeholder rubric: check whether required documents are named accurately.",
+        "riskManagement": "Placeholder rubric: note whether the applicant understands legality before flight.",
+        "scenarioJudgment": "Placeholder rubric: give credit for applying the answer to a PIC scenario.",
+        "communication": "Placeholder rubric: answer should be concise and organized.",
+        "checkrideReadiness": "Placeholder rubric: score conservatively because final content is not authored."
+      }
+    }
+  },
+  {
+    "id": "PLACEHOLDER-PA-I-A-002",
+    "acsTitle": "Private Pilot Airplane",
+    "acsArea": "I",
+    "acsTask": "A",
+    "acsElementType": "K",
+    "acsElementReference": "PA.I.A.K2",
+    "questionMode": "verbal",
+    "questionText": "Placeholder: What are some privileges and limitations of a private pilot certificate?",
+    "difficulty": "Placeholder",
+    "keywords": "placeholder||privileges||limitations||compensation",
+    "primarySubject": "Placeholder Content",
+    "visualImage": null,
+    "active": true,
+    "aiContext": {
+      "answerKeyStatus": "placeholder",
+      "taskTitle": "Pilot Qualifications",
+      "promptType": "explain",
+      "practiceLane": "oral",
+      "supportsHandsFree": true,
+      "provisionalAnswerKey": "Placeholder answer key: expected answer should mention no flying for compensation or hire, pro rata expense sharing limits, charitable/search-and-rescue exceptions at a high level, and acting as PIC within category/class/endorsement limitations. This is not final product content.",
+      "scoringRubric": {
+        "knowledge": "Placeholder rubric: check whether core privilege/limitation ideas are accurate.",
+        "riskManagement": "Placeholder rubric: identify unsafe or illegal compensation assumptions.",
+        "scenarioJudgment": "Placeholder rubric: credit practical examples of what is and is not allowed.",
+        "communication": "Placeholder rubric: answer should avoid rambling and distinguish privileges from limits.",
+        "checkrideReadiness": "Placeholder rubric: score conservatively because final content is not authored."
+      }
+    }
+  },
+  {
+    "id": "PLACEHOLDER-PA-I-B-001",
+    "acsTitle": "Private Pilot Airplane",
+    "acsArea": "I",
+    "acsTask": "B",
+    "acsElementType": "K",
+    "acsElementReference": "PA.I.B.K1",
+    "questionMode": "verbal",
+    "questionText": "Placeholder: How would you determine whether an aircraft is airworthy before a flight?",
+    "difficulty": "Placeholder",
+    "keywords": "placeholder||airworthiness||AROW||inspections||ADs",
+    "primarySubject": "Placeholder Content",
+    "visualImage": null,
+    "active": true,
+    "aiContext": {
+      "answerKeyStatus": "placeholder",
+      "taskTitle": "Airworthiness Requirements",
+      "promptType": "explain",
+      "practiceLane": "oral",
+      "supportsHandsFree": true,
+      "provisionalAnswerKey": "Placeholder answer key: expected answer should cover required documents, required inspections, AD compliance, equipment status, maintenance records, and pilot preflight determination. This is not final product content.",
+      "scoringRubric": {
+        "knowledge": "Placeholder rubric: check whether documents, inspections, and ADs are covered.",
+        "riskManagement": "Placeholder rubric: credit conservative no-go decisions when airworthiness is uncertain.",
+        "scenarioJudgment": "Placeholder rubric: credit applying the process to a real preflight.",
+        "communication": "Placeholder rubric: answer should present a clear sequence.",
+        "checkrideReadiness": "Placeholder rubric: score conservatively because final content is not authored."
+      }
+    }
+  },
+  {
+    "id": "PLACEHOLDER-PA-I-C-001",
+    "acsTitle": "Private Pilot Airplane",
+    "acsArea": "I",
+    "acsTask": "C",
+    "acsElementType": "K",
+    "acsElementReference": "PA.I.C.K1",
+    "questionMode": "verbal",
+    "questionText": "Placeholder: What weather information would you review before a day VFR cross-country flight?",
+    "difficulty": "Placeholder",
+    "keywords": "placeholder||weather||METAR||TAF||winds aloft||NOTAM",
+    "primarySubject": "Placeholder Content",
+    "visualImage": null,
+    "active": true,
+    "aiContext": {
+      "answerKeyStatus": "placeholder",
+      "taskTitle": "Weather Information",
+      "promptType": "scenario",
+      "practiceLane": "oral",
+      "supportsHandsFree": true,
+      "provisionalAnswerKey": "Placeholder answer key: expected answer should cover current conditions, forecasts, winds aloft, NOTAMs, adverse weather, TFRs, ceilings/visibility, and trend evaluation. This is not final product content.",
+      "scoringRubric": {
+        "knowledge": "Placeholder rubric: check whether key preflight weather products are named.",
+        "riskManagement": "Placeholder rubric: credit identifying weather trends and personal minimums.",
+        "scenarioJudgment": "Placeholder rubric: credit go/no-go thinking for a VFR cross-country.",
+        "communication": "Placeholder rubric: answer should be structured as a briefing flow.",
+        "checkrideReadiness": "Placeholder rubric: score conservatively because final content is not authored."
+      }
+    }
+  },
+  {
+    "id": "PLACEHOLDER-PA-I-C-002",
+    "acsTitle": "Private Pilot Airplane",
+    "acsArea": "I",
+    "acsTask": "C",
+    "acsElementType": "R",
+    "acsElementReference": "PA.I.C.R1",
+    "questionMode": "verbal",
+    "questionText": "Placeholder: If the forecast is legal VFR but trending worse along your route, how would you make the go/no-go decision?",
+    "difficulty": "Placeholder",
+    "keywords": "placeholder||weather risk||personal minimums||alternate plan",
+    "primarySubject": "Placeholder Content",
+    "visualImage": null,
+    "active": true,
+    "aiContext": {
+      "answerKeyStatus": "placeholder",
+      "taskTitle": "Weather Information",
+      "promptType": "scenario",
+      "practiceLane": "oral",
+      "supportsHandsFree": true,
+      "provisionalAnswerKey": "Placeholder answer key: expected answer should cover personal minimums, route/alternate options, fuel and daylight margins, delaying/canceling, and avoiding scud running or press-on bias. This is not final product content.",
+      "scoringRubric": {
+        "knowledge": "Placeholder rubric: check whether legal VFR is distinguished from safe VFR.",
+        "riskManagement": "Placeholder rubric: heavily reward conservative mitigation and no-go judgment.",
+        "scenarioJudgment": "Placeholder rubric: credit concrete alternate plans and decision triggers.",
+        "communication": "Placeholder rubric: answer should sound like a clear PIC decision.",
+        "checkrideReadiness": "Placeholder rubric: score conservatively because final content is not authored."
+      }
+    }
+  }
+]

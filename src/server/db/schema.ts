@@ -433,6 +433,7 @@ export const aiRuns = pgTable(
     runType: text("run_type")
       .$type<
         | "debrief"
+        | "dpe_review"
         | "evaluation"
         | "introduction_draft"
         | "pricing_review"
@@ -907,3 +908,236 @@ export const studyCardAttempts = pgTable("study_card_attempts", {
   userResponse: text("user_response"),
   verdict: text("verdict").$type<"again" | "almost" | "correct" | "easy" | "good" | "hard" | "missed">(),
 });
+
+export const dpeProfiles = pgTable(
+  "dpe_profiles",
+  {
+    aircraft: text("aircraft"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    flightSchool: text("flight_school"),
+    id: uuid("id").defaultRandom().primaryKey(),
+    instructor: text("instructor"),
+    knownDpeName: text("known_dpe_name"),
+    personalNotes: text("personal_notes"),
+    preferredName: text("preferred_name"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    weakAreaNotes: text("weak_area_notes"),
+  },
+  (profile) => ({
+    userIdx: uniqueIndex("dpe_profiles_user_idx").on(profile.userId),
+  }),
+);
+
+export const dpeCheckrideTargets = pgTable(
+  "dpe_checkride_targets",
+  {
+    active: boolean("active").default(true).notNull(),
+    aircraft: text("aircraft"),
+    aircraftCategory: text("aircraft_category").notNull(),
+    aircraftClass: text("aircraft_class").notNull(),
+    certificate: text("certificate").notNull(),
+    checkrideDate: timestamp("checkride_date", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    knownDpeName: text("known_dpe_name"),
+    schoolContext: text("school_context"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (target) => ({
+    userIdx: index("dpe_checkride_targets_user_idx").on(target.userId),
+  }),
+);
+
+export const dpeCertificateTypes = pgTable("dpe_certificate_types", {
+  active: boolean("active").default(true).notNull(),
+  aircraftClass: text("aircraft_class"),
+  category: text("category"),
+  code: text("code").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const dpeContentVersions = pgTable(
+  "dpe_content_versions",
+  {
+    certificateTypeId: text("certificate_type_id")
+      .notNull()
+      .references(() => dpeCertificateTypes.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    notes: text("notes"),
+    status: text("status").notNull(),
+    title: text("title").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    version: integer("version").notNull(),
+  },
+  (version) => ({
+    certificateVersionIdx: uniqueIndex("dpe_content_versions_certificate_version_idx").on(
+      version.certificateTypeId,
+      version.version,
+    ),
+    statusIdx: index("dpe_content_versions_status_idx").on(version.status),
+  }),
+);
+
+export const dpeOralQuestions = pgTable(
+  "dpe_oral_questions",
+  {
+    acsArea: text("acs_area").notNull(),
+    acsElementReference: text("acs_element_reference").notNull(),
+    acsElementType: text("acs_element_type").notNull(),
+    acsTask: text("acs_task").notNull(),
+    acsTitle: text("acs_title").notNull(),
+    active: boolean("active").default(true).notNull(),
+    aiContext: text("ai_context"),
+    certificateTypeId: text("certificate_type_id").references(() => dpeCertificateTypes.id, {
+      onDelete: "set null",
+    }),
+    contentVersionId: uuid("content_version_id").references(() => dpeContentVersions.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    difficulty: text("difficulty"),
+    id: text("id").primaryKey(),
+    keywords: text("keywords"),
+    primarySubject: text("primary_subject"),
+    questionMode: text("question_mode").notNull(),
+    questionText: text("question_text").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    visualImage: text("visual_image"),
+  },
+  (question) => ({
+    acsIdx: index("dpe_oral_questions_acs_idx").on(
+      question.acsTitle,
+      question.acsArea,
+      question.acsTask,
+    ),
+    certificateAcsIdx: index("dpe_oral_questions_certificate_acs_idx").on(
+      question.certificateTypeId,
+      question.acsArea,
+      question.acsTask,
+    ),
+    elementIdx: index("dpe_oral_questions_element_idx").on(question.acsElementReference),
+  }),
+);
+
+export const dpeQuestionAnswerKeys = pgTable("dpe_question_answer_keys", {
+  acceptableVariations: jsonb("acceptable_variations").$type<string[]>(),
+  commonMisses: jsonb("common_misses").$type<string[]>(),
+  correctAnswerElements: jsonb("correct_answer_elements").$type<string[]>().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  id: uuid("id").defaultRandom().primaryKey(),
+  notes: text("notes"),
+  questionId: text("question_id")
+    .notNull()
+    .references(() => dpeOralQuestions.id, { onDelete: "cascade" })
+    .unique(),
+  sourceReferences: jsonb("source_references").$type<string[]>(),
+  status: text("status").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const dpeQuestionRubrics = pgTable("dpe_question_rubrics", {
+  checkrideReadiness: text("checkride_readiness").notNull(),
+  communication: text("communication").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  id: uuid("id").defaultRandom().primaryKey(),
+  knowledge: text("knowledge").notNull(),
+  questionId: text("question_id")
+    .notNull()
+    .references(() => dpeOralQuestions.id, { onDelete: "cascade" })
+    .unique(),
+  riskManagement: text("risk_management").notNull(),
+  scenarioJudgment: text("scenario_judgment").notNull(),
+  scoringNotes: text("scoring_notes"),
+  status: text("status").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const dpePracticeSessions = pgTable(
+  "dpe_practice_sessions",
+  {
+    acsArea: text("acs_area"),
+    acsTask: text("acs_task"),
+    acsTitle: text("acs_title").notNull(),
+    checkrideTargetId: uuid("checkride_target_id").references(() => dpeCheckrideTargets.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    id: uuid("id").defaultRandom().primaryKey(),
+    mode: text("mode").notNull(),
+    promptConfigKey: text("prompt_config_key"),
+    promptConfigVersion: integer("prompt_config_version"),
+    reviewJson: jsonb("review_json"),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    status: text("status").notNull(),
+    transcriptJson: jsonb("transcript_json"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (session) => ({
+    acsIdx: index("dpe_practice_sessions_acs_idx").on(
+      session.acsTitle,
+      session.acsArea,
+      session.acsTask,
+    ),
+    userCreatedIdx: index("dpe_practice_sessions_user_created_idx").on(
+      session.userId,
+      session.createdAt,
+    ),
+  }),
+);
+
+export const dpeSessionQuestions = pgTable(
+  "dpe_session_questions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    questionId: text("question_id")
+      .notNull()
+      .references(() => dpeOralQuestions.id, { onDelete: "restrict" }),
+    response: text("response"),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => dpePracticeSessions.id, { onDelete: "cascade" }),
+    sortOrder: integer("sort_order").notNull(),
+  },
+  (sessionQuestion) => ({
+    sessionQuestionIdx: uniqueIndex("dpe_session_questions_session_question_idx").on(
+      sessionQuestion.sessionId,
+      sessionQuestion.questionId,
+    ),
+  }),
+);
+
+export const dpeDiagnosticEvents = pgTable(
+  "dpe_diagnostic_events",
+  {
+    code: text("code"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    message: text("message").notNull(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    sessionId: uuid("session_id").references(() => dpePracticeSessions.id, {
+      onDelete: "set null",
+    }),
+    severity: text("severity").notNull(),
+    surface: text("surface").notNull(),
+  },
+  (event) => ({
+    surfaceCreatedIdx: index("dpe_diagnostic_events_surface_created_idx").on(
+      event.surface,
+      event.createdAt,
+    ),
+  }),
+);
