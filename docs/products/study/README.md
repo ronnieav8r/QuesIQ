@@ -18,11 +18,12 @@ The first Study slice is imported:
 - `/study` renders a real Study dashboard from `src/features/study/study-home.tsx`
 - `/study/decks`, `/study/decks/new`, and `/study/decks/[deckId]` support the
   first usable deck-management slice
-- signed-in users can create decks and add/delete cards manually
+- `/study/decks/[deckId]/edit` supports deck metadata updates
+- signed-in users can create/edit decks and add/delete cards manually
 - Study reuses the shared platform Auth.js session
 - baseline Study deck/card/session tables are added with `study_` prefixes
-- deeper import, library, edit deck, study modes, TTS, and AI evaluation routes
-  still need to be imported
+- deeper import, library, study modes, TTS, and AI evaluation routes still need
+  to be imported
 
 ## Boundaries
 
