@@ -60,6 +60,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     description?: string | null;
     examDate?: string | null;
     examName?: string | null;
+    folderId?: string | null;
     isPublic?: boolean;
     subject?: string | null;
     tags?: string[] | null;
@@ -69,6 +70,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     ...(body.description !== undefined && { description: body.description?.trim() || null }),
     ...(body.examDate !== undefined && { examDate: body.examDate ? new Date(body.examDate) : null }),
     ...(body.examName !== undefined && { examName: body.examName?.trim() || null }),
+    ...(body.folderId !== undefined && { folderId: body.folderId || null }),
     ...(body.isPublic !== undefined && { isPublic: Boolean(body.isPublic) }),
     ...(body.subject !== undefined && { subject: body.subject?.trim() || null }),
     ...(body.tags !== undefined && { tags: Array.isArray(body.tags) ? body.tags : null }),

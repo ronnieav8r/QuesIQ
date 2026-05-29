@@ -49,6 +49,7 @@ export default async function EditStudyDeckPage({ params }: Props) {
             description: deck.description ?? "",
             examDate: deck.examDate ? new Date(deck.examDate).toISOString().split("T")[0] : "",
             examName: deck.examName ?? "",
+            folderId: deck.folderId ?? "",
             isPublic: deck.isPublic,
             subject: deck.subject ?? "",
             tags: deck.tags?.join(", ") ?? "",

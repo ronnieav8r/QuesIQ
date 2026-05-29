@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
     description?: string;
     examDate?: string | null;
     examName?: string | null;
+    folderId?: string | null;
     isPublic?: boolean;
     subject?: string;
     tags?: string[];
@@ -38,6 +39,7 @@ export async function POST(request: NextRequest) {
     description: body.description?.trim() || undefined,
     examDate: body.examDate ? new Date(body.examDate) : null,
     examName: body.examName?.trim() || null,
+    folderId: body.folderId || null,
     isPublic: Boolean(body.isPublic),
     subject: body.subject?.trim() || undefined,
     tags: Array.isArray(body.tags) ? body.tags : undefined,

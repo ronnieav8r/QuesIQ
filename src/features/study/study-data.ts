@@ -1,7 +1,7 @@
 import { asc, desc, eq, isNull, lt, lte, or, sql, and, gt } from "drizzle-orm";
 
 import { getDb } from "@/server/db/client";
-import { studyCardAttempts, studyCards, studyDecks, studySessions } from "@/server/db/schema";
+import { studyCardAttempts, studyCards, studyDecks, studyFolders, studySessions } from "@/server/db/schema";
 import { computeNextStudyReview, type StudyVerdict } from "@/features/study/study-srs";
 
 export type StudyLevel = "advanced" | "beginner" | "intermediate";
@@ -109,6 +109,7 @@ export async function createStudyDeck(data: {
   description?: string;
   examDate?: Date | null;
   examName?: string | null;
+  folderId?: string | null;
   isPublic?: boolean;
   subject?: string;
   tags?: string[];
@@ -121,6 +122,7 @@ export async function createStudyDeck(data: {
       description: data.description ?? null,
       examDate: data.examDate ?? null,
       examName: data.examName ?? null,
+      folderId: data.folderId ?? null,
       isPublic: data.isPublic ?? false,
       subject: data.subject ?? null,
       tags: data.tags ?? null,
@@ -138,6 +140,7 @@ export async function updateStudyDeck(
     description?: string | null;
     examDate?: Date | null;
     examName?: string | null;
+    folderId?: string | null;
     isPublic?: boolean;
     subject?: string | null;
     tags?: string[] | null;
@@ -155,6 +158,48 @@ export async function updateStudyDeck(
 
 export async function deleteStudyDeck(deckId: string) {
   await getDb().delete(studyDecks).where(eq(studyDecks.id, deckId));
+}
+
+export async function getStudyFolders(userId: string) {
+  return getDb()
+    .select()
+    .from(studyFolders)
+    .where(eq(studyFolders.userId, userId))
+    .orderBy(asc(studyFolders.name));
+}
+
+export async function createStudyFolder(data: { name: string; userId: string }) {
+  const [folder] = await getDb()
+    .insert(studyFolders)
+    .values({
+      name: data.name,
+      userId: data.userId,
+    })
+    .returning();
+  return folder;
+}
+
+export async function updateStudyFolder(folderId: string, data: { name: string }) {
+  const [folder] = await getDb()
+    .update(studyFolders)
+    .set({
+      name: data.name,
+      updatedAt: new Date(),
+    })
+    .where(eq(studyFolders.id, folderId))
+    .returning();
+  return folder;
+}
+
+export async function deleteStudyFolder(folderId: string) {
+  await getDb()
+    .update(studyDecks)
+    .set({
+      folderId: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(studyDecks.folderId, folderId));
+  await getDb().delete(studyFolders).where(eq(studyFolders.id, folderId));
 }
 
 export async function forkStudyDeck(data: {

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 type StudyDeckFormValues = {
   description: string;
   examDate: string;
   examName: string;
+  folderId: string;
   isPublic: boolean;
   subject: string;
   tags: string;
@@ -23,15 +24,30 @@ export function StudyDeckForm({ deckId, initialValues }: StudyDeckFormProps) {
   const isEdit = Boolean(deckId);
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
+  const [folders, setFolders] = useState<Array<{ id: string; name: string }>>([]);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [creatingFolder, setCreatingFolder] = useState(false);
   const [values, setValues] = useState<StudyDeckFormValues>({
     description: initialValues?.description ?? "",
     examDate: initialValues?.examDate ?? "",
     examName: initialValues?.examName ?? "",
+    folderId: initialValues?.folderId ?? "",
     isPublic: initialValues?.isPublic ?? false,
     subject: initialValues?.subject ?? "",
     tags: initialValues?.tags ?? "",
     title: initialValues?.title ?? "",
   });
+
+  useEffect(() => {
+    void fetch("/api/study/folders")
+      .then((response) => response.json())
+      .then((data: { folders?: Array<{ id: string; name: string }> }) => {
+        if (Array.isArray(data.folders)) {
+          setFolders(data.folders);
+        }
+      })
+      .catch(() => undefined);
+  }, []);
 
   function set(field: keyof StudyDeckFormValues, value: boolean | string) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -57,6 +73,7 @@ export function StudyDeckForm({ deckId, initialValues }: StudyDeckFormProps) {
         description: values.description.trim() || undefined,
         examDate: values.examDate || null,
         examName: values.examName.trim() || null,
+        folderId: values.folderId || null,
         isPublic: values.isPublic,
         subject: values.subject.trim() || undefined,
         tags: tags.length > 0 ? tags : undefined,
@@ -76,6 +93,28 @@ export function StudyDeckForm({ deckId, initialValues }: StudyDeckFormProps) {
 
     router.push(`/study/decks/${data.deck.id}`);
     router.refresh();
+  }
+
+  async function createFolder() {
+    const name = newFolderName.trim();
+    if (!name || creatingFolder) {
+      return;
+    }
+    setCreatingFolder(true);
+    const response = await fetch("/api/study/folders", {
+      body: JSON.stringify({ name }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
+    const data = (await response.json()) as { folder?: { id: string; name: string }; error?: string };
+    setCreatingFolder(false);
+    if (!response.ok || !data.folder) {
+      setError(data.error ?? "Folder could not be created.");
+      return;
+    }
+    setFolders((current) => [...current, data.folder!].sort((a, b) => a.name.localeCompare(b.name)));
+    set("folderId", data.folder.id);
+    setNewFolderName("");
   }
 
   return (
@@ -117,6 +156,31 @@ export function StudyDeckForm({ deckId, initialValues }: StudyDeckFormProps) {
             value={values.examDate}
           />
         </label>
+      </div>
+      <label>
+        <span>Folder</span>
+        <select
+          onChange={(event) => set("folderId", event.target.value)}
+          value={values.folderId}
+        >
+          <option value="">No folder</option>
+          {folders.map((folder) => (
+            <option key={folder.id} value={folder.id}>
+              {folder.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="inline-actions">
+        <input
+          onChange={(event) => setNewFolderName(event.target.value)}
+          placeholder="New folder name"
+          type="text"
+          value={newFolderName}
+        />
+        <button className="secondary" disabled={creatingFolder || !newFolderName.trim()} onClick={() => void createFolder()} type="button">
+          {creatingFolder ? "Adding..." : "Add Folder"}
+        </button>
       </div>
       <label>
         <span>Subject</span>

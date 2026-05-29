@@ -15,6 +15,7 @@ import {
 import { StudyCardList } from "@/features/study/study-card-list";
 import { StudyForkButton } from "@/features/study/study-fork-button";
 import { StudyPicker } from "@/features/study/study-picker";
+import { StudyPublicToggle } from "@/features/study/study-public-toggle";
 
 type Props = {
   params: Promise<{ deckId: string }>;
@@ -81,6 +82,9 @@ export default async function StudyDeckPage({ params }: Props) {
         <p className="eyebrow">Study Deck</p>
         <h1>{deck.title}</h1>
         {deck.description && <p>{deck.description}</p>}
+        {isOwner && !deck.isOfficial && (
+          <StudyPublicToggle deckId={deckId} isPublic={deck.isPublic} />
+        )}
         <div className="study-deck-card__footer">
           {deck.subject && <span className="badge">{deck.subject}</span>}
           {deck.tags?.map((tag) => (

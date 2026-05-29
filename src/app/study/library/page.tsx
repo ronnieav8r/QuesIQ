@@ -8,7 +8,7 @@ import { getPublicStudyDecks } from "@/features/study/study-data";
 import { StudyDeckCard } from "@/features/study/study-deck-card";
 
 type Props = {
-  searchParams: Promise<{ official?: string; q?: string; scope?: string; subject?: string }>;
+  searchParams: Promise<{ official?: string; q?: string; scope?: string; subject?: string; tag?: string }>;
 };
 
 function normalize(value: string | null | undefined) {
@@ -16,12 +16,13 @@ function normalize(value: string | null | undefined) {
 }
 
 export default async function StudyLibraryPage({ searchParams }: Props) {
-  const { official, q, scope, subject } = await searchParams;
+  const { official, q, scope, subject, tag } = await searchParams;
   const session = await auth();
   const userId = session?.user?.id;
   const decks = await getPublicStudyDecks();
   const query = normalize(q);
   const subjectFilter = normalize(subject);
+  const tagFilter = normalize(tag);
   const officialOnly = official === "1";
   const scopeFilter =
     scope === "mine" || scope === "official" || scope === "all"
@@ -30,6 +31,14 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
 
   const subjects = Array.from(
     new Set(decks.map((deck) => deck.subject?.trim()).filter((value): value is string => Boolean(value))),
+  ).sort((a, b) => a.localeCompare(b));
+  const tags = Array.from(
+    new Set(
+      decks
+        .flatMap((deck) => deck.tags ?? [])
+        .map((value) => value.trim())
+        .filter((value): value is string => Boolean(value)),
+    ),
   ).sort((a, b) => a.localeCompare(b));
 
   const filteredDecks = decks.filter((deck) => {
@@ -48,6 +57,9 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
     if (subjectFilter && normalize(deck.subject) !== subjectFilter) {
       return false;
     }
+    if (tagFilter && !(deck.tags ?? []).some((item) => normalize(item) === tagFilter)) {
+      return false;
+    }
 
     if (!query) {
       return true;
@@ -59,7 +71,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
     return haystack.includes(query);
   });
 
-  const hasFilters = Boolean(query || subjectFilter || officialOnly);
+  const hasFilters = Boolean(query || subjectFilter || tagFilter || officialOnly);
 
   return (
     <div className="screen study-dashboard-screen">
@@ -103,6 +115,17 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
             <select defaultValue={subjectFilter || ""} name="subject">
               <option value="">All subjects</option>
               {subjects.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Tag</span>
+            <select defaultValue={tagFilter || ""} name="tag">
+              <option value="">All tags</option>
+              {tags.map((value) => (
                 <option key={value} value={value}>
                   {value}
                 </option>
