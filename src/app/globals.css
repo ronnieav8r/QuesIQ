@@ -717,6 +717,12 @@ p {
   color: var(--danger);
 }
 
+.study-fork-action {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: end;
+}
+
 .study-match-columns {
   display: grid;
   gap: var(--space-3);

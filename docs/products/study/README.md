@@ -39,6 +39,10 @@ The first Study slice is imported:
   launch toggles and visual-session resume detection
 - `/study/decks/[deckId]/stats` shows deck-level study session totals, mode mix,
   and recent session outcomes for the owner
+- public deck pages now support signed-in `Save Copy`, cloning a deck and its
+  cards into the user's private Study lane
+- `/study/history` shows cross-deck recent study sessions with mode, accuracy,
+  and quick deck links
 - `/study/library` shows public Study decks with search, subject filter, and
   official-only filtering
 - signed-in users can create/edit decks, add/delete cards manually, and review

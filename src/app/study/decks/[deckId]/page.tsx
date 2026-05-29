@@ -13,6 +13,7 @@ import {
   getStudyWeakCards,
 } from "@/features/study/study-data";
 import { StudyCardList } from "@/features/study/study-card-list";
+import { StudyForkButton } from "@/features/study/study-fork-button";
 
 type Props = {
   params: Promise<{ deckId: string }>;
@@ -62,6 +63,7 @@ export default async function StudyDeckPage({ params }: Props) {
             </Link>
           </div>
         )}
+        {!isOwner && userId && deck.isPublic && <StudyForkButton deckId={deckId} />}
       </div>
 
       <section className="panel">

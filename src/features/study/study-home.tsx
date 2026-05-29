@@ -97,10 +97,15 @@ export default async function StudyHome() {
               <p className="eyebrow">Decks</p>
               <h2>My Decks</h2>
             </div>
-            <Link className="button-link" href="/study/decks/new">
-              <Plus size={14} aria-hidden="true" />
-              New
-            </Link>
+            <div className="inline-actions">
+              <Link className="button-link secondary" href="/study/history">
+                History
+              </Link>
+              <Link className="button-link" href="/study/decks/new">
+                <Plus size={14} aria-hidden="true" />
+                New
+              </Link>
+            </div>
           </section>
 
           {userDecks.length === 0 ? (

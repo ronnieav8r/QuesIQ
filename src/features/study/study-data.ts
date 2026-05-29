@@ -145,6 +145,61 @@ export async function deleteStudyDeck(deckId: string) {
   await getDb().delete(studyDecks).where(eq(studyDecks.id, deckId));
 }
 
+export async function forkStudyDeck(data: {
+  sourceDeckId: string;
+  userId: string;
+}) {
+  return getDb().transaction(async (tx) => {
+    const [sourceDeck] = await tx
+      .select()
+      .from(studyDecks)
+      .where(eq(studyDecks.id, data.sourceDeckId))
+      .limit(1);
+
+    if (!sourceDeck || !sourceDeck.isPublic) {
+      return null;
+    }
+
+    const sourceCards = await tx
+      .select()
+      .from(studyCards)
+      .where(eq(studyCards.deckId, sourceDeck.id))
+      .orderBy(asc(studyCards.position));
+
+    const [newDeck] = await tx
+      .insert(studyDecks)
+      .values({
+        cardCount: sourceCards.length,
+        description: sourceDeck.description,
+        examDate: null,
+        examName: null,
+        isOfficial: false,
+        isPublic: false,
+        subject: sourceDeck.subject,
+        tags: sourceDeck.tags,
+        title: sourceDeck.title.endsWith("(Copy)") ? sourceDeck.title : `${sourceDeck.title} (Copy)`,
+        userId: data.userId,
+        verifiedCardCount: 0,
+      })
+      .returning();
+
+    if (sourceCards.length > 0) {
+      await tx.insert(studyCards).values(
+        sourceCards.map((card, index) => ({
+          answer: card.answer,
+          deckId: newDeck.id,
+          hint: card.hint,
+          level: card.level,
+          position: index,
+          question: card.question,
+        })),
+      );
+    }
+
+    return newDeck;
+  });
+}
+
 export async function getStudyDeckCards(deckId: string) {
   return getDb()
     .select()
@@ -257,6 +312,25 @@ export async function getStudyDeckSessionStats(userId: string, deckId: string) {
     totalCorrect: totals?.totalCorrect ?? 0,
     totalSessions: totals?.totalSessions ?? 0,
   };
+}
+
+export async function getStudyRecentSessions(userId: string, limit = 100) {
+  return getDb()
+    .select({
+      cardsStudied: studySessions.cardsStudied,
+      correctCount: studySessions.correctCount,
+      deckId: studySessions.deckId,
+      deckTitle: studyDecks.title,
+      endedAt: studySessions.endedAt,
+      id: studySessions.id,
+      mode: studySessions.mode,
+      startedAt: studySessions.startedAt,
+    })
+    .from(studySessions)
+    .leftJoin(studyDecks, eq(studyDecks.id, studySessions.deckId))
+    .where(eq(studySessions.userId, userId))
+    .orderBy(desc(studySessions.startedAt))
+    .limit(limit);
 }
 
 async function nextStudyCardPosition(deckId: string) {
