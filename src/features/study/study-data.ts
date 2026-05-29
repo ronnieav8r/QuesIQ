@@ -371,6 +371,19 @@ export async function getStudyDeckSessionStats(userId: string, deckId: string) {
   };
 }
 
+export async function getStudyDeckCardAttemptStats(deckId: string) {
+  return getDb()
+    .select({
+      cardId: studyCardAttempts.cardId,
+      correct: sql<number>`COUNT(CASE WHEN ${studyCardAttempts.isCorrect} = true THEN 1 END)::int`,
+      total: sql<number>`COUNT(*)::int`,
+    })
+    .from(studyCardAttempts)
+    .innerJoin(studyCards, eq(studyCardAttempts.cardId, studyCards.id))
+    .where(eq(studyCards.deckId, deckId))
+    .groupBy(studyCardAttempts.cardId);
+}
+
 export async function getStudyRecentSessions(userId: string, limit = 100) {
   return getDb()
     .select({

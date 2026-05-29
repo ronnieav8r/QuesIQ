@@ -5,7 +5,13 @@ import { notFound, redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
 import { auth } from "@/auth";
-import { getStudyDeck, getStudyDeckSessionStats } from "@/features/study/study-data";
+import {
+  getStudyDeck,
+  getStudyDeckCardAttemptStats,
+  getStudyDeckCards,
+  getStudyDeckSessionStats,
+  getStudyDeckStats,
+} from "@/features/study/study-data";
 
 type Props = {
   params: Promise<{ deckId: string }>;
@@ -45,9 +51,31 @@ export default async function StudyDeckStatsPage({ params }: Props) {
     redirect(`/study/decks/${deckId}`);
   }
 
-  const stats = await getStudyDeckSessionStats(userId, deckId);
+  const [stats, deckStats, cards, cardAttempts] = await Promise.all([
+    getStudyDeckSessionStats(userId, deckId),
+    getStudyDeckStats(deckId),
+    getStudyDeckCards(deckId),
+    getStudyDeckCardAttemptStats(deckId),
+  ]);
   const accuracyPercent =
     stats.avgAccuracy === null ? "--" : `${Math.round(Math.max(0, Math.min(1, stats.avgAccuracy)) * 100)}%`;
+  const attemptsByCardId = new Map(
+    cardAttempts
+      .filter((row) => Boolean(row.cardId))
+      .map((row) => [row.cardId as string, { correct: row.correct, total: row.total }]),
+  );
+  const cardRows = cards.map((card) => {
+    const attempt = attemptsByCardId.get(card.id);
+    const accuracy = attempt && attempt.total > 0
+      ? Math.round((attempt.correct / attempt.total) * 100)
+      : null;
+    return {
+      accuracy,
+      card,
+      correct: attempt?.correct ?? 0,
+      total: attempt?.total ?? 0,
+    };
+  });
 
   return (
     <div className="screen study-session-screen">
@@ -77,6 +105,32 @@ export default async function StudyDeckStatsPage({ params }: Props) {
           <div className="study-stat-chip">
             <strong>{accuracyPercent}</strong>
             <span>Avg Accuracy</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="panel">
+        <p className="eyebrow">Card Health</p>
+        <div className="study-stat-strip" aria-label="Card health totals">
+          <div className="study-stat-chip">
+            <strong>{deckStats.total}</strong>
+            <span>Total Cards</span>
+          </div>
+          <div className="study-stat-chip">
+            <strong>{deckStats.due}</strong>
+            <span>Due</span>
+          </div>
+          <div className="study-stat-chip">
+            <strong>{deckStats.weak}</strong>
+            <span>Weak</span>
+          </div>
+          <div className="study-stat-chip">
+            <strong>{deckStats.mastered}</strong>
+            <span>Mastered</span>
+          </div>
+          <div className="study-stat-chip">
+            <strong>{deckStats.fluencyScore === null ? "--" : `${deckStats.fluencyScore}%`}</strong>
+            <span>Fluency</span>
           </div>
         </div>
       </section>
@@ -114,6 +168,25 @@ export default async function StudyDeckStatsPage({ params }: Props) {
                 </article>
               );
             })}
+          </div>
+        )}
+      </section>
+
+      <section className="panel">
+        <p className="eyebrow">Card Attempts</p>
+        {cardRows.length === 0 ? (
+          <p>No cards in this deck yet.</p>
+        ) : (
+          <div className="study-test-results">
+            {cardRows.map((row) => (
+              <article className="study-test-result" key={row.card.id}>
+                <p className="study-test-result__question">{row.card.question}</p>
+                <p>{row.total} attempt{row.total === 1 ? "" : "s"}</p>
+                <p>
+                  {row.total === 0 ? "No accuracy yet" : `${row.correct}/${row.total} correct (${row.accuracy}%)`}
+                </p>
+              </article>
+            ))}
           </div>
         )}
       </section>
