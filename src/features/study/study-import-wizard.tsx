@@ -11,6 +11,20 @@ type DraftCard = {
   selected: boolean;
 };
 
+const headerTokens = new Set([
+  "answer",
+  "answers",
+  "definition",
+  "definitions",
+  "front",
+  "hint",
+  "hints",
+  "question",
+  "questions",
+  "term",
+  "terms",
+]);
+
 function splitCsvLine(line: string) {
   const cells: string[] = [];
   let current = "";
@@ -40,6 +54,7 @@ function splitCsvLine(line: string) {
 
 function parseCards(raw: string): DraftCard[] {
   const cards: DraftCard[] = [];
+  const seen = new Set<string>();
 
   raw
     .split(/\r?\n/)
@@ -61,6 +76,22 @@ function parseCards(raw: string): DraftCard[] {
       if (!question || !answer) {
         return;
       }
+
+      const qToken = question.toLowerCase();
+      const aToken = answer.toLowerCase();
+      const looksLikeHeader =
+        headerTokens.has(qToken) &&
+        (headerTokens.has(aToken) || aToken === "answer");
+
+      if (looksLikeHeader) {
+        return;
+      }
+
+      const key = `${question.toLowerCase()}::${answer.toLowerCase()}`;
+      if (seen.has(key)) {
+        return;
+      }
+      seen.add(key);
 
       cards.push({
         answer,

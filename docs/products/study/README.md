@@ -45,7 +45,8 @@ The first Study slice is imported:
   quick deck links, and server-side deck/mode filters
 - `/study/decks/[deckId]/import` now supports CSV/TSV/TXT file upload in
   addition to pasted card text, with selectable preview rows before save and
-  downloadable CSV/TSV templates
+  downloadable CSV/TSV templates; import parsing skips header rows and exact
+  duplicate question/answer lines
 - `/study/library` shows public Study decks with search, subject filter, and
   official-only filtering
 - signed-in users can create/edit decks, add/delete cards manually, and review
