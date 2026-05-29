@@ -1,10 +1,11 @@
-import { asc, desc, eq, isNull, lt, lte, or, sql, and, gt } from "drizzle-orm";
+import { asc, desc, eq, isNull, lt, lte, or, sql, and, gt, inArray } from "drizzle-orm";
 
 import { getDb } from "@/server/db/client";
 import {
   studyAudienceTags,
   studyCardAttempts,
   studyCards,
+  studyDeckAudienceTags,
   studyDecks,
   studyFolders,
   studySessions,
@@ -14,6 +15,8 @@ import { computeNextStudyReview, type StudyVerdict } from "@/features/study/stud
 
 export type StudyLevel = "advanced" | "beginner" | "intermediate";
 export type StudyLibraryScope = "all" | "mine" | "official";
+type StudyPublicDeck = Awaited<ReturnType<typeof getPublicStudyDecks>>[number];
+export type StudyLibraryDeck = StudyPublicDeck & { audienceTags: string[] };
 
 export function filterStudyCardsByLevel<T extends { level: string | null }>(
   cards: T[],
@@ -114,11 +117,36 @@ export async function getStudyLibraryDecks(options?: {
 }) {
   const scope = options?.scope ?? "all";
   const decks = await getPublicStudyDecks();
+  const deckIds = decks.map((deck) => deck.id);
+  let audienceTagByDeckId = new Map<string, string[]>();
+
+  if (deckIds.length > 0) {
+    const rows = await getDb()
+      .select({
+        deckId: studyDeckAudienceTags.deckId,
+        label: studyAudienceTags.label,
+      })
+      .from(studyDeckAudienceTags)
+      .innerJoin(studyAudienceTags, eq(studyAudienceTags.id, studyDeckAudienceTags.audienceTagId))
+      .where(inArray(studyDeckAudienceTags.deckId, deckIds));
+
+    audienceTagByDeckId = rows.reduce((map, row) => {
+      const next = map.get(row.deckId) ?? [];
+      next.push(row.label);
+      map.set(row.deckId, next);
+      return map;
+    }, new Map<string, string[]>());
+  }
+
+  const enrichedDecks: StudyLibraryDeck[] = decks.map((deck) => ({
+    ...deck,
+    audienceTags: audienceTagByDeckId.get(deck.id) ?? [],
+  }));
   const query = options?.query?.trim().toLowerCase() ?? "";
   const subject = options?.subject?.trim().toLowerCase() ?? "";
   const tag = options?.tag?.trim().toLowerCase() ?? "";
 
-  return decks.filter((deck) => {
+  return enrichedDecks.filter((deck) => {
     if (scope === "mine" && (!options?.userId || deck.userId !== options.userId)) {
       return false;
     }
@@ -131,15 +159,16 @@ export async function getStudyLibraryDecks(options?: {
     if (subject && (deck.subject?.trim().toLowerCase() ?? "") !== subject) {
       return false;
     }
-    if (tag && !(deck.tags ?? []).some((item) => item.trim().toLowerCase() === tag)) {
+    const matchesDeckTag = (deck.tags ?? []).some((item) => item.trim().toLowerCase() === tag);
+    const matchesAudienceTag = deck.audienceTags.some((item) => item.trim().toLowerCase() === tag);
+    if (tag && !matchesDeckTag && !matchesAudienceTag) {
       return false;
     }
     if (!query) {
       return true;
     }
 
-    const audienceLabels = (deck as { audienceTags?: string[] }).audienceTags ?? [];
-    const haystack = [deck.title, deck.description ?? "", deck.subject ?? "", ...(deck.tags ?? []), ...audienceLabels]
+    const haystack = [deck.title, deck.description ?? "", deck.subject ?? "", ...(deck.tags ?? []), ...deck.audienceTags]
       .join(" ")
       .toLowerCase();
     return haystack.includes(query);
