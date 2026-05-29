@@ -323,6 +323,13 @@
       "when": 1779962400000,
       "tag": "0046_refine_realtime_interviewer_base_prompt",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1780048800000,
+      "tag": "0047_add_study_baseline_tables",
+      "breakpoints": true
     }
   ]
 }
