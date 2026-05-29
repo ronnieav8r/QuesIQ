@@ -11,6 +11,16 @@ Use:
 - product-owned routes under the future app product route structure
 - Study-specific database tables keyed by shared Auth.js `user.id`
 
+## Current Import Status
+
+The first Study slice is imported:
+
+- `/study` renders a real Study dashboard from `src/features/study/study-home.tsx`
+- Study reuses the shared platform Auth.js session
+- baseline Study deck/card/session tables are added with `study_` prefixes
+- deeper deck creation, deck detail, import, library, study modes, TTS, and AI
+  evaluation routes still need to be imported
+
 ## Boundaries
 
 Study should not add Study-only fields to the generic Auth.js user table.

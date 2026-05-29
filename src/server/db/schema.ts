@@ -5,6 +5,7 @@ import {
   jsonb,
   pgTable,
   primaryKey,
+  real,
   text,
   timestamp,
   uniqueIndex,
@@ -737,3 +738,84 @@ export const userQuests = pgTable(
     ),
   }),
 );
+
+export const studyFolders = pgTable("study_folders", {
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+});
+
+export const studyDecks = pgTable("study_decks", {
+  cardCount: integer("card_count").default(0).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  description: text("description"),
+  examDate: timestamp("exam_date", { withTimezone: true }),
+  examName: text("exam_name"),
+  folderId: uuid("folder_id").references(() => studyFolders.id, { onDelete: "set null" }),
+  id: uuid("id").defaultRandom().primaryKey(),
+  isOfficial: boolean("is_official").default(false).notNull(),
+  isPublic: boolean("is_public").default(false).notNull(),
+  subject: text("subject"),
+  tags: text("tags").array(),
+  title: text("title").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  verifiedCardCount: integer("verified_card_count").default(0).notNull(),
+});
+
+export const studyCards = pgTable("study_cards", {
+  answer: text("answer").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  deckId: uuid("deck_id")
+    .notNull()
+    .references(() => studyDecks.id, { onDelete: "cascade" }),
+  dueAt: timestamp("due_at", { withTimezone: true }),
+  easeFactor: real("ease_factor").default(2.5).notNull(),
+  hint: text("hint"),
+  id: uuid("id").defaultRandom().primaryKey(),
+  interval: integer("interval").default(1).notNull(),
+  isVerified: boolean("is_verified").default(false).notNull(),
+  lapses: integer("lapses").default(0).notNull(),
+  level: text("level"),
+  position: integer("position").default(0).notNull(),
+  question: text("question").notNull(),
+  questionAudioUrl: text("question_audio_url"),
+  quizMcAudioUrl: text("quiz_mc_audio_url"),
+  tfFalseAudioUrl: text("tf_false_audio_url"),
+  tfFoilCardId: uuid("tf_foil_card_id"),
+  tfTrueAudioUrl: text("tf_true_audio_url"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  verifiedBy: text("verified_by"),
+});
+
+export const studySessions = pgTable("study_sessions", {
+  cardsStudied: integer("cards_studied").default(0).notNull(),
+  correctCount: integer("correct_count").default(0).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  deckId: uuid("deck_id").references(() => studyDecks.id, { onDelete: "set null" }),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+  id: uuid("id").defaultRandom().primaryKey(),
+  mode: text("mode").$type<"quiz" | "truefalse" | "verbal" | "visual">().notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+});
+
+export const studyCardAttempts = pgTable("study_card_attempts", {
+  aiFeedback: text("ai_feedback"),
+  attemptedAt: timestamp("attempted_at", { withTimezone: true }).defaultNow().notNull(),
+  cardId: uuid("card_id").references(() => studyCards.id, { onDelete: "set null" }),
+  feedbackAudioUrl: text("feedback_audio_url"),
+  id: uuid("id").defaultRandom().primaryKey(),
+  isCorrect: boolean("is_correct"),
+  score: real("score"),
+  studySessionId: uuid("study_session_id")
+    .notNull()
+    .references(() => studySessions.id, { onDelete: "cascade" }),
+  userResponse: text("user_response"),
+  verdict: text("verdict").$type<"again" | "almost" | "correct" | "easy" | "good" | "hard" | "missed">(),
+});
