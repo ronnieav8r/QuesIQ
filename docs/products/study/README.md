@@ -48,7 +48,7 @@ The first Study slice is imported:
   downloadable CSV/TSV templates; import parsing skips header rows and exact
   duplicate question/answer lines
 - `/study/library` shows public Study decks with search, subject filter, and
-  official-only filtering
+  official-only filtering, plus scope filters (`all`, `official`, `mine`)
 - signed-in users can create/edit decks, add/delete cards manually, and review
   cards with simple recall ratings
 - Study reuses the shared platform Auth.js session

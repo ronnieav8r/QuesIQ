@@ -8,7 +8,7 @@ import { getPublicStudyDecks } from "@/features/study/study-data";
 import { StudyDeckCard } from "@/features/study/study-deck-card";
 
 type Props = {
-  searchParams: Promise<{ official?: string; q?: string; subject?: string }>;
+  searchParams: Promise<{ official?: string; q?: string; scope?: string; subject?: string }>;
 };
 
 function normalize(value: string | null | undefined) {
@@ -16,19 +16,31 @@ function normalize(value: string | null | undefined) {
 }
 
 export default async function StudyLibraryPage({ searchParams }: Props) {
-  const { official, q, subject } = await searchParams;
+  const { official, q, scope, subject } = await searchParams;
   const session = await auth();
   const userId = session?.user?.id;
   const decks = await getPublicStudyDecks();
   const query = normalize(q);
   const subjectFilter = normalize(subject);
   const officialOnly = official === "1";
+  const scopeFilter =
+    scope === "mine" || scope === "official" || scope === "all"
+      ? scope
+      : "all";
 
   const subjects = Array.from(
     new Set(decks.map((deck) => deck.subject?.trim()).filter((value): value is string => Boolean(value))),
   ).sort((a, b) => a.localeCompare(b));
 
   const filteredDecks = decks.filter((deck) => {
+    if (scopeFilter === "mine" && (!userId || deck.userId !== userId)) {
+      return false;
+    }
+
+    if (scopeFilter === "official" && !deck.isOfficial) {
+      return false;
+    }
+
     if (officialOnly && !deck.isOfficial) {
       return false;
     }
@@ -72,6 +84,15 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
 
       <section className="panel">
         <form action="/study/library" className="study-deck-form">
+          <label>
+            <span>Scope</span>
+            <select defaultValue={scopeFilter} name="scope">
+              <option value="all">All public decks</option>
+              <option value="official">Official decks</option>
+              {userId && <option value="mine">My public decks</option>}
+            </select>
+          </label>
+
           <label>
             <span>Search</span>
             <input defaultValue={q ?? ""} name="q" placeholder="Search title, subject, tags..." type="text" />
