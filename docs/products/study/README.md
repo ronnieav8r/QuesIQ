@@ -28,6 +28,8 @@ The first Study slice is imported:
   with AI feedback plus self-rating overrides for SRS scheduling
 - `/study/decks/[deckId]/study/match` supports term-definition matching rounds
   that write SRS-aligned attempt ratings
+- `/study/decks/[deckId]/study/quiz` supports multiple-choice quiz rounds with
+  persisted score ratings
 - `/study/library` shows public Study decks from the shared database
 - signed-in users can create/edit decks, add/delete cards manually, and review
   cards with simple recall ratings

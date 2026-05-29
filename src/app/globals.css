@@ -608,6 +608,51 @@ p {
   gap: var(--space-4);
 }
 
+.study-quiz {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.study-quiz-choices {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.study-quiz-choice {
+  align-items: start;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--text);
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: auto minmax(0, 1fr);
+  justify-items: start;
+  min-height: 4.2rem;
+  padding: var(--space-3);
+  text-align: left;
+}
+
+.study-quiz-choice__label {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  margin-top: 0.2rem;
+}
+
+.study-quiz-choice--correct {
+  border-color: rgba(56, 182, 146, 0.5);
+  color: var(--success);
+}
+
+.study-quiz-choice--wrong {
+  border-color: rgba(232, 92, 74, 0.5);
+  color: var(--danger);
+}
+
+.study-quiz-choice--dim {
+  opacity: 0.65;
+}
+
 .study-match-columns {
   display: grid;
   gap: var(--space-3);
