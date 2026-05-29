@@ -752,6 +752,34 @@ export const studyFolders = pgTable("study_folders", {
     .references(() => users.id, { onDelete: "cascade" }),
 });
 
+export const studySubjects = pgTable("study_subjects", {
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  parentId: uuid("parent_id"),
+  slug: text("slug").notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const studyAudienceTags = pgTable("study_audience_tags", {
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  id: uuid("id").defaultRandom().primaryKey(),
+  label: text("label").notNull(),
+  slug: text("slug").notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const studyTrustedSources = pgTable("study_trusted_sources", {
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  domain: text("domain"),
+  id: uuid("id").defaultRandom().primaryKey(),
+  kind: text("kind").default("general").notNull(),
+  name: text("name").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 export const studyDecks = pgTable("study_decks", {
   cardCount: integer("card_count").default(0).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -794,6 +822,63 @@ export const studyCards = pgTable("study_cards", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   verifiedAt: timestamp("verified_at", { withTimezone: true }),
   verifiedBy: text("verified_by"),
+});
+
+export const studyDeckAudienceTags = pgTable(
+  "study_deck_audience_tags",
+  {
+    audienceTagId: uuid("audience_tag_id")
+      .notNull()
+      .references(() => studyAudienceTags.id, { onDelete: "cascade" }),
+    deckId: uuid("deck_id")
+      .notNull()
+      .references(() => studyDecks.id, { onDelete: "cascade" }),
+  },
+  (deckAudienceTags) => ({
+    deckAudienceTagIdx: primaryKey({
+      columns: [deckAudienceTags.deckId, deckAudienceTags.audienceTagId],
+    }),
+  }),
+);
+
+export const studyCardSources = pgTable("study_card_sources", {
+  cardId: uuid("card_id")
+    .notNull()
+    .references(() => studyCards.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  id: uuid("id").defaultRandom().primaryKey(),
+  sourceLabel: text("source_label"),
+  sourceType: text("source_type").default("unknown").notNull(),
+  sourceUrl: text("source_url"),
+  trustedSourceId: uuid("trusted_source_id").references(() => studyTrustedSources.id, {
+    onDelete: "set null",
+  }),
+});
+
+export const studyVerifications = pgTable("study_verifications", {
+  cardId: uuid("card_id")
+    .notNull()
+    .references(() => studyCards.id, { onDelete: "cascade" }),
+  confidence: real("confidence"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  id: uuid("id").defaultRandom().primaryKey(),
+  note: text("note"),
+  verifiedByUserId: text("verified_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+});
+
+export const studyDeckImports = pgTable("study_deck_imports", {
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  deckId: uuid("deck_id")
+    .notNull()
+    .references(() => studyDecks.id, { onDelete: "cascade" }),
+  failedUrls: text("failed_urls").array(),
+  id: uuid("id").defaultRandom().primaryKey(),
+  importType: text("import_type").notNull(),
+  sourceCount: integer("source_count").default(0).notNull(),
+  sourceSummary: text("source_summary"),
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
 });
 
 export const studySessions = pgTable("study_sessions", {

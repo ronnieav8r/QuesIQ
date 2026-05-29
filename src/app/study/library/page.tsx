@@ -4,7 +4,12 @@ import Link from "next/link";
 import { BookOpen } from "lucide-react";
 
 import { auth } from "@/auth";
-import { getPublicStudyDecks } from "@/features/study/study-data";
+import {
+  getStudyAudienceTags,
+  getStudyLibraryDecks,
+  getStudyRootSubjects,
+  type StudyLibraryScope,
+} from "@/features/study/study-data";
 import { StudyDeckCard } from "@/features/study/study-deck-card";
 
 type Props = {
@@ -19,57 +24,43 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
   const { official, q, scope, subject, tag } = await searchParams;
   const session = await auth();
   const userId = session?.user?.id;
-  const decks = await getPublicStudyDecks();
   const query = normalize(q);
   const subjectFilter = normalize(subject);
   const tagFilter = normalize(tag);
   const officialOnly = official === "1";
-  const scopeFilter =
+  const scopeFilter: StudyLibraryScope =
     scope === "mine" || scope === "official" || scope === "all"
       ? scope
       : "all";
 
-  const subjects = Array.from(
-    new Set(decks.map((deck) => deck.subject?.trim()).filter((value): value is string => Boolean(value))),
-  ).sort((a, b) => a.localeCompare(b));
+  const [filteredDecks, subjects, audienceTags] = await Promise.all([
+    getStudyLibraryDecks({
+      officialOnly,
+      query,
+      scope: scopeFilter,
+      subject: subjectFilter || undefined,
+      tag: tagFilter || undefined,
+      userId,
+    }),
+    getStudyRootSubjects(),
+    getStudyAudienceTags(),
+  ]);
+
+  const deckSubjects = Array.from(
+    new Set(filteredDecks.map((deck) => deck.subject?.trim()).filter((value): value is string => Boolean(value))),
+  );
+  const taxonomySubjects = subjects.map((item) => item.name);
+  const subjectOptions = Array.from(new Set([...taxonomySubjects, ...deckSubjects])).sort((a, b) =>
+    a.localeCompare(b),
+  );
   const tags = Array.from(
     new Set(
-      decks
+      filteredDecks
         .flatMap((deck) => deck.tags ?? [])
         .map((value) => value.trim())
         .filter((value): value is string => Boolean(value)),
     ),
   ).sort((a, b) => a.localeCompare(b));
-
-  const filteredDecks = decks.filter((deck) => {
-    if (scopeFilter === "mine" && (!userId || deck.userId !== userId)) {
-      return false;
-    }
-
-    if (scopeFilter === "official" && !deck.isOfficial) {
-      return false;
-    }
-
-    if (officialOnly && !deck.isOfficial) {
-      return false;
-    }
-
-    if (subjectFilter && normalize(deck.subject) !== subjectFilter) {
-      return false;
-    }
-    if (tagFilter && !(deck.tags ?? []).some((item) => normalize(item) === tagFilter)) {
-      return false;
-    }
-
-    if (!query) {
-      return true;
-    }
-
-    const haystack = [deck.title, deck.description ?? "", deck.subject ?? "", ...(deck.tags ?? [])]
-      .join(" ")
-      .toLowerCase();
-    return haystack.includes(query);
-  });
 
   const hasFilters = Boolean(query || subjectFilter || tagFilter || officialOnly);
 
@@ -114,7 +105,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
             <span>Subject</span>
             <select defaultValue={subjectFilter || ""} name="subject">
               <option value="">All subjects</option>
-              {subjects.map((value) => (
+              {subjectOptions.map((value) => (
                 <option key={value} value={value}>
                   {value}
                 </option>
@@ -125,6 +116,11 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
             <span>Tag</span>
             <select defaultValue={tagFilter || ""} name="tag">
               <option value="">All tags</option>
+              {audienceTags.map((value) => (
+                <option key={value.id} value={value.label}>
+                  {value.label}
+                </option>
+              ))}
               {tags.map((value) => (
                 <option key={value} value={value}>
                   {value}
@@ -151,7 +147,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
 
       {filteredDecks.length === 0 ? (
         <section className="panel study-empty-panel">
-          {decks.length === 0 ? (
+          {filteredDecks.length === 0 && !hasFilters ? (
             <>
               <h2>No public decks yet.</h2>
               <p>Make one of your decks public from its edit screen to test the library.</p>

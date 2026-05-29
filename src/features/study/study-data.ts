@@ -1,10 +1,19 @@
 import { asc, desc, eq, isNull, lt, lte, or, sql, and, gt } from "drizzle-orm";
 
 import { getDb } from "@/server/db/client";
-import { studyCardAttempts, studyCards, studyDecks, studyFolders, studySessions } from "@/server/db/schema";
+import {
+  studyAudienceTags,
+  studyCardAttempts,
+  studyCards,
+  studyDecks,
+  studyFolders,
+  studySessions,
+  studySubjects,
+} from "@/server/db/schema";
 import { computeNextStudyReview, type StudyVerdict } from "@/features/study/study-srs";
 
 export type StudyLevel = "advanced" | "beginner" | "intermediate";
+export type StudyLibraryScope = "all" | "mine" | "official";
 
 export function filterStudyCardsByLevel<T extends { level: string | null }>(
   cards: T[],
@@ -70,6 +79,71 @@ export async function getPublicStudyDecks(limit = 50) {
     .where(eq(studyDecks.isPublic, true))
     .orderBy(desc(studyDecks.updatedAt))
     .limit(limit);
+}
+
+export async function getStudyRootSubjects() {
+  return getDb()
+    .select({
+      id: studySubjects.id,
+      name: studySubjects.name,
+      slug: studySubjects.slug,
+    })
+    .from(studySubjects)
+    .where(isNull(studySubjects.parentId))
+    .orderBy(asc(studySubjects.sortOrder), asc(studySubjects.name));
+}
+
+export async function getStudyAudienceTags() {
+  return getDb()
+    .select({
+      id: studyAudienceTags.id,
+      label: studyAudienceTags.label,
+      slug: studyAudienceTags.slug,
+    })
+    .from(studyAudienceTags)
+    .orderBy(asc(studyAudienceTags.sortOrder), asc(studyAudienceTags.label));
+}
+
+export async function getStudyLibraryDecks(options?: {
+  officialOnly?: boolean;
+  query?: string;
+  scope?: StudyLibraryScope;
+  subject?: string;
+  tag?: string;
+  userId?: string;
+}) {
+  const scope = options?.scope ?? "all";
+  const decks = await getPublicStudyDecks();
+  const query = options?.query?.trim().toLowerCase() ?? "";
+  const subject = options?.subject?.trim().toLowerCase() ?? "";
+  const tag = options?.tag?.trim().toLowerCase() ?? "";
+
+  return decks.filter((deck) => {
+    if (scope === "mine" && (!options?.userId || deck.userId !== options.userId)) {
+      return false;
+    }
+    if (scope === "official" && !deck.isOfficial) {
+      return false;
+    }
+    if (options?.officialOnly && !deck.isOfficial) {
+      return false;
+    }
+    if (subject && (deck.subject?.trim().toLowerCase() ?? "") !== subject) {
+      return false;
+    }
+    if (tag && !(deck.tags ?? []).some((item) => item.trim().toLowerCase() === tag)) {
+      return false;
+    }
+    if (!query) {
+      return true;
+    }
+
+    const audienceLabels = (deck as { audienceTags?: string[] }).audienceTags ?? [];
+    const haystack = [deck.title, deck.description ?? "", deck.subject ?? "", ...(deck.tags ?? []), ...audienceLabels]
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(query);
+  });
 }
 
 export async function getStudyUserStats(userId: string) {
