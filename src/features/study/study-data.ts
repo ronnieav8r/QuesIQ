@@ -209,6 +209,56 @@ export async function getStudyDeckStats(deckId: string) {
   };
 }
 
+export async function getStudyDeckSessionStats(userId: string, deckId: string) {
+  const [totals] = await getDb()
+    .select({
+      avgAccuracy: sql<number | null>`AVG(
+        CASE WHEN ${studySessions.cardsStudied} > 0
+          THEN (${studySessions.correctCount}::float / ${studySessions.cardsStudied}::float)
+          ELSE NULL
+        END
+      )`,
+      totalCardsStudied: sql<number>`COALESCE(SUM(${studySessions.cardsStudied}), 0)::int`,
+      totalCorrect: sql<number>`COALESCE(SUM(${studySessions.correctCount}), 0)::int`,
+      totalSessions: sql<number>`COUNT(*)::int`,
+    })
+    .from(studySessions)
+    .where(and(eq(studySessions.userId, userId), eq(studySessions.deckId, deckId)));
+
+  const modeRows = await getDb()
+    .select({
+      count: sql<number>`COUNT(*)::int`,
+      mode: studySessions.mode,
+    })
+    .from(studySessions)
+    .where(and(eq(studySessions.userId, userId), eq(studySessions.deckId, deckId)))
+    .groupBy(studySessions.mode)
+    .orderBy(desc(sql`COUNT(*)`));
+
+  const recentSessions = await getDb()
+    .select({
+      cardsStudied: studySessions.cardsStudied,
+      correctCount: studySessions.correctCount,
+      endedAt: studySessions.endedAt,
+      id: studySessions.id,
+      mode: studySessions.mode,
+      startedAt: studySessions.startedAt,
+    })
+    .from(studySessions)
+    .where(and(eq(studySessions.userId, userId), eq(studySessions.deckId, deckId)))
+    .orderBy(desc(studySessions.startedAt))
+    .limit(30);
+
+  return {
+    avgAccuracy: totals?.avgAccuracy ?? null,
+    modeRows,
+    recentSessions,
+    totalCardsStudied: totals?.totalCardsStudied ?? 0,
+    totalCorrect: totals?.totalCorrect ?? 0,
+    totalSessions: totals?.totalSessions ?? 0,
+  };
+}
+
 async function nextStudyCardPosition(deckId: string) {
   const [{ max }] = await getDb()
     .select({ max: sql<number>`coalesce(max(${studyCards.position}), -1)` })

@@ -37,6 +37,8 @@ The first Study slice is imported:
 - `/study/decks/[deckId]/start` provides a mode/filter launcher so users can
   choose card scope and study mode before entering a session, including SRS
   launch toggles and visual-session resume detection
+- `/study/decks/[deckId]/stats` shows deck-level study session totals, mode mix,
+  and recent session outcomes for the owner
 - `/study/library` shows public Study decks from the shared database
 - signed-in users can create/edit decks, add/delete cards manually, and review
   cards with simple recall ratings
