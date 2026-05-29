@@ -314,19 +314,30 @@
 @media (min-width: 720px) {
   .dpe-shell .app-frame {
     grid-template-areas:
-      "header header"
-      "rail body";
-    grid-template-columns: 13rem minmax(0, 1fr);
+      "header"
+      "body";
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .dpe-shell .app-layout {
+    display: grid;
+    grid-template-columns: 13rem minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
   }
 
   .dpe-shell .left-rail {
     border-right: 1px solid var(--border);
     display: grid;
     gap: var(--space-2);
-    grid-area: rail;
     align-content: start;
+    min-height: 0;
+    overflow: auto;
     padding: var(--space-3);
+  }
+
+  .dpe-shell .app-body {
+    min-width: 0;
   }
 
   .dpe-shell .tab-bar {
