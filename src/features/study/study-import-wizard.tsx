@@ -159,6 +159,25 @@ export function StudyImportWizard({ deckId }: { deckId: string }) {
     router.refresh();
   }
 
+  function downloadTemplate(format: "csv" | "tsv") {
+    const delimiter = format === "csv" ? "," : "\t";
+    const ext = format === "csv" ? "csv" : "tsv";
+    const lines = [
+      ["question", "answer", "hint"].join(delimiter),
+      ["What is Vx?", "Best angle of climb speed", "Used to gain altitude over distance"].join(delimiter),
+      ["What is Vy?", "Best rate of climb speed", "Used to gain altitude quickly"].join(delimiter),
+    ];
+    const blob = new Blob([`${lines.join("\n")}\n`], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `quesiq-study-template.${ext}`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <section className="study-import-wizard">
       <label>
@@ -177,6 +196,14 @@ export function StudyImportWizard({ deckId }: { deckId: string }) {
       <section className="panel">
         <p className="eyebrow">Upload File</p>
         <p>Import from a local file (.csv, .tsv, .txt).</p>
+        <div className="inline-actions">
+          <button className="secondary" onClick={() => downloadTemplate("csv")} type="button">
+            Download CSV Template
+          </button>
+          <button className="secondary" onClick={() => downloadTemplate("tsv")} type="button">
+            Download TSV Template
+          </button>
+        </div>
         <label>
           <span>Select file</span>
           <input
