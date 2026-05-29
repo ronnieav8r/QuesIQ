@@ -34,6 +34,8 @@ The first Study slice is imported:
   with persisted score ratings
 - `/study/decks/[deckId]/study/test` supports full test runs with detailed
   per-question end-of-test review
+- `/study/decks/[deckId]/start` provides a mode/filter launcher so users can
+  choose card scope and study mode before entering a session
 - `/study/library` shows public Study decks from the shared database
 - signed-in users can create/edit decks, add/delete cards manually, and review
   cards with simple recall ratings

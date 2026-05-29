@@ -102,32 +102,11 @@ export default async function StudyDeckPage({ params }: Props) {
           <div>
             <p className="eyebrow">Study</p>
             <h2>Review this deck</h2>
-            <p>Flip each card, then rate your recall so Study can schedule the next review.</p>
+            <p>Pick a card set and mode before you begin.</p>
           </div>
           <div className="inline-actions">
-            <Link className="button-link" href={`/study/decks/${deckId}/study?srs=1`}>
-              Study Due
-            </Link>
-            <Link className="button-link secondary" href={`/study/decks/${deckId}/study/verbal`}>
-              Study Verbal
-            </Link>
-            <Link className="button-link secondary" href={`/study/decks/${deckId}/study/written`}>
-              Study Written
-            </Link>
-            <Link className="button-link secondary" href={`/study/decks/${deckId}/study/match`}>
-              Study Match
-            </Link>
-            <Link className="button-link secondary" href={`/study/decks/${deckId}/study/quiz`}>
-              Study Quiz
-            </Link>
-            <Link className="button-link secondary" href={`/study/decks/${deckId}/study/quiz?mode=truefalse`}>
-              True / False
-            </Link>
-            <Link className="button-link secondary" href={`/study/decks/${deckId}/study/test`}>
-              Study Test
-            </Link>
-            <Link className="button-link secondary" href={`/study/decks/${deckId}/study`}>
-              Study All
+            <Link className="button-link" href={`/study/decks/${deckId}/start`}>
+              Start Study
             </Link>
           </div>
         </section>
