@@ -90,6 +90,31 @@ button:hover {
   box-shadow: 0 0 1.1rem rgba(232, 114, 26, 0.18);
 }
 
+.button-link {
+  align-items: center;
+  background: linear-gradient(180deg, #ef7c24, var(--action));
+  border: 1px solid rgba(232, 114, 26, 0.72);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  display: inline-flex;
+  font-weight: 700;
+  justify-content: center;
+  min-height: 3rem;
+  padding: var(--space-3) var(--space-4);
+  text-decoration: none;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    color var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+.button-link:hover {
+  background: linear-gradient(180deg, var(--action), var(--action-pressed));
+  box-shadow: 0 0 1.1rem rgba(232, 114, 26, 0.18);
+}
+
 button:disabled,
 button:disabled:hover {
   background: var(--surface-raised);
@@ -100,6 +125,7 @@ button:disabled:hover {
 }
 
 button:focus-visible,
+.button-link:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
@@ -108,13 +134,15 @@ textarea:focus-visible {
 }
 
 button.secondary,
-button.quiet-button {
+button.quiet-button,
+.button-link.secondary {
   background: rgba(109, 59, 255, 0.05);
   border-color: var(--border);
 }
 
 button.secondary:hover,
-button.quiet-button:hover {
+button.quiet-button:hover,
+.button-link.secondary:hover {
   background: var(--focus-soft);
   border-color: var(--focus);
   box-shadow: var(--shadow-brand);
@@ -286,6 +314,19 @@ p {
   grid-area: body;
   min-height: 0;
   overflow: auto;
+}
+
+.platform-route-frame {
+  grid-template-areas: "body";
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.platform-route-screen {
+  align-content: start;
+}
+
+.platform-placeholder-panel {
+  max-width: 48rem;
 }
 
 .screen {

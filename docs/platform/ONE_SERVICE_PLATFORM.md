@@ -35,6 +35,17 @@ Use a modular monolith:
 Current Interview code remains in its existing paths while the platform
 boundary is established. New products should land in product-owned lanes.
 
+Current route shell:
+
+- `/` still serves the existing Interview beta entry point for production
+  continuity.
+- `/interview` also serves the existing Interview beta.
+- `/study` is a placeholder product lane.
+- `/dpe` is a placeholder product lane for QuesIQ DPE.
+- `/account` is a placeholder shared account lane.
+- `/admin` is a direct admin route for signed-in admin users, while the
+  existing in-app Admin entry remains available.
+
 Preferred long-term lanes:
 
 ```txt
