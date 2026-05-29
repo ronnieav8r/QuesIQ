@@ -7,7 +7,7 @@ while the repository becomes the shared QuesIQ platform tree.
 
 Most current Interview code still lives in the original rebuild paths:
 
-- `src/app/page.tsx`
+- `src/features/interview/interview-app.tsx`
 - `src/components/interview/`
 - `src/product/`
 - `src/server/sessions/`

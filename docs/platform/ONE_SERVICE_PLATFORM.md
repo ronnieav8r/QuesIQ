@@ -40,6 +40,8 @@ Current route shell:
 - `/` still serves the existing Interview beta entry point for production
   continuity.
 - `/interview` also serves the existing Interview beta.
+- The shared Interview entry component now lives in
+  `src/features/interview/interview-app.tsx`.
 - `/study` is a placeholder product lane.
 - `/dpe` is a placeholder product lane for QuesIQ DPE.
 - `/account` is a placeholder shared account lane.
