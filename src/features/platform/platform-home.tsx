@@ -58,10 +58,10 @@ export default function PlatformHome() {
                 <Image
                   alt="QuesIQ"
                   className="platform-home-logo"
-                  height={96}
+                  height={144}
                   priority
-                  src="/brand/quesiq-icon.png"
-                  width={96}
+                  src="/brand/quesiq-main-logo.png"
+                  width={360}
                 />
                 <div>
                   <p className="eyebrow">QuesIQ</p>

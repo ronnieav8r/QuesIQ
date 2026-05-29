@@ -338,11 +338,12 @@ p {
 }
 
 .platform-home-logo {
-  border-radius: var(--radius-sm);
   display: block;
-  height: 3.5rem;
+  height: 3.2rem;
+  max-width: min(20rem, 58vw);
   object-fit: contain;
-  width: 3.5rem;
+  object-position: left center;
+  width: auto;
 }
 
 .product-picker-grid {
