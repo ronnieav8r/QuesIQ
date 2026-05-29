@@ -30,6 +30,8 @@ The first Study slice is imported:
   that write SRS-aligned attempt ratings
 - `/study/decks/[deckId]/study/quiz` supports multiple-choice quiz rounds with
   persisted score ratings
+- `/study/decks/[deckId]/study/quiz?mode=truefalse` supports true/false rounds
+  with persisted score ratings
 - `/study/library` shows public Study decks from the shared database
 - signed-in users can create/edit decks, add/delete cards manually, and review
   cards with simple recall ratings

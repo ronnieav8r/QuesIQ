@@ -10,12 +10,12 @@ import { StudyQuiz } from "@/features/study/study-quiz";
 
 type Props = {
   params: Promise<{ deckId: string }>;
-  searchParams: Promise<{ filter?: string; srs?: string }>;
+  searchParams: Promise<{ filter?: string; mode?: string; srs?: string }>;
 };
 
 export default async function StudyQuizPage({ params, searchParams }: Props) {
   const { deckId } = await params;
-  const { filter, srs } = await searchParams;
+  const { filter, mode: modeParam, srs } = await searchParams;
   const session = await auth();
   const userId = session?.user?.id;
   const deck = await getStudyDeck(deckId);
@@ -45,6 +45,8 @@ export default async function StudyQuizPage({ params, searchParams }: Props) {
     redirect(`/study/decks/${deckId}`);
   }
 
+  const mode = modeParam === "truefalse" ? "truefalse" : "quiz";
+
   return (
     <div className="screen study-session-screen">
       <div className="screen-toolbar">
@@ -53,7 +55,14 @@ export default async function StudyQuizPage({ params, searchParams }: Props) {
           {deck.title}
         </Link>
       </div>
-      <StudyQuiz activeCards={activeCards} allCards={allCards} deckId={deckId} filter={filter} srs={srs === "1"} />
+      <StudyQuiz
+        activeCards={activeCards}
+        allCards={allCards}
+        deckId={deckId}
+        filter={filter}
+        mode={mode}
+        srs={srs === "1"}
+      />
     </div>
   );
 }

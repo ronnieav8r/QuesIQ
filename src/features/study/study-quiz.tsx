@@ -12,14 +12,25 @@ type StudyQuizCard = {
 type MCQuestion = {
   card: StudyQuizCard;
   choices: string[];
+  kind: "mc";
   correctIndex: number;
 };
+
+type TFQuestion = {
+  card: StudyQuizCard;
+  correctIndex: 0 | 1;
+  kind: "tf";
+  shownAnswer: string;
+};
+
+type QuizQuestion = MCQuestion | TFQuestion;
 
 type StudyQuizProps = {
   activeCards: StudyQuizCard[];
   allCards: StudyQuizCard[];
   deckId: string;
   filter?: string;
+  mode?: "quiz" | "truefalse";
   srs?: boolean;
 };
 
@@ -43,13 +54,48 @@ function buildQuestions(activeCards: StudyQuizCard[], allCards: StudyQuizCard[])
     return {
       card,
       choices,
+      kind: "mc",
       correctIndex: choices.indexOf(card.answer),
     } satisfies MCQuestion;
   });
 }
 
-export function StudyQuiz({ activeCards, allCards, deckId, filter, srs }: StudyQuizProps) {
-  const [questions, setQuestions] = useState<MCQuestion[]>(() => buildQuestions(activeCards, allCards));
+function buildTrueFalseQuestions(activeCards: StudyQuizCard[], allCards: StudyQuizCard[]) {
+  return shuffle(activeCards).map((card) => {
+    const showTrue = Math.random() < 0.5;
+    if (showTrue) {
+      return {
+        card,
+        correctIndex: 0 as const,
+        kind: "tf",
+        shownAnswer: card.answer,
+      } satisfies TFQuestion;
+    }
+    const foilPool = allCards.filter((candidate) => candidate.id !== card.id);
+    const foil = foilPool[Math.floor(Math.random() * foilPool.length)];
+    return {
+      card,
+      correctIndex: 1 as const,
+      kind: "tf",
+      shownAnswer: foil?.answer ?? card.answer,
+    } satisfies TFQuestion;
+  });
+}
+
+function buildQuizQuestions(
+  mode: "quiz" | "truefalse",
+  activeCards: StudyQuizCard[],
+  allCards: StudyQuizCard[],
+) {
+  return mode === "truefalse"
+    ? (buildTrueFalseQuestions(activeCards, allCards) as QuizQuestion[])
+    : (buildQuestions(activeCards, allCards) as QuizQuestion[]);
+}
+
+export function StudyQuiz({ activeCards, allCards, deckId, filter, mode = "quiz", srs }: StudyQuizProps) {
+  const [questions, setQuestions] = useState<QuizQuestion[]>(() =>
+    buildQuizQuestions(mode, activeCards, allCards),
+  );
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<"answering" | "feedback" | "summary">("answering");
   const [selected, setSelected] = useState<number | null>(null);
@@ -62,7 +108,7 @@ export function StudyQuiz({ activeCards, allCards, deckId, filter, srs }: StudyQ
     await fetch(`/api/study/decks/${deckId}/rate`, {
       body: JSON.stringify({
         cardId,
-        mode: "quiz",
+        mode,
         sessionId: sessionIdRef.current,
         verdict,
       }),
@@ -111,7 +157,7 @@ export function StudyQuiz({ activeCards, allCards, deckId, filter, srs }: StudyQ
   }
 
   function restart() {
-    setQuestions(buildQuestions(activeCards, allCards));
+    setQuestions(buildQuizQuestions(mode, activeCards, allCards));
     setIndex(0);
     setPhase("answering");
     setSelected(null);
@@ -125,14 +171,14 @@ export function StudyQuiz({ activeCards, allCards, deckId, filter, srs }: StudyQ
 
     return (
       <section className="study-summary panel">
-        <h2>Quiz Complete</h2>
+        <h2>{mode === "truefalse" ? "True / False Complete" : "Quiz Complete"}</h2>
         <div className="study-summary-scores">
           <span>Correct {correct}</span>
           <span>Missed {missed}</span>
         </div>
         <div className="inline-actions">
           <button className="secondary" onClick={restart} type="button">
-            Retry Quiz
+            {mode === "truefalse" ? "Retry True / False" : "Retry Quiz"}
           </button>
           <Link className="button-link" href={`/study/decks/${deckId}${filter ? `?filter=${filter}` : ""}`}>
             Back to Deck
@@ -156,12 +202,13 @@ export function StudyQuiz({ activeCards, allCards, deckId, filter, srs }: StudyQ
       </div>
 
       <div className="panel">
-        <p className="eyebrow">Quiz</p>
+        <p className="eyebrow">{mode === "truefalse" ? "True / False" : "Quiz"}</p>
         <h2>{question.card.question}</h2>
+        {question.kind === "tf" && <p>Proposed answer: {question.shownAnswer}</p>}
       </div>
 
       <div className="study-quiz-choices">
-        {question.choices.map((choice, choiceIndex) => {
+        {(question.kind === "tf" ? ["True", "False"] : question.choices).map((choice, choiceIndex) => {
           let state = "";
 
           if (phase === "feedback") {
@@ -182,7 +229,9 @@ export function StudyQuiz({ activeCards, allCards, deckId, filter, srs }: StudyQ
               onClick={() => selectChoice(choiceIndex)}
               type="button"
             >
-              <span className="study-quiz-choice__label">{LABELS[choiceIndex]}</span>
+              <span className="study-quiz-choice__label">
+                {question.kind === "tf" ? (choiceIndex === 0 ? "T" : "F") : LABELS[choiceIndex]}
+              </span>
               <span>{choice}</span>
             </button>
           );
