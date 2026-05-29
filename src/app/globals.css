@@ -493,6 +493,57 @@ p {
   max-width: 40rem;
 }
 
+.study-deck-form,
+.study-card-list,
+.study-card-editor {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.study-deck-form label,
+.study-card-editor label {
+  color: var(--text);
+  display: grid;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  gap: var(--space-2);
+}
+
+.study-check-label {
+  align-items: center;
+  display: flex !important;
+}
+
+.study-check-label input {
+  width: auto;
+}
+
+.study-card-item {
+  align-items: start;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: var(--space-4);
+}
+
+.study-card-editor {
+  grid-template-columns: 1fr;
+}
+
+.study-card-question {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.study-card-hint {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}
+
 .study-library-cta {
   justify-content: space-between;
 }
@@ -2889,6 +2940,10 @@ textarea::placeholder {
   .study-library-cta {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .study-card-item {
+    grid-template-columns: 1fr;
   }
 
   .intro-length-list {

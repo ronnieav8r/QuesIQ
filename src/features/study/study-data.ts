@@ -1,4 +1,4 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { asc, desc, eq, isNull, lt, lte, or, sql, and, gt } from "drizzle-orm";
 
 import { getDb } from "@/server/db/client";
 import { studyCards, studyDecks, studySessions } from "@/server/db/schema";
@@ -55,6 +55,208 @@ export async function getStudyUserStats(userId: string) {
     streak: computeStreak(dateRows.map((row) => row.date)),
     totalStudied: totals?.totalStudied ?? 0,
   };
+}
+
+export async function getStudyDeck(deckId: string) {
+  const [deck] = await getDb()
+    .select()
+    .from(studyDecks)
+    .where(eq(studyDecks.id, deckId))
+    .limit(1);
+
+  return deck ?? null;
+}
+
+export async function createStudyDeck(data: {
+  description?: string;
+  examDate?: Date | null;
+  examName?: string | null;
+  isPublic?: boolean;
+  subject?: string;
+  tags?: string[];
+  title: string;
+  userId: string;
+}) {
+  const [deck] = await getDb()
+    .insert(studyDecks)
+    .values({
+      description: data.description ?? null,
+      examDate: data.examDate ?? null,
+      examName: data.examName ?? null,
+      isPublic: data.isPublic ?? false,
+      subject: data.subject ?? null,
+      tags: data.tags ?? null,
+      title: data.title,
+      userId: data.userId,
+    })
+    .returning();
+
+  return deck;
+}
+
+export async function updateStudyDeck(
+  deckId: string,
+  data: {
+    description?: string | null;
+    examDate?: Date | null;
+    examName?: string | null;
+    isPublic?: boolean;
+    subject?: string | null;
+    tags?: string[] | null;
+    title?: string;
+  },
+) {
+  const [deck] = await getDb()
+    .update(studyDecks)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(studyDecks.id, deckId))
+    .returning();
+
+  return deck;
+}
+
+export async function deleteStudyDeck(deckId: string) {
+  await getDb().delete(studyDecks).where(eq(studyDecks.id, deckId));
+}
+
+export async function getStudyDeckCards(deckId: string) {
+  return getDb()
+    .select()
+    .from(studyCards)
+    .where(eq(studyCards.deckId, deckId))
+    .orderBy(asc(studyCards.position));
+}
+
+export async function getStudyDueCards(deckId: string) {
+  return getDb()
+    .select()
+    .from(studyCards)
+    .where(
+      and(
+        eq(studyCards.deckId, deckId),
+        or(isNull(studyCards.dueAt), lte(studyCards.dueAt, new Date())),
+      ),
+    )
+    .orderBy(asc(studyCards.position));
+}
+
+export async function getStudyWeakCards(deckId: string) {
+  return getDb()
+    .select()
+    .from(studyCards)
+    .where(
+      and(
+        eq(studyCards.deckId, deckId),
+        gt(studyCards.dueAt, new Date(0)),
+        or(gt(studyCards.lapses, 0), lt(studyCards.easeFactor, 2.0)),
+      ),
+    )
+    .orderBy(asc(studyCards.easeFactor));
+}
+
+export async function getStudyDeckStats(deckId: string) {
+  const [row] = await getDb()
+    .select({
+      avgEase: sql<number | null>`AVG(CASE WHEN ${studyCards.dueAt} IS NOT NULL THEN ${studyCards.easeFactor} END)`,
+      due: sql<number>`COUNT(CASE WHEN ${studyCards.dueAt} IS NULL OR ${studyCards.dueAt} <= NOW() THEN 1 END)::int`,
+      mastered: sql<number>`COUNT(CASE WHEN ${studyCards.interval} >= 21 AND ${studyCards.lapses} = 0 AND ${studyCards.dueAt} IS NOT NULL THEN 1 END)::int`,
+      seen: sql<number>`COUNT(${studyCards.dueAt})::int`,
+      total: sql<number>`COUNT(*)::int`,
+      weak: sql<number>`COUNT(CASE WHEN ${studyCards.dueAt} IS NOT NULL AND (${studyCards.lapses} > 0 OR ${studyCards.easeFactor} < 2.0) THEN 1 END)::int`,
+    })
+    .from(studyCards)
+    .where(eq(studyCards.deckId, deckId));
+
+  const avgEase = row?.avgEase ?? null;
+  const fluencyScore =
+    avgEase === null
+      ? null
+      : Math.round(Math.min(100, Math.max(0, ((avgEase - 1.3) / (3.5 - 1.3)) * 100)));
+
+  return {
+    due: row?.due ?? 0,
+    fluencyScore,
+    mastered: row?.mastered ?? 0,
+    seen: row?.seen ?? 0,
+    total: row?.total ?? 0,
+    weak: row?.weak ?? 0,
+  };
+}
+
+async function nextStudyCardPosition(deckId: string) {
+  const [{ max }] = await getDb()
+    .select({ max: sql<number>`coalesce(max(${studyCards.position}), -1)` })
+    .from(studyCards)
+    .where(eq(studyCards.deckId, deckId));
+
+  return max + 1;
+}
+
+export async function createStudyCard(data: {
+  answer: string;
+  deckId: string;
+  hint?: string;
+  question: string;
+}) {
+  const position = await nextStudyCardPosition(data.deckId);
+  const [card] = await getDb()
+    .insert(studyCards)
+    .values({
+      answer: data.answer,
+      deckId: data.deckId,
+      hint: data.hint ?? null,
+      position,
+      question: data.question,
+    })
+    .returning();
+
+  await getDb()
+    .update(studyDecks)
+    .set({
+      cardCount: sql`greatest(${studyDecks.cardCount} + 1, 0)`,
+      updatedAt: new Date(),
+    })
+    .where(eq(studyDecks.id, data.deckId));
+
+  return card;
+}
+
+export async function updateStudyCard(
+  cardId: string,
+  data: {
+    answer?: string;
+    hint?: string | null;
+    question?: string;
+  },
+) {
+  const [card] = await getDb()
+    .update(studyCards)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(studyCards.id, cardId))
+    .returning();
+
+  return card;
+}
+
+export async function deleteStudyCard(cardId: string) {
+  const [card] = await getDb()
+    .select()
+    .from(studyCards)
+    .where(eq(studyCards.id, cardId))
+    .limit(1);
+
+  if (!card) {
+    return;
+  }
+
+  await getDb().delete(studyCards).where(eq(studyCards.id, cardId));
+  await getDb()
+    .update(studyDecks)
+    .set({
+      cardCount: sql`greatest(${studyDecks.cardCount} - 1, 0)`,
+      updatedAt: new Date(),
+    })
+    .where(eq(studyDecks.id, card.deckId));
 }
 
 function computeStreak(dates: string[]) {
