@@ -216,6 +216,19 @@ the visual/UI level during the conversation:
 - test seed and cleanup SQL at `scripts/study/seed_test_decks.sql` and
   `scripts/study/cleanup_test_decks.sql`; generated test decks are marked with
   `[TEST_DELETE]` titles and `__test_delete__` tags
+- source-style Study folder manager UI on `/study/decks`, including folder
+  create, rename, delete, collapse/expand, and per-deck move controls
+- source-style import wizard polish for focus hints, URL failure display,
+  CSV/Quizlet/Anki guidance, select/deselect review controls, column swapping,
+  row/URL counts, and save/done copy
+- source-style Study TTS object-storage caching path for R2 when the R2 env
+  vars are configured; `/api/study/tts` keeps AI Usage instrumentation and
+  returns generated audio directly if cache read/write fails
+- source-style verbal/quiz polish for spoken verbal self-rating, rating
+  countdown default, quiz feedback TTS, stable quiz answer ordering, and quiz
+  TTS cache keys for question/MC/true-false audio
+- card list/status polish for Study card mastery, due, weak/new state, level,
+  verification, and ease display
 
 Latest known full code verification before this handoff:
 
@@ -264,15 +277,18 @@ These are places where the target repo strayed from a strict copy of
    choices can still be revisited against the source app and platform prompt
    config direction.
 
-9. Source has a richer folder-management component. Target has folder APIs and
-   deck assignment, but no full source-style `FolderManager` UI yet.
+9. Source has a richer folder-management component. Target now has a
+   Study-native folder manager on `/study/decks` with the source create,
+   rename, delete, collapse, and move-to-folder behavior.
 
 10. Source has richer public-library taxonomy behavior and metadata. Target has
     the Study-prefixed taxonomy tables and mapped audience-tag filtering, but
     taxonomy seeding/content curation is still needed.
 
 11. Source `/api/tts` includes object-storage caching via `src/server/storage.ts`.
-    Target has `/api/study/tts`, but not R2/object-storage caching.
+    Target `/api/study/tts` now has Study-namespaced R2/object-storage caching
+    when `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
+    `R2_BUCKET_NAME`, and `R2_PUBLIC_URL` are configured.
 
 12. Target-only additions deliberately kept: `/study/history`, private
     owner-only export, and library scope filters. The prior
@@ -287,17 +303,12 @@ These are the remaining practical gaps after the broad Study import passes.
    applied. Use `scripts/study/cleanup_test_decks.sql` to delete the generated
    decks afterward.
 
-2. R2/object-storage caching for generated Study audio is still missing. Current
-   TTS can work without cache, but source parity includes cached audio URLs.
+2. Migration/seed QA still needs a database with `DATABASE_URL` configured.
+   Local `npm run db:migrate` was attempted on 2026-05-29 but could not run
+   because `DATABASE_URL` was not configured in this workspace.
 
-3. Full source `LibrarySearch` UI parity is not complete. Target filtering is
-   functional and taxonomy-aware, but it is not an exact component port.
-
-4. Full source `FolderManager` UI parity is not complete. Target folder APIs and
-   deck assignment exist.
-
-5. Source-vs-target polish comparison is still needed for verbal, quiz, import
-   wizard, stats, and card editor details after the broad behavior ports.
+3. Permission and production QA still needs deployed or local signed-in and
+   signed-out browser checks after migrations and seed data are available.
 
 ## Remaining Port Slices
 
@@ -309,36 +320,7 @@ Recommended order from least risky/confusing to largest:
    `/study/library` filters by subject, text tags, and mapped audience tags.
    Run `scripts/study/cleanup_test_decks.sql` after QA.
 
-2. Source `LibrarySearch` UI parity.
-   Compare source `src/components/flashcards/library-search.tsx` and
-   `src/server/library.ts` against the target `/study/library` page/API. Port
-   any missing UX, taxonomy hierarchy, empty states, and sorting behavior while
-   preserving the deliberate target scope filter.
-
-3. Folder manager UI parity.
-   Port the source `FolderManager` UX or an equivalent target-native manager.
-   The server APIs and deck assignment already exist.
-
-4. R2/object-storage audio caching.
-   Port the source storage helper if generated Study audio should be cached.
-   Keep `/api/study/tts` namespaced and preserve AI Usage instrumentation.
-
-5. Import wizard polish pass.
-   Compare source `import-wizard.tsx` against the target wizard for any missing
-   source-type tabs, failed URL display, focus hints, CSV/Quizlet/Anki details,
-   and review/save ergonomics.
-
-6. Verbal and quiz source-polish pass.
-   Compare source `study-verbal.tsx` and `quiz-session.tsx` against target
-   `study-verbal.tsx` and `study-quiz.tsx` for timing, rating recognition,
-   missed-card requeueing, audio prefetching, and edge-case behavior.
-
-7. Stats and card editor polish pass.
-   Compare source `src/server/stats.ts`, `CardList`, and `CardEditor` against
-   target stats/card management for any remaining card-level status, mastery,
-   fluency, hint, editor, and attempt-detail gaps.
-
-8. Permission and production QA.
+2. Permission and production QA.
    Re-run library/fork/export/deck/card permission checks after migrations and
    seed data exist: private decks stay private, official decks are not
    exportable, public deck copy works, owners edit only their content, and
@@ -346,7 +328,8 @@ Recommended order from least risky/confusing to largest:
 
 ## Recommended Next Slice
 
-Run migration/seed QA for the Study library taxonomy path next.
+Run migration/seed QA for the Study library taxonomy path next in an environment
+with `DATABASE_URL` configured.
 
 Reason: the code now has taxonomy tables, mapped audience-tag filtering, and
 test deck SQL, but this path needs real database rows to verify end-to-end.

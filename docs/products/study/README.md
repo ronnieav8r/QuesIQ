@@ -56,9 +56,11 @@ The first Study slice is imported:
   Study-prefixed taxonomy tables for subjects, audience tags, sources,
   verifications, and deck imports
 - `/api/study/tts` supports Study voice paths with Admin AI Usage
-  instrumentation
+  instrumentation and source-style R2 audio caching when R2 environment
+  variables are configured
 - `/api/study/folders` and `/api/study/folders/[folderId]` support Study folder
-  management data, with deck create/edit assignment
+  management data, with deck create/edit assignment and a source-style folder
+  manager on `/study/decks`
 - owned deck pages include an inline public/private toggle
 - signed-in users can create/edit decks, add/delete cards manually, and review
   cards with simple recall ratings; card lists now support inline edit/delete
@@ -69,8 +71,8 @@ The first Study slice is imported:
   `scripts/study/seed_test_decks.sql` and
   `scripts/study/cleanup_test_decks.sql`; generated decks are marked with
   `[TEST_DELETE]` and `__test_delete__`
-- remaining work is mostly parity polish, source `LibrarySearch`/`FolderManager`
-  UI comparison, R2 audio caching, taxonomy content seeding, and production QA
+- remaining work is mostly migration/seed QA, taxonomy content seeding, and
+  production permission QA
 
 Detailed import parity, divergence, and remaining-slice notes live in
 `docs/products/study/HANDOFF.md`.

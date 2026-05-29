@@ -7,6 +7,10 @@ type StudyQuizCard = {
   answer: string;
   id: string;
   question: string;
+  quizMcAudioUrl?: string | null;
+  tfFalseAudioUrl?: string | null;
+  tfFoilCardId?: string | null;
+  tfTrueAudioUrl?: string | null;
 };
 
 type MCQuestion = {
@@ -19,6 +23,7 @@ type MCQuestion = {
 type TFQuestion = {
   card: StudyQuizCard;
   correctIndex: 0 | 1;
+  foilCardId?: string;
   kind: "tf";
   shownAnswer: string;
 };
@@ -72,7 +77,7 @@ function buildQuestions(activeCards: StudyQuizCard[], allCards: StudyQuizCard[])
     const distractors = shuffle(
       allCards.filter((candidate) => candidate.id !== card.id).map((candidate) => candidate.answer),
     ).slice(0, 3);
-    const choices = shuffle([card.answer, ...distractors]).slice(0, 4);
+    const choices = [card.answer, ...distractors].slice(0, 4).sort((a, b) => a.localeCompare(b));
     return {
       card,
       choices,
@@ -93,11 +98,24 @@ function buildTrueFalseQuestions(activeCards: StudyQuizCard[], allCards: StudyQu
         shownAnswer: card.answer,
       } satisfies TFQuestion;
     }
+    if (card.tfFoilCardId) {
+      const storedFoil = allCards.find((candidate) => candidate.id === card.tfFoilCardId);
+      if (storedFoil) {
+        return {
+          card,
+          correctIndex: 1 as const,
+          foilCardId: storedFoil.id,
+          kind: "tf",
+          shownAnswer: storedFoil.answer,
+        } satisfies TFQuestion;
+      }
+    }
     const foilPool = allCards.filter((candidate) => candidate.id !== card.id);
     const foil = foilPool[Math.floor(Math.random() * foilPool.length)];
     return {
       card,
       correctIndex: 1 as const,
+      foilCardId: foil?.id,
       kind: "tf",
       shownAnswer: foil?.answer ?? card.answer,
     } satisfies TFQuestion;
@@ -120,6 +138,27 @@ function buildPromptText(question: QuizQuestion, index: number, total: number) {
   }
   const choices = question.choices.map((choice, i) => `${LABELS[i]} ${choice}`).join(". ");
   return `Question ${index + 1} of ${total}. ${question.card.question}. ${choices}. Say A, B, C, or D.`;
+}
+
+function buildFeedbackText(question: QuizQuestion, selectedIndex: number) {
+  if (selectedIndex === question.correctIndex) {
+    return "Correct.";
+  }
+  if (question.kind === "tf") {
+    return `Incorrect. The answer is: ${question.card.answer}.`;
+  }
+  return `Incorrect. The answer was ${LABELS[question.correctIndex]}: ${question.choices[question.correctIndex]}.`;
+}
+
+function ttsPayload(question: QuizQuestion, index: number, total: number) {
+  const text = buildPromptText(question, index, total);
+  if (question.kind === "mc") {
+    return { audioType: "quiz_mc", cardId: question.card.id, text };
+  }
+  if (question.correctIndex === 0) {
+    return { audioType: "tf_true", cardId: question.card.id, text };
+  }
+  return { audioType: "tf_false", cardId: question.card.id, foilCardId: question.foilCardId, text };
 }
 
 export function StudyQuiz({ activeCards, allCards, deckId, filter, handsFree, mode = "quiz", srs }: StudyQuizProps) {
@@ -208,8 +247,44 @@ export function StudyQuiz({ activeCards, allCards, deckId, filter, handsFree, mo
     }
     setPhase("feedback");
     if (handsFree) {
-      window.setTimeout(() => nextQuestion(), 1400);
+      void speakFeedbackThenAdvance(choiceIndex);
     }
+  }
+
+  async function speakFeedbackThenAdvance(choiceIndex: number) {
+    const text = buildFeedbackText(question, choiceIndex);
+    if (usePremiumTts) {
+      try {
+        const response = await fetch("/api/study/tts", {
+          body: JSON.stringify({ text }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+        if (response.ok) {
+          const url = URL.createObjectURL(await response.blob());
+          const audio = new Audio(url);
+          audio.onended = () => {
+            URL.revokeObjectURL(url);
+            nextQuestion();
+          };
+          audio.onerror = () => {
+            URL.revokeObjectURL(url);
+            nextQuestion();
+          };
+          await audio.play();
+          return;
+        }
+      } catch {
+        // Fall back to native speech.
+      }
+    }
+
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "en-US";
+    utter.rate = 0.92;
+    utter.onend = () => nextQuestion();
+    utter.onerror = () => nextQuestion();
+    window.speechSynthesis.speak(utter);
   }
 
   async function speakPromptAndListen() {
@@ -234,7 +309,7 @@ export function StudyQuiz({ activeCards, allCards, deckId, filter, handsFree, mo
           return;
         }
         const response = await fetch("/api/study/tts", {
-          body: JSON.stringify({ text: prompt }),
+          body: JSON.stringify(ttsPayload(question, index, total)),
           headers: { "Content-Type": "application/json" },
           method: "POST",
         });
@@ -272,10 +347,9 @@ export function StudyQuiz({ activeCards, allCards, deckId, filter, handsFree, mo
       return;
     }
     const nextQuestion = questions[nextIndex];
-    const nextPrompt = buildPromptText(nextQuestion, nextIndex, questions.length);
     try {
       const response = await fetch("/api/study/tts", {
-        body: JSON.stringify({ text: nextPrompt }),
+        body: JSON.stringify(ttsPayload(nextQuestion, nextIndex, questions.length)),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });

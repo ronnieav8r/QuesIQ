@@ -44,7 +44,7 @@ export default async function StudyImportPage({ params }: Props) {
         <p>Paste cards, upload a file, or download a template to start quickly.</p>
       </div>
       <section className="panel study-empty-panel">
-        <StudyImportWizard deckId={deckId} />
+        <StudyImportWizard deckId={deckId} deckTitle={deck.title} />
       </section>
     </div>
   );

@@ -4,13 +4,15 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 
 import { auth } from "@/auth";
-import { getStudyDecksWithStats } from "@/features/study/study-data";
-import { StudyDeckCard } from "@/features/study/study-deck-card";
+import { getStudyDecksWithStats, getStudyFolders } from "@/features/study/study-data";
+import { StudyFolderManager } from "@/features/study/study-folder-manager";
 
 export default async function StudyDecksPage() {
   const session = await auth();
   const userId = session?.user?.id;
-  const decks = userId ? await getStudyDecksWithStats(userId) : [];
+  const [decks, folders] = userId
+    ? await Promise.all([getStudyDecksWithStats(userId), getStudyFolders(userId)])
+    : [[], []];
 
   return (
     <div className="screen study-dashboard-screen">
@@ -41,11 +43,7 @@ export default async function StudyDecksPage() {
           </Link>
         </section>
       ) : (
-        <section className="study-deck-grid" aria-label="Study decks">
-          {decks.map((deck) => (
-            <StudyDeckCard currentUserId={userId} deck={deck} key={deck.id} />
-          ))}
-        </section>
+        <StudyFolderManager currentUserId={userId} decks={decks} initialFolders={folders} />
       )}
     </div>
   );

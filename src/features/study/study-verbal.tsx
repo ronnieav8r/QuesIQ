@@ -110,10 +110,13 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, resume, srs 
   const [feedbackVerdict, setFeedbackVerdict] = useState<StudyVerdict>("almost");
   const [results, setResults] = useState<Result[]>([]);
   const [error, setError] = useState<string>("");
+  const [countdown, setCountdown] = useState<number | null>(null);
   const [supported] = useState(() => Boolean(getSpeechRecognitionCtor()));
   const sessionIdRef = useRef<string | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const ratingActiveRef = useRef(false);
 
   const card = deck[index];
   const handsFree = mode === "handsfree";
@@ -143,6 +146,9 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, resume, srs 
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
       }
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+      }
       window.speechSynthesis.cancel();
     };
   }, []);
@@ -164,6 +170,14 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, resume, srs 
       void advanceAfterFeedback();
     }, 1800);
     return () => window.clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handsFree, phase, selfRate]);
+
+  useEffect(() => {
+    if (!(handsFree && phase === "feedback" && selfRate && !ratingActiveRef.current)) {
+      return;
+    }
+    void promptForSpokenRating();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handsFree, phase, selfRate]);
 
@@ -246,7 +260,7 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, resume, srs 
       setPhase("ready");
       if (handsFree && finalText.trim()) {
         if (selfRate) {
-          setFeedback("Use Again / Hard / Good / Easy for this answer.");
+          setFeedback("Compare your answer, then say Again, Hard, Good, or Easy.");
           setFeedbackVerdict("good");
           setPhase("feedback");
         } else {
@@ -268,6 +282,8 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, resume, srs 
   }
 
   async function rate(verdict: StudyVerdict, explanation?: string) {
+    stopRatingCountdown();
+    ratingActiveRef.current = false;
     await fetch(`/api/study/decks/${deckId}/rate`, {
       body: JSON.stringify({
         aiFeedback: explanation,
@@ -316,6 +332,8 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, resume, srs 
   }
 
   async function advanceAfterFeedback() {
+    stopRatingCountdown();
+    ratingActiveRef.current = false;
     const nextIndex = index + 1;
     if (nextIndex >= deck.length) {
       if (typeof window !== "undefined") {
@@ -339,7 +357,7 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, resume, srs 
     }
 
     if (selfRate) {
-      setFeedback("Compare to the correct answer, then rate.");
+      setFeedback("Compare your answer, then choose a rating.");
       setFeedbackVerdict("good");
       setPhase("feedback");
       return;
@@ -405,6 +423,8 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, resume, srs 
   }
 
   function restart() {
+    stopRatingCountdown();
+    ratingActiveRef.current = false;
     const nextDeck = shuffle(cards);
     setDeck(nextDeck);
     setIndex(0);
@@ -417,6 +437,127 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, resume, srs 
     }
     saveVerbalSession(nextDeck.map((currentCard) => currentCard.id), 0);
     setPhase("start");
+  }
+
+  function stopRatingCountdown() {
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    setCountdown(null);
+  }
+
+  function startRatingCountdown() {
+    stopRatingCountdown();
+    setCountdown(6);
+    countdownTimerRef.current = setInterval(() => {
+      setCountdown((current) => {
+        if (current === null || current <= 1) {
+          if (countdownTimerRef.current) {
+            clearInterval(countdownTimerRef.current);
+            countdownTimerRef.current = null;
+          }
+          if (ratingActiveRef.current) {
+            void rate("good", feedback);
+          }
+          return null;
+        }
+        return current - 1;
+      });
+    }, 1000);
+  }
+
+  function startRatingRecognition() {
+    const Ctor = getSpeechRecognitionCtor();
+    if (!Ctor) {
+      startRatingCountdown();
+      return;
+    }
+
+    const RatingCtor = Ctor;
+    ratingActiveRef.current = true;
+
+    function listen() {
+      if (!ratingActiveRef.current) return;
+      const rec = new RatingCtor();
+      recognitionRef.current = rec;
+      rec.continuous = false;
+      rec.interimResults = true;
+      rec.lang = "en-US";
+      rec.onresult = (event) => {
+        for (let i = event.resultIndex; i < event.results.length; i += 1) {
+          const text = (event.results[i][0]?.transcript ?? "").toLowerCase();
+          if (/\bagain\b/.test(text)) {
+            void rate("again", feedback);
+            return;
+          }
+          if (/\bhard\b/.test(text)) {
+            void rate("hard", feedback);
+            return;
+          }
+          if (/\bgood\b/.test(text)) {
+            void rate("good", feedback);
+            return;
+          }
+          if (/\beasy\b/.test(text)) {
+            void rate("easy", feedback);
+            return;
+          }
+        }
+      };
+      rec.onend = () => {
+        if (ratingActiveRef.current) window.setTimeout(listen, 200);
+      };
+      rec.onerror = () => {
+        if (ratingActiveRef.current) window.setTimeout(listen, 200);
+      };
+      try {
+        rec.start();
+      } catch {
+        startRatingCountdown();
+      }
+    }
+
+    listen();
+    startRatingCountdown();
+  }
+
+  async function promptForSpokenRating() {
+    ratingActiveRef.current = true;
+    const text = `The answer is: ${card.answer}. Again, Hard, Good, or Easy?`;
+
+    if (usePremiumTts) {
+      try {
+        const response = await fetch("/api/study/tts", {
+          body: JSON.stringify({ text }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+        if (response.ok) {
+          const url = URL.createObjectURL(await response.blob());
+          const audio = new Audio(url);
+          audio.onended = () => {
+            URL.revokeObjectURL(url);
+            startRatingRecognition();
+          };
+          audio.onerror = () => {
+            URL.revokeObjectURL(url);
+            startRatingRecognition();
+          };
+          await audio.play();
+          return;
+        }
+      } catch {
+        // Fall back to native speech.
+      }
+    }
+
+    const cancelFallback = window.setTimeout(() => startRatingRecognition(), 1800);
+    const cancel = speakNative(text, () => {
+      window.clearTimeout(cancelFallback);
+      cancel();
+      startRatingRecognition();
+    });
   }
 
   if (phase === "start") {
@@ -500,13 +641,13 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, resume, srs 
         )}
         {phase === "feedback" && (
           <>
-            {selfRate ? (
-              <>
-                <button className="secondary" onClick={() => void rate("again", feedback)} type="button">Again</button>
-                <button className="secondary" onClick={() => void rate("hard", feedback)} type="button">Hard</button>
-                <button className="secondary" onClick={() => void rate("good", feedback)} type="button">Good</button>
-                <button className="secondary" onClick={() => void rate("easy", feedback)} type="button">Easy</button>
-              </>
+          {selfRate ? (
+            <>
+              <button className="secondary" onClick={() => void rate("again", feedback)} type="button">Again</button>
+              <button className="secondary" onClick={() => void rate("hard", feedback)} type="button">Hard</button>
+              <button className="secondary" onClick={() => void rate("good", feedback)} type="button">Good</button>
+              <button className="secondary" onClick={() => void rate("easy", feedback)} type="button">Easy</button>
+            </>
             ) : (
               <button onClick={() => void advanceAfterFeedback()} type="button">{index + 1 >= deck.length ? "Finish" : "Next"}</button>
             )}
@@ -514,6 +655,9 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, resume, srs 
         )}
         <Link className="button-link secondary" href={`/study/decks/${deckId}/study${filter ? `?filter=${filter}` : ""}`}>Study Visual</Link>
       </div>
+      {handsFree && selfRate && countdown !== null && (
+        <p className="text-muted">Listening for a rating. Defaulting to Good in {countdown}.</p>
+      )}
     </section>
   );
 }

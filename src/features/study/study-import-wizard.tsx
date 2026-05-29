@@ -17,6 +17,7 @@ type DraftItem = {
 
 type StudyImportWizardProps = {
   deckId: string;
+  deckTitle: string;
 };
 
 function splitCsvLine(line: string) {
@@ -84,7 +85,7 @@ function parseCsvText(raw: string, swapped = false): DraftItem[] | string {
   return items;
 }
 
-export function StudyImportWizard({ deckId }: StudyImportWizardProps) {
+export function StudyImportWizard({ deckId, deckTitle }: StudyImportWizardProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const csvFileInputRef = useRef<HTMLInputElement>(null);
@@ -276,9 +277,11 @@ export function StudyImportWizard({ deckId }: StudyImportWizardProps) {
               className="import-textarea"
               id="study-import-text"
               onChange={(event) => setPastedText(event.target.value)}
+              placeholder="Paste notes, a chapter, a study guide, regulations, or any text you want turned into flashcards."
               rows={10}
               value={pastedText}
             />
+            <span className="field-note">{pastedText.length} characters</span>
           </div>
         )}
 
@@ -289,16 +292,21 @@ export function StudyImportWizard({ deckId }: StudyImportWizardProps) {
               className="import-textarea"
               id="study-import-urls"
               onChange={(event) => setPastedUrl(event.target.value)}
+              placeholder={"https://example.com/study-guide\nhttps://example.com/reference-page"}
               rows={6}
               value={pastedUrl}
             />
+            <span className="field-note">
+              {pastedUrl.split("\n").filter((line) => line.trim().startsWith("http")).length || "No"} URL
+              {pastedUrl.split("\n").filter((line) => line.trim().startsWith("http")).length === 1 ? "" : "s"} detected.
+            </span>
           </div>
         )}
 
         {sourceType === "csv" && (
           <div className="import-csv">
             <p className="field-note import-csv__hint">
-              CSV/TSV is parsed locally. Two columns required: term and definition.
+              CSV/TSV is parsed locally. Quizlet, Anki, and most flashcard exports work when the first two columns are term and definition. A third column becomes a hint.
             </p>
             <div
               className={`file-drop${dragOver ? " file-drop--dragover" : ""}`}
@@ -333,8 +341,20 @@ export function StudyImportWizard({ deckId }: StudyImportWizardProps) {
                 style={{ display: "none" }}
                 type="file"
               />
-              {csvFile ? <p className="file-drop__name">{csvFile.name}</p> : <p className="file-drop__label">Drop CSV/TSV here</p>}
+              {csvFile ? (
+                <>
+                  <p className="file-drop__name">{csvFile.name}</p>
+                  <p className="file-drop__hint">Click to change file</p>
+                </>
+              ) : (
+                <>
+                  <p className="file-drop__icon"><FileUp aria-hidden="true" size={28} /></p>
+                  <p className="file-drop__label">Drop a CSV, TSV, or TXT file here</p>
+                  <p className="file-drop__hint">First two columns become Question and Answer</p>
+                </>
+              )}
             </div>
+            <div className="import-csv__divider">or paste directly</div>
             <div className="form-field">
               <label htmlFor="study-import-csv-text">or paste rows</label>
               <textarea
@@ -345,9 +365,13 @@ export function StudyImportWizard({ deckId }: StudyImportWizardProps) {
                   setCsvText(event.target.value);
                   if (event.target.value.trim()) setCsvFile(null);
                 }}
+                placeholder={"term\tdefinition\nPhotosynthesis\tProcess plants use to convert light into energy\nMitosis\tCell division producing two identical cells"}
                 rows={8}
                 value={csvText}
               />
+              {!csvFile && csvText.trim().length > 0 && (
+                <span className="field-note">{csvText.split("\n").filter((line) => line.trim()).length} rows detected</span>
+              )}
             </div>
           </div>
         )}
@@ -358,6 +382,7 @@ export function StudyImportWizard({ deckId }: StudyImportWizardProps) {
             <input
               id="study-focus-hint"
               onChange={(event) => setFocusHint(event.target.value)}
+              placeholder='e.g. "medications and dosages" or "chapter 4 vocabulary"'
               type="text"
               value={focusHint}
             />
@@ -389,10 +414,18 @@ export function StudyImportWizard({ deckId }: StudyImportWizardProps) {
     return (
       <div className="study-import-wizard">
         {failedUrls.length > 0 && (
-          <p className="form-error">Some URLs failed: {failedUrls.join(", ")}</p>
+          <div className="form-error">
+            <strong>Could not fetch {failedUrls.length} URL{failedUrls.length === 1 ? "" : "s"}:</strong>
+            <ul className="compact-list">
+              {failedUrls.map((url) => (
+                <li key={url}>{url}</li>
+              ))}
+            </ul>
+          </div>
         )}
         {sourceType === "csv" && (
-          <div className="inline-actions">
+          <div className="import-csv__swap-banner">
+            <span>Column 1 to Question. Column 2 to Answer.</span>
             <button
               className="secondary"
               onClick={async () => {
@@ -410,6 +443,19 @@ export function StudyImportWizard({ deckId }: StudyImportWizardProps) {
             </button>
           </div>
         )}
+        <div className="import-wizard__review-header">
+          <p>
+            {sourceType === "csv" ? (
+              <><strong>{drafts.length}</strong> cards ready. Review and edit before saving.</>
+            ) : (
+              <>Que found <strong>{drafts.length}</strong> flashcard pairs. Review and edit before saving.</>
+            )}
+          </p>
+          <div className="inline-actions">
+            <button className="secondary" onClick={() => setDrafts((current) => current.map((draft) => ({ ...draft, selected: true })))} type="button">Select All</button>
+            <button className="secondary" onClick={() => setDrafts((current) => current.map((draft) => ({ ...draft, selected: false })))} type="button">Deselect All</button>
+          </div>
+        </div>
         <div className="study-import-preview">
           {drafts.map((draft) => (
             <div className={`study-import-card${draft.selected ? "" : " study-import-card--deselected"}`} key={draft.id}>
@@ -472,7 +518,7 @@ export function StudyImportWizard({ deckId }: StudyImportWizardProps) {
             <ChevronLeft aria-hidden="true" size={16} /> Back
           </button>
           <button disabled={selectedCount === 0} onClick={() => void handleSave()} type="button">
-            Save {selectedCount} Cards
+            Save {selectedCount} Card{selectedCount === 1 ? "" : "s"} to Deck
           </button>
         </div>
       </div>
@@ -492,7 +538,7 @@ export function StudyImportWizard({ deckId }: StudyImportWizardProps) {
     <div className="study-import-wizard import-wizard--done">
       <p className="import-wizard__success">
         <Check aria-hidden="true" size={16} />
-        {savedCount} cards added.
+        {savedCount} card{savedCount === 1 ? "" : "s"} added to &quot;{deckTitle}&quot;.
       </p>
       <div className="inline-actions">
         <button className="secondary" onClick={resetSource} type="button">Import More</button>

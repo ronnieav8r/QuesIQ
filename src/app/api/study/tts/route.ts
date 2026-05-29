@@ -1,9 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
 
 import { auth } from "@/auth";
 import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
+import { getDb } from "@/server/db/client";
+import { studyCards } from "@/server/db/schema";
+import { isStudyStorageConfigured, uploadStudyAudio } from "@/server/study/storage";
 
 export const runtime = "nodejs";
+
+type StudyAudioType = "question" | "quiz_mc" | "tf_false" | "tf_true";
+
+const AUDIO_CONFIG: Record<
+  StudyAudioType,
+  {
+    fileKey: (cardId: string) => string;
+    getUrl: (card: typeof studyCards.$inferSelect) => string | null;
+    update: (url: string, foilCardId?: string) => Partial<typeof studyCards.$inferInsert>;
+  }
+> = {
+  question: {
+    fileKey: (cardId) => `study/tts/${cardId}.mp3`,
+    getUrl: (card) => card.questionAudioUrl,
+    update: (url) => ({ questionAudioUrl: url }),
+  },
+  quiz_mc: {
+    fileKey: (cardId) => `study/tts/${cardId}_quiz.mp3`,
+    getUrl: (card) => card.quizMcAudioUrl,
+    update: (url) => ({ quizMcAudioUrl: url }),
+  },
+  tf_false: {
+    fileKey: (cardId) => `study/tts/${cardId}_tf_false.mp3`,
+    getUrl: (card) => card.tfFalseAudioUrl,
+    update: (url, foilCardId) => ({
+      tfFalseAudioUrl: url,
+      ...(foilCardId ? { tfFoilCardId: foilCardId } : {}),
+    }),
+  },
+  tf_true: {
+    fileKey: (cardId) => `study/tts/${cardId}_tf_true.mp3`,
+    getUrl: (card) => card.tfTrueAudioUrl,
+    update: (url) => ({ tfTrueAudioUrl: url }),
+  },
+};
 
 export async function POST(request: NextRequest) {
   const appSession = await auth();
@@ -12,7 +51,9 @@ export async function POST(request: NextRequest) {
   }
 
   const body = (await request.json()) as {
+    audioType?: StudyAudioType;
     cardId?: string;
+    foilCardId?: string;
     text?: string;
   };
   const text = body.text?.trim() ?? "";
@@ -25,9 +66,35 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "OpenAI key is not configured." }, { status: 500 });
   }
 
+  const audioType = body.audioType && body.audioType in AUDIO_CONFIG ? body.audioType : "question";
+  const audioConfig = AUDIO_CONFIG[audioType];
+  const db = getDb();
+
+  if (body.cardId) {
+    const [card] = await db.select().from(studyCards).where(eq(studyCards.id, body.cardId)).limit(1);
+    const cachedUrl = card ? audioConfig.getUrl(card) : null;
+
+    if (cachedUrl) {
+      try {
+        const cached = await fetch(cachedUrl);
+        if (cached.ok) {
+          const buffer = Buffer.from(await cached.arrayBuffer());
+          return new NextResponse(buffer, {
+            headers: {
+              "Content-Type": "audio/mpeg",
+              "X-Audio-Cache": "hit",
+            },
+          });
+        }
+      } catch {
+        // Cache read failures fall through to fresh generation.
+      }
+    }
+  }
+
   const run = await startAiRun({
     model: "tts-1",
-    rawJson: { cardId: body.cardId, textLength: text.length },
+    rawJson: { audioType, cardId: body.cardId, textLength: text.length },
     runType: "study_tts",
     userId: appSession.user.id,
   });
@@ -59,15 +126,33 @@ export async function POST(request: NextRequest) {
 
     const providerRequestId = response.headers.get("x-request-id") ?? undefined;
     const audioBuffer = Buffer.from(await response.arrayBuffer());
+    let cachedUrl: string | undefined;
+
+    if (body.cardId && isStudyStorageConfigured()) {
+      try {
+        cachedUrl = await uploadStudyAudio(audioConfig.fileKey(body.cardId), audioBuffer);
+        await db
+          .update(studyCards)
+          .set({
+            ...audioConfig.update(cachedUrl, body.foilCardId),
+            updatedAt: new Date(),
+          })
+          .where(eq(studyCards.id, body.cardId));
+      } catch {
+        cachedUrl = undefined;
+      }
+    }
+
     await completeAiRun(run.id, {
       providerRequestId,
-      rawJson: { bytes: audioBuffer.byteLength },
+      rawJson: { bytes: audioBuffer.byteLength, cached: Boolean(cachedUrl) },
       status: "succeeded",
     });
 
     return new NextResponse(audioBuffer, {
       headers: {
         "Content-Type": "audio/mpeg",
+        "X-Audio-Cache": cachedUrl ? "stored" : "miss",
       },
     });
   } catch (error) {

@@ -7,7 +7,7 @@ import { auth } from "@/auth";
 import {
   getStudyAudienceTags,
   getStudyLibraryDecks,
-  getStudyRootSubjects,
+  getStudySubjectOptions,
   type StudyLibraryScope,
 } from "@/features/study/study-data";
 import { StudyDeckCard } from "@/features/study/study-deck-card";
@@ -33,7 +33,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
       ? scope
       : "all";
 
-  const [filteredDecks, subjects, audienceTags] = await Promise.all([
+  const [filteredDecks, subjectTaxonomyOptions, audienceTags] = await Promise.all([
     getStudyLibraryDecks({
       officialOnly,
       query,
@@ -42,17 +42,15 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
       tag: tagFilter || undefined,
       userId,
     }),
-    getStudyRootSubjects(),
+    getStudySubjectOptions(),
     getStudyAudienceTags(),
   ]);
 
   const deckSubjects = Array.from(
     new Set(filteredDecks.map((deck) => deck.subject?.trim()).filter((value): value is string => Boolean(value))),
   );
-  const taxonomySubjects = subjects.map((item) => item.name);
-  const subjectOptions = Array.from(new Set([...taxonomySubjects, ...deckSubjects])).sort((a, b) =>
-    a.localeCompare(b),
-  );
+  const taxonomyNames = new Set(subjectTaxonomyOptions.map((item) => item.name));
+  const extraDeckSubjects = deckSubjects.filter((value) => !taxonomyNames.has(value));
   const tags = Array.from(
     new Set(
       filteredDecks
@@ -62,7 +60,8 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
     ),
   ).sort((a, b) => a.localeCompare(b));
 
-  const hasFilters = Boolean(query || subjectFilter || tagFilter || officialOnly);
+  const hasFilters = Boolean(query || subjectFilter || tagFilter || officialOnly || scopeFilter !== "all");
+  const resultLabel = `${filteredDecks.length} result${filteredDecks.length === 1 ? "" : "s"}`;
 
   return (
     <div className="screen study-dashboard-screen">
@@ -81,12 +80,12 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
         <BookOpen size={20} aria-hidden="true" />
         <div>
           <h2>{filteredDecks.length} public deck{filteredDecks.length === 1 ? "" : "s"}</h2>
-          <p>Browse by subject, keyword, and official decks.</p>
+          <p>Browse by subject, keyword, audience, and official status.</p>
         </div>
       </section>
 
       <section className="panel">
-        <form action="/study/library" className="study-deck-form">
+        <form action="/study/library" className="study-library-search">
           <label>
             <span>Scope</span>
             <select defaultValue={scopeFilter} name="scope">
@@ -98,14 +97,19 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
 
           <label>
             <span>Search</span>
-            <input defaultValue={q ?? ""} name="q" placeholder="Search title, subject, tags..." type="text" />
+            <input defaultValue={q ?? ""} name="q" placeholder="Search title, description, subject, tags..." type="search" />
           </label>
 
           <label>
             <span>Subject</span>
             <select defaultValue={subjectFilter || ""} name="subject">
               <option value="">All subjects</option>
-              {subjectOptions.map((value) => (
+              {subjectTaxonomyOptions.map((value) => (
+                <option key={value.id} value={value.name}>
+                  {value.label}
+                </option>
+              ))}
+              {extraDeckSubjects.map((value) => (
                 <option key={value} value={value}>
                   {value}
                 </option>
@@ -134,13 +138,14 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
             <span>Official decks only</span>
           </label>
 
-          <div className="inline-actions">
+          <div className="study-library-search__actions">
             <button type="submit">Apply</button>
             {hasFilters && (
               <Link className="button-link secondary" href="/study/library">
                 Clear
               </Link>
             )}
+            <span>{resultLabel}</span>
           </div>
         </form>
       </section>

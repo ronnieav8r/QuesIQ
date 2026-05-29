@@ -36,6 +36,7 @@ export async function getStudyDecksWithStats(userId: string) {
       description: studyDecks.description,
       dueCount: sql<number>`COUNT(CASE WHEN ${studyCards.dueAt} IS NULL OR ${studyCards.dueAt} <= NOW() THEN 1 END)::int`,
       id: studyDecks.id,
+      folderId: studyDecks.folderId,
       isOfficial: studyDecks.isOfficial,
       isPublic: studyDecks.isPublic,
       lastStudiedAt: sql<Date | null>`(
@@ -94,6 +95,38 @@ export async function getStudyRootSubjects() {
     .from(studySubjects)
     .where(isNull(studySubjects.parentId))
     .orderBy(asc(studySubjects.sortOrder), asc(studySubjects.name));
+}
+
+export async function getStudySubjectOptions() {
+  const rows = await getDb()
+    .select({
+      id: studySubjects.id,
+      name: studySubjects.name,
+      parentId: studySubjects.parentId,
+      sortOrder: studySubjects.sortOrder,
+    })
+    .from(studySubjects)
+    .orderBy(asc(studySubjects.sortOrder), asc(studySubjects.name));
+
+  const byParent = rows.reduce((map, row) => {
+    const key = row.parentId ?? "root";
+    map.set(key, [...(map.get(key) ?? []), row]);
+    return map;
+  }, new Map<string, typeof rows>());
+
+  const options: Array<{ id: string; label: string; name: string }> = [];
+  function visit(parentId: string, depth: number) {
+    for (const row of byParent.get(parentId) ?? []) {
+      options.push({
+        id: row.id,
+        label: `${depth > 0 ? `${"  ".repeat(depth)}- ` : ""}${row.name}`,
+        name: row.name,
+      });
+      visit(row.id, depth + 1);
+    }
+  }
+  visit("root", 0);
+  return options;
 }
 
 export async function getStudyAudienceTags() {

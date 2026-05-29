@@ -4,9 +4,14 @@ import { useState, type FormEvent } from "react";
 
 type StudyCard = {
   answer: string;
+  dueAt?: Date | null;
+  easeFactor?: number | null;
   hint: string | null;
   id: string;
+  interval?: number | null;
   isVerified?: boolean;
+  lapses?: number | null;
+  level?: string | null;
   position: number;
   question: string;
 };
@@ -32,6 +37,7 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
   const [pending, setPending] = useState(false);
   const [question, setQuestion] = useState("");
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [nowMs] = useState(() => Date.now());
   const [editingValues, setEditingValues] = useState<EditingCardState>({
     answer: "",
     hint: "",
@@ -135,6 +141,21 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
     cancelEdit();
   }
 
+  function cardStatus(card: StudyCard) {
+    if (!card.dueAt) return "New";
+    if ((card.interval ?? 0) >= 21 && (card.lapses ?? 0) === 0) return "Mastered";
+    if ((card.lapses ?? 0) > 0 || (card.easeFactor ?? 2.5) < 2) return "Weak";
+    if (new Date(card.dueAt).getTime() <= nowMs) return "Due";
+    return "Learning";
+  }
+
+  function formatDue(card: StudyCard) {
+    if (!card.dueAt) return "Not studied yet";
+    const due = new Date(card.dueAt);
+    if (due.getTime() <= nowMs) return "Due now";
+    return `Due ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(due)}`;
+  }
+
   return (
     <section className="study-card-list">
       {cards.length === 0 && !addingCard && (
@@ -188,9 +209,18 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
             </div>
           ) : (
             <div>
+              <div className="study-card-meta">
+                <span className="badge">{cardStatus(card)}</span>
+                {card.level && <span className="badge">{card.level}</span>}
+                {card.isVerified && <span className="badge">Verified</span>}
+              </div>
               <p className="study-card-question">{card.question}</p>
               <p>{card.answer}</p>
               {card.hint && <p className="study-card-hint">Hint: {card.hint}</p>}
+              <p className="study-card-schedule">
+                {formatDue(card)}
+                {typeof card.easeFactor === "number" && ` - ease ${card.easeFactor.toFixed(2)}`}
+              </p>
             </div>
           )}
           {isOwner && (
