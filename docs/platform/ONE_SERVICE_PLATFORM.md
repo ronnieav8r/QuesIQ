@@ -37,9 +37,8 @@ boundary is established. New products should land in product-owned lanes.
 
 Current route shell:
 
-- `/` still serves the existing Interview beta entry point for production
-  continuity.
-- `/interview` also serves the existing Interview beta.
+- `/` serves the shared product selector.
+- `/interview` serves the existing Interview beta.
 - The shared Interview entry component now lives in
   `src/features/interview/interview-app.tsx`.
 - `/study` is a placeholder product lane.

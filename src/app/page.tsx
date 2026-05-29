@@ -1,1 +1,1 @@
-export { default } from "@/features/interview/interview-app";
+export { default } from "@/features/platform/platform-home";

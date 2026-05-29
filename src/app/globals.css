@@ -325,6 +325,38 @@ p {
   align-content: start;
 }
 
+.platform-home-screen {
+  align-content: start;
+  gap: var(--space-6);
+}
+
+.platform-home-header {
+  align-items: center;
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+}
+
+.platform-home-logo {
+  border-radius: var(--radius-sm);
+  display: block;
+  height: 3.5rem;
+  object-fit: contain;
+  width: 3.5rem;
+}
+
+.product-picker-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.product-picker-card {
+  align-content: space-between;
+  display: grid;
+  gap: var(--space-6);
+}
+
 .platform-placeholder-panel {
   max-width: 48rem;
 }
@@ -2696,6 +2728,19 @@ textarea::placeholder {
 }
 
 @media (max-width: 47.9375rem) {
+  .platform-home-header {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .platform-home-header .auth-control {
+    justify-content: start;
+  }
+
+  .product-picker-grid {
+    grid-template-columns: 1fr;
+  }
+
   .intro-length-list {
     grid-template-columns: 1fr;
   }
