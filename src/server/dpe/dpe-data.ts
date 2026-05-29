@@ -9,9 +9,11 @@ import {
 import { getDb } from "@/server/db/client";
 import {
   dpeCertificateTypes,
+  dpeCheckrideTargets,
   dpeContentVersions,
   dpeOralQuestions,
   dpePracticeSessions,
+  dpeProfiles,
   dpeQuestionAnswerKeys,
   dpeQuestionRubrics,
 } from "@/server/db/schema";
@@ -479,4 +481,89 @@ export function buildLocalDpeReviewFromTranscript(transcriptJson: unknown): DpeR
       `${answers.length - skipped} prompt${answers.length - skipped === 1 ? "" : "s"} answered.`,
     ],
   };
+}
+
+export async function getDpeProfile(userId: string) {
+  const [profile] = await getDb()
+    .select()
+    .from(dpeProfiles)
+    .where(eq(dpeProfiles.userId, userId))
+    .limit(1);
+  const [target] = await getDb()
+    .select()
+    .from(dpeCheckrideTargets)
+    .where(and(eq(dpeCheckrideTargets.userId, userId), eq(dpeCheckrideTargets.active, true)))
+    .limit(1);
+
+  return { profile: profile ?? null, target: target ?? null };
+}
+
+export async function saveDpeProfile(input: {
+  aircraft?: string;
+  checkrideDate?: string | null;
+  flightSchool?: string;
+  instructor?: string;
+  knownDpeName?: string;
+  personalNotes?: string;
+  preferredName?: string;
+  schoolContext?: string;
+  userId: string;
+  weakAreaNotes?: string;
+}) {
+  const now = new Date();
+  const [existingProfile] = await getDb()
+    .select({ id: dpeProfiles.id })
+    .from(dpeProfiles)
+    .where(eq(dpeProfiles.userId, input.userId))
+    .limit(1);
+
+  const profileValues = {
+    aircraft: input.aircraft?.trim() || null,
+    flightSchool: input.flightSchool?.trim() || null,
+    instructor: input.instructor?.trim() || null,
+    knownDpeName: input.knownDpeName?.trim() || null,
+    personalNotes: input.personalNotes?.trim() || null,
+    preferredName: input.preferredName?.trim() || null,
+    updatedAt: now,
+    weakAreaNotes: input.weakAreaNotes?.trim() || null,
+  };
+
+  if (existingProfile) {
+    await getDb().update(dpeProfiles).set(profileValues).where(eq(dpeProfiles.id, existingProfile.id));
+  } else {
+    await getDb().insert(dpeProfiles).values({
+      ...profileValues,
+      userId: input.userId,
+    });
+  }
+
+  const [existingTarget] = await getDb()
+    .select({ id: dpeCheckrideTargets.id })
+    .from(dpeCheckrideTargets)
+    .where(and(eq(dpeCheckrideTargets.userId, input.userId), eq(dpeCheckrideTargets.active, true)))
+    .limit(1);
+  const targetValues = {
+    aircraft: input.aircraft?.trim() || null,
+    aircraftCategory: "Airplane",
+    aircraftClass: "Single-Engine Land",
+    certificate: "Private Pilot",
+    checkrideDate: input.checkrideDate ? new Date(input.checkrideDate) : null,
+    knownDpeName: input.knownDpeName?.trim() || null,
+    schoolContext: input.schoolContext?.trim() || null,
+    updatedAt: now,
+  };
+
+  if (existingTarget) {
+    await getDb()
+      .update(dpeCheckrideTargets)
+      .set(targetValues)
+      .where(eq(dpeCheckrideTargets.id, existingTarget.id));
+  } else {
+    await getDb().insert(dpeCheckrideTargets).values({
+      ...targetValues,
+      userId: input.userId,
+    });
+  }
+
+  return getDpeProfile(input.userId);
 }

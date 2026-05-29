@@ -135,6 +135,36 @@ type AuthState = {
   } | null;
 };
 
+type DpeProfileState = {
+  aircraft: string;
+  checkrideDate: string;
+  flightSchool: string;
+  instructor: string;
+  knownDpeName: string;
+  personalNotes: string;
+  preferredName: string;
+  schoolContext: string;
+  weakAreaNotes: string;
+};
+
+type DpeProfileResponse = {
+  profile: {
+    aircraft: string | null;
+    flightSchool: string | null;
+    instructor: string | null;
+    knownDpeName: string | null;
+    personalNotes: string | null;
+    preferredName: string | null;
+    weakAreaNotes: string | null;
+  } | null;
+  target: {
+    aircraft: string | null;
+    checkrideDate: string | null;
+    knownDpeName: string | null;
+    schoolContext: string | null;
+  } | null;
+};
+
 const navItems = [
   { key: "home", label: "Home", icon: Home },
   { key: "practice", label: "Practice", icon: Mic },
@@ -143,6 +173,18 @@ const navItems = [
   { key: "content", label: "Content", icon: Database },
   { key: "me", label: "Me", icon: User }
 ] satisfies { key: Screen; label: string; icon: typeof Home }[];
+
+const emptyDpeProfile: DpeProfileState = {
+  aircraft: "",
+  checkrideDate: "",
+  flightSchool: "",
+  instructor: "",
+  knownDpeName: "",
+  personalNotes: "",
+  preferredName: "",
+  schoolContext: "",
+  weakAreaNotes: "",
+};
 
 export default function App() {
   const [authState, setAuthState] = useState<AuthState>({
@@ -161,6 +203,8 @@ export default function App() {
     available: false,
     certificateTypes: []
   });
+  const [dpeProfile, setDpeProfile] = useState<DpeProfileState>(emptyDpeProfile);
+  const [profileSaveStatus, setProfileSaveStatus] = useState<"idle" | "saved" | "saving" | "error">("idle");
   const [databaseAvailable, setDatabaseAvailable] = useState<boolean | null>(null);
   const [questionState, setQuestionState] = useState<QuestionApiResponse>(
     buildEmptyQuestionResponse()
@@ -196,6 +240,7 @@ export default function App() {
 
     void loadStoredSessions();
     void loadQuestions();
+    void loadDpeProfile();
     if (authState.isAdmin) {
       void loadContentSummary();
     }
@@ -250,6 +295,36 @@ export default function App() {
       setContentSummary(data);
     } catch {
       setContentSummary({ available: false, certificateTypes: [] });
+    }
+  }
+
+  async function loadDpeProfile() {
+    try {
+      const response = await fetch("/api/dpe/profile");
+      if (!response.ok) return;
+      const data = (await response.json()) as DpeProfileResponse;
+      setDpeProfile(profileResponseToState(data));
+    } catch {
+      // Keep the app usable if profile persistence is not available yet.
+    }
+  }
+
+  async function saveProfile(nextProfile = dpeProfile) {
+    setProfileSaveStatus("saving");
+    try {
+      const response = await fetch("/api/dpe/profile", {
+        body: JSON.stringify(nextProfile),
+        headers: { "Content-Type": "application/json" },
+        method: "PUT",
+      });
+      if (!response.ok) {
+        throw new Error("Profile save failed.");
+      }
+      const data = (await response.json()) as DpeProfileResponse;
+      setDpeProfile(profileResponseToState(data));
+      setProfileSaveStatus("saved");
+    } catch {
+      setProfileSaveStatus("error");
     }
   }
 
@@ -502,6 +577,7 @@ export default function App() {
               <HomeScreen
                 questionBankAvailable={questionBankAvailable}
                 questionCount={questionState.questions.length}
+                dpeProfile={dpeProfile}
                 onPractice={() => setScreen("practice")}
               />
             )}
@@ -542,7 +618,17 @@ export default function App() {
               />
             )}
             {screen === "content" && authState.isAdmin && <ContentScreen summary={contentSummary} />}
-            {screen === "me" && <MeScreen />}
+            {screen === "me" && (
+              <MeScreen
+                profile={dpeProfile}
+                saveStatus={profileSaveStatus}
+                onChange={(nextProfile) => {
+                  setDpeProfile(nextProfile);
+                  setProfileSaveStatus("idle");
+                }}
+                onSave={() => saveProfile()}
+              />
+            )}
           </main>
         </div>
 
@@ -679,10 +765,12 @@ function SignInScreen({
 }
 
 function HomeScreen({
+  dpeProfile,
   questionCount,
   questionBankAvailable,
   onPractice
 }: {
+  dpeProfile: DpeProfileState;
   questionCount: number;
   questionBankAvailable: boolean | null;
   onPractice: () => void;
@@ -695,14 +783,21 @@ function HomeScreen({
       score: questionCount > 0 ? 58 : 0
     }
   ];
-
+  const targetLine = [
+    "Private Pilot ASEL",
+    dpeProfile.aircraft,
+    dpeProfile.checkrideDate ? `checkride ${formatDateLabel(dpeProfile.checkrideDate)}` : "",
+  ]
+    .filter(Boolean)
+    .join(" - ");
+  
   return (
     <section className="screen">
       <div className="screen-toolbar">
-        <div>
-          <h2>Next best practice</h2>
-          <p className="muted">Private Pilot ASEL - Checkride target setup pending</p>
-        </div>
+          <div>
+            <h2>Next best practice</h2>
+            <p className="muted">{targetLine || "Private Pilot ASEL - Checkride target setup pending"}</p>
+          </div>
         <button className="button primary" onClick={onPractice}>
           <Mic />
           Start
@@ -720,11 +815,13 @@ function HomeScreen({
       </div>
 
       <div className="stat-strip">
-        <Stat label="Question bank" value={`${questionCount}`} />
-        <Stat label="Certificate" value="PPL ASEL" />
-        <Stat label="Voice stack" value="Realtime" />
-        <Stat label="Content" value={questionBankAvailable ? "DB" : "Offline"} />
-      </div>
+          <Stat label="Question bank" value={`${questionCount}`} />
+          <Stat label="Certificate" value="PPL ASEL" />
+          <Stat label="Aircraft" value={dpeProfile.aircraft || "-"} />
+          <Stat label="Voice stack" value="Realtime" />
+          <Stat label="DPE" value={dpeProfile.knownDpeName || "-"} />
+          <Stat label="Content" value={questionBankAvailable ? "DB" : "Offline"} />
+        </div>
 
       <div className="grid two-col">
         <div className="panel">
@@ -1209,6 +1306,35 @@ function answersFromVoiceArtifact(
   }));
 }
 
+function profileResponseToState(data: DpeProfileResponse): DpeProfileState {
+  return {
+    aircraft: data.target?.aircraft ?? data.profile?.aircraft ?? "",
+    checkrideDate: data.target?.checkrideDate
+      ? new Date(data.target.checkrideDate).toISOString().slice(0, 10)
+      : "",
+    flightSchool: data.profile?.flightSchool ?? "",
+    instructor: data.profile?.instructor ?? "",
+    knownDpeName: data.target?.knownDpeName ?? data.profile?.knownDpeName ?? "",
+    personalNotes: data.profile?.personalNotes ?? "",
+    preferredName: data.profile?.preferredName ?? "",
+    schoolContext: data.target?.schoolContext ?? "",
+    weakAreaNotes: data.profile?.weakAreaNotes ?? "",
+  };
+}
+
+function formatDateLabel(value: string) {
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
 function ReviewList({ items, fallback }: { items: string[]; fallback?: string }) {
   const displayItems = items.length > 0 ? items : fallback ? [fallback] : [];
 
@@ -1600,7 +1726,21 @@ function formatStoredDate(value: string) {
   }).format(new Date(value));
 }
 
-function MeScreen() {
+function MeScreen({
+  onChange,
+  onSave,
+  profile,
+  saveStatus
+}: {
+  onChange: (profile: DpeProfileState) => void;
+  onSave: () => void;
+  profile: DpeProfileState;
+  saveStatus: "idle" | "saved" | "saving" | "error";
+}) {
+  function updateField(key: keyof DpeProfileState, value: string) {
+    onChange({ ...profile, [key]: value });
+  }
+
   return (
     <section className="screen">
       <div className="section-head">
@@ -1612,21 +1752,90 @@ function MeScreen() {
       </div>
       <div className="panel grid two-col">
         <label className="field">
+          <span>Preferred name</span>
+          <input
+            value={profile.preferredName}
+            onChange={(event) => updateField("preferredName", event.target.value)}
+            placeholder="Ronnie"
+          />
+        </label>
+        <label className="field">
           <span>Certificate / rating</span>
           <input value="Private Pilot ASEL" readOnly />
         </label>
         <label className="field">
           <span>Aircraft</span>
-          <input placeholder="Cessna 172S" />
+          <input
+            value={profile.aircraft}
+            onChange={(event) => updateField("aircraft", event.target.value)}
+            placeholder="Cessna 172S"
+          />
         </label>
         <label className="field">
           <span>Checkride date</span>
-          <input type="date" />
+          <input
+            type="date"
+            value={profile.checkrideDate}
+            onChange={(event) => updateField("checkrideDate", event.target.value)}
+          />
         </label>
         <label className="field">
           <span>DPE name</span>
-          <input placeholder="Optional" />
+          <input
+            value={profile.knownDpeName}
+            onChange={(event) => updateField("knownDpeName", event.target.value)}
+            placeholder="Optional"
+          />
         </label>
+        <label className="field">
+          <span>Flight school</span>
+          <input
+            value={profile.flightSchool}
+            onChange={(event) => updateField("flightSchool", event.target.value)}
+            placeholder="Optional"
+          />
+        </label>
+        <label className="field">
+          <span>Instructor</span>
+          <input
+            value={profile.instructor}
+            onChange={(event) => updateField("instructor", event.target.value)}
+            placeholder="Optional"
+          />
+        </label>
+      </div>
+      <div className="panel grid">
+        <label className="field">
+          <span>School / aircraft context</span>
+          <textarea
+            value={profile.schoolContext}
+            onChange={(event) => updateField("schoolContext", event.target.value)}
+            placeholder="Aircraft quirks, school procedures, local airport context, or checkride prep notes."
+          />
+        </label>
+        <label className="field">
+          <span>Weak areas</span>
+          <textarea
+            value={profile.weakAreaNotes}
+            onChange={(event) => updateField("weakAreaNotes", event.target.value)}
+            placeholder="Topics you want QuesIQ DPE to keep in view."
+          />
+        </label>
+        <label className="field">
+          <span>Personal notes</span>
+          <textarea
+            value={profile.personalNotes}
+            onChange={(event) => updateField("personalNotes", event.target.value)}
+            placeholder="Anything else useful for checkride practice."
+          />
+        </label>
+        <div className="inline-actions">
+          <button className="button primary" disabled={saveStatus === "saving"} onClick={onSave}>
+            {saveStatus === "saving" ? "Saving" : "Save"}
+          </button>
+          {saveStatus === "saved" && <span className="pill">Saved</span>}
+          {saveStatus === "error" && <span className="pill">Save failed</span>}
+        </div>
       </div>
     </section>
   );

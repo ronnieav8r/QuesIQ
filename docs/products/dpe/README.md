@@ -48,6 +48,9 @@ First import slice completed locally on 2026-05-29:
 - Finalized DPE voice artifacts save through
   `/api/dpe/practice-sessions/[id]/artifact`, then feed the existing DPE
   review path.
+- DPE Me now persists preferred name, aircraft, checkride date, DPE name,
+  school/instructor context, weak areas, and notes through `/api/dpe/profile`.
+- DPE Home reflects saved aircraft/checkride/DPE context.
 
 The raw DPE source archive under
 `C:\Users\weeks\Documents\github\DPE\docs\checkride question content` was not
@@ -60,6 +63,7 @@ through a deliberate content-import slice.
    `/dpe` with a signed-in account.
 2. QA the DPE voice MVP in a signed-in browser with microphone permission and
    OpenAI Realtime env vars configured.
-3. Build the real aviation content curation/import path from the DPE source
+3. QA DPE Me profile persistence after migration `0050` is applied.
+4. Build the real aviation content curation/import path from the DPE source
    workbook/PDF material. Keep placeholder content clearly marked until final
    answer keys and rubrics are authored.
