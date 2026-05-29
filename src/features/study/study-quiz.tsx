@@ -137,13 +137,17 @@ export function StudyQuiz({ activeCards, allCards, deckId, filter, handsFree, mo
   const [micSupported] = useState(() => Boolean(getSpeechRecognitionCtor()));
   const sessionIdRef = useRef<string | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const prefetchedAudioRef = useRef<Map<number, string>>(new Map());
   const question = questions[index];
   const total = questions.length;
 
   useEffect(() => {
+    const prefetchedAudio = prefetchedAudioRef.current;
     return () => {
       recognitionRef.current?.stop();
       window.speechSynthesis.cancel();
+      prefetchedAudio.forEach((url) => URL.revokeObjectURL(url));
+      prefetchedAudio.clear();
     };
   }, []);
 
@@ -213,6 +217,22 @@ export function StudyQuiz({ activeCards, allCards, deckId, filter, handsFree, mo
     const prompt = buildPromptText(question, index, total);
     if (usePremiumTts) {
       try {
+        const prefetched = prefetchedAudioRef.current.get(index);
+        if (prefetched) {
+          prefetchedAudioRef.current.delete(index);
+          const audio = new Audio(prefetched);
+          audio.onended = () => {
+            URL.revokeObjectURL(prefetched);
+            startListening();
+          };
+          audio.onerror = () => {
+            URL.revokeObjectURL(prefetched);
+            startListening();
+          };
+          await audio.play();
+          void prefetchNextQuestionAudio(index + 1);
+          return;
+        }
         const response = await fetch("/api/study/tts", {
           body: JSON.stringify({ text: prompt }),
           headers: { "Content-Type": "application/json" },
@@ -231,6 +251,7 @@ export function StudyQuiz({ activeCards, allCards, deckId, filter, handsFree, mo
             startListening();
           };
           await audio.play();
+          void prefetchNextQuestionAudio(index + 1);
           return;
         }
       } catch {
@@ -244,6 +265,28 @@ export function StudyQuiz({ activeCards, allCards, deckId, filter, handsFree, mo
     utter.onend = () => startListening();
     utter.onerror = () => startListening();
     window.speechSynthesis.speak(utter);
+  }
+
+  async function prefetchNextQuestionAudio(nextIndex: number) {
+    if (!usePremiumTts || nextIndex >= questions.length || prefetchedAudioRef.current.has(nextIndex)) {
+      return;
+    }
+    const nextQuestion = questions[nextIndex];
+    const nextPrompt = buildPromptText(nextQuestion, nextIndex, questions.length);
+    try {
+      const response = await fetch("/api/study/tts", {
+        body: JSON.stringify({ text: nextPrompt }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      if (!response.ok) {
+        return;
+      }
+      const blob = await response.blob();
+      prefetchedAudioRef.current.set(nextIndex, URL.createObjectURL(blob));
+    } catch {
+      // Prefetch failures should not block the live flow.
+    }
   }
 
   function startListening() {
@@ -303,6 +346,8 @@ export function StudyQuiz({ activeCards, allCards, deckId, filter, handsFree, mo
   }
 
   function restart() {
+    prefetchedAudioRef.current.forEach((url) => URL.revokeObjectURL(url));
+    prefetchedAudioRef.current.clear();
     setQuestions(buildQuizQuestions(mode, activeCards, allCards));
     setIndex(0);
     setPhase(handsFree ? "start" : "answering");

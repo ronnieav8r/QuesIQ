@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { StudyVerdict } from "@/features/study/study-srs";
 
@@ -71,8 +71,34 @@ function speakNative(text: string, onEnd: () => void) {
   return () => window.speechSynthesis.cancel();
 }
 
-export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, srs }: StudyVerbalProps) {
-  const [deck, setDeck] = useState(() => shuffle(cards));
+export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, resume, srs }: StudyVerbalProps) {
+  const resumeKey = `quesiq-study-verbal-session-${deckId}`;
+  const [deck, setDeck] = useState(() => {
+    if (resume && typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem(resumeKey);
+        const saved = raw
+          ? (JSON.parse(raw) as {
+              orderedIds?: string[];
+              ratedCount?: number;
+            })
+          : null;
+        if (saved?.orderedIds && typeof saved.ratedCount === "number") {
+          const cardMap = new Map(cards.map((currentCard) => [currentCard.id, currentCard]));
+          const remaining = saved.orderedIds
+            .slice(saved.ratedCount)
+            .map((id) => cardMap.get(id))
+            .filter((currentCard): currentCard is StudyVerbalCard => Boolean(currentCard));
+          if (remaining.length > 0) {
+            return remaining;
+          }
+        }
+      } catch {
+        // Ignore broken saved verbal sessions.
+      }
+    }
+    return shuffle(cards);
+  });
   const [mode, setMode] = useState<"handsfree" | "manual">(hf ? "handsfree" : "manual");
   const [phase, setPhase] = useState<VerbalPhase>("start");
   const [silenceMs, setSilenceMs] = useState(1500);
@@ -92,6 +118,25 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, srs }: Study
   const card = deck[index];
   const handsFree = mode === "handsfree";
 
+  const saveVerbalSession = useCallback(
+    (orderedIds: string[], ratedCount: number) => {
+      if (typeof window === "undefined") {
+        return;
+      }
+      window.localStorage.setItem(
+        resumeKey,
+        JSON.stringify({
+          filter: filter ?? "all",
+          mode: "verbal",
+          orderedIds,
+          ratedCount,
+          startedAt: Date.now(),
+        }),
+      );
+    },
+    [filter, resumeKey],
+  );
+
   useEffect(() => {
     return () => {
       recognitionRef.current?.stop();
@@ -108,6 +153,7 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, srs }: Study
     }
     const timeout = window.setTimeout(() => startRecording(), 350);
     return () => window.clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, handsFree, supported]);
 
   useEffect(() => {
@@ -118,6 +164,7 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, srs }: Study
       void advanceAfterFeedback();
     }, 1800);
     return () => window.clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handsFree, phase, selfRate]);
 
   async function speakQuestion() {
@@ -254,9 +301,13 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, srs }: Study
     const nextIndex = index + 1;
     const total = willRequeue ? deck.length + 1 : deck.length;
     if (nextIndex >= total) {
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(resumeKey);
+      }
       setPhase("summary");
       return;
     }
+    saveVerbalSession(deck.map((currentCard) => currentCard.id), nextIndex);
     setIndex(nextIndex);
     setTyped("");
     setFeedback("");
@@ -267,9 +318,13 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, srs }: Study
   async function advanceAfterFeedback() {
     const nextIndex = index + 1;
     if (nextIndex >= deck.length) {
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(resumeKey);
+      }
       setPhase("summary");
       return;
     }
+    saveVerbalSession(deck.map((currentCard) => currentCard.id), nextIndex);
     setIndex(nextIndex);
     setTyped("");
     setFeedback("");
@@ -344,17 +399,23 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, srs }: Study
   }
 
   function startSession() {
+    saveVerbalSession(deck.map((currentCard) => currentCard.id), 0);
     setPhase("evaluating");
     void speakQuestion();
   }
 
   function restart() {
-    setDeck(shuffle(cards));
+    const nextDeck = shuffle(cards);
+    setDeck(nextDeck);
     setIndex(0);
     setTyped("");
     setFeedback("");
     setResults([]);
     sessionIdRef.current = null;
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(resumeKey);
+    }
+    saveVerbalSession(nextDeck.map((currentCard) => currentCard.id), 0);
     setPhase("start");
   }
 
