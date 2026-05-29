@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { signIn, signOut } from "next-auth/react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
+import type { VoiceSessionArtifactDraft } from "@/product/interview-types";
 import {
   areaLabels,
   buildEmptyQuestionResponse,
@@ -67,6 +69,8 @@ type LocalSession = {
   endedAt?: Date;
   persisted: boolean;
   review?: ReviewJson;
+  voiceArtifact?: VoiceSessionArtifactDraft;
+  voiceMode?: boolean;
 };
 
 type StoredPracticeSession = {
@@ -255,7 +259,7 @@ export default function App() {
     setTask(nextTasks[0] ?? "A");
   }
 
-  async function startSession() {
+  async function startSession(voiceMode = false) {
     const questions = selectedQuestions.slice(0, 5);
     if (questions.length === 0) return;
 
@@ -267,7 +271,8 @@ export default function App() {
       questions,
       answers: [],
       startedAt: new Date(),
-      persisted: false
+      persisted: false,
+      voiceMode
     };
 
     setSession(draftSession);
@@ -395,6 +400,42 @@ export default function App() {
     }
   }
 
+  async function saveVoiceArtifact(artifact: VoiceSessionArtifactDraft) {
+    if (!session?.persisted) return;
+
+    const voiceAnswers = answersFromVoiceArtifact(session.questions, artifact);
+    const nextSession = {
+      ...session,
+      answers: voiceAnswers,
+      endedAt: artifact.endedAt ? new Date(artifact.endedAt) : new Date(),
+      voiceArtifact: artifact,
+    };
+
+    setSession(nextSession);
+
+    try {
+      const response = await fetch(`/api/dpe/practice-sessions/${session.id}/artifact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          artifact,
+          transcriptJson: {
+            answers: voiceAnswers,
+            questions: session.questions,
+            voiceArtifact: artifact,
+          },
+        }),
+      });
+      setDatabaseAvailable(response.ok);
+      await loadStoredSessions();
+    } catch {
+      setDatabaseAvailable(false);
+    }
+
+    setStage("review");
+    await generateReview(nextSession);
+  }
+
   function resetPractice() {
     setStage("setup");
     setSession(null);
@@ -485,7 +526,9 @@ export default function App() {
                 onModeChange={setMode}
                 onRecordAnswer={recordAnswer}
                 onReset={resetPractice}
-                onStartSession={startSession}
+                onStartSession={() => startSession(false)}
+                onStartVoiceSession={() => startSession(true)}
+                onVoiceArtifactFinalized={saveVoiceArtifact}
                 areaOptions={areaOptions}
                 onTaskChange={setTask}
               />
@@ -740,13 +783,15 @@ function PracticeScreen(props: {
   reviewGenerating: boolean;
   onAreaChange: (area: string) => void;
   onTaskChange: (task: string) => void;
-  onModeChange: (mode: PracticeMode) => void;
-  onStartSession: () => void;
-  onRecordAnswer: (skipped: boolean) => void;
-  onFinishEarly: () => void;
-  onReset: () => void;
-  onAnswerChange: (value: string) => void;
-}) {
+    onModeChange: (mode: PracticeMode) => void;
+    onStartSession: () => void;
+    onStartVoiceSession: () => void;
+    onRecordAnswer: (skipped: boolean) => void;
+    onFinishEarly: () => void;
+    onReset: () => void;
+    onAnswerChange: (value: string) => void;
+    onVoiceArtifactFinalized: (artifact: VoiceSessionArtifactDraft) => void;
+  }) {
   if (props.stage === "live" && props.session) {
     return <LiveSessionScreen {...props} session={props.session} />;
   }
@@ -774,10 +819,11 @@ function PracticeSetupScreen({
   questionBankAvailable,
   questionCount,
   onAreaChange,
-  onTaskChange,
-  onModeChange,
-  onStartSession
-}: {
+    onTaskChange,
+    onModeChange,
+    onStartSession,
+    onStartVoiceSession
+  }: {
   areaOptions: string[];
   area: string;
   selectedTask: string;
@@ -787,10 +833,11 @@ function PracticeSetupScreen({
   questionBankAvailable: boolean | null;
   questionCount: number;
   onAreaChange: (area: string) => void;
-  onTaskChange: (task: string) => void;
-  onModeChange: (mode: PracticeMode) => void;
-  onStartSession: () => void;
-}) {
+    onTaskChange: (task: string) => void;
+    onModeChange: (mode: PracticeMode) => void;
+    onStartSession: () => void;
+    onStartVoiceSession: () => void;
+  }) {
   const visualCount = questions.filter((question) => question.practiceLane === "visual").length;
   const handsFreeCount = questions.filter((question) => question.supportsHandsFree).length;
 
@@ -857,19 +904,23 @@ function PracticeSetupScreen({
             <Stat label="Visual hints" value={`${visualCount}`} />
             <Stat label="Content" value={questionBankAvailable ? `${questionCount} DB` : "Offline"} />
           </div>
-          <div className="inline-actions mt-4">
-            <button className="button primary" onClick={onStartSession} disabled={questions.length === 0}>
-              <Mic />
-              Start Local Session
-            </button>
-          </div>
+            <div className="inline-actions mt-4">
+              <button className="button primary" onClick={onStartVoiceSession} disabled={questions.length === 0}>
+                <Mic />
+                Start Voice Practice
+              </button>
+              <button className="button" onClick={onStartSession} disabled={questions.length === 0}>
+                <ListChecks />
+                Type Answers
+              </button>
+            </div>
         </div>
 
         <div className="panel">
           <div className="section-head">
             <div>
-              <h3>Session shape</h3>
-              <p>For now this captures a transcript locally; Realtime voice will plug into this loop.</p>
+                <h3>Session shape</h3>
+                <p>Voice practice saves a transcript for review; typed answers remain available as a fallback.</p>
             </div>
             <Plane />
           </div>
@@ -881,25 +932,59 @@ function PracticeSetupScreen({
   );
 }
 
-function LiveSessionScreen({
-  session,
-  currentIndex,
-  draftAnswer,
-  onAnswerChange,
-  onRecordAnswer,
-  onFinishEarly
-}: {
-  session: LocalSession;
-  currentIndex: number;
-  draftAnswer: string;
-  onAnswerChange: (value: string) => void;
-  onRecordAnswer: (skipped: boolean) => void;
-  onFinishEarly: () => void;
-}) {
-  const question = session.questions[currentIndex];
-  const progress = `${currentIndex + 1} of ${session.questions.length}`;
+  function LiveSessionScreen({
+    session,
+    currentIndex,
+    draftAnswer,
+    onAnswerChange,
+    onRecordAnswer,
+    onFinishEarly,
+    onVoiceArtifactFinalized
+  }: {
+    session: LocalSession;
+    currentIndex: number;
+    draftAnswer: string;
+    onAnswerChange: (value: string) => void;
+    onRecordAnswer: (skipped: boolean) => void;
+    onFinishEarly: () => void;
+    onVoiceArtifactFinalized: (artifact: VoiceSessionArtifactDraft) => void;
+  }) {
+    const question = session.questions[currentIndex];
+    const progress = `${currentIndex + 1} of ${session.questions.length}`;
 
-  return (
+    if (session.voiceMode) {
+      return (
+        <section className="screen">
+          <div className="section-head">
+            <div>
+              <h2>Voice oral session</h2>
+              <p>
+                Area {session.area}, Task {session.task} - {session.questions.length} selected prompts
+              </p>
+            </div>
+            <Mic />
+          </div>
+
+          <RealtimeVoiceSession
+            endpoint="/api/dpe/realtime/session"
+            firstTurnInstructions="Speak in English only. Start this DPE oral practice now. Ask the first selected ACS question, then continue one question at a time."
+            onArtifactFinalized={onVoiceArtifactFinalized}
+            sessionId={session.id}
+            startButtonLabel="Start Voice Practice"
+            surfaceClassName="panel realtime-session dpe-voice-session"
+            title="DPE oral voice practice"
+          />
+
+          <QuestionPreview
+            area={session.area}
+            selectedTask={session.task}
+            questions={session.questions}
+          />
+        </section>
+      );
+    }
+  
+    return (
     <section className="screen">
       <div className="section-head">
         <div>
@@ -1101,6 +1186,27 @@ function buildLocalReview(session: LocalSession) {
       .map((answer) => answer.question.acsElementReference),
     nextPracticeAction: "Repeat this task and answer each prompt in complete sentences."
   } satisfies ReviewJson;
+}
+
+function answersFromVoiceArtifact(
+  questions: DpeQuestion[],
+  artifact: VoiceSessionArtifactDraft,
+): SessionAnswer[] {
+  const userTurns = artifact.transcript.filter((turn) => turn.role === "user" && turn.text.trim());
+
+  if (userTurns.length === 0) {
+    return questions.slice(0, 1).map((question) => ({
+      question,
+      response: "",
+      skipped: true,
+    }));
+  }
+
+  return userTurns.map((turn, index) => ({
+    question: questions[index] ?? questions[questions.length - 1],
+    response: turn.text,
+    skipped: false,
+  }));
 }
 
 function ReviewList({ items, fallback }: { items: string[]; fallback?: string }) {

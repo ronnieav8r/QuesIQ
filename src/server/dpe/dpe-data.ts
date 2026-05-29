@@ -341,6 +341,33 @@ export async function saveDpeReview(input: {
   return session;
 }
 
+export async function saveDpeVoiceArtifact(input: {
+  artifact: unknown;
+  id: string;
+  transcriptJson: unknown;
+  userId: string;
+}) {
+  const [session] = await getDb()
+    .update(dpePracticeSessions)
+    .set({
+      endedAt:
+        typeof input.artifact === "object" &&
+        input.artifact !== null &&
+        "endedAt" in input.artifact &&
+        typeof input.artifact.endedAt === "string"
+          ? new Date(input.artifact.endedAt)
+          : new Date(),
+      reviewJson: undefined,
+      status: "completed",
+      transcriptJson: input.transcriptJson,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(dpePracticeSessions.id, input.id), eq(dpePracticeSessions.userId, input.userId)))
+    .returning();
+
+  return session;
+}
+
 export async function listDpeContentSummary() {
   const certificateTypes = await getDb()
     .select()
