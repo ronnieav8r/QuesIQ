@@ -4,6 +4,18 @@ import { getDb } from "@/server/db/client";
 import { studyCardAttempts, studyCards, studyDecks, studySessions } from "@/server/db/schema";
 import { computeNextStudyReview, type StudyVerdict } from "@/features/study/study-srs";
 
+export type StudyLevel = "advanced" | "beginner" | "intermediate";
+
+export function filterStudyCardsByLevel<T extends { level: string | null }>(
+  cards: T[],
+  level: StudyLevel | undefined,
+) {
+  if (!level) {
+    return cards;
+  }
+  return cards.filter((card) => card.level === level);
+}
+
 export async function getStudyDecksWithStats(userId: string) {
   return getDb()
     .select({

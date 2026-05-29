@@ -6,21 +6,31 @@ import { ChevronLeft } from "lucide-react";
 
 import { auth } from "@/auth";
 import {
+  filterStudyCardsByLevel,
   getStudyDeck,
   getStudyDeckCards,
   getStudyDueCards,
   getStudyWeakCards,
+  type StudyLevel,
 } from "@/features/study/study-data";
 import { StudyVerbal } from "@/features/study/study-verbal";
 
 type Props = {
   params: Promise<{ deckId: string }>;
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<{ filter?: string; hf?: string; level?: string; resume?: string; srs?: string }>;
 };
+
+function resolveLevel(value: string | undefined): StudyLevel | undefined {
+  if (value === "beginner" || value === "intermediate" || value === "advanced") {
+    return value;
+  }
+  return undefined;
+}
 
 export default async function StudyVerbalPage({ params, searchParams }: Props) {
   const { deckId } = await params;
-  const { filter } = await searchParams;
+  const { filter, level: rawLevel } = await searchParams;
+  const level = resolveLevel(rawLevel);
   const session = await auth();
   const userId = session?.user?.id;
   const deck = await getStudyDeck(deckId);
@@ -43,6 +53,7 @@ export default async function StudyVerbalPage({ params, searchParams }: Props) {
   if (cards.length === 0) {
     cards = await getStudyDeckCards(deckId);
   }
+  cards = filterStudyCardsByLevel(cards, level);
 
   if (cards.length === 0) {
     redirect(`/study/decks/${deckId}`);
@@ -60,4 +71,3 @@ export default async function StudyVerbalPage({ params, searchParams }: Props) {
     </div>
   );
 }
-

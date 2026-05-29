@@ -5,17 +5,32 @@ import { notFound, redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
 import { auth } from "@/auth";
-import { getStudyDeck, getStudyDeckCards, getStudyDueCards, getStudyWeakCards } from "@/features/study/study-data";
+import {
+  filterStudyCardsByLevel,
+  getStudyDeck,
+  getStudyDeckCards,
+  getStudyDueCards,
+  getStudyWeakCards,
+  type StudyLevel,
+} from "@/features/study/study-data";
 import { StudyTest } from "@/features/study/study-test";
 
 type Props = {
   params: Promise<{ deckId: string }>;
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<{ filter?: string; level?: string }>;
 };
+
+function resolveLevel(value: string | undefined): StudyLevel | undefined {
+  if (value === "beginner" || value === "intermediate" || value === "advanced") {
+    return value;
+  }
+  return undefined;
+}
 
 export default async function StudyTestPage({ params, searchParams }: Props) {
   const { deckId } = await params;
-  const { filter } = await searchParams;
+  const { filter, level: rawLevel } = await searchParams;
+  const level = resolveLevel(rawLevel);
   const session = await auth();
   const userId = session?.user?.id;
   const deck = await getStudyDeck(deckId);
@@ -28,13 +43,14 @@ export default async function StudyTestPage({ params, searchParams }: Props) {
     redirect("/");
   }
 
-  const allCards = await getStudyDeckCards(deckId);
+  const allCards = filterStudyCardsByLevel(await getStudyDeckCards(deckId), level);
   let activeCards =
     filter === "due"
       ? await getStudyDueCards(deckId)
       : filter === "weak"
         ? await getStudyWeakCards(deckId)
         : allCards;
+  activeCards = filterStudyCardsByLevel(activeCards, level);
 
   if (activeCards.length === 0) {
     activeCards = allCards;

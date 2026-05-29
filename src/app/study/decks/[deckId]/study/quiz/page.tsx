@@ -5,17 +5,32 @@ import { notFound, redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
 import { auth } from "@/auth";
-import { getStudyDeck, getStudyDeckCards, getStudyDueCards, getStudyWeakCards } from "@/features/study/study-data";
+import {
+  filterStudyCardsByLevel,
+  getStudyDeck,
+  getStudyDeckCards,
+  getStudyDueCards,
+  getStudyWeakCards,
+  type StudyLevel,
+} from "@/features/study/study-data";
 import { StudyQuiz } from "@/features/study/study-quiz";
 
 type Props = {
   params: Promise<{ deckId: string }>;
-  searchParams: Promise<{ filter?: string; mode?: string; srs?: string }>;
+  searchParams: Promise<{ filter?: string; hf?: string; level?: string; mode?: string; srs?: string }>;
 };
+
+function resolveLevel(value: string | undefined): StudyLevel | undefined {
+  if (value === "beginner" || value === "intermediate" || value === "advanced") {
+    return value;
+  }
+  return undefined;
+}
 
 export default async function StudyQuizPage({ params, searchParams }: Props) {
   const { deckId } = await params;
-  const { filter, mode: modeParam, srs } = await searchParams;
+  const { filter, level: rawLevel, mode: modeParam, srs } = await searchParams;
+  const level = resolveLevel(rawLevel);
   const session = await auth();
   const userId = session?.user?.id;
   const deck = await getStudyDeck(deckId);
@@ -29,20 +44,26 @@ export default async function StudyQuizPage({ params, searchParams }: Props) {
   }
 
   const allCards = await getStudyDeckCards(deckId);
+  const levelCards = filterStudyCardsByLevel(allCards, level);
 
   let activeCards =
     filter === "due"
       ? await getStudyDueCards(deckId)
       : filter === "weak"
         ? await getStudyWeakCards(deckId)
-        : allCards;
+        : levelCards;
 
   if (activeCards.length === 0) {
-    activeCards = allCards;
+    activeCards = levelCards;
   }
 
-  if (allCards.length < 2) {
+  const filteredAllCards = levelCards;
+  if (filteredAllCards.length < 2) {
     redirect(`/study/decks/${deckId}`);
+  }
+  activeCards = filterStudyCardsByLevel(activeCards, level);
+  if (activeCards.length === 0) {
+    activeCards = filteredAllCards;
   }
 
   const mode = modeParam === "truefalse" ? "truefalse" : "quiz";
@@ -57,7 +78,7 @@ export default async function StudyQuizPage({ params, searchParams }: Props) {
       </div>
       <StudyQuiz
         activeCards={activeCards}
-        allCards={allCards}
+        allCards={filteredAllCards}
         deckId={deckId}
         filter={filter}
         mode={mode}
