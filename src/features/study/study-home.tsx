@@ -45,9 +45,6 @@ export default async function StudyHome() {
           <h1>Ready to study?</h1>
           <p>{supportingCopy}</p>
         </div>
-        <Link className="button-link secondary" href="/">
-          Products
-        </Link>
       </div>
 
       {studyDataError && (
