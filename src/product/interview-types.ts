@@ -604,6 +604,8 @@ export type AiRunRecord = {
     | "introduction_draft"
     | "pricing_review"
     | "realtime"
+    | "study_evaluate"
+    | "study_import"
     | "study_tts"
     | "story_follow_up"
     | "story_outline";
