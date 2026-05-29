@@ -39,7 +39,8 @@ The first Study slice is imported:
   launch toggles and visual-session resume detection
 - `/study/decks/[deckId]/stats` shows deck-level study session totals, mode mix,
   and recent session outcomes for the owner
-- `/study/library` shows public Study decks from the shared database
+- `/study/library` shows public Study decks with search, subject filter, and
+  official-only filtering
 - signed-in users can create/edit decks, add/delete cards manually, and review
   cards with simple recall ratings
 - Study reuses the shared platform Auth.js session
