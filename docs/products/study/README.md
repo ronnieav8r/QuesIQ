@@ -37,6 +37,8 @@ The first Study slice is imported:
 - `/study/decks/[deckId]/start` provides a mode/filter launcher so users can
   choose card scope and study mode before entering a session, including SRS
   launch toggles and visual-session resume detection
+- deck pages now include the source-style inline Study picker (preset filters,
+  modality selection, mode cards, optional SRS/level routing)
 - `/study/decks/[deckId]/stats` shows deck-level study session totals, mode mix,
   and recent session outcomes for the owner
 - public deck pages now support signed-in `Save Copy`, cloning a deck and its
@@ -47,6 +49,8 @@ The first Study slice is imported:
   addition to pasted card text, with selectable preview rows before save and
   downloadable CSV/TSV templates; import parsing skips header rows and exact
   duplicate question/answer lines
+- owned deck pages now support `Export CSV` and `Export TSV` through
+  `/api/study/decks/[deckId]/export`
 - `/study/library` shows public Study decks with search, subject filter, and
   official-only filtering, plus scope filters (`all`, `official`, `mine`)
 - signed-in users can create/edit decks, add/delete cards manually, and review

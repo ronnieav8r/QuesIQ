@@ -14,6 +14,7 @@ import {
 } from "@/features/study/study-data";
 import { StudyCardList } from "@/features/study/study-card-list";
 import { StudyForkButton } from "@/features/study/study-fork-button";
+import { StudyPicker } from "@/features/study/study-picker";
 
 type Props = {
   params: Promise<{ deckId: string }>;
@@ -53,6 +54,16 @@ export default async function StudyDeckPage({ params }: Props) {
             <Link className="button-link secondary" href={`/study/decks/${deckId}/stats`}>
               Stats
             </Link>
+            {!deck.isPublic && !deck.isOfficial && (
+              <>
+                <Link className="button-link secondary" href={`/api/study/decks/${deckId}/export`}>
+                  Export CSV
+                </Link>
+                <Link className="button-link secondary" href={`/api/study/decks/${deckId}/export?format=tsv`}>
+                  Export TSV
+                </Link>
+              </>
+            )}
             {isOwner && (
               <Link className="button-link secondary" href={`/study/decks/${deckId}/import`}>
                 Import
@@ -107,13 +118,19 @@ export default async function StudyDeckPage({ params }: Props) {
           <div>
             <p className="eyebrow">Study</p>
             <h2>Review this deck</h2>
-            <p>Pick a card set and mode before you begin.</p>
+            <p>Pick your mode and launch directly.</p>
           </div>
-          <div className="inline-actions">
-            <Link className="button-link" href={`/study/decks/${deckId}/start`}>
-              Start Study
-            </Link>
-          </div>
+          <StudyPicker
+            deckId={deckId}
+            dueCount={dueCards.length}
+            levelCounts={{
+              advanced: cards.filter((card) => card.level === "advanced").length,
+              beginner: cards.filter((card) => card.level === "beginner").length,
+              intermediate: cards.filter((card) => card.level === "intermediate").length,
+            }}
+            totalCount={cards.length}
+            weakCount={weakCards.length}
+          />
         </section>
       )}
 

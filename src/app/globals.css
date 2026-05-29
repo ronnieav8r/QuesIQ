@@ -723,6 +723,66 @@ p {
   justify-items: end;
 }
 
+.study-picker {
+  display: grid;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.study-picker__presets,
+.study-picker__filters,
+.study-picker__modalities,
+.study-picker__queue-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.study-picker__resume {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+  justify-content: space-between;
+}
+
+.study-picker__header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.study-picker__mode-cards {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.study-picker__mode-card {
+  align-items: center;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: var(--space-3);
+  text-decoration: none;
+}
+
+.study-picker__mode-card-info {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.study-picker__mode-card-info small {
+  color: var(--muted);
+}
+
+.study-picker__tf-icons {
+  display: inline-flex;
+  gap: 0.2rem;
+}
+
 .study-match-columns {
   display: grid;
   gap: var(--space-3);
