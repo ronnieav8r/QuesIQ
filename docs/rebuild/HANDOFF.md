@@ -4,6 +4,11 @@ Last updated: 2026-05-29
 
 ## Immediate Handoff Snapshot
 
+- QuesIQ Study import handoff now lives at
+  `docs/products/study/HANDOFF.md`. Use it before continuing the import from
+  `C:\Users\weeks\Documents\github\claude_flashcards`; the next recommended
+  Study slice is route-parameter parity plus honest handling of incomplete
+  hands-free links.
 - Latest local work is ready for deploy QA, not yet user-confirmed in
   production.
 - User preference for future work: Codex should handle the full edit, verify,

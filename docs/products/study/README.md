@@ -60,6 +60,9 @@ The first Study slice is imported:
 - deeper import automation, library curation/filters, quiz modes, and TTS still
   need to be imported
 
+Detailed import parity, divergence, and remaining-slice notes live in
+`docs/products/study/HANDOFF.md`.
+
 ## Boundaries
 
 Study should not add Study-only fields to the generic Auth.js user table.
