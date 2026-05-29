@@ -495,13 +495,16 @@ p {
 
 .study-deck-form,
 .study-card-list,
-.study-card-editor {
+.study-card-editor,
+.study-import-wizard,
+.study-import-preview {
   display: grid;
   gap: var(--space-4);
 }
 
 .study-deck-form label,
-.study-card-editor label {
+.study-card-editor label,
+.study-import-wizard label {
   color: var(--text);
   display: grid;
   font-size: var(--font-size-sm);
@@ -542,6 +545,35 @@ p {
   color: var(--muted);
   font-size: var(--font-size-sm);
   font-style: italic;
+}
+
+.study-import-preview {
+  gap: var(--space-2);
+}
+
+.study-import-card {
+  align-items: start;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: var(--space-3);
+}
+
+.study-import-card input {
+  margin-top: 0.25rem;
+  width: auto;
+}
+
+.study-import-card span {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.study-import-card small {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
 }
 
 .study-library-cta {

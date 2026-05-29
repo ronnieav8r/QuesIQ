@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { createStudyCard, getStudyDeck } from "@/features/study/study-data";
+import { bulkCreateStudyCards, createStudyCard, getStudyDeck } from "@/features/study/study-data";
 
 type Params = {
   params: Promise<{ deckId: string }>;
@@ -27,9 +27,28 @@ export async function POST(request: NextRequest, { params }: Params) {
 
   const body = (await request.json()) as {
     answer?: string;
+    cards?: Array<{ answer?: string; hint?: string; question?: string }>;
     hint?: string;
     question?: string;
   };
+
+  if (Array.isArray(body.cards)) {
+    const drafts = body.cards
+      .filter((card) => card.question?.trim() && card.answer?.trim())
+      .map((card) => ({
+        answer: card.answer!.trim(),
+        hint: card.hint?.trim() || undefined,
+        question: card.question!.trim(),
+      }));
+
+    if (drafts.length === 0) {
+      return NextResponse.json({ error: "No valid cards provided." }, { status: 400 });
+    }
+
+    const cards = await bulkCreateStudyCards(deckId, drafts);
+
+    return NextResponse.json({ cards }, { status: 201 });
+  }
 
   if (!body.question?.trim() || !body.answer?.trim()) {
     return NextResponse.json({ error: "Question and answer are required." }, { status: 400 });

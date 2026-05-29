@@ -49,6 +49,11 @@ export default async function StudyDeckPage({ params }: Props) {
         </Link>
         {isOwner && (
           <div className="inline-actions">
+            {isOwner && (
+              <Link className="button-link secondary" href={`/study/decks/${deckId}/import`}>
+                Import
+              </Link>
+            )}
             <Link className="button-link secondary" href={`/study/decks/${deckId}/edit`}>
               Edit
             </Link>

@@ -19,6 +19,8 @@ The first Study slice is imported:
 - `/study/decks`, `/study/decks/new`, and `/study/decks/[deckId]` support the
   first usable deck-management slice
 - `/study/decks/[deckId]/edit` supports deck metadata updates
+- `/study/decks/[deckId]/import` supports dependency-free pasted text/CSV card
+  import
 - `/study/decks/[deckId]/study` supports the first visual flashcard review mode
 - `/study/library` shows public Study decks from the shared database
 - signed-in users can create/edit decks, add/delete cards manually, and review

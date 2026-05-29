@@ -247,6 +247,39 @@ export async function createStudyCard(data: {
   return card;
 }
 
+export async function bulkCreateStudyCards(
+  deckId: string,
+  drafts: Array<{ answer: string; hint?: string | null; question: string }>,
+) {
+  if (drafts.length === 0) {
+    return [];
+  }
+
+  const position = await nextStudyCardPosition(deckId);
+  const cards = await getDb()
+    .insert(studyCards)
+    .values(
+      drafts.map((draft, index) => ({
+        answer: draft.answer,
+        deckId,
+        hint: draft.hint ?? null,
+        position: position + index,
+        question: draft.question,
+      })),
+    )
+    .returning();
+
+  await getDb()
+    .update(studyDecks)
+    .set({
+      cardCount: sql`greatest(${studyDecks.cardCount} + ${drafts.length}, 0)`,
+      updatedAt: new Date(),
+    })
+    .where(eq(studyDecks.id, deckId));
+
+  return cards;
+}
+
 export async function updateStudyCard(
   cardId: string,
   data: {
