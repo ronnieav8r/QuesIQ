@@ -316,6 +316,13 @@
       "when": 1779958800000,
       "tag": "0045_refine_interviewer_style_prompts",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1779962400000,
+      "tag": "0046_refine_realtime_interviewer_base_prompt",
+      "breakpoints": true
     }
   ]
 }

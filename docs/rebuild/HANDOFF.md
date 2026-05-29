@@ -7,7 +7,7 @@ Last updated: 2026-05-28
 - Latest local work is ready for deploy QA, not yet user-confirmed in
   production.
 - New migrations to verify on deploy through
-  `0045_refine_interviewer_style_prompts.sql`.
+  `0046_refine_realtime_interviewer_base_prompt.sql`.
 - Recent completed local slices:
   - Job Targets now support true edit, delete, persisted active target, and
     target-aware Home nudges.
@@ -25,9 +25,9 @@ Last updated: 2026-05-28
     story detail in STAR order.
   - Realtime voice calls now prefer `OPENAI_REALTIME_API_KEY`, falling back to
     `OPENAI_API_KEY`; non-voice Responses API calls stay on `OPENAI_API_KEY`.
-  - Realtime Interviewer prompt v2 and first-turn templates now push Que to
-    open like a real interview: one short welcome sentence, one role-relevant
-    question, no setup narration, and no mid-answer interruption.
+  - Realtime Interviewer prompt v4 now has a clearer instruction hierarchy,
+    cleaner opening behavior, stronger mode/question/style composition,
+    tighter turn-taking, and less risk of Que sounding like a product tutor.
   - Regular practice first-turn mode behavior now lives in Admin-visible prompt
     text instead of hidden client templates. Keep this as the prompt principle:
     behavior instructions belong in Admin prompt/config surfaces; code may pass
@@ -56,7 +56,7 @@ Last updated: 2026-05-28
   - Admin Diagnostics captures failed API/client/Realtime events.
 - Local verification passed on 2026-05-28 with `npm run typecheck`,
   `npm run lint`, and `npm run build`.
-- Best next move: deploy to `quesiq-web`, confirm migrations through `0045`,
+- Best next move: deploy to `quesiq-web`, confirm migrations through `0046`,
   then QA Story Lab, saved Job Targets, AI Usage, Diagnostics, and installable
   app behavior on real devices.
 
@@ -426,6 +426,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
   production build on 2026-05-28.
 - Interviewer style prompt refinement passed ESLint, TypeScript check, and
   production build on 2026-05-28.
+- Realtime Interviewer base prompt v4 refinement passed ESLint, TypeScript
+  check, and production build on 2026-05-28.
 - Render logs on 2026-05-22 showed the QuesIQ persistence deploy build
   succeeded, Drizzle migrations applied successfully, and Next started.
 - Live `quesiq.com` QA passed across the owned practice loop and tonight's
@@ -511,7 +513,7 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 1. Deploy/user-confirm QA the latest Story Lab, prompt, debrief, progression,
    and job-target UI changes on `quesiq-web`. Confirm migrations through
-   `0045_refine_interviewer_style_prompts.sql` run before testing Introduction
+   `0046_refine_realtime_interviewer_base_prompt.sql` run before testing Introduction
    Builder, Intro Practice, verbal Debrief, Story Practice coaching history,
    Tell Que story capture, saved Job Targets, Admin Diagnostics, and AI Usage
    prompt links/raw metadata.
@@ -601,7 +603,7 @@ path until Phase 2 navigation is completed unless the product direction changes.
   `/api/realtime/debrief`. Do not build new written debrief UX unless product
   direction changes.
 - `tsconfig.tsbuildinfo` is generated TypeScript cache and intentionally ignored.
-- Migrations through `0045_refine_interviewer_style_prompts.sql` must be applied
+- Migrations through `0046_refine_realtime_interviewer_base_prompt.sql` must be applied
   before using the updated Story Lab in production. The Render start command
   currently runs Drizzle migrations before `npm start`, so it should apply
   automatically on deploy, but verify it in Render logs before QA.

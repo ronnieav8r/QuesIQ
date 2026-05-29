@@ -123,9 +123,10 @@ Last updated: 2026-05-28
   - Realtime endpoints prefer `OPENAI_REALTIME_API_KEY` for voice-only cost
     tracking and fall back to `OPENAI_API_KEY` when the dedicated voice key is
     not configured
-  - Realtime Interviewer prompt v3 and the client first-turn templates now
-    specify a realistic interview opening: short welcome, one role-relevant
-    question, no setup narration, and no mid-answer interruption
+  - Realtime Interviewer prompt v4 and the client first-turn templates now
+    specify a realistic interview opening, instruction hierarchy,
+    mode/question/style composition, concise turn-taking, no setup narration,
+    and no mid-answer interruption
   - Regular practice first-turn mode behavior now lives in the Admin-visible
     Realtime Interviewer prompt; the client sends only a minimal kickoff that
     tells the model to start using the active Admin prompt and runtime context
@@ -494,6 +495,8 @@ The current coded app has passed:
   production build on 2026-05-28.
 - Interviewer style prompt refinement passed ESLint, TypeScript check, and
   production build on 2026-05-28.
+- Realtime Interviewer base prompt v4 refinement passed ESLint, TypeScript
+  check, and production build on 2026-05-28.
 - Render deploy log verification on 2026-05-22 for `quesiq-web`:
   - QuesIQ build succeeded on the persistence commit
   - `npm run db:migrate` ran
@@ -572,7 +575,7 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 
 1. Deploy and user-confirm QA the latest Story Lab, prompt, debrief,
    progression, and job-target UI changes on `quesiq-web`, making sure
-   migrations through `0045_refine_interviewer_style_prompts.sql` run before using
+   migrations through `0046_refine_realtime_interviewer_base_prompt.sql` run before using
    the updated Story Lab in production.
 2. Run/user-confirm migration QA for Bubble levels and quests: Admin >
    Progression > Levels shows Rookie through Master, Admin > Progression >
