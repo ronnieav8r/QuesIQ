@@ -32,6 +32,8 @@ The first Study slice is imported:
   persisted score ratings
 - `/study/decks/[deckId]/study/quiz?mode=truefalse` supports true/false rounds
   with persisted score ratings
+- `/study/decks/[deckId]/study/test` supports full test runs with detailed
+  per-question end-of-test review
 - `/study/library` shows public Study decks from the shared database
 - signed-in users can create/edit decks, add/delete cards manually, and review
   cards with simple recall ratings

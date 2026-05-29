@@ -123,6 +123,9 @@ export default async function StudyDeckPage({ params }: Props) {
             <Link className="button-link secondary" href={`/study/decks/${deckId}/study/quiz?mode=truefalse`}>
               True / False
             </Link>
+            <Link className="button-link secondary" href={`/study/decks/${deckId}/study/test`}>
+              Study Test
+            </Link>
             <Link className="button-link secondary" href={`/study/decks/${deckId}/study`}>
               Study All
             </Link>
