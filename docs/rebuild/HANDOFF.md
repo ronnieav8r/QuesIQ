@@ -7,8 +7,8 @@ Last updated: 2026-05-29
 - QuesIQ Study import handoff now lives at
   `docs/products/study/HANDOFF.md`. Use it before continuing the import from
   `C:\Users\weeks\Documents\github\claude_flashcards`; the next recommended
-  Study slice is route-parameter parity plus honest handling of incomplete
-  hands-free links.
+  Study slice is migration/seed QA for the library taxonomy path, then
+  source `LibrarySearch`/`FolderManager` parity polish.
 - Latest local work is ready for deploy QA, not yet user-confirmed in
   production.
 - User preference for future work: Codex should handle the full edit, verify,
@@ -16,7 +16,7 @@ Last updated: 2026-05-29
   manually inspect code or catch implementation mistakes in GitHub; explain
   risks and verification in plain language and make the next action explicit.
 - New migrations to verify on deploy through
-  `0046_refine_realtime_interviewer_base_prompt.sql`.
+  `0048_add_study_library_taxonomy.sql`.
 - Recent completed local slices:
   - Job Targets now support true edit, delete, persisted active target, and
     target-aware Home nudges.
@@ -63,11 +63,17 @@ Last updated: 2026-05-29
   - AI Usage now logs prompt config links/snapshots/raw JSON metadata, and
     Realtime exchange setup calls are represented in AI Usage.
   - Admin Diagnostics captures failed API/client/Realtime events.
-- Local verification passed on 2026-05-28 with `npm run typecheck`,
+  - QuesIQ Study now has source-style picker routing, hands-free/TTS verbal and
+    quiz behavior, AI-assisted import with AI Usage instrumentation, folder
+    APIs, inline public toggle, stats/card edit polish, Study-prefixed library
+    taxonomy tables, mapped audience-tag filtering, and `[TEST_DELETE]` Study
+    library seed/cleanup SQL under `scripts/study/`.
+- Local verification passed on 2026-05-29 with `npm run typecheck`,
   `npm run lint`, and `npm run build`.
 - Best next move: commit/push the verified local work, deploy to `quesiq-web`,
-  confirm migrations through `0046`, then QA Story Lab, saved Job Targets, AI
-  Usage, Diagnostics, and installable app behavior on real devices.
+  confirm migrations through `0048`, then QA Story Lab, saved Job Targets, AI
+  Usage, Diagnostics, installable app behavior, and Study library taxonomy
+  seed/filter/cleanup behavior.
 
 ## Current Focus
 
@@ -521,64 +527,67 @@ path until Phase 2 navigation is completed unless the product direction changes.
 ## Next Best Work
 
 1. Deploy/user-confirm QA the latest Story Lab, prompt, debrief, progression,
-   and job-target UI changes on `quesiq-web`. Confirm migrations through
-   `0046_refine_realtime_interviewer_base_prompt.sql` run before testing Introduction
-   Builder, Intro Practice, verbal Debrief, Story Practice coaching history,
-   Tell Que story capture, saved Job Targets, Admin Diagnostics, and AI Usage
-   prompt links/raw metadata.
-2. Run/user-confirm database migration QA for the imported levels and quests:
+   job-target UI changes, and Study import work on `quesiq-web`. Confirm
+   migrations through `0048_add_study_library_taxonomy.sql` run before testing
+   Introduction Builder, Intro Practice, verbal Debrief, Story Practice
+   coaching history, Tell Que story capture, saved Job Targets, Admin
+   Diagnostics, AI Usage prompt links/raw metadata, and Study library taxonomy.
+2. Run/user-confirm Study library taxonomy QA: run
+   `scripts/study/seed_test_decks.sql`, confirm mapped audience-tag filters in
+   `/study/library`, then run `scripts/study/cleanup_test_decks.sql`.
+3. Run/user-confirm database migration QA for the imported levels and quests:
    Progression > Levels shows Rookie through Master, Progression > Quests shows
    37 active quest definitions, level/quest edits save from Admin, and Home
    awards quest XP only once per quest.
-3. User-confirm QA the Admin tab: Prompts, Modes, Questions, Styles, API Calls,
+4. User-confirm QA the Admin tab: Prompts, Modes, Questions, Styles, API Calls,
    Realtime Sessions, Pricing, Feedback/Bugs, Progression, Levels, and Data.
-4. Keep monthly/scheduled pricing checks paused; use manual Admin pricing review
+5. Keep monthly/scheduled pricing checks paused; use manual Admin pricing review
    only if needed.
-5. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
+6. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
    new completed reviews award XP once, Home shows saved streak/level/latest
    next action, level thresholds load from Admin, and retry/reopen does not
    double-count.
-6. QA scoring polish: Recent Scores reflects the latest 10 reviewed sessions,
+7. QA scoring polish: Recent Scores reflects the latest 10 reviewed sessions,
    Skill Scores remains all-time, Overall is highlighted, and sub-120-second
    sessions appear in History without scoring or XP.
-7. QA rotating post-review beta feedback prompts in production and confirm Admin
+8. QA rotating post-review beta feedback prompts in production and confirm Admin
    Feedback stores the exact `rating_prompt` for review usefulness, voice
    realism, transcript accuracy, and scoring fairness.
-8. Continue Story Lab QA: deploy/user-confirm the Practice Story voice flow,
+9. Continue Story Lab QA: deploy/user-confirm the Practice Story voice flow,
    Intro Practice voice flow, hideable navigation, saved coaching history on
    Story records, saved intro coaching history, and top Introduction/TMAAT
    selector alignment across desktop and mobile.
-9. QA Admin Diagnostics in production: trigger or observe a failed API response
+10. QA Admin Diagnostics in production: trigger or observe a failed API response
    and a Realtime connection issue, then confirm the Diagnostics tab shows
    sanitized event rows without secrets, raw audio, or large transcripts.
-10. QA the Introduction Builder AI draft/extraction step in production: after
+11. QA the Introduction Builder AI draft/extraction step in production: after
    Talk with Que transcript capture, verify `/api/introductions/draft` runs,
    fills structured intro fields, and saves the polished introduction with raw
    notes retained.
-11. Investigate any production `client.session.error` from the Story Lab
+12. Investigate any production `client.session.error` from the Story Lab
    Realtime entry points, starting with the Introduction Builder conversation
    endpoint.
-12. QA installable app behavior on iOS and Android: add QuesIQ to the home
+13. QA installable app behavior on iOS and Android: add QuesIQ to the home
    screen, launch it, and confirm standalone mode uses the expected icon,
    splash/background color, and app start URL.
-13. Consider mobile bottom-nav auto-hide later as a guarded UX experiment:
+14. Consider mobile bottom-nav auto-hide later as a guarded UX experiment:
    visible by default, hide only on meaningful downward scroll, show
    immediately on upward scroll, and never hide during active voice/session,
    error, modal, save, or onboarding states.
-14. Work the remaining highest-value Bubble reference gaps into upcoming phases:
+15. Work the remaining highest-value Bubble reference gaps into upcoming phases:
    richer coaching memory controls, beta tuning for XP rules, and AI-backed
    Quira support.
-15. Defer or avoid lower-value parity work until the beta needs it: standalone
+16. Defer or avoid lower-value parity work until the beta needs it: standalone
    anonymous bug-report page, in-app marketing/blog pages, payments, industry
    packs, mascot work, and VAPI parity.
-16. Later Quira work: replace the curated Help panel with an AI chat assistant
+17. Later Quira work: replace the curated Help panel with an AI chat assistant
    that uses a maintained QuesIQ knowledge base and can submit structured bugs,
    feedback, screenshots, and current screen/session context.
-17. Continue deploy/user-confirmed QA for changes because localhost preview is
+18. Continue deploy/user-confirmed QA for changes because localhost preview is
    deprecated in this environment.
-18. Keep verifying that `Launch Voice Session` creates a Session id before direct
+19. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
-19. Establish the branch/release flow before broader live traffic: keep `main` as
+20. Establish the branch/release flow before broader live traffic: keep `main` as
     stable integration, create/confirm `live` from the actual production commit,
     and promote intentional releases from `main` to `live`.
 
@@ -612,7 +621,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
   `/api/realtime/debrief`. Do not build new written debrief UX unless product
   direction changes.
 - `tsconfig.tsbuildinfo` is generated TypeScript cache and intentionally ignored.
-- Migrations through `0046_refine_realtime_interviewer_base_prompt.sql` must be applied
-  before using the updated Story Lab in production. The Render start command
-  currently runs Drizzle migrations before `npm start`, so it should apply
-  automatically on deploy, but verify it in Render logs before QA.
+- Migrations through `0048_add_study_library_taxonomy.sql` must be applied
+  before using the updated Story Lab and Study library taxonomy paths in
+  production. The Render start command currently runs Drizzle migrations before
+  `npm start`, so it should apply automatically on deploy, but verify it in
+  Render logs before QA.

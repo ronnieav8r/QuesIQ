@@ -442,6 +442,21 @@ Last updated: 2026-05-29
   - it creates representative rows for empty/missing profile, story,
     introduction, session, evaluation, legacy debrief, coaching memory,
     feedback, and progression data
+- QuesIQ Study import advanced as a separate product lane under `/study`:
+  - Study routes and APIs live under `/study` and `/api/study`, with code in
+    `src/features/study/` and Study-owned `study_*` tables
+  - source-style deck-page picker routing, level filters, SRS/resume handling,
+    verbal/quiz hands-free paths, speech recognition, Study TTS, and AI Usage
+    instrumentation are in code
+  - AI-assisted deck import supports PDF, image, pasted text, and URLs through
+    `/api/study/decks/[deckId]/import`, with Study import/evaluation/TTS calls
+    represented in `ai_runs`
+  - folder APIs, deck folder assignment, inline public/private toggle,
+    private owner-only export, deck stats/card-attempt detail, and inline card
+    edit/delete polish are in code
+  - Study library has public deck search/filtering, deliberate scope filters
+    (`all`, `official`, `mine`), Study-prefixed taxonomy tables, mapped
+    audience-tag filtering, and test seed/cleanup SQL under `scripts/study/`
 
 ## Verification
 
@@ -456,6 +471,8 @@ The current coded app has passed:
   production build. Build output includes the new `/api/realtime/debrief`
   route.
 - Latest local checks passed with local `npm` available on PATH.
+- Latest Study import/taxonomy local checks passed on 2026-05-29 with ESLint,
+  TypeScript check, and production build.
 - Story Lab Phase 1, Phase 2, and Phase 3 practice-hook local checks passed:
   ESLint, TypeScript, and production build.
 - Latest Story Lab Introduction/TMAAT cleanup passed ESLint, TypeScript check,
@@ -539,10 +556,10 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 ## Current Product Direction
 
 - Replace Bubble for the core QuesIQ Interview app.
-- Keep QuesIQ Interview as the lead coded product. QuesIQ Study, shared billing,
+- Keep QuesIQ Interview as the lead coded product. QuesIQ Study is now being
+  imported as a separate product lane inside the same service. Shared billing,
   cross-product account dashboards, a shared platform shell, and shared
-  product-level Quira service boundaries are later platform work, not current
-  implementation constraints.
+  product-level Quira service boundaries remain later platform work.
 - Use direct OpenAI Realtime first for the coded browser voice beta.
 - Keep VAPI as a fallback if direct voice testing reveals a quality,
   reliability, transcript, or tooling gap.
@@ -578,54 +595,58 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 
 1. Deploy and user-confirm QA the latest Story Lab, prompt, debrief,
    progression, and job-target UI changes on `quesiq-web`, making sure
-   migrations through `0046_refine_realtime_interviewer_base_prompt.sql` run before using
-   the updated Story Lab in production.
-2. Run/user-confirm migration QA for Bubble levels and quests: Admin >
+   migrations through `0048_add_study_library_taxonomy.sql` run before using
+   the updated Story Lab or Study library taxonomy paths in production.
+2. Run/user-confirm Study library taxonomy QA: after migrations through `0048`,
+   run `scripts/study/seed_test_decks.sql`, confirm `/study/library` filters by
+   subject, text tag, and mapped audience tags, then run
+   `scripts/study/cleanup_test_decks.sql`.
+3. Run/user-confirm migration QA for Bubble levels and quests: Admin >
    Progression > Levels shows Rookie through Master, Admin > Progression >
    Quests shows 37 active definitions, Admin level/quest edits save, and Home
    awards quest XP once per quest.
-3. Add/confirm `ADMIN_EMAILS` in Render before QAing Admin; monthly pricing
+4. Add/confirm `ADMIN_EMAILS` in Render before QAing Admin; monthly pricing
    checks are suspended/deprecated, so `PRICING_CHECK_SECRET` is not an active
    QA blocker unless manual pricing-review endpoint testing resumes.
-4. Keep pricing updates manual until candidate preview/writeback or a
+5. Keep pricing updates manual until candidate preview/writeback or a
    deterministic pricing parser is built.
-5. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
+6. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
    new completed reviews award XP once, Home shows saved streak/level/latest
    next action, level thresholds load from Admin, and retry/reopen does not
    double-count.
-6. QA scoring polish: Recent Scores uses the latest 10 reviews, Skill Scores is
+7. QA scoring polish: Recent Scores uses the latest 10 reviews, Skill Scores is
    all-time, Overall is highlighted, and sub-120-second sessions appear in
    History without scoring or XP.
-7. QA rotating post-review beta feedback prompts in production and confirm Admin
+8. QA rotating post-review beta feedback prompts in production and confirm Admin
    Feedback stores the exact `rating_prompt` for review usefulness, voice
    realism, transcript accuracy, and scoring fairness.
-8. QA Admin Diagnostics in production: trigger or observe a failed API response
+9. QA Admin Diagnostics in production: trigger or observe a failed API response
    and a Realtime connection issue, then confirm the Diagnostics tab shows
    sanitized event rows without secrets, raw audio, or large transcripts.
-9. QA the Introduction Builder AI draft/extraction flow in production: after
+10. QA the Introduction Builder AI draft/extraction flow in production: after
    Talk with Que transcript capture, verify `/api/introductions/draft` runs,
    fills the structured intro fields, and saves the polished intro with raw
    notes retained.
-10. QA the Story Lab Talk with Que entry points in production, especially any
+11. QA the Story Lab Talk with Que entry points in production, especially any
    `client.session.error` behavior on the Introduction conversation endpoint.
-11. QA installable app behavior on iOS and Android: add QuesIQ to the home
+12. QA installable app behavior on iOS and Android: add QuesIQ to the home
    screen, launch it, and confirm standalone mode uses the expected icon,
    splash/background color, and app start URL.
-12. Consider mobile bottom-nav auto-hide later as a guarded UX experiment:
+13. Consider mobile bottom-nav auto-hide later as a guarded UX experiment:
    visible by default, hide only on meaningful downward scroll, show
    immediately on upward scroll, and never hide during active voice/session,
    error, modal, save, or onboarding states.
-13. Later Quira work: replace the curated Help panel with an AI chat bot backed
+14. Later Quira work: replace the curated Help panel with an AI chat bot backed
    by a maintained QuesIQ product knowledge base.
-14. Product gap backlog from the Bubble reference, ordered by current user value:
+15. Product gap backlog from the Bubble reference, ordered by current user value:
    richer coaching memory controls, tuning XP rules from beta behavior, and
    AI-backed Quira support.
-15. Treat standalone anonymous bug reports, in-app marketing/blog pages,
+16. Treat standalone anonymous bug reports, in-app marketing/blog pages,
    payments, industry packs, mascot work, and VAPI parity as lower-priority
    until the core practice loop and retention features are stronger.
-16. Continue deploy-based QA on `quesiq-web` while localhost preview is
+17. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
-17. Before broader live traffic, establish the documented branch/release flow:
+18. Before broader live traffic, establish the documented branch/release flow:
    scoped `codex/*` work branches, `main` as stable integration, and `live` as
    the exact production branch after the current production commit is confirmed.
 

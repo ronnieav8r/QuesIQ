@@ -118,8 +118,12 @@ Current imported Study routes and APIs:
 - `/api/study/decks/[deckId]/fork`
 - `/api/study/decks/[deckId]/rate`
 - `/api/study/decks/[deckId]/export`
+- `/api/study/decks/[deckId]/import`
 - `/api/study/evaluate`
+- `/api/study/folders`
+- `/api/study/folders/[folderId]`
 - `/api/study/library`
+- `/api/study/tts`
 
 Current imported Study feature files:
 
@@ -132,6 +136,7 @@ Current imported Study feature files:
 - `src/features/study/study-import-wizard.tsx`
 - `src/features/study/study-match.tsx`
 - `src/features/study/study-picker.tsx`
+- `src/features/study/study-public-toggle.tsx`
 - `src/features/study/study-quiz.tsx`
 - `src/features/study/study-resume-card.tsx`
 - `src/features/study/study-srs.ts`
@@ -147,6 +152,13 @@ Current Study schema lives in `src/server/db/schema.ts` and includes:
 - `study_cards`
 - `study_sessions`
 - `study_card_attempts`
+- `study_subjects`
+- `study_audience_tags`
+- `study_trusted_sources`
+- `study_deck_audience_tags`
+- `study_card_sources`
+- `study_verifications`
+- `study_deck_imports`
 
 The current Study schema already has several source-compatible card fields:
 
@@ -188,6 +200,22 @@ the visual/UI level during the conversation:
 - public deck fork/copy
 - deck stats page
 - cross-deck Study history page
+- route parameter parity for `level`, `resume`, `srs`, and honest hands-free
+  routing
+- hands-free verbal and quiz paths with speech recognition, TTS, and resume
+  behavior
+- `/api/study/tts` with AI Usage instrumentation
+- AI-assisted import from PDF, image, pasted text, and URLs through
+  `/api/study/decks/[deckId]/import`
+- `/api/study/evaluate`, AI import, and Study TTS AI Usage instrumentation
+- folder APIs and folder assignment in deck create/edit
+- inline public/private deck toggle
+- enriched stats/card-attempt details and inline card edit/delete polish
+- Study-prefixed library taxonomy tables and initial library query helpers
+- private-owner-only deck export
+- test seed and cleanup SQL at `scripts/study/seed_test_decks.sql` and
+  `scripts/study/cleanup_test_decks.sql`; generated test decks are marked with
+  `[TEST_DELETE]` titles and `__test_delete__` tags
 
 Latest known full code verification before this handoff:
 
@@ -195,9 +223,7 @@ Latest known full code verification before this handoff:
 - `npm run typecheck`
 - `npm run build`
 
-Those checks passed after the source-style Study picker and private-only export
-restriction were added. This handoff is documentation-only and does not change
-runtime code.
+Those checks passed after the Study library taxonomy mapping work.
 
 ## Known Divergences From Source
 
@@ -215,183 +241,125 @@ These are places where the target repo strayed from a strict copy of
 3. The prior `/study/decks/[deckId]/start` intermediate launcher route was
    removed. Study launch now uses the source-style deck-page picker directly.
 
-4. `/study/library` uses a simpler target-side search/filter implementation
-   plus a `scope` filter. Source uses `LibrarySearch`, `getRootSubjects`,
-   `getAudienceTags`, and `getLibraryDecks` with subject/tag taxonomy support.
+4. `/study/library` keeps target-only scope filters (`all`, `official`,
+   `mine`) as a product decision. It now has Study-prefixed taxonomy tables,
+   `getStudyRootSubjects`, `getStudyAudienceTags`, and `getStudyLibraryDecks`,
+   but the UI is still a target-side form rather than the exact source
+   `LibrarySearch` component.
 
-5. The target import wizard currently handles dependency-free paste and
-   CSV/TSV/TXT upload. Source also supports AI-assisted import from PDF, image,
-   pasted text, and URLs through `/api/decks/[deckId]/import`.
+5. The target import wizard supports AI-assisted import and CSV/TSV/TXT flows,
+   but should still be compared against source `import-wizard.tsx` for any
+   remaining source-type tabs, review/save details, and failed-URL presentation.
 
-6. The target typed verbal mode is simplified. Source verbal mode supports
-   manual and hands-free modes, speech recognition, silence timing, device TTS,
-   optional OpenAI TTS, rating recognition, resume, and SRS.
+6. The target verbal mode now has hands-free, speech recognition, TTS, resume,
+   and SRS behavior. It should still be compared against source
+   `study-verbal.tsx` for subtle timing/rating/polish differences.
 
-7. The target quiz mode is simplified. Source quiz uses `quiz-session.tsx` with
-   normal and hands-free play, speech recognition, device TTS, OpenAI TTS, R2
-   audio caching, multiple-choice audio, true/false audio, and prefetching.
+7. The target quiz mode now has normal and hands-free play, TTS, true/false,
+   and prefetching behavior. R2 audio caching/storage from source is still not
+   imported.
 
-8. The target `/api/study/evaluate` uses a direct `fetch` call to OpenAI
-   Chat Completions with `gpt-4o-mini`. Source uses the OpenAI SDK with
-   `gpt-4o`. The broader QuesIQ app direction says new OpenAI calls should use
-   Admin AI Usage instrumentation, and preferably the current app-owned AI run
-   pattern. This target endpoint is not instrumented yet.
+8. Study OpenAI calls are now instrumented for Admin AI Usage with
+   `study_evaluate`, `study_import`, and `study_tts` run types. Model/prompt
+   choices can still be revisited against the source app and platform prompt
+   config direction.
 
-9. Source has folder management UI and folder API routes. Target has the schema
-   field but does not yet expose folder management in the Study lane.
+9. Source has a richer folder-management component. Target has folder APIs and
+   deck assignment, but no full source-style `FolderManager` UI yet.
 
-10. Source has `PublicToggle` on the deck detail page. Target supports changing
-    `isPublic` through deck edit, but does not yet have the same quick toggle
-    UX.
+10. Source has richer public-library taxonomy behavior and metadata. Target has
+    the Study-prefixed taxonomy tables and mapped audience-tag filtering, but
+    taxonomy seeding/content curation is still needed.
 
-11. Source has richer public-library taxonomy tables:
-    `subjects`, `audience_tags`, `trusted_sources`, `deck_audience_tags`,
-    `card_sources`, `verifications`, and `deck_imports`. Target Study has not
-    imported the Study-prefixed equivalents yet.
+11. Source `/api/tts` includes object-storage caching via `src/server/storage.ts`.
+    Target has `/api/study/tts`, but not R2/object-storage caching.
 
-12. Source `/api/tts` and `src/server/storage.ts` are not imported. Target
-    schema has audio URL columns, but no Study TTS route or R2 storage helper.
-
-13. Source route params include `level`, `hf`, `resume`, and `srs` across more
-    modes. Target picker now emits those params, but several target routes do
-    not fully consume them yet.
+12. Target-only additions deliberately kept: `/study/history`, private
+    owner-only export, and library scope filters. The prior
+    `/study/decks/[deckId]/start` launcher was removed.
 
 ## Current Functional Gaps To Fix
 
-These are not just "nice to have" differences; they can create confusing user
-behavior now that the source-style picker exists.
+These are the remaining practical gaps after the broad Study import passes.
 
-1. `StudyPicker` can emit `level`, but target session routes currently ignore
-   `level` in several places. Source filters by beginner/intermediate/advanced
-   in visual, verbal, written, match, quiz, and test pages.
+1. Test data is needed to verify taxonomy filtering end-to-end. Use
+   `scripts/study/seed_test_decks.sql` after migrations through `0048` are
+   applied. Use `scripts/study/cleanup_test_decks.sql` to delete the generated
+   decks afterward.
 
-2. `StudyPicker` can emit `hf=1` for hands-free flashcards and quiz, but target
-   `StudyVerbal` and `StudyQuiz` do not implement source hands-free behavior.
-   A user can click a hands-free path and land in a mostly normal typed/tap
-   experience.
+2. R2/object-storage caching for generated Study audio is still missing. Current
+   TTS can work without cache, but source parity includes cached audio URLs.
 
-3. `StudyPicker` resume links currently focus on visual resume. Source verbal
-   supports resume behavior too. Target `StudyVerbal` does not currently honor
-   source resume/session restoration.
+3. Full source `LibrarySearch` UI parity is not complete. Target filtering is
+   functional and taxonomy-aware, but it is not an exact component port.
 
-4. Target `StudyQuiz` does not accept or use `hf`, `level`, or premium/device
-   TTS choices. Source `/decks/[deckId]/quiz` does.
+4. Full source `FolderManager` UI parity is not complete. Target folder APIs and
+   deck assignment exist.
 
-5. Target `StudyVerbal` does not accept or use `hf`, `resume`, `srs`, or
-   `deckTitle` the same way source does.
-
-6. Source AI import is missing. Target import is useful for CSV/text decks, but
-   source parity requires `/api/study/decks/[deckId]/import` and the import
-   parser flow for PDF/image/text/URL extraction.
-
-7. Any Study OpenAI endpoint added or kept in this repo needs Admin AI Usage
-   instrumentation. That includes evaluate, AI import, and OpenAI TTS if it is
-   ported.
+5. Source-vs-target polish comparison is still needed for verbal, quiz, import
+   wizard, stats, and card editor details after the broad behavior ports.
 
 ## Remaining Port Slices
 
 Recommended order from least risky/confusing to largest:
 
-1. Route-parameter parity slice.
-   Add `level` filtering to target visual, verbal, written, match, quiz, and
-   test routes. Add route-level acceptance for `hf`, `resume`, and `srs` where
-   source supports them, even if some behavior is still explicitly disabled or
-   hidden until the matching component is ported.
+1. Migration and seed QA.
+   Apply migrations through `0048_add_study_library_taxonomy.sql`, then run
+   `scripts/study/seed_test_decks.sql` against the target database. Verify
+   `/study/library` filters by subject, text tags, and mapped audience tags.
+   Run `scripts/study/cleanup_test_decks.sql` after QA.
 
-2. Disable or accurately label incomplete hands-free links.
-   Until the full source hands-free components are imported, prevent the picker
-   from advertising working hands-free flows that are not implemented. This is
-   a short stabilization slice if full hands-free import is not done next.
+2. Source `LibrarySearch` UI parity.
+   Compare source `src/components/flashcards/library-search.tsx` and
+   `src/server/library.ts` against the target `/study/library` page/API. Port
+   any missing UX, taxonomy hierarchy, empty states, and sorting behavior while
+   preserving the deliberate target scope filter.
 
-3. Full source `StudyVerbal` slice.
-   Port source `study-verbal.tsx` into
-   `src/features/study/study-verbal.tsx`, adapted to `/study/...` routes and
-   `/api/study/...` APIs. Preserve manual mode, hands-free mode, speech
-   recognition, silence timing, rating recognition, resume, SRS, device TTS,
-   and optional AI voice behavior.
+3. Folder manager UI parity.
+   Port the source `FolderManager` UX or an equivalent target-native manager.
+   The server APIs and deck assignment already exist.
 
-4. Full source quiz/hands-free slice.
-   Port source `quiz-session.tsx` into the target Study lane or merge its
-   behavior into `study-quiz.tsx`. Preserve multiple-choice and true/false
-   behavior, hands-free mode, speech recognition, device TTS, OpenAI TTS,
-   prefetching, SRS missed-card requeueing, and result recording.
+4. R2/object-storage audio caching.
+   Port the source storage helper if generated Study audio should be cached.
+   Keep `/api/study/tts` namespaced and preserve AI Usage instrumentation.
 
-5. Study TTS and storage slice.
-   Port `/api/tts` as `/api/study/tts` or another namespaced route, plus the
-   storage helper. Decide whether to reuse source R2 env vars or defer caching
-   behind a no-cache response path. If OpenAI TTS is active, add AI Usage
-   instrumentation.
+5. Import wizard polish pass.
+   Compare source `import-wizard.tsx` against the target wizard for any missing
+   source-type tabs, failed URL display, focus hints, CSV/Quizlet/Anki details,
+   and review/save ergonomics.
 
-6. AI evaluation instrumentation slice.
-   Update `/api/study/evaluate` to the QuesIQ app's current AI run pattern.
-   Use the source prompt/rubric as the behavior reference, but record
-   `ai_runs` rows with model, status, duration, token usage when available, and
-   safe raw metadata. Decide whether to keep `gpt-4o-mini`, use source `gpt-4o`,
-   or move to the current platform default through prompt config.
+6. Verbal and quiz source-polish pass.
+   Compare source `study-verbal.tsx` and `quiz-session.tsx` against target
+   `study-verbal.tsx` and `study-quiz.tsx` for timing, rating recognition,
+   missed-card requeueing, audio prefetching, and edge-case behavior.
 
-7. Full source AI import slice.
-   Port `src/server/import-parser.ts` behavior into a Study-prefixed target
-   module. Add `/api/study/decks/[deckId]/import`. Support PDF, images, plain
-   text, URLs, focus hints, and failed URL reporting. Add AI Usage
-   instrumentation for OpenAI parsing calls.
+7. Stats and card editor polish pass.
+   Compare source `src/server/stats.ts`, `CardList`, and `CardEditor` against
+   target stats/card management for any remaining card-level status, mastery,
+   fluency, hint, editor, and attempt-detail gaps.
 
-8. Source import wizard parity slice.
-   Replace or expand target `StudyImportWizard` to match source source-type
-   tabs and review/save flow: file upload, pasted text, URLs, CSV/Quizlet/Anki,
-   focus hint, failed URL display, and source API route usage.
-
-9. Folder management slice.
-   Port `folders` server logic, `/api/folders`, `/api/folders/[folderId]`, and
-   `FolderManager`, namespaced to Study and `study_folders`. Wire deck list and
-   edit form to folder assignment.
-
-10. Library taxonomy slice.
-    Add Study-prefixed equivalents or carefully mapped tables for source
-    subjects, audience tags, trusted sources, deck audience tags, card sources,
-    verifications, and deck imports. Port `getRootSubjects`,
-    `getAudienceTags`, `getLibraryDecks`, and `LibrarySearch`.
-
-11. Public toggle slice.
-    Port source `PublicToggle` UX into the target Study deck page, using the
-    namespaced `/api/study/decks/[deckId]` route.
-
-12. Stats parity slice.
-    Compare source `src/server/stats.ts` and `/decks/[deckId]/stats` to the
-    target stats page. Fill any missing card-level status, fluency, due, weak,
-    mastery, and attempt details.
-
-13. Deck/card form parity slice.
-    Compare source `DeckForm`, `CardList`, and `CardEditor` against target
-    `StudyDeckForm` and `StudyCardList`. Fill missing fields and edit states,
-    especially hints, folder assignment, exam metadata, and card editor polish.
-
-14. Library/fork permission QA slice.
-    Verify private decks remain private, official decks are not exportable,
-    public deck copy works, owners can edit only their own decks/cards, and
-    signed-out users can only see allowed public library content.
-
-15. Cleanup decision slice.
-    Ask the user to explicitly keep or remove target-only additions:
-    `/study/history`, private deck export, and scope filters in library. Keep
-    them only as deliberate product decisions.
+8. Permission and production QA.
+   Re-run library/fork/export/deck/card permission checks after migrations and
+   seed data exist: private decks stay private, official decks are not
+   exportable, public deck copy works, owners edit only their content, and
+   signed-out users see only public library content.
 
 ## Recommended Next Slice
 
-Do the route-parameter parity and hands-free labeling slice next.
+Run migration/seed QA for the Study library taxonomy path next.
 
-Reason: the source-style Study picker is already visible, but target routes and
-components do not fully honor the params it emits. Fixing that first prevents
-clicking into misleading modes while the larger hands-free/TTS import is still
-in progress.
+Reason: the code now has taxonomy tables, mapped audience-tag filtering, and
+test deck SQL, but this path needs real database rows to verify end-to-end.
 
 Minimum acceptance for that slice:
 
-- `level=beginner|intermediate|advanced` filters cards in every target Study
-  mode route.
-- `hf=1` is either fully honored or not offered in the picker.
-- `resume=1` behavior is only linked for modes that actually resume.
-- `srs=1` is preserved only for modes that requeue/rate SRS correctly.
-- Links from the deck page route to existing `/study/...` URLs only.
+- migrations apply through `0048_add_study_library_taxonomy.sql`
+- `scripts/study/seed_test_decks.sql` creates three `[TEST_DELETE]` public decks
+  with three cards each
+- `/study/library?tag=Beginner` returns the Algebra and US Capitals test decks
+- `/study/library?tag=Quick+Review` returns the Algebra and STAR test decks
+- `/study/library?tag=Interview+Prep` returns the STAR test deck
+- `scripts/study/cleanup_test_decks.sql` removes the seeded decks
 
 ## Handoff Rules For The Next Agent
 

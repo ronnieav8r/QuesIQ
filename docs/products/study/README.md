@@ -35,9 +35,10 @@ The first Study slice is imported:
 - `/study/decks/[deckId]/study/test` supports full test runs with detailed
   per-question end-of-test review
 - deck pages now include the source-style inline Study picker (preset filters,
-  modality selection, mode cards, optional SRS/level routing)
+  modality selection, mode cards, honest hands-free routing, optional SRS,
+  resume, and level routing)
 - `/study/decks/[deckId]/stats` shows deck-level study session totals, mode mix,
-  and recent session outcomes for the owner
+  card health, card-attempt details, and recent session outcomes for the owner
 - public deck pages now support signed-in `Save Copy`, cloning a deck and its
   cards into the user's private Study lane
 - `/study/history` shows cross-deck recent study sessions with mode, accuracy,
@@ -46,16 +47,30 @@ The first Study slice is imported:
   addition to pasted card text, with selectable preview rows before save and
   downloadable CSV/TSV templates; import parsing skips header rows and exact
   duplicate question/answer lines
+- `/study/decks/[deckId]/import` also supports AI-assisted import from PDF,
+  images, pasted text, and URLs through `/api/study/decks/[deckId]/import`
 - owned deck pages now support `Export CSV` and `Export TSV` through
   `/api/study/decks/[deckId]/export`
 - `/study/library` shows public Study decks with search, subject filter, and
-  official-only filtering, plus scope filters (`all`, `official`, `mine`)
+  official-only filtering, plus scope filters (`all`, `official`, `mine`) and
+  Study-prefixed taxonomy tables for subjects, audience tags, sources,
+  verifications, and deck imports
+- `/api/study/tts` supports Study voice paths with Admin AI Usage
+  instrumentation
+- `/api/study/folders` and `/api/study/folders/[folderId]` support Study folder
+  management data, with deck create/edit assignment
+- owned deck pages include an inline public/private toggle
 - signed-in users can create/edit decks, add/delete cards manually, and review
-  cards with simple recall ratings
+  cards with simple recall ratings; card lists now support inline edit/delete
 - Study reuses the shared platform Auth.js session
-- baseline Study deck/card/session tables are added with `study_` prefixes
-- deeper import automation, library curation/filters, quiz modes, and TTS still
-  need to be imported
+- baseline Study deck/card/session, folder, and library taxonomy tables are
+  added with `study_` prefixes
+- temporary library QA seed scripts live at
+  `scripts/study/seed_test_decks.sql` and
+  `scripts/study/cleanup_test_decks.sql`; generated decks are marked with
+  `[TEST_DELETE]` and `__test_delete__`
+- remaining work is mostly parity polish, source `LibrarySearch`/`FolderManager`
+  UI comparison, R2 audio caching, taxonomy content seeding, and production QA
 
 Detailed import parity, divergence, and remaining-slice notes live in
 `docs/products/study/HANDOFF.md`.
