@@ -102,7 +102,6 @@ Current imported Study routes and APIs:
 - `/study/decks/[deckId]`
 - `/study/decks/[deckId]/edit`
 - `/study/decks/[deckId]/import`
-- `/study/decks/[deckId]/start`
 - `/study/decks/[deckId]/stats`
 - `/study/decks/[deckId]/study`
 - `/study/decks/[deckId]/study/verbal`
@@ -213,9 +212,8 @@ These are places where the target repo strayed from a strict copy of
 2. `/study/history` was added as a platform-style cross-deck history page. It
    does not appear in the source route inventory.
 
-3. `/study/decks/[deckId]/start` was added as an intermediate launcher before
-   the source-style Study picker was imported. The source app uses the deck page
-   picker directly. This target route may be redundant.
+3. The prior `/study/decks/[deckId]/start` intermediate launcher route was
+   removed. Study launch now uses the source-style deck-page picker directly.
 
 4. `/study/library` uses a simpler target-side search/filter implementation
    plus a `scope` filter. Source uses `LibrarySearch`, `getRootSubjects`,
@@ -374,8 +372,8 @@ Recommended order from least risky/confusing to largest:
 
 15. Cleanup decision slice.
     Ask the user to explicitly keep or remove target-only additions:
-    `/study/history`, `/study/decks/[deckId]/start`, private deck export, and
-    scope filters in library. Keep them only as deliberate product decisions.
+    `/study/history`, private deck export, and scope filters in library. Keep
+    them only as deliberate product decisions.
 
 ## Recommended Next Slice
 

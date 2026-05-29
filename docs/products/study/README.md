@@ -34,9 +34,6 @@ The first Study slice is imported:
   with persisted score ratings
 - `/study/decks/[deckId]/study/test` supports full test runs with detailed
   per-question end-of-test review
-- `/study/decks/[deckId]/start` provides a mode/filter launcher so users can
-  choose card scope and study mode before entering a session, including SRS
-  launch toggles and visual-session resume detection
 - deck pages now include the source-style inline Study picker (preset filters,
   modality selection, mode cards, optional SRS/level routing)
 - `/study/decks/[deckId]/stats` shows deck-level study session totals, mode mix,
