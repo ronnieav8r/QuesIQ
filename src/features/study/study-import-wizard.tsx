@@ -78,6 +78,7 @@ export function StudyImportWizard({ deckId }: { deckId: string }) {
   const router = useRouter();
   const [drafts, setDrafts] = useState<DraftCard[]>([]);
   const [error, setError] = useState<string>();
+  const [fileName, setFileName] = useState<string>("");
   const [parsingFile, setParsingFile] = useState(false);
   const [rawText, setRawText] = useState("");
   const [saving, setSaving] = useState(false);
@@ -173,21 +174,27 @@ export function StudyImportWizard({ deckId }: { deckId: string }) {
         />
       </label>
 
-      <label>
-        <span>Or upload file (CSV, TSV, TXT)</span>
-        <input
-          accept=".csv,.tsv,.txt,text/csv,text/plain"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (!file) {
-              return;
-            }
-            handleFileUpload(file);
-            event.currentTarget.value = "";
-          }}
-          type="file"
-        />
-      </label>
+      <section className="panel">
+        <p className="eyebrow">Upload File</p>
+        <p>Import from a local file (.csv, .tsv, .txt).</p>
+        <label>
+          <span>Select file</span>
+          <input
+            accept=".csv,.tsv,.txt,text/csv,text/plain"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (!file) {
+                return;
+              }
+              setFileName(file.name);
+              handleFileUpload(file);
+              event.currentTarget.value = "";
+            }}
+            type="file"
+          />
+        </label>
+        {fileName && <p>Selected: {fileName}</p>}
+      </section>
 
       <div className="inline-actions">
         <button className="secondary" onClick={handleParse} type="button">
