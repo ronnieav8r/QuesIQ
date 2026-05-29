@@ -16,6 +16,27 @@ Start here for broad resume work:
 - `docs/rebuild/PLATFORM_READINESS.md`
 - `docs/rebuild/BRANCHING_AND_RELEASES.md`
 
+## Platform Docs
+
+Use `docs/platform/` for active one-service platform architecture and
+parallel-development boundaries.
+
+Current platform docs:
+
+- `docs/platform/ONE_SERVICE_PLATFORM.md`
+- `docs/platform/PARALLEL_DEVELOPMENT.md`
+
+## Product Docs
+
+Use `docs/products/` for product-specific notes that should not leak into the
+shared platform layer.
+
+Current product docs:
+
+- `docs/products/interview/README.md`
+- `docs/products/study/README.md`
+- `docs/products/dpe/README.md`
+
 ## Strategy Docs
 
 Use `docs/strategy/` for future-facing plans that may guide later decisions but

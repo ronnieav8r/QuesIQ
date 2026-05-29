@@ -79,12 +79,26 @@ The app shell is auth-gated for V1 readiness: signed-out users see the sign-in
 screen, and Home, History, Practice, Stories, Me, and live Sessions are only
 available after sign-in.
 
-### Keep Product Channels In The QuesIQ App By Default
+### Use One QuesIQ Platform Service By Default
 
-Interview, Learn, Stories, Jobs, profile, and other shared-user QuesIQ product
-channels should default to routes/modules inside the same QuesIQ app and shared
-product database. Separate Render services are for real product, deploy,
-security, scaling, or operational boundaries, not every channel.
+Interview, Study, QuesIQ DPE, account, admin, marketing, and future QuesIQ
+product channels should default to routes/modules inside the same QuesIQ
+repository and one primary web service. Separate Render services are for real
+product, deploy, security, scaling, or operational boundaries, not every
+product lane.
+
+Use `www.quesiq.com` for parent-brand and product marketing, and
+`app.quesiq.com` for the signed-in product shell. Inside the app shell, product
+routes should stay product-specific, such as `/interview`, `/study`, and
+`/dpe`, with shared `/account` and `/admin` surfaces.
+
+Keep this as a modular monolith until a separate service is justified:
+
+- shared Auth.js identity and session handling
+- shared account/admin/platform shell
+- separate product modules and product tables keyed by `user_id`
+- one migration stream with one owner at a time
+- one release promotion path
 
 Que and Quira remain distinct product surfaces. For V1, Quira should be embedded
 inside QuesIQ rather than deployed as a separate Render service. The first
@@ -96,21 +110,26 @@ or feedback with screen/session/screenshot/device context. Quira can return to
 its own deploy boundary later if reuse across multiple products or operational
 scale justifies it.
 
-### Keep Interview First, Platform-Ready Later
+### Build Platform Lanes While Keeping Interview Stable
 
-QuesIQ Interview remains the lead coded product. Do not merge QuesIQ Study or
-build a shared QuesIQ platform shell until Interview's beta practice loop is
-stable enough that platform work is more valuable than core product iteration.
+QuesIQ Interview remains the most complete coded product, but QuesIQ Study and
+QuesIQ DPE are active enough that the repository should now be shaped as the
+shared QuesIQ tree.
+
+Do not extract a separate auth center yet. Auth.js remains inside the one
+service as the generic account root. A separate `accounts.quesiq.com` or auth
+service can be revisited when billing, entitlements, independent apps, or
+operational scale justify the extra boundary.
 
 The current platform stance is documented in `docs/rebuild/PLATFORM_READINESS.md`:
 
 - Auth.js identity tables are the generic account root.
-- Interview-specific records stay in Interview product tables keyed by `user_id`.
+- Product-specific records stay in product tables keyed by `user_id`.
 - Avoid adding product-specific fields to the generic `user` table.
-- Keep design tokens and reusable components clean, but do not extract a shared
-  design-system package until a second active product needs it.
-- Treat shared billing, entitlements, cross-product navigation, Study merge
-  work, and shared Quira service boundaries as later platform work.
+- Keep design tokens and reusable components clean enough for shared platform
+  use, but do not extract a separate design-system package yet.
+- Treat shared billing, entitlements, native app splitting, and shared Quira
+  service boundaries as later platform work.
 
 ### Use A Main/Live Release Flow Before Broader Traffic
 

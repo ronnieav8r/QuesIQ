@@ -1,10 +1,16 @@
-# QuesIQ Interview
+# QuesIQ Platform
 
-This repository is the custom coded rebuild of QuesIQ Interview.
+This repository is the one-service QuesIQ platform tree. QuesIQ Interview is
+the most complete coded product in the repo today, and the platform is being
+prepared to import QuesIQ Study, QuesIQ DPE, marketing, and
+future product lanes without creating separate web services by default.
 
 ## Direction
 
 - Replace the Bubble app with a codebase we own.
+- Keep one primary Next.js web service and one shared Auth.js identity layer.
+- Keep product code separated by product lane so Interview, Study, QuesIQ DPE,
+  and marketing work can move in parallel.
 - Use direct OpenAI Realtime first for browser voice practice.
 - Keep VAPI as the fallback voice path.
 - Keep Make for automation edges where it helps.
@@ -44,6 +50,8 @@ preserved historical context.
 For current platform and release guardrails, see:
 
 - `docs/rebuild/PLATFORM_READINESS.md`
+- `docs/platform/ONE_SERVICE_PLATFORM.md`
+- `docs/platform/PARALLEL_DEVELOPMENT.md`
 - `docs/rebuild/BRANCHING_AND_RELEASES.md`
 
 ## Data
