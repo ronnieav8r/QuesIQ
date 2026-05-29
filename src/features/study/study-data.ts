@@ -1,7 +1,8 @@
 import { asc, desc, eq, isNull, lt, lte, or, sql, and, gt } from "drizzle-orm";
 
 import { getDb } from "@/server/db/client";
-import { studyCards, studyDecks, studySessions } from "@/server/db/schema";
+import { studyCardAttempts, studyCards, studyDecks, studySessions } from "@/server/db/schema";
+import { computeNextStudyReview, type StudyVerdict } from "@/features/study/study-srs";
 
 export async function getStudyDecksWithStats(userId: string) {
   return getDb()
@@ -257,6 +258,88 @@ export async function deleteStudyCard(cardId: string) {
       updatedAt: new Date(),
     })
     .where(eq(studyDecks.id, card.deckId));
+}
+
+export async function rateStudyCard(data: {
+  aiFeedback?: string;
+  cardId: string;
+  deckId: string;
+  mode?: "quiz" | "truefalse" | "verbal" | "visual";
+  sessionId?: string;
+  userId: string;
+  userResponse?: string;
+  verdict: StudyVerdict;
+}) {
+  let activeSessionId = data.sessionId;
+
+  if (!activeSessionId) {
+    const [newSession] = await getDb()
+      .insert(studySessions)
+      .values({
+        deckId: data.deckId,
+        mode: data.mode ?? "visual",
+        startedAt: new Date(),
+        userId: data.userId,
+      })
+      .returning({ id: studySessions.id });
+
+    activeSessionId = newSession.id;
+  }
+
+  const [card] = await getDb()
+    .select()
+    .from(studyCards)
+    .where(eq(studyCards.id, data.cardId))
+    .limit(1);
+
+  if (!card || card.deckId !== data.deckId) {
+    return undefined;
+  }
+
+  const nextReview = computeNextStudyReview(
+    {
+      dueAt: card.dueAt,
+      easeFactor: card.easeFactor,
+      interval: card.interval,
+      lapses: card.lapses,
+    },
+    data.verdict,
+  );
+  const correct = ["correct", "easy", "good"].includes(data.verdict);
+  const score =
+    data.verdict === "correct" || data.verdict === "easy"
+      ? 1
+      : data.verdict === "good"
+        ? 0.8
+        : data.verdict === "almost" || data.verdict === "hard"
+          ? 0.5
+          : 0;
+
+  await getDb().insert(studyCardAttempts).values({
+    aiFeedback: data.aiFeedback ?? null,
+    cardId: data.cardId,
+    isCorrect: correct,
+    score,
+    studySessionId: activeSessionId,
+    userResponse: data.userResponse ?? null,
+    verdict: data.verdict,
+  });
+
+  await getDb()
+    .update(studyCards)
+    .set({ ...nextReview, updatedAt: new Date() })
+    .where(eq(studyCards.id, data.cardId));
+
+  await getDb()
+    .update(studySessions)
+    .set({
+      cardsStudied: sql`${studySessions.cardsStudied} + 1`,
+      correctCount: sql`${studySessions.correctCount} + ${correct ? 1 : 0}`,
+      endedAt: new Date(),
+    })
+    .where(eq(studySessions.id, activeSessionId));
+
+  return { nextReview: nextReview.dueAt, sessionId: activeSessionId };
 }
 
 function computeStreak(dates: string[]) {

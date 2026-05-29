@@ -92,6 +92,24 @@ export default async function StudyDeckPage({ params }: Props) {
         </section>
       )}
 
+      {cards.length > 0 && (
+        <section className="panel study-deck-study-actions">
+          <div>
+            <p className="eyebrow">Study</p>
+            <h2>Review this deck</h2>
+            <p>Flip each card, then rate your recall so Study can schedule the next review.</p>
+          </div>
+          <div className="inline-actions">
+            <Link className="button-link" href={`/study/decks/${deckId}/study?srs=1`}>
+              Study Due
+            </Link>
+            <Link className="button-link secondary" href={`/study/decks/${deckId}/study`}>
+              Study All
+            </Link>
+          </div>
+        </section>
+      )}
+
       <StudyCardList deckId={deckId} initialCards={cards} isOwner={isOwner} />
     </div>
   );

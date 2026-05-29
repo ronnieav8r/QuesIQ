@@ -19,11 +19,13 @@ The first Study slice is imported:
 - `/study/decks`, `/study/decks/new`, and `/study/decks/[deckId]` support the
   first usable deck-management slice
 - `/study/decks/[deckId]/edit` supports deck metadata updates
-- signed-in users can create/edit decks and add/delete cards manually
+- `/study/decks/[deckId]/study` supports the first visual flashcard review mode
+- signed-in users can create/edit decks, add/delete cards manually, and review
+  cards with simple recall ratings
 - Study reuses the shared platform Auth.js session
 - baseline Study deck/card/session tables are added with `study_` prefixes
-- deeper import, library, study modes, TTS, and AI evaluation routes still need
-  to be imported
+- deeper import, library, verbal/quiz modes, TTS, and AI evaluation routes still
+  need to be imported
 
 ## Boundaries
 
