@@ -131,6 +131,7 @@ Current imported Study feature files:
 - `src/features/study/study-data.ts`
 - `src/features/study/study-deck-card.tsx`
 - `src/features/study/study-deck-form.tsx`
+- `src/features/study/study-folder-manager.tsx`
 - `src/features/study/study-fork-button.tsx`
 - `src/features/study/study-home.tsx`
 - `src/features/study/study-import-wizard.tsx`
@@ -171,6 +172,13 @@ The current Study schema already has several source-compatible card fields:
 - verification fields
 - exam fields on decks
 - folder id on decks
+
+Current Study brand assets live in `public/brand/`:
+
+- `quesiq-icon.png` is the shared QuesIQ icon used across products.
+- `quesiq-main-logo.png` is the main platform/product-family logo.
+- `quesiq-study-logo.png` is the Study product logo.
+- `quesiq-interview-logo.png` remains the Interview product logo.
 
 ## Imported And Working
 
@@ -229,6 +237,10 @@ the visual/UI level during the conversation:
   TTS cache keys for question/MC/true-false audio
 - card list/status polish for Study card mastery, due, weak/new state, level,
   verification, and ease display
+- Study app shell, menus, pill controls, segmented controls, focus states, and
+  logos now follow the same shared display rules used by QuesIQ Interview.
+- `0049_seed_study_library_taxonomy.sql` seeds the imported source subject and
+  audience taxonomy content, including parent/child/grandchild subject order.
 
 Latest known full code verification before this handoff:
 
@@ -236,7 +248,7 @@ Latest known full code verification before this handoff:
 - `npm run typecheck`
 - `npm run build`
 
-Those checks passed after the Study library taxonomy mapping work.
+Those checks passed after the Study brand/platform logo updates on 2026-05-29.
 
 ## Known Divergences From Source
 
@@ -256,21 +268,23 @@ These are places where the target repo strayed from a strict copy of
 
 4. `/study/library` keeps target-only scope filters (`all`, `official`,
    `mine`) as a product decision. It now has Study-prefixed taxonomy tables,
-   `getStudyRootSubjects`, `getStudyAudienceTags`, and `getStudyLibraryDecks`,
-   but the UI is still a target-side form rather than the exact source
-   `LibrarySearch` component.
+   `getStudyRootSubjects`, `getStudyAudienceTags`, `getStudyLibraryDecks`,
+   mapped audience-tag filtering, and mobile-friendly pill filters. It is still
+   a target-side implementation rather than a literal copy of source
+   `LibrarySearch`, so final mobile visual QA is still useful.
 
 5. The target import wizard supports AI-assisted import and CSV/TSV/TXT flows,
-   but should still be compared against source `import-wizard.tsx` for any
-   remaining source-type tabs, review/save details, and failed-URL presentation.
+   plus the source-style focus hints, URL failure display, CSV/Quizlet/Anki
+   guidance, selectable review rows, column swapping, and save/done copy.
 
 6. The target verbal mode now has hands-free, speech recognition, TTS, resume,
-   and SRS behavior. It should still be compared against source
-   `study-verbal.tsx` for subtle timing/rating/polish differences.
+   SRS behavior, spoken self-rating, rating countdown, missed-card requeueing,
+   and source-style verbal polish.
 
 7. The target quiz mode now has normal and hands-free play, TTS, true/false,
-   and prefetching behavior. R2 audio caching/storage from source is still not
-   imported.
+   feedback TTS, stable answer ordering, missed-card requeueing, audio
+   prefetching, and R2-backed TTS cache keys when object-storage env vars are
+   configured.
 
 8. Study OpenAI calls are now instrumented for Admin AI Usage with
    `study_evaluate`, `study_import`, and `study_tts` run types. Model/prompt
@@ -282,8 +296,9 @@ These are places where the target repo strayed from a strict copy of
    rename, delete, collapse, and move-to-folder behavior.
 
 10. Source has richer public-library taxonomy behavior and metadata. Target has
-    the Study-prefixed taxonomy tables and mapped audience-tag filtering, but
-    taxonomy seeding/content curation is still needed.
+    the Study-prefixed taxonomy tables, mapped audience-tag filtering, and
+    source taxonomy seed migration. Real official/library content curation is
+    still needed beyond test data and taxonomy labels.
 
 11. Source `/api/tts` includes object-storage caching via `src/server/storage.ts`.
     Target `/api/study/tts` now has Study-namespaced R2/object-storage caching
@@ -299,7 +314,7 @@ These are places where the target repo strayed from a strict copy of
 These are the remaining practical gaps after the broad Study import passes.
 
 1. Test data is needed to verify taxonomy filtering end-to-end. Use
-   `scripts/study/seed_test_decks.sql` after migrations through `0048` are
+   `scripts/study/seed_test_decks.sql` after migrations through `0049` are
    applied. Use `scripts/study/cleanup_test_decks.sql` to delete the generated
    decks afterward.
 
@@ -310,12 +325,25 @@ These are the remaining practical gaps after the broad Study import passes.
 3. Permission and production QA still needs deployed or local signed-in and
    signed-out browser checks after migrations and seed data are available.
 
+4. R2/object-storage audio caching is coded, but production caching depends on
+   `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
+   `R2_BUCKET_NAME`, and `R2_PUBLIC_URL`. Without those env vars, Study TTS
+   still works by returning generated audio directly without persistence.
+
+5. Visual/mobile QA is still needed on the deployed app. The in-app browser
+   runtime failed in the local Windows sandbox during the last pass, so code
+   verification passed but a screenshot/browser pass was not completed.
+
+6. Real Study library content curation remains. The taxonomy labels are seeded,
+   and QA seed decks exist, but production official decks/content are not
+   curated as part of this port.
+
 ## Remaining Port Slices
 
 Recommended order from least risky/confusing to largest:
 
 1. Migration and seed QA.
-   Apply migrations through `0048_add_study_library_taxonomy.sql`, then run
+   Apply migrations through `0049_seed_study_library_taxonomy.sql`, then run
    `scripts/study/seed_test_decks.sql` against the target database. Verify
    `/study/library` filters by subject, text tags, and mapped audience tags.
    Run `scripts/study/cleanup_test_decks.sql` after QA.
@@ -325,6 +353,20 @@ Recommended order from least risky/confusing to largest:
    seed data exist: private decks stay private, official decks are not
    exportable, public deck copy works, owners edit only their content, and
    signed-out users see only public library content.
+
+3. R2 config QA.
+   Configure the R2 env vars in production if cached generated audio should be
+   retained. Verify `/api/study/tts` returns a cached `audioUrl` after first
+   generation and keeps direct audio fallback behavior if cache writes fail.
+
+4. Visual/mobile QA.
+   On production or a local browser with auth available, verify `/study`,
+   `/study/decks`, `/study/library`, deck detail, import, Study picker, folder
+   manager, and the study modes on mobile and desktop.
+
+5. Library content curation.
+   Add or import real official/public Study library decks after permission and
+   taxonomy QA passes.
 
 ## Recommended Next Slice
 
@@ -336,7 +378,7 @@ test deck SQL, but this path needs real database rows to verify end-to-end.
 
 Minimum acceptance for that slice:
 
-- migrations apply through `0048_add_study_library_taxonomy.sql`
+- migrations apply through `0049_seed_study_library_taxonomy.sql`
 - `scripts/study/seed_test_decks.sql` creates three `[TEST_DELETE]` public decks
   with three cards each
 - `/study/library?tag=Beginner` returns the Algebra and US Capitals test decks

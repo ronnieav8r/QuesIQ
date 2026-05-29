@@ -54,13 +54,17 @@ The first Study slice is imported:
 - `/study/library` shows public Study decks with search, subject filter, and
   official-only filtering, plus scope filters (`all`, `official`, `mine`) and
   Study-prefixed taxonomy tables for subjects, audience tags, sources,
-  verifications, and deck imports
+  verifications, and deck imports; subject and audience filters now use
+  mobile-friendly pill controls
 - `/api/study/tts` supports Study voice paths with Admin AI Usage
   instrumentation and source-style R2 audio caching when R2 environment
   variables are configured
 - `/api/study/folders` and `/api/study/folders/[folderId]` support Study folder
   management data, with deck create/edit assignment and a source-style folder
   manager on `/study/decks`
+- Study uses the shared QuesIQ product shell, Interview-aligned tokens and
+  controls, the shared QuesIQ icon, and its own `quesiq-study-logo.png` product
+  logo. The platform selector uses `quesiq-main-logo.png`.
 - owned deck pages include an inline public/private toggle
 - signed-in users can create/edit decks, add/delete cards manually, and review
   cards with simple recall ratings; card lists now support inline edit/delete
@@ -71,8 +75,10 @@ The first Study slice is imported:
   `scripts/study/seed_test_decks.sql` and
   `scripts/study/cleanup_test_decks.sql`; generated decks are marked with
   `[TEST_DELETE]` and `__test_delete__`
-- remaining work is mostly migration/seed QA, taxonomy content seeding, and
-  production permission QA
+- `0049_seed_study_library_taxonomy.sql` seeds the imported source taxonomy
+  labels for subjects and audience tags
+- remaining work is mostly migration/seed QA, production permission QA, R2 env
+  verification, mobile visual QA, and real library content curation
 
 Detailed import parity, divergence, and remaining-slice notes live in
 `docs/products/study/HANDOFF.md`.

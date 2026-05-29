@@ -6,17 +6,17 @@ Last updated: 2026-05-29
 
 - QuesIQ Study import handoff now lives at
   `docs/products/study/HANDOFF.md`. Use it before continuing the import from
-  `C:\Users\weeks\Documents\github\claude_flashcards`; the next recommended
-  Study slice is migration/seed QA for the library taxonomy path, then
-  source `LibrarySearch`/`FolderManager` parity polish.
+  `C:\Users\weeks\Documents\github\claude_flashcards`; the remaining Study
+  work is now mostly migration/seed QA, production permission QA, R2 env
+  verification, mobile visual QA, and real public-library content curation.
 - Latest local work is ready for deploy QA, not yet user-confirmed in
   production.
 - User preference for future work: Codex should handle the full edit, verify,
   commit/push, and deploy-prep flow when requested. Do not assume the user will
   manually inspect code or catch implementation mistakes in GitHub; explain
   risks and verification in plain language and make the next action explicit.
-- New migrations to verify on deploy through
-  `0048_add_study_library_taxonomy.sql`.
+- New Study migrations to verify on deploy through
+  `0049_seed_study_library_taxonomy.sql`.
 - Recent completed local slices:
   - Job Targets now support true edit, delete, persisted active target, and
     target-aware Home nudges.
@@ -66,14 +66,18 @@ Last updated: 2026-05-29
   - QuesIQ Study now has source-style picker routing, hands-free/TTS verbal and
     quiz behavior, AI-assisted import with AI Usage instrumentation, folder
     APIs, inline public toggle, stats/card edit polish, Study-prefixed library
-    taxonomy tables, mapped audience-tag filtering, and `[TEST_DELETE]` Study
-    library seed/cleanup SQL under `scripts/study/`.
+    taxonomy tables, mapped audience-tag filtering, source taxonomy seed SQL,
+    source-style folder manager/import/verbal/quiz polish, R2-backed TTS cache
+    code, shared Interview-aligned Study shell controls, and `[TEST_DELETE]`
+    Study library seed/cleanup SQL under `scripts/study/`.
+  - QuesIQ brand assets are now split by product: shared icon, main platform
+    logo, Interview product logo, and Study product logo under `public/brand/`.
 - Local verification passed on 2026-05-29 with `npm run typecheck`,
   `npm run lint`, and `npm run build`.
 - Best next move: commit/push the verified local work, deploy to `quesiq-web`,
-  confirm migrations through `0048`, then QA Story Lab, saved Job Targets, AI
-  Usage, Diagnostics, installable app behavior, and Study library taxonomy
-  seed/filter/cleanup behavior.
+  confirm migrations through `0049`, then QA Study library taxonomy
+  seed/filter/cleanup behavior, Study permission boundaries, R2 TTS cache envs,
+  and mobile visual behavior.
 
 ## Current Focus
 
@@ -528,7 +532,7 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 1. Deploy/user-confirm QA the latest Story Lab, prompt, debrief, progression,
    job-target UI changes, and Study import work on `quesiq-web`. Confirm
-   migrations through `0048_add_study_library_taxonomy.sql` run before testing
+   migrations through `0049_seed_study_library_taxonomy.sql` run before testing
    Introduction Builder, Intro Practice, verbal Debrief, Story Practice
    coaching history, Tell Que story capture, saved Job Targets, Admin
    Diagnostics, AI Usage prompt links/raw metadata, and Study library taxonomy.
@@ -621,7 +625,7 @@ path until Phase 2 navigation is completed unless the product direction changes.
   `/api/realtime/debrief`. Do not build new written debrief UX unless product
   direction changes.
 - `tsconfig.tsbuildinfo` is generated TypeScript cache and intentionally ignored.
-- Migrations through `0048_add_study_library_taxonomy.sql` must be applied
+- Migrations through `0049_seed_study_library_taxonomy.sql` must be applied
   before using the updated Story Lab and Study library taxonomy paths in
   production. The Render start command currently runs Drizzle migrations before
   `npm start`, so it should apply automatically on deploy, but verify it in
