@@ -17,6 +17,10 @@ parallel without touching the same shared surfaces.
 
 - Keep the current Interview beta stable while creating product lanes for Study,
   QuesIQ DPE, marketing, and future QuesIQ products.
+- Use `/login?next=/interview`, `/login?next=/study`, and `/login?next=/dpe`
+  as the shared marketing-to-app sign-in gateway before adding a separate auth
+  service.
+- Keep `/account` as the shared account/product hub.
 - Preserve Auth.js `user`, `account`, `session`, and `verificationToken` tables
   as the generic identity layer.
 - Keep product-specific data in product tables keyed by `user_id`. Interview,

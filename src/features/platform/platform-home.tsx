@@ -4,30 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { AuthControl, AuthView, useAuthSession } from "@/components/auth-control";
-
-const products = [
-  {
-    description: "Voice-first interview practice, Story Lab, job targets, reviews, and coaching memory.",
-    href: "/interview",
-    label: "Open Interview",
-    name: "QuesIQ Interview",
-    status: "Active",
-  },
-  {
-    description: "Study tools will live here with shared sign-in and Study-owned progress.",
-    href: "/study",
-    label: "Open Study Lane",
-    name: "QuesIQ Study",
-    status: "Import lane",
-  },
-  {
-    description: "Aviation oral-exam preparation for QuesIQ DPE will live here.",
-    href: "/dpe",
-    label: "Open DPE Lane",
-    name: "QuesIQ DPE",
-    status: "Import lane",
-  },
-];
+import { platformProducts } from "@/features/platform/products";
 
 export default function PlatformHome() {
   const authSession = useAuthSession();
@@ -72,7 +49,7 @@ export default function PlatformHome() {
             </header>
 
             <section className="product-picker-grid" aria-label="QuesIQ products">
-              {products.map((product) => (
+              {platformProducts.map((product) => (
                 <article className="panel product-picker-card" key={product.name}>
                   <div>
                     <p className="eyebrow">{product.status}</p>

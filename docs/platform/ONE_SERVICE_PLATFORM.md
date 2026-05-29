@@ -15,6 +15,8 @@ but they do not require separate Render services:
 - `app.quesiq.com/interview` for QuesIQ Interview
 - `app.quesiq.com/study` for QuesIQ Study
 - `app.quesiq.com/dpe` for QuesIQ DPE
+- `app.quesiq.com/login?next=/interview` as the shared marketing-to-app
+  sign-in gateway, with `next=/study` and `next=/dpe` supported
 - `app.quesiq.com/account` for shared account/settings
 - `app.quesiq.com/admin` for shared admin
 
@@ -43,7 +45,9 @@ Current route shell:
   `src/features/interview/interview-app.tsx`.
 - `/study` renders the first imported Study dashboard slice.
 - `/dpe` is a placeholder product lane for QuesIQ DPE.
-- `/account` is a placeholder shared account lane.
+- `/login` is the shared sign-in gateway for marketing pages and product
+  deep-links.
+- `/account` is the shared account/product hub.
 - `/admin` is a direct admin route for signed-in admin users, while the
   existing in-app Admin entry remains available.
 

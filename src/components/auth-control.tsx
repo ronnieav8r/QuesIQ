@@ -58,9 +58,11 @@ export function AuthControl({ authSession }: { authSession: AppAuthSession }) {
 export function AuthView({
   authSession,
   onContinue,
+  redirectTo = "/",
 }: {
   authSession: AppAuthSession;
   onContinue: () => void;
+  redirectTo?: string;
 }) {
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState<string>();
@@ -77,7 +79,7 @@ export function AuthView({
       const response = await signIn("email", {
         email,
         redirect: false,
-        redirectTo: "/",
+        redirectTo,
       });
 
       if (!response?.ok) {
@@ -151,14 +153,14 @@ export function AuthView({
             <p>Use Google for a quick account connection, or GitHub for testing and admin use.</p>
             <button
               className="secondary"
-              onClick={() => signIn("google")}
+              onClick={() => signIn("google", { redirectTo })}
               type="button"
             >
               Continue with Google
             </button>
             <button
               className="secondary"
-              onClick={() => signIn("github")}
+              onClick={() => signIn("github", { redirectTo })}
               type="button"
             >
               Continue with GitHub
