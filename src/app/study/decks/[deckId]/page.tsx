@@ -108,6 +108,12 @@ export default async function StudyDeckPage({ params }: Props) {
             <Link className="button-link" href={`/study/decks/${deckId}/study?srs=1`}>
               Study Due
             </Link>
+            <Link className="button-link secondary" href={`/study/decks/${deckId}/study/verbal`}>
+              Study Verbal
+            </Link>
+            <Link className="button-link secondary" href={`/study/decks/${deckId}/study/written`}>
+              Study Written
+            </Link>
             <Link className="button-link secondary" href={`/study/decks/${deckId}/study`}>
               Study All
             </Link>

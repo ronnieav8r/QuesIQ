@@ -800,7 +800,7 @@ export const studySessions = pgTable("study_sessions", {
   deckId: uuid("deck_id").references(() => studyDecks.id, { onDelete: "set null" }),
   endedAt: timestamp("ended_at", { withTimezone: true }),
   id: uuid("id").defaultRandom().primaryKey(),
-  mode: text("mode").$type<"quiz" | "truefalse" | "verbal" | "visual">().notNull(),
+  mode: text("mode").$type<"quiz" | "truefalse" | "verbal" | "visual" | "written">().notNull(),
   startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
   userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
 });

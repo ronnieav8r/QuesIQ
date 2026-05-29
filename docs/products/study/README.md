@@ -22,13 +22,17 @@ The first Study slice is imported:
 - `/study/decks/[deckId]/import` supports dependency-free pasted text/CSV card
   import
 - `/study/decks/[deckId]/study` supports the first visual flashcard review mode
+- `/study/decks/[deckId]/study/verbal` supports typed verbal-answer practice
+  with AI verdict/feedback and saved Study attempts
+- `/study/decks/[deckId]/study/written` supports typed written-answer practice
+  with AI feedback plus self-rating overrides for SRS scheduling
 - `/study/library` shows public Study decks from the shared database
 - signed-in users can create/edit decks, add/delete cards manually, and review
   cards with simple recall ratings
 - Study reuses the shared platform Auth.js session
 - baseline Study deck/card/session tables are added with `study_` prefixes
-- deeper import, library curation/filters, verbal/quiz modes, TTS, and AI
-  evaluation routes still need to be imported
+- deeper import automation, library curation/filters, quiz modes, and TTS still
+  need to be imported
 
 ## Boundaries
 

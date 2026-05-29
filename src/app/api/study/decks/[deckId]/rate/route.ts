@@ -39,7 +39,7 @@ export async function POST(request: NextRequest, { params }: Params) {
   const body = (await request.json()) as {
     aiFeedback?: string;
     cardId?: string;
-    mode?: "quiz" | "truefalse" | "verbal" | "visual";
+    mode?: "quiz" | "truefalse" | "verbal" | "visual" | "written";
     sessionId?: string;
     userResponse?: string;
     verdict?: StudyVerdict;

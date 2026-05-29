@@ -322,7 +322,7 @@ export async function rateStudyCard(data: {
   aiFeedback?: string;
   cardId: string;
   deckId: string;
-  mode?: "quiz" | "truefalse" | "verbal" | "visual";
+  mode?: "quiz" | "truefalse" | "verbal" | "visual" | "written";
   sessionId?: string;
   userId: string;
   userResponse?: string;
