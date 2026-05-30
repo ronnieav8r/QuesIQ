@@ -23,6 +23,24 @@ product lane:
 Each product owns its own UI, product services, product copy, prompt configs,
 and product database tables.
 
+## Admin Lane
+
+Shared admin/platform operations may move in a separate Admin lane when the
+manager assigns it:
+
+- Admin UI: `src/features/admin` and `src/app/admin`
+- Admin APIs: `src/app/api/admin`
+- Admin helpers: `src/server/admin*` and `src/server/admin-data`
+- Admin/platform direction docs under `docs/platform`
+- Lane guard updates under `scripts/guards`
+
+Admin Content Studio starts as a protected `/admin` UI for source intake,
+pipeline selection, reusable prompt/template selection, custom instructions,
+and staged scrub/generate/verify/review/publish framing. Study flashcard sets
+and DPE content are first-priority pipelines. Generation and verification must
+remain distinct stages, and publishing should stay disabled until product-owned
+backend controls and audit storage are ready.
+
 ## Shared Lanes
 
 Only one owner should change these at a time:
@@ -79,6 +97,7 @@ QuesIQ-manager   -> main, manager/integration
 QuesIQ-interview -> codex/interview
 QuesIQ-study     -> codex/study
 QuesIQ-dpe       -> codex/dpe
+QuesIQ-admin     -> codex/admin
 ```
 
 The manager thread sends work to the worker threads, reads their handoffs,
@@ -91,6 +110,7 @@ Before merging a worker branch, the manager should run:
 npm run guard:interview -- origin/codex/interview
 npm run guard:study -- origin/codex/study
 npm run guard:dpe -- origin/codex/dpe
+npm run guard:admin -- origin/codex/admin
 ```
 
 The lane guard checks changed files against allowed path prefixes. It does not
@@ -107,6 +127,7 @@ The manager keeps a branch state board for product lanes:
 Interview: idle | active | awaiting handoff | needs rebase | ready for review | merged | blocked
 Study:     idle | active | awaiting handoff | needs rebase | ready for review | merged | blocked
 DPE:       idle | active | awaiting handoff | needs rebase | ready for review | merged | blocked
+Admin:     idle | active | awaiting handoff | needs rebase | ready for review | merged | blocked
 ```
 
 After `main` changes, the manager only fast-forwards branches in the `idle`

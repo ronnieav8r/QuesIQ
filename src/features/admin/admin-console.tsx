@@ -1,13 +1,15 @@
 import Link from "next/link";
 
+import { ContentStudio } from "@/features/admin/content-studio";
 import { AdminView } from "@/components/interview/admin-view";
 import { getStudyLibraryDecks } from "@/features/study/study-data";
 import { listDpeContentSummary } from "@/server/dpe/dpe-data";
 
-type AdminProduct = "dpe" | "interview" | "overview" | "study";
+type AdminProduct = "content" | "dpe" | "interview" | "overview" | "study";
 
 const adminProducts: { key: AdminProduct; label: string }[] = [
   { key: "overview", label: "Overview" },
+  { key: "content", label: "Content Studio" },
   { key: "interview", label: "Interview" },
   { key: "study", label: "Study" },
   { key: "dpe", label: "DPE" },
@@ -45,6 +47,7 @@ export async function AdminConsole({ product }: { product?: string }) {
       </nav>
 
       {activeProduct === "overview" && <AdminOverview />}
+      {activeProduct === "content" && <ContentStudio />}
       {activeProduct === "interview" && (
         <AdminView eyebrow="Interview" title="Interview" />
       )}
@@ -62,14 +65,17 @@ function AdminOverview() {
           <p className="eyebrow">Products</p>
           <h2 id="admin-overview-title">One place for product operations</h2>
           <p>
-            Use the product tabs to inspect Interview, Study, and DPE without leaving
-            the protected admin area.
+            Use the product tabs to inspect Interview, Study, DPE, and shared content
+            operations without leaving the protected admin area.
           </p>
         </div>
       </div>
       <div className="prompt-version-list">
         <Link className="button-link secondary" href="/admin?product=interview">
           Interview
+        </Link>
+        <Link className="button-link secondary" href="/admin?product=content">
+          Content Studio
         </Link>
         <Link className="button-link secondary" href="/admin?product=study">
           Study admin
