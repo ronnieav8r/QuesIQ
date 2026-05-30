@@ -63,6 +63,24 @@ npm run guard:dpe -- origin/codex/dpe
 Worker branches may be pushed to `origin/codex/*` for manager integration.
 Only the manager pushes `main`.
 
+After each successful `main` push, the manager must not blindly update every
+worker branch. Idle worker branches should be fast-forwarded to `origin/main`.
+Active worker branches should be marked as needing an update from `origin/main`
+before final handoff, unless the manager decides to pause the worker because of
+likely shared-file conflicts.
+
+Use these lane states when coordinating worker branches:
+
+```txt
+idle              -> no active worker changes; safe to fast-forward to main
+active            -> worker is implementing; do not reset or fast-forward
+awaiting handoff  -> worker should return MANAGER HANDOFF: <Lane>
+needs rebase      -> main changed while active; update from origin/main before handoff
+ready for review  -> pushed and ready for manager guard/review/merge
+merged            -> manager merged the lane into main
+blocked           -> waiting on manager or user input
+```
+
 ## User Preference
 
 The user wants Codex to handle commit/push/deploy-prep when requested rather

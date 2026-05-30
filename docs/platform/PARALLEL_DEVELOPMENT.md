@@ -99,6 +99,25 @@ replace review, but it catches obvious cross-lane edits before merge.
 Worker handoffs should include summary, files changed, commits, checks run,
 risks, and whether the worker branch was pushed.
 
+## Branch Sync States
+
+The manager keeps a branch state board for product lanes:
+
+```txt
+Interview: idle | active | awaiting handoff | needs rebase | ready for review | merged | blocked
+Study:     idle | active | awaiting handoff | needs rebase | ready for review | merged | blocked
+DPE:       idle | active | awaiting handoff | needs rebase | ready for review | merged | blocked
+```
+
+After `main` changes, the manager only fast-forwards branches in the `idle`
+state. Branches in `active` or `awaiting handoff` are not reset. Instead, the
+manager marks them `needs rebase` and tells the worker to update from
+`origin/main` before final handoff.
+
+If the active branch touches shared/platform files, the manager should pause or
+serialize that work rather than letting multiple lanes drift across the same
+files.
+
 ## Agent Brief
 
 Before starting product work, an agent should state its lane. If the task needs
