@@ -2,6 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 
+import { StudyTrustBadge } from "@/features/study/study-trust-badge";
+
 type StudyCard = {
   answer: string;
   dueAt?: Date | null;
@@ -212,7 +214,7 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
               <div className="study-card-meta">
                 <span className="badge">{cardStatus(card)}</span>
                 {card.level && <span className="badge">{card.level}</span>}
-                {card.isVerified && <span className="badge">Verified</span>}
+                {card.isVerified && <StudyTrustBadge compact type="verified" />}
               </div>
               <p className="study-card-question">{card.question}</p>
               <p>{card.answer}</p>

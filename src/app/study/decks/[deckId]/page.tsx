@@ -16,6 +16,7 @@ import { StudyCardList } from "@/features/study/study-card-list";
 import { StudyForkButton } from "@/features/study/study-fork-button";
 import { StudyPicker } from "@/features/study/study-picker";
 import { StudyPublicToggle } from "@/features/study/study-public-toggle";
+import { StudyTrustBadge } from "@/features/study/study-trust-badge";
 import { StudyVerifyButton } from "@/features/study/study-verify-button";
 import { isAdminEmail } from "@/server/admin";
 
@@ -93,8 +94,8 @@ export default async function StudyDeckPage({ params }: Props) {
         <div className="study-deck-card__footer">
           {isOwner && <span className="badge">Mine</span>}
           {deck.isPublic && <span className="badge">Public</span>}
-          {deck.isOfficial && <span className="badge">Official</span>}
-          {isFullyVerified && <span className="badge">Verified</span>}
+          {deck.isOfficial && <StudyTrustBadge type="official" />}
+          {isFullyVerified && <StudyTrustBadge type="verified" />}
           {deck.subject && <span className="badge">{deck.subject}</span>}
           {deck.tags?.map((tag) => (
             <span className="badge" key={tag}>

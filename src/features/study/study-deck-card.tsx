@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { StudyTrustBadge } from "@/features/study/study-trust-badge";
+
 type StudyDeckCardProps = {
   currentUserId?: string;
   deck: {
@@ -53,8 +55,8 @@ export function StudyDeckCard({ currentUserId, deck }: StudyDeckCardProps) {
       <div className="study-deck-card__header">
         {isOwner && <span className="badge">Mine</span>}
         {deck.isPublic && <span className="badge">Public</span>}
-        {deck.isOfficial && <span className="badge">Official</span>}
-        {isFullyVerified && <span className="badge">Verified</span>}
+        {deck.isOfficial && <StudyTrustBadge compact type="official" />}
+        {isFullyVerified && <StudyTrustBadge compact type="verified" />}
         {hasStats && (deck.dueCount ?? 0) > 0 && (
           <span className="study-deck-card__due">{deck.dueCount} due</span>
         )}
