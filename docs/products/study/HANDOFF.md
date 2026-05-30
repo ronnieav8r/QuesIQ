@@ -226,6 +226,8 @@ the visual/UI level during the conversation:
   `[TEST_DELETE]` titles and `__test_delete__` tags
 - source-style Study folder manager UI on `/study/decks`, including folder
   create, rename, delete, collapse/expand, and per-deck move controls
+- deck-first creation surface on `/study/decks` with Manual, Import, AI
+  Generate placeholder, and admin-only Official generation entry points
 - source-style import wizard polish for focus hints, URL failure display,
   CSV/Quizlet/Anki guidance, select/deselect review controls, column swapping,
   row/URL counts, and save/done copy

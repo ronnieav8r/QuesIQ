@@ -1,30 +1,44 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { BookOpen, CheckCircle2, History, PencilLine, Plus, ShieldCheck, Sparkles, Upload } from "lucide-react";
 
 import { auth } from "@/auth";
 import { getStudyDecksWithStats, getStudyFolders } from "@/features/study/study-data";
 import { StudyFolderManager } from "@/features/study/study-folder-manager";
+import { isAdminEmail } from "@/server/admin";
 
 export default async function StudyDecksPage() {
   const session = await auth();
   const userId = session?.user?.id;
+  const isAdmin = isAdminEmail(session?.user?.email);
   const [decks, folders] = userId
     ? await Promise.all([getStudyDecksWithStats(userId), getStudyFolders(userId)])
     : [[], []];
+  const publicDecks = decks.filter((deck) => deck.isPublic).length;
+  const fullyVerifiedDecks = decks.filter(
+    (deck) => deck.cardCount > 0 && (deck.verifiedCardCount ?? 0) === deck.cardCount,
+  ).length;
+  const importHref = decks[0] ? `/study/decks/${decks[0].id}/import` : "/study/decks/new";
 
   return (
     <div className="screen study-dashboard-screen">
       <div className="screen-toolbar">
         <div>
           <p className="eyebrow">QuesIQ Study</p>
-          <h1>My Decks</h1>
+          <h1>Decks</h1>
+          <p>Create, import, organize, and publish Study decks from one place.</p>
         </div>
-        <Link className="button-link" href="/study/decks/new">
-          <Plus size={14} aria-hidden="true" />
-          New
-        </Link>
+        <div className="inline-actions">
+          <Link className="button-link secondary" href="/study/library">
+            <BookOpen size={14} aria-hidden="true" />
+            Library
+          </Link>
+          <Link className="button-link" href="/study/decks/new">
+            <Plus size={14} aria-hidden="true" />
+            Manual Deck
+          </Link>
+        </div>
       </div>
 
       {!userId ? (
@@ -34,16 +48,111 @@ export default async function StudyDecksPage() {
             Sign In
           </Link>
         </section>
-      ) : decks.length === 0 ? (
-        <section className="panel study-empty-panel">
-          <h2>No decks yet.</h2>
-          <p>Create your first Study deck, then add cards manually.</p>
-          <Link className="button-link" href="/study/decks/new">
-            Create Deck
-          </Link>
-        </section>
       ) : (
-        <StudyFolderManager currentUserId={userId} decks={decks} initialFolders={folders} />
+        <>
+          <section className="study-stat-strip" aria-label="Deck summary">
+            <div className="study-stat-chip">
+              <strong>{decks.length}</strong>
+              <span>Mine</span>
+            </div>
+            <div className={publicDecks > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
+              <strong>{publicDecks}</strong>
+              <span>Public</span>
+            </div>
+            <div className={fullyVerifiedDecks > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
+              <strong>{fullyVerifiedDecks}</strong>
+              <span>Verified</span>
+            </div>
+          </section>
+
+          <section className="section-head">
+            <div>
+              <p className="eyebrow">Create</p>
+              <h2>Start with a deck</h2>
+              <p>Choose how this deck should get its cards.</p>
+            </div>
+            <Link className="button-link secondary" href="/study/history">
+              <History size={14} aria-hidden="true" />
+              History
+            </Link>
+          </section>
+
+          <section className="study-deck-grid" aria-label="Deck creation options">
+            <Link className="study-deck-card" href="/study/decks/new">
+              <div className="study-deck-card__header">
+                <span className="badge">Manual</span>
+                <PencilLine size={18} aria-hidden="true" />
+              </div>
+              <h3>Manual deck</h3>
+              <p>Create the deck shell, then add cards by hand.</p>
+              <div className="study-deck-card__footer">
+                <span>Best for small or custom sets</span>
+              </div>
+            </Link>
+
+            <Link className="study-deck-card" href={importHref}>
+              <div className="study-deck-card__header">
+                <span className="badge">Import</span>
+                <Upload size={18} aria-hidden="true" />
+              </div>
+              <h3>Import cards</h3>
+              <p>
+                {decks.length > 0
+                  ? "Add cards to an existing deck from text, CSV, TSV, PDF, images, or URLs."
+                  : "Create a deck first, then import cards from text, files, or URLs."}
+              </p>
+              <div className="study-deck-card__footer">
+                <span>{decks.length > 0 ? "Uses your most recent deck" : "Creates a deck first"}</span>
+              </div>
+            </Link>
+
+            <div className="study-deck-card" aria-disabled="true">
+              <div className="study-deck-card__header">
+                <span className="badge">AI Generate</span>
+                <Sparkles size={18} aria-hidden="true" />
+              </div>
+              <h3>Generate from a prompt</h3>
+              <p>AI deck generation belongs here, but the safe generation endpoint is not enabled yet.</p>
+              <div className="study-deck-card__footer">
+                <span>Coming soon</span>
+              </div>
+            </div>
+
+            {isAdmin && (
+              <Link className="study-deck-card" href="/admin?product=study">
+                <div className="study-deck-card__header">
+                  <span className="badge">Official</span>
+                  <ShieldCheck size={18} aria-hidden="true" />
+                </div>
+                <h3>Admin official generation</h3>
+                <p>Create and curate QuesIQ official decks from the protected Study admin lane.</p>
+                <div className="study-deck-card__footer">
+                  <CheckCircle2 size={14} aria-hidden="true" />
+                  <span>Admin only</span>
+                </div>
+              </Link>
+            )}
+          </section>
+
+          <section className="section-head">
+            <div>
+              <p className="eyebrow">Manage</p>
+              <h2>My Decks</h2>
+            </div>
+          </section>
+
+          {decks.length === 0 ? (
+            <section className="panel study-empty-panel">
+              <h2>No decks yet.</h2>
+              <p>Create your first Study deck, then add cards manually or import content.</p>
+              <Link className="button-link" href="/study/decks/new">
+                Create Deck
+              </Link>
+            </section>
+          ) : (
+            <StudyFolderManager currentUserId={userId} decks={decks} initialFolders={folders} />
+          )}
+        </>
       )}
     </div>
   );
