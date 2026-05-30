@@ -290,7 +290,9 @@ These are places where the target repo strayed from a strict copy of
 8. Study OpenAI calls are now instrumented for Admin AI Usage with
    `study_evaluate`, `study_import`, and `study_tts` run types. Model/prompt
    choices can still be revisited against the source app and platform prompt
-   config direction.
+   config direction. The V1 deck verification action records its AI usage under
+   `study_evaluate` with `operation: study_deck_verification` metadata rather
+   than adding a new shared run type.
 
 9. Source has a richer folder-management component. Target now has a
    Study-native folder manager on `/study/decks` with the source create,
@@ -298,8 +300,10 @@ These are places where the target repo strayed from a strict copy of
 
 10. Source has richer public-library taxonomy behavior and metadata. Target has
     the Study-prefixed taxonomy tables, mapped audience-tag filtering, and
-    source taxonomy seed migration. Real official/library content curation is
-    still needed beyond test data and taxonomy labels.
+    source taxonomy seed migration. V1 also has an admin-only AI verification
+    pass that updates card-level verification fields and deck verified-card
+    counts. Real official/library content curation is still needed beyond test
+    data and taxonomy labels.
 
 11. Source `/api/tts` includes object-storage caching via `src/server/storage.ts`.
     Target `/api/study/tts` now has Study-namespaced R2/object-storage caching

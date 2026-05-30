@@ -57,6 +57,10 @@ The first Study slice is imported:
   Study-prefixed taxonomy tables for subjects, audience tags, sources,
   verifications, and deck imports; subject and audience filters now use
   mobile-friendly pill controls
+- admin users can run a lightweight AI verification pass from a deck page; the
+  pass marks individual cards verified only when the model returns high
+  confidence and no substantive factual or safety issue, updates the deck
+  verified-card count, and records Study AI usage as `study_evaluate`
 - `/api/study/tts` supports Study voice paths with Admin AI Usage
   instrumentation and source-style R2 audio caching when R2 environment
   variables are configured
