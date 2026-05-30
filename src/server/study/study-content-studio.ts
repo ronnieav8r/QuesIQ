@@ -1,7 +1,10 @@
+import { createHash } from "crypto";
+
 import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
 import { getOpenAiApiKey } from "@/server/openai/keys";
 
 export type StudyGeneratedCardLevel = "advanced" | "beginner" | "intermediate";
+export type StudyContentStudioWarningSeverity = "blocker" | "info" | "warning";
 
 export type StudyGeneratedFlashcardDraft = {
   answer: string;
@@ -12,16 +15,50 @@ export type StudyGeneratedFlashcardDraft = {
   sourceNotes?: string;
 };
 
+export type StudyContentStudioWarning = {
+  message: string;
+  severity: StudyContentStudioWarningSeverity;
+};
+
+export type StudyContentStudioReviewChecklist = {
+  hasEnoughCards: boolean;
+  hasNoBlockerWarnings: boolean;
+  hasSourceSummary: boolean;
+  needsHumanReview: boolean;
+  readyForVerification: boolean;
+  requiresSourceReview: boolean;
+};
+
 export type StudyGeneratedDeckDraft = {
   cards: StudyGeneratedFlashcardDraft[];
+  cardCount: number;
+  confidenceSummary: {
+    average: number;
+    highConfidenceCount: number;
+    lowConfidenceCardIndexes: number[];
+    lowConfidenceCount: number;
+  };
   description: string;
+  draftId: string;
+  fingerprint: string;
+  generatedAt: string;
   generationMode: "ai" | "mock";
   generationWarnings: string[];
+  missingFields: string[];
+  promptMetadata: {
+    hasPromptInstructions: boolean;
+    promptInstructions?: string;
+    sourceTextLength: number;
+    templateKey: "study.flashcardDeckDraft.v1";
+    templateVersion: 1;
+  };
   promptInstructions?: string;
+  reviewChecklist: StudyContentStudioReviewChecklist;
   sourceSummary: string;
   subject?: string;
   tags: string[];
   title: string;
+  warnings: StudyContentStudioWarning[];
 };
 
 type RawGeneratedDeckDraft = {
@@ -37,6 +74,7 @@ type RawGeneratedDeckDraft = {
 const GENERATE_MODEL = "gpt-4o";
 const MAX_SOURCE_CHARS = 24_000;
 const MAX_INSTRUCTION_CHARS = 2_000;
+const LOW_CONFIDENCE_THRESHOLD = 0.7;
 
 function clean(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
@@ -70,6 +108,108 @@ function rawCards(value: unknown) {
   return Array.isArray(value)
     ? value.filter((item): item is Partial<StudyGeneratedFlashcardDraft> => typeof item === "object" && item !== null)
     : [];
+}
+
+function fingerprint(value: unknown) {
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 24);
+}
+
+function warningSeverity(message: string): StudyContentStudioWarningSeverity {
+  if (/not configured|missing|no cards|failed|unsafe|safety|medical|legal|aviation|emergency/i.test(message)) {
+    return "blocker";
+  }
+  if (/review|low confidence|thin|ambig|uncertain|source/i.test(message)) {
+    return "warning";
+  }
+  return "info";
+}
+
+function structuredWarnings(messages: string[]) {
+  const unique = Array.from(new Set(messages.map((message) => message.trim()).filter(Boolean)));
+  return unique.map((message) => ({
+    message,
+    severity: warningSeverity(message),
+  }));
+}
+
+function decorateDraft(
+  draft: Omit<
+    StudyGeneratedDeckDraft,
+    | "cardCount"
+    | "confidenceSummary"
+    | "draftId"
+    | "fingerprint"
+    | "generatedAt"
+    | "missingFields"
+    | "promptMetadata"
+    | "reviewChecklist"
+    | "warnings"
+  >,
+  args: {
+    promptInstructions?: string;
+    sourceText: string;
+  },
+): StudyGeneratedDeckDraft {
+  const warnings = structuredWarnings(draft.generationWarnings);
+  const missingFields = [
+    !draft.title && "title",
+    !draft.description && "description",
+    !draft.subject && "subject",
+    draft.tags.length === 0 && "tags",
+    !draft.sourceSummary && "sourceSummary",
+    draft.cards.length === 0 && "cards",
+  ].filter((item): item is string => Boolean(item));
+  const lowConfidenceCardIndexes = draft.cards
+    .map((card, index) => (card.confidence < LOW_CONFIDENCE_THRESHOLD ? index : -1))
+    .filter((index) => index >= 0);
+  const average =
+    draft.cards.length > 0
+      ? Number((draft.cards.reduce((sum, card) => sum + card.confidence, 0) / draft.cards.length).toFixed(2))
+      : 0;
+  const hasBlockerWarning = warnings.some((warning) => warning.severity === "blocker");
+  const reviewChecklist = {
+    hasEnoughCards: draft.cards.length >= 5,
+    hasNoBlockerWarnings: !hasBlockerWarning,
+    hasSourceSummary: Boolean(draft.sourceSummary),
+    needsHumanReview: true,
+    readyForVerification: draft.cards.length > 0 && missingFields.length === 0 && !hasBlockerWarning,
+    requiresSourceReview: lowConfidenceCardIndexes.length > 0 || draft.generationMode === "mock",
+  };
+  const stablePayload = {
+    cards: draft.cards,
+    description: draft.description,
+    generationMode: draft.generationMode,
+    promptInstructions: args.promptInstructions,
+    sourceText: args.sourceText,
+    subject: draft.subject,
+    tags: draft.tags,
+    title: draft.title,
+  };
+  const stableFingerprint = fingerprint(stablePayload);
+
+  return {
+    ...draft,
+    cardCount: draft.cards.length,
+    confidenceSummary: {
+      average,
+      highConfidenceCount: draft.cards.filter((card) => card.confidence >= LOW_CONFIDENCE_THRESHOLD).length,
+      lowConfidenceCardIndexes,
+      lowConfidenceCount: lowConfidenceCardIndexes.length,
+    },
+    draftId: `study-draft-${stableFingerprint}`,
+    fingerprint: stableFingerprint,
+    generatedAt: new Date().toISOString(),
+    missingFields,
+    promptMetadata: {
+      hasPromptInstructions: Boolean(args.promptInstructions),
+      promptInstructions: args.promptInstructions,
+      sourceTextLength: args.sourceText.length,
+      templateKey: "study.flashcardDeckDraft.v1",
+      templateVersion: 1,
+    },
+    reviewChecklist,
+    warnings,
+  };
 }
 
 function extractJsonObject(raw: string) {
@@ -136,20 +276,23 @@ function mockDraft(args: {
       };
     });
 
-  return {
-    cards,
-    description: "Reviewable Study deck draft generated from provided source text.",
-    generationMode: "mock",
-    generationWarnings: [
-      "OpenAI is not configured, so this is a deterministic fallback draft.",
-      "Review all cards before publishing. Generation does not mark cards Verified or Official.",
-    ],
-    promptInstructions: args.promptInstructions,
-    sourceSummary: args.sourceText.slice(0, 500),
-    subject: undefined,
-    tags: ["content-studio", "draft"],
-    title,
-  };
+  return decorateDraft(
+    {
+      cards,
+      description: "Reviewable Study deck draft generated from provided source text.",
+      generationMode: "mock",
+      generationWarnings: [
+        "OpenAI is not configured, so this is a deterministic fallback draft.",
+        "Review all cards before publishing. Generation does not mark cards Verified or Official.",
+      ],
+      promptInstructions: args.promptInstructions,
+      sourceSummary: args.sourceText.slice(0, 500),
+      subject: undefined,
+      tags: ["content-studio", "draft"],
+      title,
+    },
+    args,
+  );
 }
 
 function normalizeDraft(raw: RawGeneratedDeckDraft, args: {
@@ -176,22 +319,26 @@ function normalizeDraft(raw: RawGeneratedDeckDraft, args: {
     .filter((card): card is StudyGeneratedFlashcardDraft => Boolean(card))
     .slice(0, 30);
 
-  return {
-    cards,
-    description: clean(raw.description, "Reviewable Study deck draft generated from source material."),
-    generationMode: "ai",
-    generationWarnings: [
-      ...stringArray(raw.generationWarnings).map((item) => item.trim()),
-      "Generation is not verification. Review before publishing and run verification separately.",
-    ],
-    promptInstructions: args.promptInstructions,
-    sourceSummary: clean(raw.sourceSummary, args.sourceText.slice(0, 500)),
-    subject: cleanOptional(raw.subject),
-    tags: stringArray(raw.tags)
-      .map((tag) => tag.trim())
-      .slice(0, 8),
-    title: clean(raw.title, titleFromText(args.sourceText, args.promptInstructions)),
-  };
+  return decorateDraft(
+    {
+      cards,
+      description: clean(raw.description, "Reviewable Study deck draft generated from source material."),
+      generationMode: "ai",
+      generationWarnings: [
+        ...stringArray(raw.generationWarnings).map((item) => item.trim()),
+        ...(cards.length === 0 ? ["No usable cards were returned by the generator."] : []),
+        "Generation is not verification. Review before publishing and run verification separately.",
+      ],
+      promptInstructions: args.promptInstructions,
+      sourceSummary: clean(raw.sourceSummary, args.sourceText.slice(0, 500)),
+      subject: cleanOptional(raw.subject),
+      tags: stringArray(raw.tags)
+        .map((tag) => tag.trim())
+        .slice(0, 8),
+      title: clean(raw.title, titleFromText(args.sourceText, args.promptInstructions)),
+    },
+    args,
+  );
 }
 
 function buildGenerationPrompt(args: {
@@ -309,8 +456,11 @@ export async function generateStudyFlashcardDeckDraft(args: {
       providerRequestId: payload.id,
       rawJson: {
         cardCount: draft.cards.length,
+        draftId: draft.draftId,
+        fingerprint: draft.fingerprint,
         generationWarnings: draft.generationWarnings,
         operation: "study_content_studio_flashcard_draft",
+        reviewChecklist: draft.reviewChecklist,
         usage: payload.usage,
       },
       status: "succeeded",
@@ -325,4 +475,30 @@ export async function generateStudyFlashcardDeckDraft(args: {
     });
     throw error;
   }
+}
+
+export function getStudyContentStudioReviewSections(draft: StudyGeneratedDeckDraft) {
+  return [
+    {
+      items: [
+        `Title: ${draft.title}`,
+        `Subject: ${draft.subject || "Missing"}`,
+        `Cards: ${draft.cardCount}`,
+        `Average confidence: ${draft.confidenceSummary.average}`,
+      ],
+      title: "Deck Metadata",
+    },
+    {
+      items: draft.warnings.map((warning) => `${warning.severity}: ${warning.message}`),
+      title: "Warnings",
+    },
+    {
+      items: [
+        `Ready for verification: ${draft.reviewChecklist.readyForVerification ? "yes" : "no"}`,
+        `Requires source review: ${draft.reviewChecklist.requiresSourceReview ? "yes" : "no"}`,
+        `Missing fields: ${draft.missingFields.length > 0 ? draft.missingFields.join(", ") : "none"}`,
+      ],
+      title: "Review Checklist",
+    },
+  ];
 }
