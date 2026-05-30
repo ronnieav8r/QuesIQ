@@ -4,6 +4,11 @@ Last updated: 2026-05-30
 
 ## Immediate Handoff Snapshot
 
+- Current manager workspace:
+  `C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-manager` on `main`.
+  Use the manager/worker clone flow in `docs/rebuild/BRANCHING_AND_RELEASES.md`
+  and `docs/platform/PARALLEL_DEVELOPMENT.md`. The older
+  `C:\Users\weeks\Documents\github\QuesIQ` checkout is reference/archive.
 - Latest local work is the QuesIQ marketing homepage regeneration plus recent
   platform/DPE import work. It is locally verified but not yet visually
   user-confirmed in production.

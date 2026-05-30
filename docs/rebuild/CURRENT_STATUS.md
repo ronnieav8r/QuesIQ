@@ -4,10 +4,22 @@ Last updated: 2026-05-30
 
 ## Rebuild Location
 
-- Local repo: `C:\Users\weeks\Documents\GitHub\QuesIQ`
+- Manager clone:
+  `C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-manager`
 - GitHub repo: `ronnieav8r/QuesIQ`
 - Living rebuild docs: `docs/rebuild/`
 - Docs map: `docs/README.md`
+- Parallel worker clones:
+  - Interview:
+    `C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-interview` on
+    `codex/interview`
+  - Study:
+    `C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-study` on
+    `codex/study`
+  - DPE: `C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-dpe` on
+    `codex/dpe`
+- The older local checkout `C:\Users\weeks\Documents\github\QuesIQ` is
+  reference/archive unless a manager explicitly reactivates it.
 - Active Render web service: `quesiq-web`
   - now points at `ronnieav8r/QuesIQ`
   - Render URL: `https://quesiq-web.onrender.com`

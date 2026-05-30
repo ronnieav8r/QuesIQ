@@ -1,20 +1,34 @@
 # QuesIQ Docs Map
 
-This folder is split by how the documents should be used.
+This folder is split by how the documents should be used. When documents
+conflict, prefer the active source-of-truth docs below over older planning,
+strategy, or reference notes.
 
-## Living Rebuild Docs
+## Active Source Of Truth
 
-Use `docs/rebuild/` as the current source of truth for active product,
-architecture, handoff, status, and durable decisions.
+Start here for broad resume work and manager handoffs:
 
-Start here for broad resume work:
+- `docs/rebuild/HANDOFF.md`: current resume snapshot and product handoff.
+- `docs/rebuild/CURRENT_STATUS.md`: current platform status and deployment
+  context.
+- `docs/rebuild/DECISIONS.md`: durable product and architecture decisions.
+- `docs/rebuild/BRANCHING_AND_RELEASES.md`: manager/worker branch flow,
+  release flow, and branch sync states.
+- `docs/platform/PARALLEL_DEVELOPMENT.md`: product lane boundaries and
+  parallel-development guardrails.
+- `docs/platform/ONE_SERVICE_PLATFORM.md`: one-service platform architecture.
 
-- `docs/rebuild/HANDOFF.md`
-- `docs/rebuild/CURRENT_STATUS.md`
-- `docs/rebuild/DECISIONS.md`
-- `docs/rebuild/REBUILD_PLAN.md`
+## Historical Rebuild Planning
+
+These files are retained for traceability. They may guide future work, but they
+should not override the active source-of-truth docs:
+
+- `docs/rebuild/ARCHITECTURE.md`
+- `docs/rebuild/NEXT_STEPS.md`
 - `docs/rebuild/PLATFORM_READINESS.md`
-- `docs/rebuild/BRANCHING_AND_RELEASES.md`
+- `docs/rebuild/PRODUCT_SCOPE.md`
+- `docs/rebuild/REBUILD_PLAN.md`
+- `docs/rebuild/TRANSCRIPT_NORMALIZATION_DECISION.md`
 
 ## Platform Docs
 
@@ -45,6 +59,7 @@ are not yet active implementation constraints.
 
 Current strategy docs:
 
+- `docs/strategy/DPE_PILOT_APP_ALIGNMENT_GUIDE.md`
 - `docs/strategy/platform-integration-plan.md`
 
 ## Reference Docs

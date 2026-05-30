@@ -1,16 +1,22 @@
 # Agent Notes
 
 Use `docs/README.md` for the document map.
-Read `docs/rebuild/HANDOFF.md` and `docs/rebuild/CURRENT_STATUS.md` before
-broad resume exploration.
-Read `docs/rebuild/REBUILD_PLAN.md` before major product or architecture work.
-Read `docs/rebuild/PLATFORM_READINESS.md` before shared-platform, Study,
-billing, auth-boundary, or design-system extraction work.
+Read `docs/rebuild/HANDOFF.md`, `docs/rebuild/CURRENT_STATUS.md`, and
+`docs/rebuild/DECISIONS.md` before broad resume exploration.
 Read `docs/platform/ONE_SERVICE_PLATFORM.md` and
 `docs/platform/PARALLEL_DEVELOPMENT.md` before importing another product,
 changing route structure, or editing shared platform/auth/schema files.
 Read `docs/rebuild/BRANCHING_AND_RELEASES.md` before changing production branch
 or deploy flow.
+
+The active manager workspace is
+`C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-manager`. The older
+`C:\Users\weeks\Documents\github\QuesIQ` checkout is reference/archive unless a
+manager explicitly says otherwise.
+
+Older planning docs such as `docs/rebuild/REBUILD_PLAN.md`,
+`docs/rebuild/NEXT_STEPS.md`, and `docs/strategy/*` are historical guidance.
+They should not override the active docs listed above.
 
 ## Working Direction
 
