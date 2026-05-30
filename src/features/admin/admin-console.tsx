@@ -179,6 +179,7 @@ async function DpeAdminPanel() {
       certificateType.questions.filter((question) => question.rubricStatus === "missing").length,
     0,
   );
+  const readiness = calculateDpeReadiness(totalQuestions, missingAnswerKeys, missingRubrics);
 
   return (
     <section className="ai-runs-panel" aria-labelledby="dpe-admin-title">
@@ -210,24 +211,92 @@ async function DpeAdminPanel() {
           <strong>{missingAnswerKeys + missingRubrics}</strong>
           <span>Gaps</span>
         </div>
+        <div className="study-stat-chip">
+          <strong>{readiness}%</strong>
+          <span>Ready</span>
+        </div>
       </div>
 
       <div className="prompt-version-list">
         {summary.certificateTypes.length > 0 ? (
-          summary.certificateTypes.map((certificateType) => (
-            <article className="raised-card" key={certificateType.id}>
-              <div className="question-meta">
-                <span className="pill">{certificateType.code}</span>
-                <span className="pill">{certificateType.active ? "active" : "inactive"}</span>
-                <span className="pill">{certificateType.questions.length} questions</span>
-              </div>
-              <strong>{certificateType.title}</strong>
-              <p>
-                {certificateType.category ?? "Category pending"} /{" "}
-                {certificateType.aircraftClass ?? "Class pending"}
-              </p>
-            </article>
-          ))
+          summary.certificateTypes.map((certificateType) => {
+            const certificateGaps = getDpeCertificateGapSummary(certificateType);
+            const taskGroups = groupDpeContentByTask(certificateType);
+
+            return (
+              <article className="raised-card" key={certificateType.id}>
+                <div className="question-meta">
+                  <span className="pill">{certificateType.code}</span>
+                  <span className="pill">{certificateType.active ? "active" : "inactive"}</span>
+                  <span className="pill">{certificateType.questions.length} questions</span>
+                  <span className="pill">{certificateGaps.readiness}% ready</span>
+                  <span className="pill">{certificateGaps.status}</span>
+                </div>
+                <strong>{certificateType.title}</strong>
+                <p>
+                  {certificateType.category ?? "Category pending"} /{" "}
+                  {certificateType.aircraftClass ?? "Class pending"}
+                </p>
+
+                <div className="study-stat-strip" aria-label={`${certificateType.title} readiness`}>
+                  <div className="study-stat-chip">
+                    <strong>{certificateGaps.missingAnswerKeys}</strong>
+                    <span>Missing keys</span>
+                  </div>
+                  <div className="study-stat-chip">
+                    <strong>{certificateGaps.missingRubrics}</strong>
+                    <span>Missing rubrics</span>
+                  </div>
+                  <div className="study-stat-chip">
+                    <strong>{certificateGaps.readyQuestions}</strong>
+                    <span>Ready questions</span>
+                  </div>
+                </div>
+
+                <div className="question-list mt-4">
+                  {taskGroups.map((group) => (
+                    <article className="raised-card" key={group.key}>
+                      <div className="section-head">
+                        <div>
+                          <strong>
+                            Area {group.acsArea}, Task {group.acsTask}
+                          </strong>
+                          <p>
+                            {group.questions} question{group.questions === 1 ? "" : "s"} -{" "}
+                            {group.readiness}% ready
+                          </p>
+                        </div>
+                        <span className="pill">
+                          {group.gapCount > 0 ? `${group.gapCount} gaps` : "ready"}
+                        </span>
+                      </div>
+                      {group.gapQuestions.length > 0 ? (
+                        <div className="question-list mt-4">
+                          {group.gapQuestions.map((question) => (
+                            <div className="raised-card" key={question.id}>
+                              <div className="question-meta">
+                                <span className="pill">{question.id}</span>
+                                <span className="pill">{question.acsElementReference}</span>
+                                {question.answerKeyStatus === "missing" && (
+                                  <span className="pill">missing answer key</span>
+                                )}
+                                {question.rubricStatus === "missing" && (
+                                  <span className="pill">missing rubric</span>
+                                )}
+                              </div>
+                              <p>{question.questionText}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p>No answer key or rubric gaps in this ACS task.</p>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              </article>
+            );
+          })
         ) : (
           <p>
             {summary.available
@@ -238,4 +307,117 @@ async function DpeAdminPanel() {
       </div>
     </section>
   );
+}
+
+type DpeContentSummary = Awaited<ReturnType<typeof listDpeContentSummary>>;
+type DpeCertificateSummary = DpeContentSummary["certificateTypes"][number];
+type DpeQuestionSummary = DpeCertificateSummary["questions"][number];
+
+function calculateDpeReadiness(
+  questions: number,
+  missingAnswerKeys: number,
+  missingRubrics: number,
+) {
+  const requiredPieces = questions * 2;
+
+  if (requiredPieces === 0) {
+    return 0;
+  }
+
+  return Math.max(
+    0,
+    Math.round(((requiredPieces - missingAnswerKeys - missingRubrics) / requiredPieces) * 100),
+  );
+}
+
+function getDpeCertificateGapSummary(certificateType: DpeCertificateSummary) {
+  const missingAnswerKeys = certificateType.questions.filter(
+    (question) => question.answerKeyStatus === "missing",
+  ).length;
+  const missingRubrics = certificateType.questions.filter(
+    (question) => question.rubricStatus === "missing",
+  ).length;
+  const readyQuestions = certificateType.questions.filter(
+    (question) =>
+      question.answerKeyStatus !== "missing" && question.rubricStatus !== "missing",
+  ).length;
+  const readiness = calculateDpeReadiness(
+    certificateType.questions.length,
+    missingAnswerKeys,
+    missingRubrics,
+  );
+
+  return {
+    missingAnswerKeys,
+    missingRubrics,
+    readiness,
+    readyQuestions,
+    status:
+      missingAnswerKeys + missingRubrics === 0
+        ? "ready"
+        : missingAnswerKeys >= missingRubrics
+          ? "needs answer keys"
+          : "needs rubrics",
+  };
+}
+
+function groupDpeContentByTask(certificateType: DpeCertificateSummary) {
+  const groups = certificateType.questions.reduce<
+    Record<
+      string,
+      {
+        acsArea: string;
+        acsTask: string;
+        gapQuestions: DpeQuestionSummary[];
+        key: string;
+        missingAnswerKeys: number;
+        missingRubrics: number;
+        questions: number;
+      }
+    >
+  >((accumulator, question) => {
+    const key = `${question.acsArea}.${question.acsTask}`;
+    accumulator[key] ??= {
+      acsArea: question.acsArea,
+      acsTask: question.acsTask,
+      gapQuestions: [],
+      key,
+      missingAnswerKeys: 0,
+      missingRubrics: 0,
+      questions: 0,
+    };
+
+    accumulator[key].questions += 1;
+
+    if (question.answerKeyStatus === "missing") {
+      accumulator[key].missingAnswerKeys += 1;
+    }
+
+    if (question.rubricStatus === "missing") {
+      accumulator[key].missingRubrics += 1;
+    }
+
+    if (question.answerKeyStatus === "missing" || question.rubricStatus === "missing") {
+      accumulator[key].gapQuestions.push(question);
+    }
+
+    return accumulator;
+  }, {});
+
+  return Object.values(groups)
+    .map((group) => ({
+      ...group,
+      gapCount: group.missingAnswerKeys + group.missingRubrics,
+      readiness: calculateDpeReadiness(
+        group.questions,
+        group.missingAnswerKeys,
+        group.missingRubrics,
+      ),
+    }))
+    .sort(
+      (left, right) =>
+        right.gapCount - left.gapCount ||
+        left.acsArea.localeCompare(right.acsArea, undefined, { numeric: true }) ||
+        left.acsTask.localeCompare(right.acsTask, undefined, { numeric: true }),
+    );
 }
