@@ -65,7 +65,9 @@ The first Study slice is imported:
 - `/api/study/content-studio/flashcard-draft` provides a Study-owned
   Content Studio primitive for reviewable flashcard deck drafts. It accepts
   source text and prompt instructions, returns deck metadata plus generated
-  card drafts with source notes/confidence/warnings, and never publishes,
+  card drafts with source notes/confidence/warnings, stable draft id and
+  fingerprint, prompt metadata, card counts, missing-field flags, low-confidence
+  indexes, review checklist flags, and review sections; it never publishes,
   marks Official, or marks cards Verified.
 - `/api/study/tts` supports Study voice paths with Admin AI Usage
   instrumentation and source-style R2 audio caching when R2 environment

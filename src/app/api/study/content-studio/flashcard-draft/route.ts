@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { requireAdminSession } from "@/server/admin";
-import { generateStudyFlashcardDeckDraft } from "@/server/study/study-content-studio";
+import {
+  generateStudyFlashcardDeckDraft,
+  getStudyContentStudioReviewSections,
+} from "@/server/study/study-content-studio";
 
 export async function POST(request: Request) {
   const session = await requireAdminSession();
@@ -30,7 +33,10 @@ export async function POST(request: Request) {
       userId: session.user.id,
     });
 
-    return NextResponse.json({ draft });
+    return NextResponse.json({
+      draft,
+      reviewSections: getStudyContentStudioReviewSections(draft),
+    });
   } catch (error) {
     return NextResponse.json(
       {

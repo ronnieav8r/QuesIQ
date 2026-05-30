@@ -231,8 +231,10 @@ the visual/UI level during the conversation:
 - Study-owned Content Studio flashcard draft primitive at
   `/api/study/content-studio/flashcard-draft`; it returns reviewable deck
   title/description/subject/tags, card drafts with hints/levels/source
-  notes/confidence, and generation warnings without publishing, marking
-  Official, or marking cards Verified
+  notes/confidence, generation warnings with severity, stable draft id and
+  fingerprint, prompt metadata, card counts, low-confidence indexes,
+  missing-field flags, review checklist flags, and review sections without
+  publishing, marking Official, or marking cards Verified
 - source-style import wizard polish for focus hints, URL failure display,
   CSV/Quizlet/Anki guidance, select/deselect review controls, column swapping,
   row/URL counts, and save/done copy
