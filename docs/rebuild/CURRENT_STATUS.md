@@ -72,16 +72,17 @@ Last updated: 2026-05-30
   - Admin owns shared Content Studio UI/API work under the protected `/admin`
     console
   - `/admin?product=content` supports source intake, pipeline/template
-    selection, custom instructions, Study draft generation, current-session
-    review display, and existing AI-run history
+    selection, custom instructions, Study and DPE draft generation,
+    current-session review display, and existing AI-run history
   - `/api/admin/content-studio/runs` orchestrates Study draft generation and
-    exposes available run history from `ai_runs`
+    DPE content draft generation, then exposes available run history from
+    `ai_runs`
   - Study draft generation is product-owned at
     `/api/study/content-studio/flashcard-draft` and returns review-ready deck
     metadata, cards, confidence, warnings, missing fields, and checklist flags
   - DPE draft generation is product-owned at `/api/dpe/content/draft` and
     returns certificate, ACS, oral-question, answer-key, rubric, confidence,
-    warning, and readiness draft JSON without saving live content
+    warning, readiness, and missing-field draft JSON without saving live content
   - Publish, Official, and Verified changes remain disabled until durable
     Content Studio run storage and product-specific publish controls exist
 - Rebuild plan, architecture, decisions, scope, and handoff docs

@@ -39,26 +39,113 @@ type StudyGeneratedDeckDraft = {
   title: string;
 };
 
-type ContentStudioDraftRun = {
+type DpeContentStudioDraft = {
+  acs: {
+    area?: string;
+    elementType?: string;
+    reference?: string;
+    task?: string;
+    title?: string;
+  };
+  answerKey: {
+    acceptableVariations: string[];
+    commonMisses: string[];
+    correctAnswerElements: string[];
+    notes?: string;
+    sourceReferences: string[];
+    status: "draft";
+  };
+  certificate: {
+    code?: string;
+    id?: string;
+    title?: string;
+  };
+  confidence: number;
+  generation: {
+    mode: "ai" | "fallback";
+    model: string | null;
+    saved: false;
+  };
+  oralQuestion: {
+    acsElementType?: string;
+    primarySubject?: string;
+    questionMode: "oral";
+    questionText: string;
+  };
+  readiness: {
+    hasAcsReference: boolean;
+    hasAcsTask: boolean;
+    hasAnswerKey: boolean;
+    hasCertificate: boolean;
+    hasQuestion: boolean;
+    hasRubric: boolean;
+    missingFields: string[];
+    readyToReview: boolean;
+  };
+  rubric: {
+    checkrideReadiness: string;
+    communication: string;
+    knowledge: string;
+    riskManagement: string;
+    scenarioJudgment: string;
+    scoringNotes?: string;
+    status: "draft";
+  };
+  sourceSummary: string;
+  warnings: string[];
+};
+
+type DpeDraftContext = {
+  acs: {
+    area: string;
+    elementType: string;
+    reference: string;
+    task: string;
+    title: string;
+  };
+  certificate: {
+    code: string;
+    id: string;
+    title: string;
+  };
+};
+
+type StudyDraftRun = {
   completedAt: string;
   draft: StudyGeneratedDeckDraft;
   id: string;
-  pipelineKey: ContentStudioPipelineKey;
+  pipelineKey: "study_flashcards";
   stage: "review";
   status: "draft_ready";
   storage: "transient_review_state";
   templateKey: string;
 };
 
+type DpeDraftRun = {
+  completedAt: string;
+  draft: DpeContentStudioDraft;
+  id: string;
+  pipelineKey: "dpe_content";
+  stage: "review";
+  status: "draft_ready";
+  storage: "transient_review_state";
+  templateKey: string;
+};
+
+type ContentStudioDraftRun = DpeDraftRun | StudyDraftRun;
+
 type ContentStudioRunHistoryRecord = {
   cardCount?: number;
   completedAt?: string;
+  confidence?: number;
   errorMessage?: string;
   generationWarnings: string[];
   id: string;
+  missingFields: string[];
   model: string;
-  pipelineKey: "study_flashcards";
+  pipelineKey: "dpe_content" | "study_flashcards";
   providerRequestId?: string;
+  readyToReview?: boolean;
   startedAt: string;
   status: "failed" | "started" | "succeeded";
   storage: "ai_run_audit_only";
@@ -81,6 +168,21 @@ type GenerateStatus = "draft_ready" | "generating" | "idle";
 
 const MIN_SOURCE_CHARS = 40;
 
+const emptyDpeContext: DpeDraftContext = {
+  acs: {
+    area: "",
+    elementType: "",
+    reference: "",
+    task: "",
+    title: "",
+  },
+  certificate: {
+    code: "",
+    id: "",
+    title: "",
+  },
+};
+
 function formatDate(value?: string) {
   if (!value) {
     return "Pending";
@@ -96,6 +198,18 @@ function confidenceLabel(value: number) {
   return `${Math.round(value * 100)}% generation confidence`;
 }
 
+function pipelineHistoryLabel(pipelineKey: ContentStudioRunHistoryRecord["pipelineKey"]) {
+  return pipelineKey === "dpe_content" ? "DPE content draft" : "Study flashcard draft";
+}
+
+function hasDpeCertificateContext(context: DpeDraftContext) {
+  return Boolean(
+    context.certificate.code.trim() ||
+      context.certificate.id.trim() ||
+      context.certificate.title.trim(),
+  );
+}
+
 export function ContentStudio() {
   const [pipelineKey, setPipelineKey] =
     useState<ContentStudioPipelineKey>("study_flashcards");
@@ -104,6 +218,7 @@ export function ContentStudio() {
   );
   const [sourceText, setSourceText] = useState("");
   const [customInstructions, setCustomInstructions] = useState("");
+  const [dpeContext, setDpeContext] = useState<DpeDraftContext>(emptyDpeContext);
   const [status, setStatus] = useState<GenerateStatus>("idle");
   const [error, setError] = useState<string>();
   const [draftRun, setDraftRun] = useState<ContentStudioDraftRun>();
@@ -118,10 +233,10 @@ export function ContentStudio() {
   const selectedTemplateDetail = templates.find(
     (template) => template.value === selectedTemplate,
   );
-  const canGenerateStudyDraft =
-    pipelineKey === "study_flashcards" &&
+  const canGenerateDraft =
     status !== "generating" &&
-    sourceText.trim().length >= MIN_SOURCE_CHARS;
+    sourceText.trim().length >= MIN_SOURCE_CHARS &&
+    (pipelineKey === "study_flashcards" || hasDpeCertificateContext(dpeContext));
 
   useEffect(() => {
     let cancelled = false;
@@ -161,8 +276,22 @@ export function ContentStudio() {
     setError(undefined);
   }
 
+  function updateDpeContext(
+    group: keyof DpeDraftContext,
+    key: string,
+    value: string,
+  ) {
+    setDpeContext((current) => ({
+      ...current,
+      [group]: {
+        ...current[group],
+        [key]: value,
+      },
+    }));
+  }
+
   async function handleGenerateDraft() {
-    if (!canGenerateStudyDraft) {
+    if (!canGenerateDraft) {
       return;
     }
 
@@ -173,6 +302,7 @@ export function ContentStudio() {
       const response = await fetch("/api/admin/content-studio/runs", {
         body: JSON.stringify({
           customInstructions,
+          dpeContext,
           pipelineKey,
           sourceText,
           templateKey: selectedTemplate,
@@ -257,7 +387,7 @@ export function ContentStudio() {
               <h2>{pipeline.label}</h2>
               <span>{pipeline.sourceHint}</span>
             </div>
-            <span>{pipelineKey === "study_flashcards" ? "Draft generation ready" : "Coming soon"}</span>
+            <span>Draft generation ready</span>
           </div>
 
           <div className="field-grid">
@@ -289,6 +419,10 @@ export function ContentStudio() {
               <p>{selectedTemplateDetail?.description}</p>
             </div>
 
+            {pipelineKey === "dpe_content" && (
+              <DpeContextFields context={dpeContext} onChange={updateDpeContext} />
+            )}
+
             <label>
               <span>Custom instructions</span>
               <textarea
@@ -311,7 +445,7 @@ export function ContentStudio() {
               Scrub source
             </button>
             <button
-              disabled={!canGenerateStudyDraft}
+              disabled={!canGenerateDraft}
               onClick={handleGenerateDraft}
               type="button"
             >
@@ -330,7 +464,8 @@ export function ContentStudio() {
 
           {pipelineKey === "dpe_content" && (
             <div className="form-note">
-              DPE draft generation is disabled until the product-owned DPE draft primitive is available.
+              DPE generation returns a draft for review only. It does not write
+              questions, answer keys, rubrics, Official status, or Verified state.
             </div>
           )}
         </div>
@@ -364,7 +499,7 @@ export function ContentStudio() {
             <h3 id="content-history-title">Run history</h3>
             <p>
               {storageDetail ??
-                "AI-backed Study draft runs appear here when durable AI usage storage is available."}
+                "AI-backed Content Studio draft runs appear here when durable AI usage storage is available."}
             </p>
           </div>
           <History size={20} aria-hidden="true" />
@@ -376,14 +511,29 @@ export function ContentStudio() {
               <article className="runtime-context-panel" key={run.id}>
                 <div className="section-head">
                   <div>
-                    <strong>Study flashcard draft</strong>
+                    <strong>{pipelineHistoryLabel(run.pipelineKey)}</strong>
                     <p>{formatDate(run.completedAt ?? run.startedAt)}</p>
                   </div>
                   <span>{run.status}</span>
                 </div>
                 <div className="question-meta">
                   <span className="pill">{run.model}</span>
-                  <span className="pill">{run.cardCount ?? 0} cards</span>
+                  {run.pipelineKey === "study_flashcards" && (
+                    <span className="pill">{run.cardCount ?? 0} cards</span>
+                  )}
+                  {run.pipelineKey === "dpe_content" && (
+                    <>
+                      <span className="pill">
+                        {run.readyToReview ? "ready to review" : "needs review"}
+                      </span>
+                      <span className="pill">
+                        {run.confidence !== undefined
+                          ? confidenceLabel(run.confidence)
+                          : "confidence unavailable"}
+                      </span>
+                      <span className="pill">{run.missingFields.length} missing fields</span>
+                    </>
+                  )}
                   <span className="pill">{run.totalTokens ?? 0} tokens</span>
                   <span className="pill">{run.storage.replaceAll("_", " ")}</span>
                 </div>
@@ -406,6 +556,79 @@ export function ContentStudio() {
 }
 
 function DraftReviewPanel({ run }: { run: ContentStudioDraftRun }) {
+  if (run.pipelineKey === "dpe_content") {
+    return <DpeDraftReviewPanel run={run} />;
+  }
+
+  return <StudyDraftReviewPanel run={run} />;
+}
+
+function DpeContextFields({
+  context,
+  onChange,
+}: {
+  context: DpeDraftContext;
+  onChange: (group: keyof DpeDraftContext, key: string, value: string) => void;
+}) {
+  return (
+    <div className="runtime-context-panel">
+      <strong>DPE context</strong>
+      <p>Certificate context is required. ACS fields improve draft grounding but do not save content.</p>
+      <div className="field-grid">
+        <label>
+          <span>Certificate title</span>
+          <input
+            onChange={(event) => onChange("certificate", "title", event.target.value)}
+            placeholder="Private Pilot Airplane Single-Engine Land"
+            value={context.certificate.title}
+          />
+        </label>
+        <label>
+          <span>Certificate code</span>
+          <input
+            onChange={(event) => onChange("certificate", "code", event.target.value)}
+            placeholder="PPL-ASEL"
+            value={context.certificate.code}
+          />
+        </label>
+        <label>
+          <span>ACS area</span>
+          <input
+            onChange={(event) => onChange("acs", "area", event.target.value)}
+            placeholder="Area of Operation"
+            value={context.acs.area}
+          />
+        </label>
+        <label>
+          <span>ACS task</span>
+          <input
+            onChange={(event) => onChange("acs", "task", event.target.value)}
+            placeholder="Task"
+            value={context.acs.task}
+          />
+        </label>
+        <label>
+          <span>ACS reference</span>
+          <input
+            onChange={(event) => onChange("acs", "reference", event.target.value)}
+            placeholder="PA.I.A.K1"
+            value={context.acs.reference}
+          />
+        </label>
+        <label>
+          <span>ACS element type</span>
+          <input
+            onChange={(event) => onChange("acs", "elementType", event.target.value)}
+            placeholder="Knowledge, Risk Management, or Skill"
+            value={context.acs.elementType}
+          />
+        </label>
+      </div>
+    </div>
+  );
+}
+
+function StudyDraftReviewPanel({ run }: { run: StudyDraftRun }) {
   return (
     <section className="prompt-version-list" aria-labelledby="draft-review-title">
       <div className="section-head">
@@ -467,5 +690,143 @@ function DraftReviewPanel({ run }: { run: ContentStudioDraftRun }) {
         ))}
       </div>
     </section>
+  );
+}
+
+function DpeDraftReviewPanel({ run }: { run: DpeDraftRun }) {
+  const draft = run.draft;
+
+  return (
+    <section className="prompt-version-list" aria-labelledby="dpe-draft-review-title">
+      <div className="section-head">
+        <div>
+          <p className="eyebrow">Review</p>
+          <h3 id="dpe-draft-review-title">DPE content draft</h3>
+          <p>{draft.sourceSummary}</p>
+        </div>
+        <span>{draft.generation.mode === "ai" ? "AI draft" : "Fallback draft"}</span>
+      </div>
+
+      <div className="study-stat-strip" aria-label="DPE draft readiness summary">
+        <div className="study-stat-chip">
+          <strong>{draft.readiness.readyToReview ? "Ready" : "Needs work"}</strong>
+          <span>Review status</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{Math.round(draft.confidence * 100)}%</strong>
+          <span>Confidence</span>
+        </div>
+        <div className="study-stat-chip highlight">
+          <strong>{draft.readiness.missingFields.length}</strong>
+          <span>Missing fields</span>
+        </div>
+      </div>
+
+      <div className="runtime-context-panel">
+        <strong>Certificate</strong>
+        <div className="question-meta">
+          <span className="pill">{draft.certificate.title || "Title missing"}</span>
+          <span className="pill">{draft.certificate.code || "Code missing"}</span>
+          <span className="pill">{draft.certificate.id || "ID missing"}</span>
+        </div>
+      </div>
+
+      <div className="runtime-context-panel">
+        <strong>ACS</strong>
+        <div className="question-meta">
+          <span className="pill">Area: {draft.acs.area || "missing"}</span>
+          <span className="pill">Task: {draft.acs.task || "missing"}</span>
+          <span className="pill">Reference: {draft.acs.reference || "missing"}</span>
+          <span className="pill">Type: {draft.acs.elementType || "missing"}</span>
+        </div>
+        {draft.acs.title && <p>{draft.acs.title}</p>}
+      </div>
+
+      <div className="runtime-context-panel">
+        <strong>Oral question</strong>
+        <p>{draft.oralQuestion.questionText || "Question text missing."}</p>
+        <div className="question-meta">
+          <span className="pill">{draft.oralQuestion.questionMode}</span>
+          <span className="pill">
+            {draft.oralQuestion.primarySubject || "Subject pending"}
+          </span>
+          <span className="pill">
+            {draft.oralQuestion.acsElementType || "Element type pending"}
+          </span>
+        </div>
+      </div>
+
+      <div className="runtime-context-panel">
+        <strong>Answer key</strong>
+        <ReviewList title="Correct answer elements" values={draft.answerKey.correctAnswerElements} />
+        <ReviewList title="Acceptable variations" values={draft.answerKey.acceptableVariations} />
+        <ReviewList title="Common misses" values={draft.answerKey.commonMisses} />
+        <ReviewList title="Source references" values={draft.answerKey.sourceReferences} />
+        {draft.answerKey.notes && <p>Notes: {draft.answerKey.notes}</p>}
+      </div>
+
+      <div className="runtime-context-panel">
+        <strong>Rubric</strong>
+        <p>Knowledge: {draft.rubric.knowledge || "Missing"}</p>
+        <p>Risk management: {draft.rubric.riskManagement || "Missing"}</p>
+        <p>Scenario judgment: {draft.rubric.scenarioJudgment || "Missing"}</p>
+        <p>Communication: {draft.rubric.communication || "Missing"}</p>
+        <p>Checkride readiness: {draft.rubric.checkrideReadiness || "Missing"}</p>
+        {draft.rubric.scoringNotes && <p>Scoring notes: {draft.rubric.scoringNotes}</p>}
+      </div>
+
+      <div className="runtime-context-panel">
+        <strong>Reviewer indicators</strong>
+        <div className="question-meta">
+          <span className="pill">
+            Certificate: {draft.readiness.hasCertificate ? "present" : "missing"}
+          </span>
+          <span className="pill">
+            ACS task: {draft.readiness.hasAcsTask ? "present" : "missing"}
+          </span>
+          <span className="pill">
+            ACS reference: {draft.readiness.hasAcsReference ? "present" : "missing"}
+          </span>
+          <span className="pill">
+            Question: {draft.readiness.hasQuestion ? "present" : "missing"}
+          </span>
+          <span className="pill">
+            Answer key: {draft.readiness.hasAnswerKey ? "present" : "missing"}
+          </span>
+          <span className="pill">
+            Rubric: {draft.readiness.hasRubric ? "present" : "missing"}
+          </span>
+        </div>
+        {draft.readiness.missingFields.length > 0 ? (
+          <ReviewList title="Missing fields" values={draft.readiness.missingFields} />
+        ) : (
+          <p>No missing fields reported by the draft generator.</p>
+        )}
+      </div>
+
+      {draft.warnings.length > 0 && (
+        <div className="runtime-context-panel">
+          <AlertCircle size={18} aria-hidden="true" />
+          <ReviewList title="Warnings" values={draft.warnings} />
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ReviewList({ title, values }: { title: string; values: string[] }) {
+  return (
+    <div>
+      <strong>{title}</strong>
+      {values.length > 0 ? (
+        <ul>
+          {values.map((value) => (
+            <li key={value}>{value}</li>
+          ))}
+        </ul>
+      ) : (
+        <p>None provided.</p>
+      )}
+    </div>
   );
 }
