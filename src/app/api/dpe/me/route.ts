@@ -3,13 +3,15 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { isAdminEmail } from "@/server/admin";
 
+const googleEnabled = Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
+
 export async function GET() {
   const session = await auth();
 
   if (!session?.user?.email) {
     return NextResponse.json({
       authenticated: false,
-      googleEnabled: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+      googleEnabled,
       isAdmin: false,
       user: null,
     });
@@ -17,7 +19,7 @@ export async function GET() {
 
   return NextResponse.json({
     authenticated: true,
-    googleEnabled: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+    googleEnabled,
     isAdmin: isAdminEmail(session.user.email),
     user: {
       email: session.user.email,
