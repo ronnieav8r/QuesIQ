@@ -9,25 +9,26 @@ Last updated: 2026-05-30
   Use the manager/worker clone flow in `docs/rebuild/BRANCHING_AND_RELEASES.md`
   and `docs/platform/PARALLEL_DEVELOPMENT.md`. The older
   `C:\Users\weeks\Documents\github\QuesIQ` checkout is reference/archive.
-- Current repository head is `3815223 Merge DPE content studio draft primitive`.
+- Current repository head is `ac61ce1 Merge Admin DPE content studio wiring`.
   `QuesIQ-manager/main` is clean and aligned with `origin/main` at that commit.
 - The current worker-thread set is Manager, Admin, Interview, Study, and DPE.
   Admin owns shared `/admin` and Content Studio work; product workers own their
   product lanes and must not work on or push `main`.
 - Admin Content Studio now has the first usable run/review slice:
-  `/admin?product=content` can submit Study flashcard source material through
-  `/api/admin/content-studio/runs`, call the Study-owned draft generator, and
-  render transient review state plus existing AI-run history. Publish, Official,
-  and Verified state changes remain disabled.
+  `/admin?product=content` can submit Study flashcard source material or DPE
+  content source material through `/api/admin/content-studio/runs`, call the
+  product-owned draft generators, and render transient review state plus
+  existing AI-run history. Publish, Official, and Verified state changes remain
+  disabled.
 - Study Content Studio draft generation is product-owned at
   `/api/study/content-studio/flashcard-draft`. Draft responses include stable
   draft/fingerprint metadata, card count, confidence summary, warning severity,
   missing fields, and review checklist sections for Admin review.
 - DPE Content Studio draft generation is product-owned at
   `/api/dpe/content/draft`. It returns certificate, ACS, oral-question,
-  answer-key, rubric, confidence, warning, and readiness draft JSON without
-  writing to DPE content tables. Wiring this DPE endpoint into the Admin Content
-  Studio UI is the next likely slice.
+  answer-key, rubric, confidence, warning, readiness, and missing-field draft
+  JSON without writing to DPE content tables. This endpoint is now wired into
+  the Admin Content Studio run/review flow.
 - Dedicated durable Content Studio run storage is still missing. Existing
   `ai_runs` can audit AI calls, but full source intake, draft payloads, reviewer
   notes, stage transitions, and publish audit state need a future migration.

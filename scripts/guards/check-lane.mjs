@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 const lanes = {
   admin: [
     "docs/platform/",
+    "docs/rebuild/CURRENT_STATUS.md",
     "docs/README.md",
     "package.json",
     "scripts/guards/",

@@ -7,12 +7,27 @@ import {
 } from "@/features/admin/content-studio-config";
 import { requireAdminSession } from "@/server/admin";
 import { listContentStudioRunHistory } from "@/server/admin-content-studio/content-studio-runs";
+import { generateDpeContentStudioDraft } from "@/server/dpe/content-draft";
 import { generateStudyFlashcardDeckDraft } from "@/server/study/study-content-studio";
 
 export const runtime = "nodejs";
 
 type GenerateDraftBody = {
   customInstructions?: string;
+  dpeContext?: {
+    acs?: {
+      area?: string;
+      elementType?: string;
+      reference?: string;
+      task?: string;
+      title?: string;
+    };
+    certificate?: {
+      code?: string;
+      id?: string;
+      title?: string;
+    };
+  };
   pipelineKey?: string;
   sourceText?: string;
   templateKey?: string;
@@ -22,6 +37,27 @@ const MIN_SOURCE_CHARS = 40;
 
 function trimOptional(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function trimDraftContext(context: GenerateDraftBody["dpeContext"]) {
+  return {
+    acs: {
+      area: trimOptional(context?.acs?.area),
+      elementType: trimOptional(context?.acs?.elementType),
+      reference: trimOptional(context?.acs?.reference),
+      task: trimOptional(context?.acs?.task),
+      title: trimOptional(context?.acs?.title),
+    },
+    certificate: {
+      code: trimOptional(context?.certificate?.code),
+      id: trimOptional(context?.certificate?.id),
+      title: trimOptional(context?.certificate?.title),
+    },
+  };
+}
+
+function hasCertificateContext(certificate: ReturnType<typeof trimDraftContext>["certificate"]) {
+  return Boolean(certificate.code || certificate.id || certificate.title);
 }
 
 function buildPromptInstructions(args: {
@@ -83,16 +119,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "A valid Content Studio pipeline is required." }, { status: 400 });
   }
 
-  if (pipeline.key === "dpe_content") {
-    return NextResponse.json(
-      {
-        error:
-          "DPE draft generation is not wired yet. The DPE product draft primitive is still pending.",
-      },
-      { status: 501 },
-    );
-  }
-
   const sourceText = trimOptional(body.sourceText);
   const templateKey = trimOptional(body.templateKey);
 
@@ -107,17 +133,37 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "A valid reusable template is required." }, { status: 400 });
   }
 
+  if (pipeline.key === "dpe_content") {
+    const dpeContext = trimDraftContext(body.dpeContext);
+
+    if (!hasCertificateContext(dpeContext.certificate)) {
+      return NextResponse.json(
+        { error: "Certificate context is required for DPE draft generation." },
+        { status: 400 },
+      );
+    }
+  }
+
   try {
     const customInstructions = trimOptional(body.customInstructions);
-    const draft = await generateStudyFlashcardDeckDraft({
-      promptInstructions: buildPromptInstructions({
-        customInstructions,
-        pipelineKey: pipeline.key,
-        templateKey,
-      }),
-      sourceText,
-      userId: appSession.user.id,
+    const promptInstructions = buildPromptInstructions({
+      customInstructions,
+      pipelineKey: pipeline.key,
+      templateKey,
     });
+    const draft =
+      pipeline.key === "dpe_content"
+        ? await generateDpeDraft({
+            body,
+            promptInstructions,
+            sourceText,
+            userId: appSession.user.id,
+          })
+        : await generateStudyFlashcardDeckDraft({
+            promptInstructions,
+            sourceText,
+            userId: appSession.user.id,
+          });
 
     return NextResponse.json({
       run: {
@@ -148,4 +194,25 @@ export async function POST(request: Request) {
       { status: 502 },
     );
   }
+}
+
+async function generateDpeDraft(args: {
+  body: GenerateDraftBody;
+  promptInstructions: string;
+  sourceText: string;
+  userId: string;
+}) {
+  const dpeContext = trimDraftContext(args.body.dpeContext);
+
+  if (!hasCertificateContext(dpeContext.certificate)) {
+    throw new Error("Certificate context is required for DPE draft generation.");
+  }
+
+  return generateDpeContentStudioDraft({
+    acs: dpeContext.acs,
+    certificate: dpeContext.certificate,
+    promptInstructions: args.promptInstructions,
+    sourceText: args.sourceText,
+    userId: args.userId,
+  });
 }

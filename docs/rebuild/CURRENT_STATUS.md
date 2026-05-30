@@ -37,7 +37,7 @@ Last updated: 2026-05-30
 - User is not expecting to manually review code for correctness. Future Codex
   passes should own verification, explain outcomes plainly, and when requested
   prepare the GitHub push/deploy path instead of leaving that work to the user.
-- Current manager head: `3815223 Merge DPE content studio draft primitive`.
+- Current manager head: `ac61ce1 Merge Admin DPE content studio wiring`.
   `QuesIQ-manager/main` is clean and aligned with `origin/main` at that commit.
 
 ## Built So Far
@@ -72,16 +72,17 @@ Last updated: 2026-05-30
   - Admin owns shared Content Studio UI/API work under the protected `/admin`
     console
   - `/admin?product=content` supports source intake, pipeline/template
-    selection, custom instructions, Study draft generation, current-session
-    review display, and existing AI-run history
+    selection, custom instructions, Study and DPE draft generation,
+    current-session review display, and existing AI-run history
   - `/api/admin/content-studio/runs` orchestrates Study draft generation and
-    exposes available run history from `ai_runs`
+    DPE content draft generation, then exposes available run history from
+    `ai_runs`
   - Study draft generation is product-owned at
     `/api/study/content-studio/flashcard-draft` and returns review-ready deck
     metadata, cards, confidence, warnings, missing fields, and checklist flags
   - DPE draft generation is product-owned at `/api/dpe/content/draft` and
     returns certificate, ACS, oral-question, answer-key, rubric, confidence,
-    warning, and readiness draft JSON without saving live content
+    warning, readiness, and missing-field draft JSON without saving live content
   - Publish, Official, and Verified changes remain disabled until durable
     Content Studio run storage and product-specific publish controls exist
 - Rebuild plan, architecture, decisions, scope, and handoff docs
