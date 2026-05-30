@@ -7,6 +7,9 @@
     "build": "next build",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "guard:dpe": "node scripts/guards/check-lane.mjs dpe",
+    "guard:interview": "node scripts/guards/check-lane.mjs interview",
+    "guard:study": "node scripts/guards/check-lane.mjs study",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
