@@ -228,6 +228,11 @@ the visual/UI level during the conversation:
   create, rename, delete, collapse/expand, and per-deck move controls
 - deck-first creation surface on `/study/decks` with Manual, Import, AI
   Generate placeholder, and admin-only Official generation entry points
+- Study-owned Content Studio flashcard draft primitive at
+  `/api/study/content-studio/flashcard-draft`; it returns reviewable deck
+  title/description/subject/tags, card drafts with hints/levels/source
+  notes/confidence, and generation warnings without publishing, marking
+  Official, or marking cards Verified
 - source-style import wizard polish for focus hints, URL failure display,
   CSV/Quizlet/Anki guidance, select/deselect review controls, column swapping,
   row/URL counts, and save/done copy
