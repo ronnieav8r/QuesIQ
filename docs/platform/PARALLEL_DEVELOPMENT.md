@@ -70,33 +70,34 @@ Prefer this order when multiple branches are active:
 3. Marketing changes
 4. Integration QA and release promotion
 
-## Worktree Guardrails
+## Clone Guardrails
 
-The current local parallel setup uses one manager checkout and three worker
-worktrees:
+The current local parallel setup uses one manager clone and three worker clones:
 
 ```txt
-QuesIQ           -> main, manager/integration
+QuesIQ-manager   -> main, manager/integration
 QuesIQ-interview -> codex/interview
 QuesIQ-study     -> codex/study
 QuesIQ-dpe       -> codex/dpe
 ```
 
-Each worker worktree has local instructions in
-`.codex-local/WORKER_INSTRUCTIONS.md`. That folder is ignored by Git so each
-worker can keep lane-specific instructions without copying them into the shared
-repo.
+The manager thread sends work to the worker threads, reads their handoffs,
+reviews diffs, runs lane guards, merges one branch at a time into `main`, and
+pushes `main`. Workers should not merge or push `main`.
 
 Before merging a worker branch, the manager should run:
 
 ```txt
-npm run guard:interview -- codex/interview
-npm run guard:study -- codex/study
-npm run guard:dpe -- codex/dpe
+npm run guard:interview -- origin/codex/interview
+npm run guard:study -- origin/codex/study
+npm run guard:dpe -- origin/codex/dpe
 ```
 
 The lane guard checks changed files against allowed path prefixes. It does not
 replace review, but it catches obvious cross-lane edits before merge.
+
+Worker handoffs should include summary, files changed, commits, checks run,
+risks, and whether the worker branch was pushed.
 
 ## Agent Brief
 
