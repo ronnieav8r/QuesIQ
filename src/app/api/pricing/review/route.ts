@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getOpenAiApiKey } from "@/server/openai/keys";
 import { runPricingReview } from "@/server/pricing/ai-pricing";
 
 export const runtime = "nodejs";
@@ -22,10 +23,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Pricing review access is required." }, { status: 403 });
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!getOpenAiApiKey("interview")) {
     return NextResponse.json(
       {
-        detail: "OPENAI_API_KEY is required for pricing reviews.",
+        detail: "OPENAI_INTERVIEW_API_KEY is required for pricing reviews.",
         error: "Pricing review failed.",
       },
       { status: 503 },

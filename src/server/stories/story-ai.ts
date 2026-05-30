@@ -5,6 +5,7 @@ import {
   estimateTokenCostMicroUsd,
   getActiveAiPricing,
 } from "@/server/pricing/ai-pricing";
+import { getOpenAiApiKey } from "@/server/openai/keys";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 
 type ResponsesApiBody = {
@@ -153,7 +154,7 @@ export async function generateStoryFollowUp(turns: StoryBuilderTurn[], userId?: 
         model: promptConfig.model,
       }),
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${getOpenAiApiKey("interview")}`,
         "Content-Type": "application/json",
       },
       method: "POST",
@@ -245,7 +246,7 @@ export async function generateStoryOutline(
         },
       }),
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${getOpenAiApiKey("interview")}`,
         "Content-Type": "application/json",
       },
       method: "POST",

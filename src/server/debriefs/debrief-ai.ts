@@ -12,6 +12,7 @@ import {
   estimateTokenCostMicroUsd,
   getActiveAiPricing,
 } from "@/server/pricing/ai-pricing";
+import { getOpenAiApiKey } from "@/server/openai/keys";
 
 type ResponsesApiBody = {
   error?: {
@@ -171,7 +172,7 @@ export async function generateSessionDebrief({
         },
       }),
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${getOpenAiApiKey("interview")}`,
         "Content-Type": "application/json",
       },
       method: "POST",

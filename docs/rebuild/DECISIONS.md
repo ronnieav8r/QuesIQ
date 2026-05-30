@@ -20,6 +20,14 @@ proved browser microphone connection, Que first-turn speech, audio quality,
 transcript/events, and disconnect behavior well enough to prefer this route
 while phone calls are out of scope.
 
+### Use Product-Specific OpenAI Keys
+
+QuesIQ should use separate server-side OpenAI keys per product lane and workload:
+Interview API, Interview Realtime, Study API, Study Realtime, DPE API, and DPE
+Realtime. This keeps usage tracking and key rotation clean without creating a
+key for every tiny task. The legacy shared `OPENAI_API_KEY` and
+`OPENAI_REALTIME_API_KEY` names remain code fallbacks during migration only.
+
 ### Keep VAPI As A Voice Fallback
 
 VAPI remains a fallback option if direct OpenAI Realtime later shows a material

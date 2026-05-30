@@ -1,6 +1,7 @@
 import pdfParse from "pdf-parse";
 
 import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
+import { getOpenAiApiKey } from "@/server/openai/keys";
 
 export type StudyParsedCardDraft = {
   answer: string;
@@ -90,9 +91,9 @@ async function runStudyImportAi(args: {
   rawJson: Record<string, unknown>;
   userId: string;
 }) {
-  const apiKey = process.env.OPENAI_API_KEY || process.env.OPENAI_REALTIME_API_KEY;
+  const apiKey = getOpenAiApiKey("study");
   if (!apiKey) {
-    throw new Error("OpenAI key is not configured.");
+    throw new Error("Study OpenAI key is not configured.");
   }
   const run = await startAiRun({
     model: "gpt-4o",

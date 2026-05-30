@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { parseStoryBuilderTurns } from "@/product/story-lab";
+import { getOpenAiApiKey } from "@/server/openai/keys";
 import { generateStoryOutline } from "@/server/stories/story-ai";
 import { listStories, saveStory } from "@/server/stories/stories";
 
@@ -58,10 +59,10 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!getOpenAiApiKey("interview")) {
     return NextResponse.json(
       {
-        detail: "Story Lab needs OpenAI configured before it can shape stories.",
+        detail: "Story Lab needs the Interview OpenAI key configured before it can shape stories.",
         error: "Story could not be created.",
       },
       { status: 503 },

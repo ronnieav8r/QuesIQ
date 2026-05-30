@@ -8,6 +8,7 @@ import type {
 } from "@/product/interview-types";
 import { getDb } from "@/server/db/client";
 import { aiPricing, pricingChecks, pricingReviews } from "@/server/db/schema";
+import { getOpenAiApiKey } from "@/server/openai/keys";
 
 const sourceUrl = "https://developers.openai.com/api/docs/pricing";
 
@@ -458,7 +459,7 @@ export async function runPricingReview() {
         ],
       }),
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${getOpenAiApiKey("interview")}`,
         "Content-Type": "application/json",
       },
       method: "POST",

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { getOpenAiApiKey } from "@/server/openai/keys";
 import { createSessionEvaluation } from "@/server/sessions/create-session-evaluation";
 
 export const runtime = "nodejs";
@@ -28,10 +29,10 @@ export async function POST(_request: Request, context: RouteContext) {
     );
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!getOpenAiApiKey("interview")) {
     return NextResponse.json(
       {
-        detail: "Practice reviews need OpenAI configured before evaluation.",
+        detail: "Practice reviews need the Interview OpenAI key configured before evaluation.",
         error: "Practice review could not be created.",
       },
       { status: 503 },

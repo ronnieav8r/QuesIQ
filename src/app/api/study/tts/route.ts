@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
 import { getDb } from "@/server/db/client";
 import { studyCards } from "@/server/db/schema";
+import { getOpenAiApiKey } from "@/server/openai/keys";
 import { isStudyStorageConfigured, uploadStudyAudio } from "@/server/study/storage";
 
 export const runtime = "nodejs";
@@ -61,9 +62,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No text provided." }, { status: 400 });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY || process.env.OPENAI_REALTIME_API_KEY;
+  const apiKey = getOpenAiApiKey("study");
   if (!apiKey) {
-    return NextResponse.json({ error: "OpenAI key is not configured." }, { status: 500 });
+    return NextResponse.json({ error: "Study OpenAI key is not configured." }, { status: 500 });
   }
 
   const audioType = body.audioType && body.audioType in AUDIO_CONFIG ? body.audioType : "question";

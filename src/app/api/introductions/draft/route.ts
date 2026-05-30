@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import type { IntroAudience, IntroLength } from "@/product/interview-types";
 import { generateIntroductionDraft } from "@/server/introductions/introduction-ai";
+import { getOpenAiApiKey } from "@/server/openai/keys";
 
 export const runtime = "nodejs";
 
@@ -20,10 +21,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!getOpenAiApiKey("interview")) {
     return NextResponse.json(
       {
-        detail: "Introduction drafting needs a configured OpenAI API key.",
+        detail: "Introduction drafting needs the Interview OpenAI key configured.",
         error: "Introduction draft could not be generated.",
       },
       { status: 503 },

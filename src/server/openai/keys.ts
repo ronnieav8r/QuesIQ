@@ -1,3 +1,40 @@
-export function getOpenAiRealtimeApiKey() {
-  return process.env.OPENAI_REALTIME_API_KEY || process.env.OPENAI_API_KEY;
+type OpenAiProduct = "dpe" | "interview" | "study";
+
+export function getOpenAiApiKey(product: OpenAiProduct = "interview") {
+  if (product === "study") {
+    return process.env.OPENAI_STUDY_API_KEY || process.env.OPENAI_API_KEY;
+  }
+
+  if (product === "dpe") {
+    return process.env.OPENAI_DPE_API_KEY || process.env.OPENAI_API_KEY;
+  }
+
+  return process.env.OPENAI_INTERVIEW_API_KEY || process.env.OPENAI_API_KEY;
+}
+
+export function getOpenAiRealtimeApiKey(product: OpenAiProduct = "interview") {
+  if (product === "study") {
+    return (
+      process.env.OPENAI_STUDY_REALTIME_API_KEY ||
+      process.env.OPENAI_STUDY_API_KEY ||
+      process.env.OPENAI_REALTIME_API_KEY ||
+      process.env.OPENAI_API_KEY
+    );
+  }
+
+  if (product === "dpe") {
+    return (
+      process.env.OPENAI_DPE_REALTIME_API_KEY ||
+      process.env.OPENAI_DPE_API_KEY ||
+      process.env.OPENAI_REALTIME_API_KEY ||
+      process.env.OPENAI_API_KEY
+    );
+  }
+
+  return (
+    process.env.OPENAI_INTERVIEW_REALTIME_API_KEY ||
+    process.env.OPENAI_INTERVIEW_API_KEY ||
+    process.env.OPENAI_REALTIME_API_KEY ||
+    process.env.OPENAI_API_KEY
+  );
 }

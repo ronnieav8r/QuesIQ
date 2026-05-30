@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import type { AiPricingRecord } from "@/product/interview-types";
 import { requireAdminSession } from "@/server/admin";
+import { getOpenAiApiKey } from "@/server/openai/keys";
 import {
   acceptLatestPricingReview,
   listAiPricing,
@@ -74,10 +75,10 @@ export async function POST(request: Request) {
   };
 
   if (body.action === "review") {
-    if (!process.env.OPENAI_API_KEY) {
+    if (!getOpenAiApiKey("interview")) {
       return NextResponse.json(
         {
-          detail: "OPENAI_API_KEY is required for pricing reviews.",
+          detail: "OPENAI_INTERVIEW_API_KEY is required for pricing reviews.",
           error: "Pricing review failed.",
         },
         { status: 503 },

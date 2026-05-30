@@ -149,9 +149,12 @@ Last updated: 2026-05-30
   - shared Realtime audio input config uses near-field noise reduction,
     stricter server VAD, longer silence detection, and disabled automatic
     response interruption to reduce false interruptions from headset/cable noise
-  - Realtime endpoints prefer `OPENAI_REALTIME_API_KEY` for voice-only cost
-    tracking and fall back to `OPENAI_API_KEY` when the dedicated voice key is
-    not configured
+  - OpenAI calls now prefer product-specific keys for usage tracking:
+    `OPENAI_INTERVIEW_API_KEY`, `OPENAI_INTERVIEW_REALTIME_API_KEY`,
+    `OPENAI_STUDY_API_KEY`, `OPENAI_STUDY_REALTIME_API_KEY`,
+    `OPENAI_DPE_API_KEY`, and `OPENAI_DPE_REALTIME_API_KEY`; legacy shared
+    `OPENAI_API_KEY` and `OPENAI_REALTIME_API_KEY` names remain code fallbacks
+    during migration.
   - Realtime Interviewer prompt v4 and the client first-turn templates now
     specify a realistic interview opening, instruction hierarchy,
     mode/question/style composition, concise turn-taking, no setup narration,

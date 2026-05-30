@@ -10,6 +10,7 @@ import {
 } from "@/server/dpe/dpe-data";
 import { getDb } from "@/server/db/client";
 import { dpeDiagnosticEvents } from "@/server/db/schema";
+import { getOpenAiApiKey } from "@/server/openai/keys";
 
 type RouteContext = {
   params: Promise<{
@@ -57,7 +58,7 @@ export async function POST(_request: Request, context: RouteContext) {
     }
 
     const model = process.env.OPENAI_REVIEW_MODEL ?? "gpt-4o-mini";
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = getOpenAiApiKey("dpe");
 
     if (!apiKey) {
       const review = buildLocalDpeReviewFromTranscript(practiceSession.transcriptJson);

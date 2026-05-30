@@ -71,8 +71,12 @@ Last updated: 2026-05-30
     capture stays focused, resets draft/transcript state when switching between
     Introduction and TMAAT, fixes the mobile tab overflow, and shows TMAAT
     story detail in STAR order.
-  - Realtime voice calls now prefer `OPENAI_REALTIME_API_KEY`, falling back to
-    `OPENAI_API_KEY`; non-voice Responses API calls stay on `OPENAI_API_KEY`.
+  - OpenAI calls now prefer product-specific keys for usage tracking:
+    `OPENAI_INTERVIEW_API_KEY`, `OPENAI_INTERVIEW_REALTIME_API_KEY`,
+    `OPENAI_STUDY_API_KEY`, `OPENAI_STUDY_REALTIME_API_KEY`,
+    `OPENAI_DPE_API_KEY`, and `OPENAI_DPE_REALTIME_API_KEY`. Legacy shared
+    `OPENAI_API_KEY` and `OPENAI_REALTIME_API_KEY` names remain code fallbacks
+    during migration.
   - Realtime Interviewer prompt v4 now has a clearer instruction hierarchy,
     cleaner opening behavior, stronger mode/question/style composition,
     tighter turn-taking, and less risk of Que sounding like a product tutor.
@@ -636,10 +640,12 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 ## Watch Outs
 
-- A test `OPENAI_API_KEY` is currently stored locally in ignored `.env.local`;
-  rotate the key after the spike/test cycle because it was shared in chat.
-- For cleaner voice cost tracking, set `OPENAI_REALTIME_API_KEY` in `.env.local`
-  and Render. Leave non-voice OpenAI calls on `OPENAI_API_KEY`.
+- A test OpenAI key was previously stored locally in ignored `.env.local`;
+  rotate any key that was shared during spike/test work before using it in
+  production.
+- For cleaner cost tracking, set product-specific OpenAI keys in `.env.local`
+  and Render: Interview API/Realtime, Study API/Realtime, and DPE API/Realtime.
+  Legacy shared OpenAI keys are fallback-only during migration.
 - Prompt visibility principle: avoid meaningful hidden prompts in client/server
   code. Put behavior instructions in Admin prompt configs or Admin-visible
   component prompts; code should mainly pass runtime context and a minimal

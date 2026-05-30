@@ -138,11 +138,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
   }
 
-  const apiKey = getOpenAiRealtimeApiKey();
+  const apiKey = getOpenAiRealtimeApiKey("interview");
 
   if (!apiKey) {
     return NextResponse.json(
-      { error: "OPENAI_REALTIME_API_KEY or OPENAI_API_KEY is not configured on the server." },
+      {
+        error:
+          "OPENAI_INTERVIEW_REALTIME_API_KEY or OPENAI_INTERVIEW_API_KEY is not configured on the server.",
+      },
       { status: 500 },
     );
   }

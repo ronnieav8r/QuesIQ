@@ -5,6 +5,7 @@ import {
   createSessionDebrief,
   listSessionDebriefs,
 } from "@/server/debriefs/debriefs";
+import { getOpenAiApiKey } from "@/server/openai/keys";
 
 export const runtime = "nodejs";
 
@@ -59,10 +60,10 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!getOpenAiApiKey("interview")) {
     return NextResponse.json(
       {
-        detail: "Debrief needs OpenAI configured before Que can respond.",
+        detail: "Debrief needs the Interview OpenAI key configured before Que can respond.",
         error: "Debrief could not be created.",
       },
       { status: 503 },

@@ -4,6 +4,7 @@ import {
   estimateTokenCostMicroUsd,
   getActiveAiPricing,
 } from "@/server/pricing/ai-pricing";
+import { getOpenAiApiKey } from "@/server/openai/keys";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 
 export type IntroductionDraftResult = {
@@ -235,7 +236,7 @@ export async function generateIntroductionDraft(
         },
       }),
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${getOpenAiApiKey("interview")}`,
         "Content-Type": "application/json",
       },
       method: "POST",

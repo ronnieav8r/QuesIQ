@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
+import { getOpenAiApiKey } from "@/server/openai/keys";
 
 type Verdict = "almost" | "correct" | "good" | "missed";
 
@@ -22,10 +23,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY || process.env.OPENAI_REALTIME_API_KEY;
+  const apiKey = getOpenAiApiKey("study");
 
   if (!apiKey) {
-    return NextResponse.json({ error: "OpenAI key is not configured." }, { status: 500 });
+    return NextResponse.json({ error: "Study OpenAI key is not configured." }, { status: 500 });
   }
 
   const model = "gpt-4o-mini";

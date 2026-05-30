@@ -144,10 +144,18 @@ approved preview path. After prompt config records are migrated, model and voice
 come from the active admin-managed prompt config unless the code fallback is
 used.
 
-- `OPENAI_API_KEY` - required server-side OpenAI API key for text/evaluation/story calls
-- `OPENAI_REALTIME_API_KEY` - optional dedicated key for Realtime voice calls; falls back to `OPENAI_API_KEY` when unset
+- `OPENAI_INTERVIEW_API_KEY` - Interview text/evaluation/story/admin pricing calls
+- `OPENAI_INTERVIEW_REALTIME_API_KEY` - Interview, Story Lab, and verbal Debrief Realtime voice calls
+- `OPENAI_STUDY_API_KEY` - Study import, evaluation, and TTS calls
+- `OPENAI_STUDY_REALTIME_API_KEY` - reserved for Study Realtime voice flows
+- `OPENAI_DPE_API_KEY` - DPE review/scoring calls
+- `OPENAI_DPE_REALTIME_API_KEY` - DPE Realtime oral practice calls
 - `OPENAI_REALTIME_MODEL` - optional model override, defaults to `gpt-realtime`
 - `OPENAI_REALTIME_VOICE` - optional voice override, defaults to `marin`
+
+The legacy `OPENAI_API_KEY` and `OPENAI_REALTIME_API_KEY` names still work as
+code fallbacks during migration, but production should use the product-specific
+keys above for cleaner usage tracking and rotation.
 
 The app keeps the API key on the server. The browser sends its WebRTC offer and
 the current practice setup snapshot to `/api/realtime/session`, and the backend
