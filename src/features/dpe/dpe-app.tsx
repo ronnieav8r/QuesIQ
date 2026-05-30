@@ -39,6 +39,8 @@ type SessionAnswer = {
   skipped: boolean;
 };
 
+type CertificateOption = QuestionApiResponse["certificateTypes"][number];
+
 type ReviewJson = {
   status: "generated" | "fallback";
   promptConfigKey: string;
@@ -62,6 +64,7 @@ type LocalSession = {
   id: string;
   mode: PracticeMode;
   area: string;
+  certificateType: CertificateOption | null;
   task: string;
   questions: DpeQuestion[];
   answers: SessionAnswer[];
@@ -83,6 +86,7 @@ type StoredPracticeSession = {
   endedAt: string | null;
   createdAt: string;
   transcriptJson: {
+    certificateType?: CertificateOption | null;
     questions?: DpeQuestion[];
     answers?: SessionAnswer[];
   } | null;
@@ -214,21 +218,43 @@ export default function App() {
   const [reviewGenerating, setReviewGenerating] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [draftAnswer, setDraftAnswer] = useState("");
+  const [certificateTypeId, setCertificateTypeId] = useState("");
 
-  const areaOptions = useMemo(
-    () => (questionState.areas.length > 0 ? questionState.areas : ["I"]),
-    [questionState.areas]
+  const certificateOptions = useMemo(
+    () =>
+      questionState.certificateTypes.length > 0
+        ? questionState.certificateTypes
+        : buildCertificateOptionsFromQuestions(questionState.questions),
+    [questionState.certificateTypes, questionState.questions],
   );
+  const selectedCertificateType =
+    certificateOptions.find((certificateType) => certificateType.id === certificateTypeId) ??
+    certificateOptions[0] ??
+    null;
+  const certificateQuestions = useMemo(
+    () =>
+      selectedCertificateType
+        ? questionState.questions.filter(
+            (question) => question.certificateType?.id === selectedCertificateType.id,
+          )
+        : questionState.questions,
+    [questionState.questions, selectedCertificateType],
+  );
+  const practiceScope = useMemo(
+    () => buildQuestionScope(certificateQuestions, questionState),
+    [certificateQuestions, questionState],
+  );
+  const areaOptions = practiceScope.areas;
   const [area, setArea] = useState(areaOptions[0] ?? "I");
   const selectedArea = areaOptions.includes(area) ? area : (areaOptions[0] ?? "I");
   const taskOptions = useMemo(
-    () => questionState.tasksByArea[selectedArea] ?? ["A"],
-    [selectedArea, questionState.tasksByArea]
+    () => practiceScope.tasksByArea[selectedArea] ?? ["A"],
+    [selectedArea, practiceScope.tasksByArea]
   );
   const [task, setTask] = useState(taskOptions[0] ?? "A");
 
   const selectedTask = taskOptions.includes(task) ? task : (taskOptions[0] ?? "A");
-  const selectedQuestions = questionState.questions.filter(
+  const selectedQuestions = certificateQuestions.filter(
     (question) => question.acsArea === selectedArea && question.acsTask === selectedTask
   );
 
@@ -354,6 +380,7 @@ export default function App() {
       id: `local-${Date.now()}`,
       mode,
       area: selectedArea,
+      certificateType: selectedCertificateType,
       task: selectedTask,
       questions,
       answers: [],
@@ -371,6 +398,7 @@ export default function App() {
           acsTitle: "Private Pilot Airplane",
           acsArea: selectedArea,
           acsTask: selectedTask,
+          certificateType: selectedCertificateType,
           questions,
           startedAt: draftSession.startedAt.toISOString()
         })
@@ -616,6 +644,8 @@ export default function App() {
                 draftAnswer={draftAnswer}
                 mode={mode}
                 questions={selectedQuestions}
+                certificateOptions={certificateOptions}
+                selectedCertificateType={selectedCertificateType}
                 questionBankAvailable={questionBankAvailable}
                 questionCount={questionState.questions.length}
                 selectedTask={selectedTask}
@@ -628,6 +658,7 @@ export default function App() {
                 reviewGenerating={reviewGenerating}
                 onFinishEarly={finishEarly}
                 onModeChange={setMode}
+                onCertificateChange={setCertificateTypeId}
                 onRecordAnswer={recordAnswer}
                 onReset={resetPractice}
                 onStartSession={() => startSession(false)}
@@ -894,7 +925,9 @@ function HomeScreen({
 function PracticeScreen(props: {
   areaOptions: string[];
   area: string;
+  certificateOptions: CertificateOption[];
   selectedTask: string;
+  selectedCertificateType: CertificateOption | null;
   taskOptions: string[];
   mode: PracticeMode;
   questions: DpeQuestion[];
@@ -907,6 +940,7 @@ function PracticeScreen(props: {
   databaseAvailable: boolean | null;
   reviewGenerating: boolean;
   onAreaChange: (area: string) => void;
+  onCertificateChange: (certificateTypeId: string) => void;
   onTaskChange: (task: string) => void;
     onModeChange: (mode: PracticeMode) => void;
     onStartSession: () => void;
@@ -937,7 +971,9 @@ function PracticeScreen(props: {
 function PracticeSetupScreen({
   areaOptions,
   area,
+  certificateOptions,
   selectedTask,
+  selectedCertificateType,
   taskOptions,
   mode,
   questions,
@@ -945,6 +981,7 @@ function PracticeSetupScreen({
   questionCount,
   databaseAvailable,
   onAreaChange,
+  onCertificateChange,
     onTaskChange,
     onModeChange,
     onStartSession,
@@ -952,7 +989,9 @@ function PracticeSetupScreen({
   }: {
   areaOptions: string[];
   area: string;
+  certificateOptions: CertificateOption[];
   selectedTask: string;
+  selectedCertificateType: CertificateOption | null;
   taskOptions: string[];
   mode: PracticeMode;
   questions: DpeQuestion[];
@@ -960,6 +999,7 @@ function PracticeSetupScreen({
   questionCount: number;
   databaseAvailable: boolean | null;
   onAreaChange: (area: string) => void;
+  onCertificateChange: (certificateTypeId: string) => void;
     onTaskChange: (task: string) => void;
     onModeChange: (mode: PracticeMode) => void;
     onStartSession: () => void;
@@ -992,6 +1032,22 @@ function PracticeSetupScreen({
         </div>
 
         <div className="grid two-col mt-4">
+          <label className="field">
+            <span>Certificate</span>
+            <select
+              value={selectedCertificateType?.id ?? ""}
+              onChange={(event) => onCertificateChange(event.target.value)}
+              disabled={certificateOptions.length <= 1}
+            >
+              {certificateOptions.map((certificateType) => (
+                <option key={certificateType.id} value={certificateType.id}>
+                  {certificateType.title}
+                </option>
+              ))}
+              {certificateOptions.length === 0 && <option value="">Certificate pending</option>}
+            </select>
+          </label>
+
           <label className="field">
             <span>ACS Area</span>
             <select value={area} onChange={(event) => onAreaChange(event.target.value)}>
@@ -1027,6 +1083,7 @@ function PracticeSetupScreen({
           </div>
           <div className="stat-strip mt-4">
             <Stat label="Session prompts" value={`${Math.min(5, questions.length)}`} />
+            <Stat label="Certificate" value={selectedCertificateType?.code ?? "Pending"} />
             <Stat label="Hands-free" value={`${handsFreeCount}`} />
             <Stat label="Visual hints" value={`${visualCount}`} />
             <Stat
@@ -1111,7 +1168,8 @@ function PracticeSetupScreen({
             <div>
               <h2>Voice oral session</h2>
               <p>
-                Area {session.area}, Task {session.task} - {session.questions.length} selected prompts
+                {session.certificateType?.title ?? "Certificate pending"} - Area {session.area},
+                Task {session.task} - {session.questions.length} selected prompts
               </p>
             </div>
             <Mic />
@@ -1142,7 +1200,8 @@ function PracticeSetupScreen({
         <div>
           <h2>Local oral session</h2>
           <p>
-            Area {session.area}, Task {session.task} - {progress}
+            {session.certificateType?.title ?? "Certificate pending"} - Area {session.area}, Task{" "}
+            {session.task} - {progress}
           </p>
         </div>
         <Mic />
@@ -1226,7 +1285,9 @@ function ReviewScreen({
           <p>
             {reviewGenerating
               ? "Generating AI review..."
-              : `${modeLabel[session.mode]} - Area ${session.area}, Task ${session.task}`}
+              : `${modeLabel[session.mode]} - ${
+                  session.certificateType?.title ?? "Certificate pending"
+                } - Area ${session.area}, Task ${session.task}`}
           </p>
         </div>
         <BadgeCheck />
@@ -1452,6 +1513,45 @@ function normalizeStringList(value: unknown, fallback: string[]) {
     : fallback;
 }
 
+function buildCertificateOptionsFromQuestions(questions: DpeQuestion[]): CertificateOption[] {
+  const options = questions.reduce<Record<string, CertificateOption>>((accumulator, question) => {
+    if (!question.certificateType) return accumulator;
+
+    accumulator[question.certificateType.id] ??= {
+      code: question.certificateType.code,
+      id: question.certificateType.id,
+      questionCount: 0,
+      title: question.certificateType.title,
+    };
+    accumulator[question.certificateType.id].questionCount += 1;
+    return accumulator;
+  }, {});
+
+  return Object.values(options).sort((left, right) => left.title.localeCompare(right.title));
+}
+
+function buildQuestionScope(questions: DpeQuestion[], fallback: QuestionApiResponse) {
+  if (questions.length === 0) {
+    return {
+      areas: fallback.areas.length > 0 ? fallback.areas : ["I"],
+      tasksByArea:
+        Object.keys(fallback.tasksByArea).length > 0 ? fallback.tasksByArea : { I: ["A"] },
+    };
+  }
+
+  const areas = [...new Set(questions.map((question) => question.acsArea))].sort();
+  const tasksByArea = questions.reduce<Record<string, string[]>>((accumulator, question) => {
+    accumulator[question.acsArea] ??= [];
+    if (!accumulator[question.acsArea].includes(question.acsTask)) {
+      accumulator[question.acsArea].push(question.acsTask);
+    }
+    accumulator[question.acsArea].sort();
+    return accumulator;
+  }, {});
+
+  return { areas, tasksByArea };
+}
+
 function reviewFromStoredSession(storedSession: StoredPracticeSession): LocalSession | null {
   const transcript = isRecord(storedSession.transcriptJson) ? storedSession.transcriptJson : {};
   const questions = normalizeStoredQuestions(transcript.questions);
@@ -1465,6 +1565,7 @@ function reviewFromStoredSession(storedSession: StoredPracticeSession): LocalSes
     id: storedSession.id,
     mode: storedSession.mode,
     area: storedSession.acsArea ?? "-",
+    certificateType: normalizeStoredCertificateType(transcript.certificateType),
     task: storedSession.acsTask ?? "-",
     questions,
     answers,
@@ -1476,6 +1577,7 @@ function reviewFromStoredSession(storedSession: StoredPracticeSession): LocalSes
         id: storedSession.id,
         mode: storedSession.mode,
         area: storedSession.acsArea ?? "-",
+        certificateType: normalizeStoredCertificateType(transcript.certificateType),
         task: storedSession.acsTask ?? "-",
         questions,
         answers,
@@ -1498,6 +1600,24 @@ function normalizeStoredQuestions(value: unknown): DpeQuestion[] {
       typeof question.acsElementReference === "string"
     );
   });
+}
+
+function normalizeStoredCertificateType(value: unknown): CertificateOption | null {
+  if (!isRecord(value)) return null;
+  if (
+    typeof value.id !== "string" ||
+    typeof value.code !== "string" ||
+    typeof value.title !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    code: value.code,
+    id: value.id,
+    questionCount: typeof value.questionCount === "number" ? value.questionCount : 0,
+    title: value.title,
+  };
 }
 
 function normalizeStoredAnswers(value: unknown): SessionAnswer[] {
@@ -1753,6 +1873,14 @@ function HistoryScreen({
               <div className="question-meta">
                 <span className="pill">{storedSession.status}</span>
                 <span className="pill">{storedSession.mode}</span>
+                {normalizeStoredCertificateType(storedSession.transcriptJson?.certificateType) && (
+                  <span className="pill">
+                    {
+                      normalizeStoredCertificateType(storedSession.transcriptJson?.certificateType)
+                        ?.code
+                    }
+                  </span>
+                )}
                 <span className="pill">
                   Area {storedSession.acsArea ?? "-"}, Task {storedSession.acsTask ?? "-"}
                 </span>

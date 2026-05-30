@@ -7,6 +7,11 @@ type CreateSessionBody = {
   acsArea?: string;
   acsTask?: string;
   acsTitle?: string;
+  certificateType?: {
+    code?: string;
+    id?: string;
+    title?: string;
+  } | null;
   mode?: string;
   questions?: unknown[];
   startedAt?: string;
@@ -59,6 +64,14 @@ export async function POST(request: NextRequest) {
       acsArea: body.acsArea,
       acsTask: body.acsTask,
       acsTitle: body.acsTitle,
+      certificateType:
+        body.certificateType?.id && body.certificateType?.code && body.certificateType?.title
+          ? {
+              code: body.certificateType.code,
+              id: body.certificateType.id,
+              title: body.certificateType.title,
+            }
+          : null,
       mode: body.mode,
       questions: Array.isArray(body.questions) ? body.questions : [],
       startedAt: body.startedAt,

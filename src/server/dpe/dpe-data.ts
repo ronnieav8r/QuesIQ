@@ -79,6 +79,7 @@ export function fallbackQuestionResponse(): QuestionApiResponse {
 export async function listDpeQuestions(input?: {
   acsArea?: string;
   acsTask?: string;
+  certificateTypeId?: string;
   limit?: number;
 }): Promise<QuestionApiResponse> {
   const limit = Math.min(Math.max(input?.limit ?? 100, 1), 100);
@@ -128,6 +129,9 @@ export async function listDpeQuestions(input?: {
     .where(
       and(
         eq(dpeOralQuestions.active, true),
+        input?.certificateTypeId
+          ? eq(dpeOralQuestions.certificateTypeId, input.certificateTypeId)
+          : undefined,
         input?.acsArea ? eq(dpeOralQuestions.acsArea, input.acsArea) : undefined,
         input?.acsTask ? eq(dpeOralQuestions.acsTask, input.acsTask) : undefined,
       ),
@@ -190,7 +194,7 @@ export async function listDpeQuestions(input?: {
     }),
   );
 
-  if (questions.length === 0 && !input?.acsArea && !input?.acsTask) {
+  if (questions.length === 0 && !input?.acsArea && !input?.acsTask && !input?.certificateTypeId) {
     return fallbackQuestionResponse();
   }
 
@@ -200,7 +204,14 @@ export async function listDpeQuestions(input?: {
       acsTask: dpeOralQuestions.acsTask,
     })
     .from(dpeOralQuestions)
-    .where(eq(dpeOralQuestions.active, true));
+    .where(
+      and(
+        eq(dpeOralQuestions.active, true),
+        input?.certificateTypeId
+          ? eq(dpeOralQuestions.certificateTypeId, input.certificateTypeId)
+          : undefined,
+      ),
+    );
 
   return buildQuestionResponse(questions, true, allRows);
 }
@@ -230,10 +241,31 @@ function buildQuestionResponse(
   return {
     available,
     areas: areas.length ? areas : ["I"],
+    certificateTypes: buildCertificateTypeOptions(questions),
     countsByArea,
     questions,
     tasksByArea: Object.keys(tasksByArea).length ? tasksByArea : { I: ["A"] },
   };
+}
+
+function buildCertificateTypeOptions(questions: DpeQuestion[]): QuestionApiResponse["certificateTypes"] {
+  const options = questions.reduce<Record<string, QuestionApiResponse["certificateTypes"][number]>>(
+    (accumulator, question) => {
+      if (!question.certificateType) return accumulator;
+
+      accumulator[question.certificateType.id] ??= {
+        code: question.certificateType.code,
+        id: question.certificateType.id,
+        questionCount: 0,
+        title: question.certificateType.title,
+      };
+      accumulator[question.certificateType.id].questionCount += 1;
+      return accumulator;
+    },
+    {},
+  );
+
+  return Object.values(options).sort((left, right) => left.title.localeCompare(right.title));
 }
 
 export async function listDpePracticeSessions(userId: string) {
@@ -249,6 +281,11 @@ export async function createDpePracticeSession(input: {
   acsArea: string;
   acsTask: string;
   acsTitle: string;
+  certificateType?: {
+    code: string;
+    id: string;
+    title: string;
+  } | null;
   mode: string;
   questions: unknown[];
   startedAt?: string;
@@ -265,6 +302,7 @@ export async function createDpePracticeSession(input: {
       status: "in_progress",
       transcriptJson: {
         answers: [],
+        certificateType: input.certificateType ?? null,
         questions: input.questions,
       },
       userId: input.userId,
