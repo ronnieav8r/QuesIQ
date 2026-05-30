@@ -22,7 +22,23 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  return NextResponse.json(await getDpeProfile(session.user.id));
+  try {
+    return NextResponse.json({
+      available: true,
+      ...(await getDpeProfile(session.user.id)),
+    });
+  } catch (error) {
+    console.error("DPE profile unavailable", error);
+    return NextResponse.json(
+      {
+        available: false,
+        error: "DPE profile storage is not available yet.",
+        profile: null,
+        target: null,
+      },
+      { status: 200 },
+    );
+  }
 }
 
 export async function PUT(request: NextRequest) {
@@ -32,20 +48,34 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = (await request.json()) as DpeProfileBody;
+  try {
+    const body = (await request.json()) as DpeProfileBody;
 
-  return NextResponse.json(
-    await saveDpeProfile({
-      aircraft: body.aircraft,
-      checkrideDate: body.checkrideDate,
-      flightSchool: body.flightSchool,
-      instructor: body.instructor,
-      knownDpeName: body.knownDpeName,
-      personalNotes: body.personalNotes,
-      preferredName: body.preferredName,
-      schoolContext: body.schoolContext,
-      userId: session.user.id,
-      weakAreaNotes: body.weakAreaNotes,
-    }),
-  );
+    return NextResponse.json({
+      available: true,
+      ...(await saveDpeProfile({
+        aircraft: body.aircraft,
+        checkrideDate: body.checkrideDate,
+        flightSchool: body.flightSchool,
+        instructor: body.instructor,
+        knownDpeName: body.knownDpeName,
+        personalNotes: body.personalNotes,
+        preferredName: body.preferredName,
+        schoolContext: body.schoolContext,
+        userId: session.user.id,
+        weakAreaNotes: body.weakAreaNotes,
+      })),
+    });
+  } catch (error) {
+    console.error("DPE profile save failed", error);
+    return NextResponse.json(
+      {
+        available: false,
+        error: "DPE profile storage is not available yet.",
+        profile: null,
+        target: null,
+      },
+      { status: 200 },
+    );
+  }
 }

@@ -21,6 +21,19 @@ function getRealtimeCallId(location?: string | null) {
   return location?.split("/").filter(Boolean).at(-1);
 }
 
+async function safeCompleteAiRun(
+  aiRunId: string | null,
+  input: Parameters<typeof completeAiRun>[1],
+) {
+  if (!aiRunId) return;
+
+  try {
+    await completeAiRun(aiRunId, input);
+  } catch (error) {
+    console.error("DPE realtime AI run completion unavailable", error);
+  }
+}
+
 function buildDpeInstructions(practiceSession: Awaited<ReturnType<typeof getOwnedDpePracticeSession>>) {
   const transcript =
     typeof practiceSession?.transcriptJson === "object" &&
@@ -71,27 +84,46 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing DPE session id." }, { status: 400 });
   }
 
-  const practiceSession = await getOwnedDpePracticeSession(body.sessionId, appSession.user.id);
+  let practiceSession: Awaited<ReturnType<typeof getOwnedDpePracticeSession>>;
+
+  try {
+    practiceSession = await getOwnedDpePracticeSession(body.sessionId, appSession.user.id);
+  } catch (error) {
+    console.error("DPE realtime session setup unavailable", error);
+    return NextResponse.json(
+      {
+        error: "DPE session storage is not available yet. Use typed practice until setup storage is ready.",
+      },
+      { status: 503 },
+    );
+  }
 
   if (!practiceSession) {
     return NextResponse.json({ error: "DPE session was not found." }, { status: 404 });
   }
 
-  const aiRun = await startAiRun({
-    model,
-    promptConfigKey: "dpe_realtime_oral",
-    promptConfigVersion: 1,
-    promptSnapshot: buildDpeInstructions(practiceSession),
-    rawJson: {
-      acsArea: practiceSession.acsArea,
-      acsTask: practiceSession.acsTask,
-      dpeSessionId: practiceSession.id,
-      endpoint: "/api/dpe/realtime/session",
-      product: "dpe",
-    },
-    runType: "realtime",
-    userId: appSession.user.id,
-  });
+  let aiRunId: string | null = null;
+
+  try {
+    const aiRun = await startAiRun({
+      model,
+      promptConfigKey: "dpe_realtime_oral",
+      promptConfigVersion: 1,
+      promptSnapshot: buildDpeInstructions(practiceSession),
+      rawJson: {
+        acsArea: practiceSession.acsArea,
+        acsTask: practiceSession.acsTask,
+        dpeSessionId: practiceSession.id,
+        endpoint: "/api/dpe/realtime/session",
+        product: "dpe",
+      },
+      runType: "realtime",
+      userId: appSession.user.id,
+    });
+    aiRunId = aiRun.id;
+  } catch (error) {
+    console.error("DPE realtime AI run tracking unavailable", error);
+  }
 
   const sessionConfig = {
     audio: {
@@ -124,7 +156,7 @@ export async function POST(request: Request) {
 
     if (!realtimeResponse.ok) {
       const detail = await realtimeResponse.text();
-      await completeAiRun(aiRun.id, {
+      await safeCompleteAiRun(aiRunId, {
         errorMessage: detail,
         rawJson: {
           dpeSessionId: practiceSession.id,
@@ -145,7 +177,7 @@ export async function POST(request: Request) {
 
     const realtimeCallId = getRealtimeCallId(realtimeResponse.headers.get("Location"));
 
-    await completeAiRun(aiRun.id, {
+    await safeCompleteAiRun(aiRunId, {
       providerRequestId: realtimeCallId,
       rawJson: {
         dpeSessionId: practiceSession.id,
@@ -161,7 +193,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    await completeAiRun(aiRun.id, {
+    await safeCompleteAiRun(aiRunId, {
       errorMessage: error instanceof Error ? error.message : "Unknown network error.",
       rawJson: {
         dpeSessionId: practiceSession.id,
