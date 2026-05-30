@@ -4,10 +4,12 @@ import { BookOpen, ChevronRight, Plus } from "lucide-react";
 import { auth } from "@/auth";
 import { getStudyDecksWithStats, getStudyUserStats } from "@/features/study/study-data";
 import { StudyDeckCard } from "@/features/study/study-deck-card";
+import { isAdminEmail } from "@/server/admin";
 
 export default async function StudyHome() {
   const session = await auth();
   const userId = session?.user?.id;
+  const isAdmin = isAdminEmail(session?.user?.email);
 
   let studyDataError = false;
   let userDecks: Awaited<ReturnType<typeof getStudyDecksWithStats>> = [];
@@ -45,6 +47,11 @@ export default async function StudyHome() {
           <h1>Ready to study?</h1>
           <p>{supportingCopy}</p>
         </div>
+        {isAdmin && (
+          <Link className="button-link secondary" href="/admin?product=study">
+            Admin
+          </Link>
+        )}
       </div>
 
       {studyDataError && (

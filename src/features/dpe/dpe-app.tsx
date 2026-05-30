@@ -18,6 +18,7 @@ import {
   SkipForward,
   User
 } from "lucide-react";
+import Link from "next/link";
 import { signIn, signOut } from "next-auth/react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
@@ -625,6 +626,11 @@ export default function App() {
           </div>
           <div className="inline-actions">
             <span className="muted">{authState.user?.email}</span>
+            {authState.isAdmin && (
+              <Link className="button-link secondary" href="/admin?product=dpe">
+                Admin
+              </Link>
+            )}
             <button className="button icon-only" aria-label="Settings">
               <Settings />
             </button>

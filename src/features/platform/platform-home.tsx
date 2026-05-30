@@ -2,12 +2,32 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import { AuthControl, AuthView, useAuthSession } from "@/components/auth-control";
 import { platformProducts } from "@/features/platform/products";
 
 export default function PlatformHome() {
   const authSession = useAuthSession();
+  const [adminAccess, setAdminAccess] = useState(false);
+
+  useEffect(() => {
+    if (!authSession?.user) {
+      return;
+    }
+
+    async function loadAdminAccess() {
+      try {
+        const response = await fetch("/api/admin/status");
+        const body = (await response.json()) as { admin?: boolean };
+        setAdminAccess(Boolean(body.admin));
+      } catch {
+        setAdminAccess(false);
+      }
+    }
+
+    void loadAdminAccess();
+  }, [authSession?.user]);
 
   if (authSession === undefined) {
     return null;
@@ -74,9 +94,11 @@ export default function PlatformHome() {
                 <Link className="button-link secondary" href="/account">
                   Account
                 </Link>
-                <Link className="button-link secondary" href="/admin">
-                  Admin
-                </Link>
+                {adminAccess && (
+                  <Link className="button-link secondary" href="/admin">
+                    Admin
+                  </Link>
+                )}
               </div>
             </section>
           </div>

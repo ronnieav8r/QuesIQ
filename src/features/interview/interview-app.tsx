@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   BookOpenText,
@@ -16,7 +17,6 @@ import {
 } from "lucide-react";
 
 import { AuthControl, AuthView, useAuthSession } from "@/components/auth-control";
-import { AdminView } from "@/components/interview/admin-view";
 import { ClientDiagnostics } from "@/components/interview/client-diagnostics";
 import { Dashboard } from "@/components/interview/dashboard";
 import { DebriefView } from "@/components/interview/debrief-view";
@@ -691,7 +691,7 @@ export default function Home() {
                 aria-expanded={appMenuOpen}
                 aria-label={appMenuOpen ? "Close menu" : "Open menu"}
                 className={
-                  activeView === "me" || activeView === "admin"
+                  activeView === "me"
                     ? "app-menu-button active"
                     : "app-menu-button"
                 }
@@ -712,11 +712,9 @@ export default function Home() {
                     <span>Me</span>
                   </button>
                   {adminAccess && (
-                    <button
-                      className={activeView === "admin" ? "active" : undefined}
-                      onClick={() => openView("admin")}
+                    <Link
+                      href="/admin?product=interview"
                       role="menuitem"
-                      type="button"
                     >
                       <ShieldCheck
                         aria-hidden="true"
@@ -724,7 +722,7 @@ export default function Home() {
                         strokeWidth={2.2}
                       />
                       <span>Admin</span>
-                    </button>
+                    </Link>
                   )}
                 </div>
               )}
@@ -886,7 +884,6 @@ export default function Home() {
               selectedJobTarget={activeJobTarget}
             />
           )}
-          {signedIn && activeView === "admin" && adminAccess && <AdminView />}
           {signedIn && activeView === "onboarding" && (
             <OnboardingView
               interviewContext={interviewContext}

@@ -1,9 +1,14 @@
-import { AdminView } from "@/components/interview/admin-view";
+import { AdminConsole } from "@/features/admin/admin-console";
 import { PlatformPlaceholder, PlatformRouteShell } from "@/features/platform/platform-route-shell";
 import { requireAdminSession } from "@/server/admin";
 
-export default async function AdminPage() {
+type Props = {
+  searchParams?: Promise<{ product?: string }>;
+};
+
+export default async function AdminPage({ searchParams }: Props) {
   const appSession = await requireAdminSession();
+  const { product } = (await searchParams) ?? {};
 
   if (!appSession) {
     return (
@@ -20,7 +25,7 @@ export default async function AdminPage() {
 
   return (
     <PlatformRouteShell eyebrow="QuesIQ Admin" title="Admin">
-      <AdminView />
+      <AdminConsole product={product} />
     </PlatformRouteShell>
   );
 }

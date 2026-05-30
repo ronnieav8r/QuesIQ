@@ -559,7 +559,12 @@ function aiRunRawJsonText(run: AiRunRecord) {
   return run.rawJson ? JSON.stringify(run.rawJson) : "";
 }
 
-export function AdminView() {
+type AdminViewProps = {
+  eyebrow?: string;
+  title?: string;
+};
+
+export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps) {
   const [configs, setConfigs] = useState<PromptConfigRecord[]>([]);
   const [components, setComponents] = useState<PromptComponentRecord[]>([]);
   const [aiRuns, setAiRuns] = useState<AiRunRecord[]>([]);
@@ -1623,8 +1628,8 @@ export function AdminView() {
     <section className="screen admin-screen" aria-labelledby="admin-title">
       <div className="screen-toolbar">
         <div>
-          <p className="eyebrow">Admin</p>
-          <h1 id="admin-title">Admin</h1>
+          <p className="eyebrow">{eyebrow}</p>
+          <h1 id="admin-title">{title}</h1>
         </div>
         <button className="secondary" onClick={refreshAdminSection} type="button">
           Refresh
