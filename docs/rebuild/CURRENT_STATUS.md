@@ -1,6 +1,6 @@
 # Current Status
 
-Last updated: 2026-05-29
+Last updated: 2026-05-30
 
 ## Rebuild Location
 
@@ -25,6 +25,32 @@ Last updated: 2026-05-29
 
 ## Built So Far
 
+- Public marketing homepage regeneration:
+  - `/` now renders a QuesIQ platform marketing homepage instead of the signed-in
+    platform product picker
+  - new homepage file:
+    `src/features/marketing/marketing-home.tsx`
+  - homepage sections include brand nav, hero CTA, dashboard-style product
+    preview, Interview/Study/DPE product cards, how-it-works, trust grid,
+    proof stats, and footer product links
+  - CTAs route into the shared login flow with product-aware `next` paths
+  - app metadata now describes the broader QuesIQ AI practice platform instead
+    of only QuesIQ Interview
+- Shared platform login/account gateway:
+  - `/login` supports product-aware redirects such as `?next=/interview`,
+    `?next=/study`, and `?next=/dpe`
+  - `/account` now acts as a product hub for the shared Auth.js account
+  - shared product definitions live in `src/features/platform/products.ts`
+- QuesIQ DPE import:
+  - DPE lives as its own product lane under `/dpe`
+  - DPE APIs live under `/api/dpe/*`
+  - DPE-owned data uses `dpe_*` tables in the same shared Postgres database and
+    shared Auth.js user id boundary
+  - baseline DPE content/session/profile/review tables were added in migration
+    `0050_add_dpe_baseline_tables.sql`
+  - baseline Private Pilot ASEL placeholder content is seeded in the migration
+  - DPE voice uses the existing direct OpenAI Realtime pattern; assume it works
+    until the user resumes voice troubleshooting
 - Rebuild plan, architecture, decisions, scope, and handoff docs
 - Next.js TypeScript baseline and Render readiness files
 - Responsive app shell with intentional mobile and desktop compositions
@@ -462,6 +488,12 @@ Last updated: 2026-05-29
 
 The current coded app has passed:
 
+- Latest marketing homepage regeneration passed `npm run typecheck`,
+  `npm run lint`, and `npm run build` on 2026-05-29. Local headless browser
+  screenshot QA could not be completed because Chrome and Edge failed with a GPU
+  runtime error before writing a screenshot.
+- Latest DPE import/shared login work passed `npm run typecheck`,
+  `npm run lint`, and `npm run build` before the marketing homepage pass.
 - ESLint
 - TypeScript check
 - Latest local feedback/progression/UI foundation/user-screen cleanup/Quira
@@ -593,60 +625,67 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 
 ## Next Work
 
-1. Deploy and user-confirm QA the latest Story Lab, prompt, debrief,
+1. Deploy and user-confirm QA the new marketing homepage at `quesiq.com`,
+   especially desktop/mobile visual spacing, CTA routing to `/login?next=...`,
+   and product card links for Interview, Study, and DPE.
+2. Deploy and verify DPE migration `0050_add_dpe_baseline_tables.sql` actually
+   runs in Render logs, then confirm the previous production errors for missing
+   `dpe_certificate_types`, `dpe_oral_questions`, and
+   `dpe_practice_sessions` are gone.
+3. Deploy and user-confirm QA the latest Story Lab, prompt, debrief,
    progression, and job-target UI changes on `quesiq-web`, making sure
    migrations through `0048_add_study_library_taxonomy.sql` run before using
    the updated Story Lab or Study library taxonomy paths in production.
-2. Run/user-confirm Study library taxonomy QA: after migrations through `0048`,
+4. Run/user-confirm Study library taxonomy QA: after migrations through `0048`,
    run `scripts/study/seed_test_decks.sql`, confirm `/study/library` filters by
    subject, text tag, and mapped audience tags, then run
    `scripts/study/cleanup_test_decks.sql`.
-3. Run/user-confirm migration QA for Bubble levels and quests: Admin >
+5. Run/user-confirm migration QA for Bubble levels and quests: Admin >
    Progression > Levels shows Rookie through Master, Admin > Progression >
    Quests shows 37 active definitions, Admin level/quest edits save, and Home
    awards quest XP once per quest.
-4. Add/confirm `ADMIN_EMAILS` in Render before QAing Admin; monthly pricing
+6. Add/confirm `ADMIN_EMAILS` in Render before QAing Admin; monthly pricing
    checks are suspended/deprecated, so `PRICING_CHECK_SECRET` is not an active
    QA blocker unless manual pricing-review endpoint testing resumes.
-5. Keep pricing updates manual until candidate preview/writeback or a
+7. Keep pricing updates manual until candidate preview/writeback or a
    deterministic pricing parser is built.
-6. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
+8. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
    new completed reviews award XP once, Home shows saved streak/level/latest
    next action, level thresholds load from Admin, and retry/reopen does not
    double-count.
-7. QA scoring polish: Recent Scores uses the latest 10 reviews, Skill Scores is
+9. QA scoring polish: Recent Scores uses the latest 10 reviews, Skill Scores is
    all-time, Overall is highlighted, and sub-120-second sessions appear in
    History without scoring or XP.
-8. QA rotating post-review beta feedback prompts in production and confirm Admin
+10. QA rotating post-review beta feedback prompts in production and confirm Admin
    Feedback stores the exact `rating_prompt` for review usefulness, voice
    realism, transcript accuracy, and scoring fairness.
-9. QA Admin Diagnostics in production: trigger or observe a failed API response
+11. QA Admin Diagnostics in production: trigger or observe a failed API response
    and a Realtime connection issue, then confirm the Diagnostics tab shows
    sanitized event rows without secrets, raw audio, or large transcripts.
-10. QA the Introduction Builder AI draft/extraction flow in production: after
+12. QA the Introduction Builder AI draft/extraction flow in production: after
    Talk with Que transcript capture, verify `/api/introductions/draft` runs,
    fills the structured intro fields, and saves the polished intro with raw
    notes retained.
-11. QA the Story Lab Talk with Que entry points in production, especially any
+13. QA the Story Lab Talk with Que entry points in production, especially any
    `client.session.error` behavior on the Introduction conversation endpoint.
-12. QA installable app behavior on iOS and Android: add QuesIQ to the home
+14. QA installable app behavior on iOS and Android: add QuesIQ to the home
    screen, launch it, and confirm standalone mode uses the expected icon,
    splash/background color, and app start URL.
-13. Consider mobile bottom-nav auto-hide later as a guarded UX experiment:
+15. Consider mobile bottom-nav auto-hide later as a guarded UX experiment:
    visible by default, hide only on meaningful downward scroll, show
    immediately on upward scroll, and never hide during active voice/session,
    error, modal, save, or onboarding states.
-14. Later Quira work: replace the curated Help panel with an AI chat bot backed
+16. Later Quira work: replace the curated Help panel with an AI chat bot backed
    by a maintained QuesIQ product knowledge base.
-15. Product gap backlog from the Bubble reference, ordered by current user value:
+17. Product gap backlog from the Bubble reference, ordered by current user value:
    richer coaching memory controls, tuning XP rules from beta behavior, and
    AI-backed Quira support.
-16. Treat standalone anonymous bug reports, in-app marketing/blog pages,
+18. Treat standalone anonymous bug reports, in-app marketing/blog pages,
    payments, industry packs, mascot work, and VAPI parity as lower-priority
    until the core practice loop and retention features are stronger.
-17. Continue deploy-based QA on `quesiq-web` while localhost preview is
+19. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
-18. Before broader live traffic, establish the documented branch/release flow:
+20. Before broader live traffic, establish the documented branch/release flow:
    scoped `codex/*` work branches, `main` as stable integration, and `live` as
    the exact production branch after the current production commit is confirmed.
 

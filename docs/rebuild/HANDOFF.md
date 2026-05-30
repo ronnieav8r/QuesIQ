@@ -1,15 +1,54 @@
 # Handoff
 
-Last updated: 2026-05-29
+Last updated: 2026-05-30
 
 ## Immediate Handoff Snapshot
 
+- Latest local work is the QuesIQ marketing homepage regeneration plus recent
+  platform/DPE import work. It is locally verified but not yet visually
+  user-confirmed in production.
+- Root `/` now renders the new marketing homepage in
+  `src/features/marketing/marketing-home.tsx`, inspired by the user's two
+  generated references: dark navy/purple/orange QuesIQ brand, hero CTA,
+  product previews for Interview/Study/DPE, dashboard-style visual, trust
+  section, and stats row.
+- The old root page export was replaced in `src/app/page.tsx`. Shared platform
+  product routing still exists in `src/features/platform/platform-home.tsx`,
+  but the public homepage is now marketing-first.
+- Site metadata now presents the broader platform, not only Interview:
+  `src/app/layout.tsx` title is `QuesIQ | AI Practice Platform`, with dark
+  theme color.
+- Marketing homepage styling was appended to `src/app/globals.css` under
+  `.marketing-*` classes. The CSS includes desktop and mobile responsive
+  behavior; the user still needs visual confirmation because local headless
+  browser screenshot attempts failed on this machine with Chrome/Edge GPU
+  runtime errors.
+- Latest local verification for the marketing homepage passed on 2026-05-29:
+  `npm run typecheck`, `npm run lint`, and `npm run build`.
+- Marketing homepage code is present in the current local Git history as commit
+  `6fb6271 Regenerated the homepage marketing`.
+- QuesIQ DPE has been imported as a separate product lane under `/dpe` and
+  `/api/dpe/*`, using DPE-owned `dpe_*` tables keyed by the shared Auth.js user
+  id. Voice is assumed working for now; deeper voice troubleshooting is parked
+  for later.
+- Important DPE deploy watch-out: migration
+  `drizzle/0050_add_dpe_baseline_tables.sql` exists and the Drizzle journal was
+  updated so Render should actually apply it on next deploy. The production log
+  error `relation "dpe_*" does not exist` meant the table migration had not run,
+  not that the app code was using a separate database.
+- Shared login/account gateway slice is in place: `/login` accepts `next` and
+  product targeting, `/account` is a product hub, and CTAs can route users into
+  Interview, Study, or DPE after sign-in.
+- Original marketing reference was found in
+  `C:\Users\weeks\Documents\github\quira-chat-server`, especially
+  `public/index.html` and brand assets. Treat it as reference material only;
+  do not import the old Express server as the active platform.
 - QuesIQ Study import handoff now lives at
   `docs/products/study/HANDOFF.md`. Use it before continuing the import from
   `C:\Users\weeks\Documents\github\claude_flashcards`; the remaining Study
   work is now mostly migration/seed QA, production permission QA, R2 env
   verification, mobile visual QA, and real public-library content curation.
-- Latest local work is ready for deploy QA, not yet user-confirmed in
+- Latest broader local work is ready for deploy QA, not yet user-confirmed in
   production.
 - User preference for future work: Codex should handle the full edit, verify,
   commit/push, and deploy-prep flow when requested. Do not assume the user will
