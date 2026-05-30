@@ -41,6 +41,24 @@ type SessionAnswer = {
 
 type CertificateOption = QuestionApiResponse["certificateTypes"][number];
 
+type ProgressFocus = {
+  answered: number;
+  key: string;
+  label: string;
+  score: number;
+  skipped: number;
+  weak: number;
+};
+
+type ProgressSummary = {
+  answeredPrompts: number;
+  completedSessions: number;
+  latestReview: LocalSession | null;
+  nextPracticeAction: string;
+  skippedPrompts: number;
+  weakFocuses: ProgressFocus[];
+};
+
 type ReviewJson = {
   status: "generated" | "fallback";
   promptConfigKey: string;
@@ -634,7 +652,9 @@ export default function App() {
                 questionBankAvailable={questionBankAvailable}
                 questionCount={questionState.questions.length}
                 dpeProfile={dpeProfile}
+                currentSession={session}
                 onPractice={() => setScreen("practice")}
+                storedSessions={storedSessions}
               />
             )}
             {screen === "practice" && (
@@ -824,24 +844,24 @@ function SignInScreen({
 }
 
 function HomeScreen({
+  currentSession,
   dpeProfile,
   questionCount,
   questionBankAvailable,
-  onPractice
+  onPractice,
+  storedSessions,
 }: {
+  currentSession: LocalSession | null;
   dpeProfile: DpeProfileState;
   questionCount: number;
   questionBankAvailable: boolean | null;
   onPractice: () => void;
+  storedSessions: StoredPracticeSession[];
 }) {
-  const readiness = [
-    {
-      area: "I",
-      label: areaLabels.I,
-      count: questionCount,
-      score: questionCount > 0 ? 58 : 0
-    }
-  ];
+  const progress = buildProgressSummary([
+    ...(currentSession?.endedAt ? [currentSession] : []),
+    ...storedSessions.map((storedSession) => reviewFromStoredSession(storedSession)).filter(isSession),
+  ]);
   const targetLine = [
     "Private Pilot ASEL",
     dpeProfile.aircraft,
@@ -866,8 +886,8 @@ function HomeScreen({
       <div className="panel">
         <div className="section-head">
           <div>
-            <h3>Oral warmup</h3>
-            <p>Begin with Area I, Task A: pilot qualifications and required documents.</p>
+            <h3>{progress.latestReview ? "Recommended follow-up" : "Oral warmup"}</h3>
+            <p>{progress.nextPracticeAction}</p>
           </div>
           <BadgeCheck />
         </div>
@@ -875,10 +895,11 @@ function HomeScreen({
 
       <div className="stat-strip">
           <Stat label="Question bank" value={`${questionCount}`} />
+          <Stat label="Sessions" value={`${progress.completedSessions}`} />
+          <Stat label="Answered" value={`${progress.answeredPrompts}`} />
+          <Stat label="Skipped" value={`${progress.skippedPrompts}`} />
           <Stat label="Certificate" value="PPL ASEL" />
           <Stat label="Aircraft" value={dpeProfile.aircraft || "-"} />
-          <Stat label="Voice stack" value="Realtime" />
-          <Stat label="DPE" value={dpeProfile.knownDpeName || "-"} />
           <Stat label="Content" value={questionBankAvailable ? "DB" : "Fallback"} />
         </div>
 
@@ -887,32 +908,43 @@ function HomeScreen({
           <div className="section-head">
             <div>
               <h3>Weak ACS areas</h3>
-              <p>Scores are placeholders until sessions are stored.</p>
+              <p>
+                {progress.completedSessions
+                  ? "Based on skipped prompts and answers that need more detail."
+                  : "Complete a typed session to start tracking weak areas."}
+              </p>
             </div>
             <ListChecks />
           </div>
           <div className="grid mt-4">
-            {readiness.map((item) => (
-              <div className="raised-card" key={item.area}>
+            {progress.weakFocuses.map((item) => (
+              <div className="raised-card" key={item.key}>
                 <div className="section-head">
-                  <strong>
-                    Area {item.area}: {item.label}
-                  </strong>
-                  <span className="pill">{item.count} questions</span>
+                  <strong>{item.label}</strong>
+                  <span className="pill">{item.weak} weak</span>
                 </div>
                 <div className="readiness-bar" aria-label={`${item.score}% readiness`}>
                   <span style={{ width: `${item.score}%` }} />
                 </div>
               </div>
             ))}
+            {progress.weakFocuses.length === 0 && (
+              <div className="raised-card">
+                <strong>No weak area signal yet</strong>
+                <p>Finish a typed practice set and skipped or short answers will appear here.</p>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="panel">
           <div className="section-head">
             <div>
-              <h3>First run focus</h3>
-              <p>Keep oral practice hands-free while building visual checks as their own lane.</p>
+              <h3>Progress scaffold</h3>
+              <p>
+                Reviews are deterministic until AI review is available: completion, skipped prompts,
+                answer depth, and ACS references drive the next recommendation.
+              </p>
             </div>
             <Radio />
           </div>
@@ -1276,6 +1308,7 @@ function ReviewScreen({
     ? Math.round((session.answers.length / session.questions.length) * 100)
     : 0;
   const review = normalizeReview(session.review, buildLocalReview(session));
+  const sessionProgress = buildSessionProgress(session);
 
   return (
     <section className="screen">
@@ -1298,6 +1331,7 @@ function ReviewScreen({
         <Stat label="Answered" value={`${answered}`} />
         <Stat label="Skipped" value={`${skipped}`} />
         <Stat label="Visual prompts" value={`${visualPrompts}`} />
+        <Stat label="Weak signals" value={`${sessionProgress.weakFocuses.length}`} />
       </div>
 
       <div className="grid two-col">
@@ -1326,6 +1360,12 @@ function ReviewScreen({
               <div className="raised-card">
                 <strong>Weak ACS references</strong>
                 <ReviewList items={review.weakAcsReferences} />
+              </div>
+            )}
+            {sessionProgress.weakFocuses.length > 0 && (
+              <div className="raised-card">
+                <strong>Weak area/task focus</strong>
+                <ReviewList items={sessionProgress.weakFocuses.map((focus) => focus.label)} />
               </div>
             )}
           </div>
@@ -1374,30 +1414,25 @@ function ReviewScreen({
 
 function buildLocalReview(session: LocalSession) {
   const answered = session.answers.filter((answer) => !answer.skipped && answer.response).length;
-  const skipped = session.answers.filter((answer) => answer.skipped).length;
+  const progress = buildSessionProgress(session);
 
   return {
     status: "fallback",
     promptConfigKey: "local_review_placeholder",
     promptConfigVersion: 1,
     model: null,
-    summary:
-      "The transcript was saved. AI review will appear here when OpenAI review generation is configured.",
+    summary: progress.summary,
     scores: {
-      knowledge: null,
-      riskManagement: null,
-      scenarioJudgment: null,
-      communication: null,
-      checkrideReadiness: null
+      knowledge: progress.scores.knowledge,
+      riskManagement: progress.scores.riskManagement,
+      scenarioJudgment: progress.scores.scenarioJudgment,
+      communication: progress.scores.communication,
+      checkrideReadiness: progress.scores.checkrideReadiness
     },
     whatWorked: [`${answered} prompt${answered === 1 ? "" : "s"} answered.`],
-    whatToSharpen: skipped
-      ? [`${skipped} prompt${skipped === 1 ? "" : "s"} skipped or left blank.`]
-      : ["Use complete, checkride-style answers with examples when helpful."],
-    weakAcsReferences: session.answers
-      .filter((answer) => answer.skipped || !answer.response)
-      .map((answer) => answer.question.acsElementReference),
-    nextPracticeAction: "Repeat this task and answer each prompt in complete sentences."
+    whatToSharpen: progress.whatToSharpen,
+    weakAcsReferences: progress.weakAcsReferences,
+    nextPracticeAction: progress.nextPracticeAction
   } satisfies ReviewJson;
 }
 
@@ -1471,6 +1506,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function isSession(value: LocalSession | null): value is LocalSession {
+  return value !== null;
+}
+
 function normalizeReview(value: unknown, fallback: ReviewJson): ReviewJson {
   if (!isRecord(value)) return fallback;
 
@@ -1511,6 +1550,128 @@ function normalizeStringList(value: unknown, fallback: string[]) {
   return Array.isArray(value) && value.every((item) => typeof item === "string")
     ? value
     : fallback;
+}
+
+function answerWordCount(answer: SessionAnswer) {
+  return answer.response.trim().split(/\s+/).filter(Boolean).length;
+}
+
+function isWeakAnswer(answer: SessionAnswer) {
+  return answer.skipped || answerWordCount(answer) < 12;
+}
+
+function answerFocusKey(answer: SessionAnswer) {
+  return `${answer.question.acsArea}.${answer.question.acsTask}`;
+}
+
+function answerFocusLabel(answer: SessionAnswer) {
+  return `Area ${answer.question.acsArea}, Task ${answer.question.acsTask}: ${answer.question.taskTitle}`;
+}
+
+function buildSessionProgress(session: LocalSession) {
+  const total = session.questions.length;
+  const answered = session.answers.filter((answer) => !answer.skipped && answer.response.trim()).length;
+  const weakAnswers = session.answers.filter(isWeakAnswer);
+  const weakFocuses = buildWeakFocuses(session.answers);
+  const completion = total ? session.answers.length / total : 0;
+  const answerRate = total ? answered / total : 0;
+  const weakPenalty = total ? weakAnswers.length / total : 0;
+  const readiness = clampScore(Math.round((answerRate * 5 - weakPenalty * 2) * completion));
+  const communication = clampScore(
+    Math.round(
+      average(
+        session.answers
+          .filter((answer) => !answer.skipped)
+          .map((answer) => Math.min(5, Math.max(1, Math.ceil(answerWordCount(answer) / 12)))),
+      ),
+    ),
+  );
+  const nextFocus = weakFocuses[0];
+
+  return {
+    scores: {
+      checkrideReadiness: readiness,
+      communication,
+      knowledge: readiness,
+      riskManagement: readiness,
+      scenarioJudgment: readiness,
+    },
+    summary:
+      total === 0
+        ? "No prompts were captured for this DPE practice session."
+        : `${answered} of ${total} prompts have usable answers. ${
+            weakAnswers.length
+              ? `${weakAnswers.length} prompt${weakAnswers.length === 1 ? "" : "s"} need another pass.`
+              : "No weak answer signal was found in this deterministic review."
+          }`,
+    weakAcsReferences: weakAnswers.map((answer) => answer.question.acsElementReference),
+    weakFocuses,
+    whatToSharpen: weakAnswers.length
+      ? weakFocuses.map((focus) => `Re-run ${focus.label} and answer with complete ACS detail.`)
+      : ["Add concrete examples, limits, and decision points to keep answers checkride-ready."],
+    nextPracticeAction: nextFocus
+      ? `Practice ${nextFocus.label} again and turn skipped or short answers into complete checkride responses.`
+      : "Repeat this ACS task and add practical examples, limits, and risk-management details.",
+  };
+}
+
+function buildWeakFocuses(answers: SessionAnswer[]): ProgressFocus[] {
+  const focusMap = answers.reduce<Record<string, ProgressFocus>>((accumulator, answer) => {
+    const key = answerFocusKey(answer);
+    accumulator[key] ??= {
+      answered: 0,
+      key,
+      label: answerFocusLabel(answer),
+      score: 0,
+      skipped: 0,
+      weak: 0,
+    };
+    accumulator[key].answered += answer.skipped || !answer.response.trim() ? 0 : 1;
+    accumulator[key].skipped += answer.skipped || !answer.response.trim() ? 1 : 0;
+    accumulator[key].weak += isWeakAnswer(answer) ? 1 : 0;
+    return accumulator;
+  }, {});
+
+  return Object.values(focusMap)
+    .filter((focus) => focus.weak > 0)
+    .map((focus) => ({
+      ...focus,
+      score: Math.max(5, Math.round((focus.answered / Math.max(1, focus.answered + focus.weak)) * 100)),
+    }))
+    .sort((left, right) => right.weak - left.weak || left.score - right.score);
+}
+
+function buildProgressSummary(sessions: LocalSession[]): ProgressSummary {
+  const completedSessions = sessions.filter((session) => session.endedAt).length;
+  const answers = sessions.flatMap((session) => session.answers);
+  const answeredPrompts = answers.filter((answer) => !answer.skipped && answer.response.trim()).length;
+  const skippedPrompts = answers.filter((answer) => answer.skipped || !answer.response.trim()).length;
+  const weakFocuses = buildWeakFocuses(answers).slice(0, 3);
+  const latestReview = sessions[0] ?? null;
+
+  return {
+    answeredPrompts,
+    completedSessions,
+    latestReview,
+    nextPracticeAction:
+      weakFocuses[0]?.label
+        ? `Next: repeat ${weakFocuses[0].label} and turn weak answers into complete checkride responses.`
+        : completedSessions
+          ? "Next: repeat the last ACS task and add practical limits, examples, and risk-management detail."
+          : "Begin with Area I, Task A: pilot qualifications and required documents.",
+    skippedPrompts,
+    weakFocuses,
+  };
+}
+
+function average(values: number[]) {
+  if (values.length === 0) return 0;
+  return values.reduce((total, value) => total + value, 0) / values.length;
+}
+
+function clampScore(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return Math.min(5, Math.max(1, value));
 }
 
 function buildCertificateOptionsFromQuestions(questions: DpeQuestion[]): CertificateOption[] {

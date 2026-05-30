@@ -493,32 +493,88 @@ export function buildLocalDpeReviewFromTranscript(transcriptJson: unknown): DpeR
       ? (transcriptJson as { answers?: SessionAnswer[] })
       : {};
   const answers = Array.isArray(transcript.answers) ? transcript.answers : [];
-  const skipped = answers.filter((answer) => answer.skipped || !answer.response).length;
+  const answered = answers.filter((answer) => !answer.skipped && answer.response.trim()).length;
+  const weakAnswers = answers.filter(isWeakDpeAnswer);
+  const weakFocuses = buildDpeWeakFocuses(answers);
+  const readiness = clampDpeScore(
+    Math.round(((answered / Math.max(1, answers.length)) * 5 - (weakAnswers.length / Math.max(1, answers.length)) * 2)),
+  );
+  const communication = clampDpeScore(
+    Math.round(
+      averageDpeScore(
+        answers
+          .filter((answer) => !answer.skipped)
+          .map((answer) => Math.min(5, Math.max(1, Math.ceil(answerWordCount(answer) / 12)))),
+      ),
+    ),
+  );
+  const nextFocus = weakFocuses[0];
 
   return {
     model: null,
-    nextPracticeAction: "Repeat this task and answer each prompt in complete sentences.",
+    nextPracticeAction: nextFocus
+      ? `Practice ${nextFocus} again and turn skipped or short answers into complete checkride responses.`
+      : "Repeat this ACS task and add practical examples, limits, and risk-management details.",
     promptConfigKey: "dpe_post_session_review",
     promptConfigVersion: 1,
     scores: {
-      checkrideReadiness: null,
-      communication: null,
-      knowledge: null,
-      riskManagement: null,
-      scenarioJudgment: null,
+      checkrideReadiness: readiness,
+      communication,
+      knowledge: readiness,
+      riskManagement: readiness,
+      scenarioJudgment: readiness,
     },
     status: "fallback",
-    summary: "The transcript was saved. AI review will appear here when OpenAI is configured.",
-    weakAcsReferences: answers
-      .filter((answer) => answer.skipped || !answer.response)
-      .map((answer) => answer.question.acsElementReference),
-    whatToSharpen: skipped
-      ? [`${skipped} prompt${skipped === 1 ? "" : "s"} skipped or left blank.`]
+    summary: `${answered} of ${answers.length} prompts have usable answers. ${
+      weakAnswers.length
+        ? `${weakAnswers.length} prompt${weakAnswers.length === 1 ? "" : "s"} need another pass.`
+        : "No weak answer signal was found in this deterministic review."
+    }`,
+    weakAcsReferences: weakAnswers.map((answer) => answer.question.acsElementReference),
+    whatToSharpen: weakAnswers.length
+      ? weakFocuses.map((focus) => `Re-run ${focus} and answer with complete ACS detail.`)
       : ["Use complete, checkride-style answers with examples when helpful."],
-    whatWorked: [
-      `${answers.length - skipped} prompt${answers.length - skipped === 1 ? "" : "s"} answered.`,
-    ],
+    whatWorked: [`${answered} prompt${answered === 1 ? "" : "s"} answered.`],
   };
+}
+
+function answerWordCount(answer: SessionAnswer) {
+  return answer.response.trim().split(/\s+/).filter(Boolean).length;
+}
+
+function isWeakDpeAnswer(answer: SessionAnswer) {
+  return answer.skipped || answerWordCount(answer) < 12;
+}
+
+function buildDpeWeakFocuses(answers: SessionAnswer[]) {
+  const focusMap = answers.reduce<Record<string, { label: string; weak: number }>>(
+    (accumulator, answer) => {
+      if (!isWeakDpeAnswer(answer)) return accumulator;
+
+      const key = `${answer.question.acsArea}.${answer.question.acsTask}`;
+      accumulator[key] ??= {
+        label: `Area ${answer.question.acsArea}, Task ${answer.question.acsTask}: ${answer.question.taskTitle}`,
+        weak: 0,
+      };
+      accumulator[key].weak += 1;
+      return accumulator;
+    },
+    {},
+  );
+
+  return Object.values(focusMap)
+    .sort((left, right) => right.weak - left.weak)
+    .map((focus) => focus.label);
+}
+
+function averageDpeScore(values: number[]) {
+  if (values.length === 0) return 0;
+  return values.reduce((total, value) => total + value, 0) / values.length;
+}
+
+function clampDpeScore(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return Math.min(5, Math.max(1, value));
 }
 
 export async function getDpeProfile(userId: string) {
