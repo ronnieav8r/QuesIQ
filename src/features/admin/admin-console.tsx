@@ -46,7 +46,7 @@ export async function AdminConsole({ product }: { product?: string }) {
 
       {activeProduct === "overview" && <AdminOverview />}
       {activeProduct === "interview" && (
-        <AdminView eyebrow="Interview Admin" title="Interview Admin" />
+        <AdminView eyebrow="Interview" title="Interview" />
       )}
       {activeProduct === "study" && <StudyAdminPanel />}
       {activeProduct === "dpe" && <DpeAdminPanel />}
@@ -69,7 +69,7 @@ function AdminOverview() {
       </div>
       <div className="prompt-version-list">
         <Link className="button-link secondary" href="/admin?product=interview">
-          Interview admin
+          Interview
         </Link>
         <Link className="button-link secondary" href="/admin?product=study">
           Study admin
