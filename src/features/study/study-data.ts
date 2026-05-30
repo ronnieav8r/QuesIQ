@@ -233,7 +233,10 @@ export async function getStudyLibraryDecks(options?: {
     if (options?.officialOnly && !deck.isOfficial) {
       return false;
     }
-    if (options?.verifiedOnly && (deck.verifiedCardCount ?? 0) <= 0) {
+    if (
+      options?.verifiedOnly &&
+      (deck.cardCount <= 0 || (deck.verifiedCardCount ?? 0) !== deck.cardCount)
+    ) {
       return false;
     }
     if (subject && (deck.subject?.trim().toLowerCase() ?? "") !== subject) {
@@ -595,6 +598,21 @@ async function nextStudyCardPosition(deckId: string) {
   return max + 1;
 }
 
+async function refreshStudyDeckVerifiedCount(deckId: string) {
+  await getDb()
+    .update(studyDecks)
+    .set({
+      updatedAt: new Date(),
+      verifiedCardCount: sql`(
+        select count(*)::int
+        from ${studyCards}
+        where ${studyCards.deckId} = ${deckId}
+          and ${studyCards.isVerified} = true
+      )`,
+    })
+    .where(eq(studyDecks.id, deckId));
+}
+
 export async function createStudyCard(data: {
   answer: string;
   deckId: string;
@@ -665,11 +683,24 @@ export async function updateStudyCard(
     question?: string;
   },
 ) {
+  const clearsVerification = data.answer !== undefined || data.question !== undefined;
   const [card] = await getDb()
     .update(studyCards)
-    .set({ ...data, updatedAt: new Date() })
+    .set({
+      ...data,
+      ...(clearsVerification && {
+        isVerified: false,
+        verifiedAt: null,
+        verifiedBy: null,
+      }),
+      updatedAt: new Date(),
+    })
     .where(eq(studyCards.id, cardId))
     .returning();
+
+  if (card && clearsVerification) {
+    await refreshStudyDeckVerifiedCount(card.deckId);
+  }
 
   return card;
 }
@@ -693,6 +724,7 @@ export async function deleteStudyCard(cardId: string) {
       updatedAt: new Date(),
     })
     .where(eq(studyDecks.id, card.deckId));
+  await refreshStudyDeckVerifiedCount(card.deckId);
 }
 
 export async function rateStudyCard(data: {

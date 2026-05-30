@@ -44,7 +44,7 @@ export function StudyDeckCard({ currentUserId, deck }: StudyDeckCardProps) {
   const hasStats = deck.dueCount !== undefined;
   const isOwner = deck.userId === currentUserId;
   const verifiedCardCount = deck.verifiedCardCount ?? 0;
-  const isVerified = verifiedCardCount > 0;
+  const isFullyVerified = deck.cardCount > 0 && verifiedCardCount === deck.cardCount;
   const masteryPct =
     deck.cardCount > 0 ? Math.round(((deck.masteredCount ?? 0) / deck.cardCount) * 100) : 0;
 
@@ -54,7 +54,7 @@ export function StudyDeckCard({ currentUserId, deck }: StudyDeckCardProps) {
         {isOwner && <span className="badge">Mine</span>}
         {deck.isPublic && <span className="badge">Public</span>}
         {deck.isOfficial && <span className="badge">Official</span>}
-        {isVerified && <span className="badge">Verified</span>}
+        {isFullyVerified && <span className="badge">Verified</span>}
         {hasStats && (deck.dueCount ?? 0) > 0 && (
           <span className="study-deck-card__due">{deck.dueCount} due</span>
         )}
@@ -74,7 +74,7 @@ export function StudyDeckCard({ currentUserId, deck }: StudyDeckCardProps) {
 
       <div className="study-deck-card__footer">
         {deck.subject && <span className="badge">{deck.subject}</span>}
-        {verifiedCardCount > 0 && verifiedCardCount < deck.cardCount && (
+        {verifiedCardCount > 0 && !isFullyVerified && (
           <span className="badge">
             {verifiedCardCount} verified card{verifiedCardCount === 1 ? "" : "s"}
           </span>
