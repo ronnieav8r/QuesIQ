@@ -370,7 +370,9 @@ export type AdminProgressionSummaryRecord = ProgressionSummaryRecord & {
 };
 
 export type ProgressionEventRecord = {
+  awardKey?: string;
   createdAt: string;
+  duplicateAwardCount?: number;
   eventType: ProgressionEventType;
   id: string;
   metadata?: Record<string, unknown>;

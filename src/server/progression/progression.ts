@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 
 import type {
   AdminProgressionSummaryRecord,
@@ -1025,18 +1025,67 @@ export async function listProgressionEvents(
     .leftJoin(users, eq(users.id, progressionEvents.userId))
     .orderBy(desc(progressionEvents.occurredAt))
     .limit(limit);
+  const awardRows = await getDb()
+    .select({
+      eventType: progressionEvents.eventType,
+      metadata: progressionEvents.metadata,
+      sessionId: progressionEvents.sessionId,
+      userId: progressionEvents.userId,
+    })
+    .from(progressionEvents)
+    .where(
+      inArray(progressionEvents.eventType, ["quest_completed", "xp_rule_awarded"]),
+    );
+  const awardCounts = awardRows.reduce<Record<string, number>>((counts, row) => {
+    const ruleKey = getRuleKey(row.metadata);
+    const questKey = getQuestKey(row.metadata);
+    const awardKey = ruleKey || questKey;
 
-  return rows.map((row) => ({
-    createdAt: row.createdAt.toISOString(),
-    eventType: row.eventType,
-    id: row.id,
-    metadata: row.metadata ?? undefined,
-    occurredAt: row.occurredAt.toISOString(),
-    sessionId: row.sessionId ?? undefined,
-    userEmail: row.userEmail ?? undefined,
-    userId: row.userId,
-    xp: row.xp,
-  }));
+    if (!awardKey) {
+      return counts;
+    }
+
+    const countKey = [
+      row.eventType,
+      row.userId,
+      row.eventType === "xp_rule_awarded" ? row.sessionId : undefined,
+      awardKey,
+    ]
+      .filter(Boolean)
+      .join(":");
+
+    counts[countKey] = (counts[countKey] || 0) + 1;
+
+    return counts;
+  }, {});
+
+  return rows.map((row) => {
+    const awardKey = getRuleKey(row.metadata) || getQuestKey(row.metadata);
+    const countKey = awardKey
+      ? [
+          row.eventType,
+          row.userId,
+          row.eventType === "xp_rule_awarded" ? row.sessionId : undefined,
+          awardKey,
+        ]
+          .filter(Boolean)
+          .join(":")
+      : undefined;
+
+    return {
+      awardKey,
+      createdAt: row.createdAt.toISOString(),
+      duplicateAwardCount: countKey ? awardCounts[countKey] : undefined,
+      eventType: row.eventType,
+      id: row.id,
+      metadata: row.metadata ?? undefined,
+      occurredAt: row.occurredAt.toISOString(),
+      sessionId: row.sessionId ?? undefined,
+      userEmail: row.userEmail ?? undefined,
+      userId: row.userId,
+      xp: row.xp,
+    };
+  });
 }
 
 export async function listProgressionLevelThresholds(): Promise<

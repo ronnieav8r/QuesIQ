@@ -463,6 +463,50 @@ function getProgressionEventSortValue(
   }
 }
 
+function getAdminReviewDebugStatus(session: AdminSessionRecord) {
+  if (session.evaluationStatus === "completed") {
+    return "completed: evaluation row exists";
+  }
+
+  if (session.evaluationStatus === "too_short") {
+    return "too_short: saved transcript did not meet review minimum";
+  }
+
+  if (session.evaluationStatus === "failed") {
+    return "failed: review request did not complete";
+  }
+
+  if (session.evaluationStatus === "processing") {
+    return "processing: review request started but has not completed";
+  }
+
+  if (session.evaluationStatus === "pending") {
+    return session.transcriptTurns > 0
+      ? "pending: transcript saved and waiting for review"
+      : "pending: no transcript turns available";
+  }
+
+  if (session.status === "created") {
+    return "not_started: session launched but no artifact saved";
+  }
+
+  return "not_started: no completed review available";
+}
+
+function getSessionReviewXp(
+  sessionId: string,
+  events: ProgressionEventRecord[],
+) {
+  const reviewEvents = events.filter(
+    (event) => event.eventType === "xp_rule_awarded" && event.sessionId === sessionId,
+  );
+
+  return {
+    ruleKeys: [...new Set(reviewEvents.map((event) => event.awardKey).filter(Boolean))],
+    totalXp: reviewEvents.reduce((sum, event) => sum + event.xp, 0),
+  };
+}
+
 function pricingToDraft(pricing?: AiPricingRecord): PricingDraft {
   return {
     active: pricing?.active ?? true,
@@ -2118,6 +2162,8 @@ export function AdminView() {
                             sort={progressionEventSort}
                             sortKey="xp"
                           />
+                          <th>Award key</th>
+                          <th>Once</th>
                           <SortHeader
                             className="narrow-column"
                             label="Session"
@@ -2139,6 +2185,16 @@ export function AdminView() {
                             </td>
                             <td>{event.eventType}</td>
                             <td>{event.xp}</td>
+                            <td>
+                              <ExpandableCell value={event.awardKey} />
+                            </td>
+                            <td>
+                              {event.awardKey
+                                ? event.duplicateAwardCount === 1
+                                  ? "Yes"
+                                  : `Duplicate x${event.duplicateAwardCount ?? 0}`
+                                : "--"}
+                            </td>
                             <td className="narrow-column">
                               <ExpandableCell className="mono-cell" value={event.sessionId} />
                             </td>
@@ -2737,27 +2793,43 @@ export function AdminView() {
                           <th>Mode</th>
                           <th>Status</th>
                           <th>Review</th>
+                          <th>Review reason</th>
                           <th>Turns</th>
+                          <th>Review XP</th>
                           <th>Session</th>
                         </tr>
                       </thead>
                       <tbody>
                         {adminData.sessions.length > 0 ? (
-                          adminData.sessions.map((session) => (
-                            <tr key={session.id}>
-                              <td>{new Date(session.createdAt).toLocaleString()}</td>
-                              <td><ExpandableCell value={session.userEmail || session.userId} /></td>
-                              <td><ExpandableCell value={session.targetRole} /></td>
-                              <td>{session.modeKey}</td>
-                              <td>{session.status}</td>
-                              <td>{session.evaluationStatus}</td>
-                              <td>{session.transcriptTurns}</td>
-                              <td className="narrow-column"><ExpandableCell className="mono-cell" value={session.id} /></td>
-                            </tr>
-                          ))
+                          adminData.sessions.map((session) => {
+                            const reviewXp = getSessionReviewXp(session.id, progressionEvents);
+
+                            return (
+                              <tr key={session.id}>
+                                <td>{new Date(session.createdAt).toLocaleString()}</td>
+                                <td><ExpandableCell value={session.userEmail || session.userId} /></td>
+                                <td><ExpandableCell value={session.targetRole} /></td>
+                                <td>{session.modeKey}</td>
+                                <td>{session.status}</td>
+                                <td>{session.evaluationStatus}</td>
+                                <td><ExpandableCell value={getAdminReviewDebugStatus(session)} /></td>
+                                <td>{session.transcriptTurns}</td>
+                                <td>
+                                  {reviewXp.totalXp > 0 ? (
+                                    <ExpandableCell
+                                      value={`${reviewXp.totalXp} XP via ${reviewXp.ruleKeys.join(", ") || "unknown rules"}`}
+                                    />
+                                  ) : (
+                                    "No"
+                                  )}
+                                </td>
+                                <td className="narrow-column"><ExpandableCell className="mono-cell" value={session.id} /></td>
+                              </tr>
+                            );
+                          })
                         ) : (
                           <tr>
-                            <td colSpan={8}>No sessions returned from the admin data endpoint.</td>
+                            <td colSpan={10}>No sessions returned from the admin data endpoint.</td>
                           </tr>
                         )}
                       </tbody>
