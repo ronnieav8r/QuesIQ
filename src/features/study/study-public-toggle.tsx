@@ -40,7 +40,7 @@ export function StudyPublicToggle({ deckId, disabled, isPublic }: StudyPublicTog
         onChange={(event) => void onToggle(event.target.checked)}
         type="checkbox"
       />
-      <span>{pending ? "Updating..." : value ? "Public deck" : "Private deck"}</span>
+      <span>{pending ? "Updating..." : value ? "Public deck" : "Mine only"}</span>
     </label>
   );
 }

@@ -16,9 +16,10 @@ export async function GET(request: Request) {
   const subject = searchParams.get("subject") ?? undefined;
   const tag = searchParams.get("tag") ?? undefined;
   const officialOnly = searchParams.get("official") === "1";
+  const verifiedOnly = searchParams.get("verified") === "1";
   const rawScope = searchParams.get("scope");
   const scope: StudyLibraryScope =
-    rawScope === "all" || rawScope === "mine" || rawScope === "official"
+    rawScope === "all" || rawScope === "mine" || rawScope === "public"
       ? rawScope
       : "all";
 
@@ -30,6 +31,7 @@ export async function GET(request: Request) {
       subject,
       tag,
       userId,
+      verifiedOnly,
     }),
     getStudyRootSubjects(),
     getStudyAudienceTags(),

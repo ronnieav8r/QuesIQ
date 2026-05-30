@@ -14,9 +14,9 @@ import {
 import { computeNextStudyReview, type StudyVerdict } from "@/features/study/study-srs";
 
 export type StudyLevel = "advanced" | "beginner" | "intermediate";
-export type StudyLibraryScope = "all" | "mine" | "official";
-type StudyPublicDeck = Awaited<ReturnType<typeof getPublicStudyDecks>>[number];
-export type StudyLibraryDeck = StudyPublicDeck & { audienceTags: string[] };
+export type StudyLibraryScope = "all" | "mine" | "public";
+type StudyVisibleDeck = Awaited<ReturnType<typeof getVisibleStudyLibraryDecks>>[number];
+export type StudyLibraryDeck = StudyVisibleDeck & { audienceTags: string[] };
 
 function isMissingStudyTaxonomyError(error: unknown) {
   if (!(error instanceof Error)) {
@@ -71,7 +71,11 @@ export async function getStudyDecksWithStats(userId: string) {
     .orderBy(desc(studyDecks.updatedAt));
 }
 
-export async function getPublicStudyDecks(limit = 50) {
+export async function getVisibleStudyLibraryDecks(limit = 50, userId?: string) {
+  const visibilityFilter = userId
+    ? or(eq(studyDecks.isPublic, true), eq(studyDecks.userId, userId))
+    : eq(studyDecks.isPublic, true);
+
   return getDb()
     .select({
       cardCount: studyDecks.cardCount,
@@ -91,7 +95,7 @@ export async function getPublicStudyDecks(limit = 50) {
       verifiedCardCount: studyDecks.verifiedCardCount,
     })
     .from(studyDecks)
-    .where(eq(studyDecks.isPublic, true))
+    .where(visibilityFilter)
     .orderBy(desc(studyDecks.updatedAt))
     .limit(limit);
 }
@@ -180,9 +184,10 @@ export async function getStudyLibraryDecks(options?: {
   subject?: string;
   tag?: string;
   userId?: string;
+  verifiedOnly?: boolean;
 }) {
   const scope = options?.scope ?? "all";
-  const decks = await getPublicStudyDecks();
+  const decks = await getVisibleStudyLibraryDecks(50, options?.userId);
   const deckIds = decks.map((deck) => deck.id);
   let audienceTagByDeckId = new Map<string, string[]>();
 
@@ -222,10 +227,13 @@ export async function getStudyLibraryDecks(options?: {
     if (scope === "mine" && (!options?.userId || deck.userId !== options.userId)) {
       return false;
     }
-    if (scope === "official" && !deck.isOfficial) {
+    if (scope !== "mine" && !deck.isPublic) {
       return false;
     }
     if (options?.officialOnly && !deck.isOfficial) {
+      return false;
+    }
+    if (options?.verifiedOnly && (deck.verifiedCardCount ?? 0) <= 0) {
       return false;
     }
     if (subject && (deck.subject?.trim().toLowerCase() ?? "") !== subject) {
