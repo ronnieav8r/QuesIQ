@@ -14,12 +14,14 @@ export async function GET(request: NextRequest) {
   try {
     const acsArea = request.nextUrl.searchParams.get("acsArea") ?? undefined;
     const acsTask = request.nextUrl.searchParams.get("acsTask") ?? undefined;
+    const certificateTypeId = request.nextUrl.searchParams.get("certificateTypeId") ?? undefined;
     const limit = Number(request.nextUrl.searchParams.get("limit") ?? "100");
 
     return NextResponse.json(
       await listDpeQuestions({
         acsArea,
         acsTask,
+        certificateTypeId,
         limit: Number.isFinite(limit) ? limit : 100,
       }),
     );

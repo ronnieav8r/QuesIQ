@@ -55,6 +55,12 @@ export type DpeQuestion = {
 
 export type QuestionApiResponse = {
   available: boolean;
+  certificateTypes: {
+    code: string;
+    id: string;
+    questionCount: number;
+    title: string;
+  }[];
   questions: DpeQuestion[];
   areas: string[];
   tasksByArea: Record<string, string[]>;
@@ -78,6 +84,7 @@ export const areaLabels: Record<string, string> = {
 export function buildEmptyQuestionResponse(): QuestionApiResponse {
   return {
     available: false,
+    certificateTypes: [],
     questions: [],
     areas: ["I"],
     tasksByArea: { I: ["A"] },
