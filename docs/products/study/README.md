@@ -17,7 +17,8 @@ The first Study slice is imported:
 
 - `/study` renders a real Study dashboard from `src/features/study/study-home.tsx`
 - `/study/decks`, `/study/decks/new`, and `/study/decks/[deckId]` support the
-  first usable deck-management slice
+  deck-first management slice; `/study/decks` is now the creation hub for
+  manual decks, imports, future AI generation, and admin official generation
 - `/study/decks/[deckId]/edit` supports deck metadata updates
 - `/study/decks/[deckId]/import` supports dependency-free pasted text/CSV card
   import

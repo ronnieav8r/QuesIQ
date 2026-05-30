@@ -115,9 +115,9 @@ export default async function StudyHome() {
           {userDecks.length === 0 ? (
             <section className="panel study-empty-panel">
               <h2>No decks yet.</h2>
-              <p>Create or import your first Study deck after the deck builder is imported.</p>
-              <Link className="button-link" href="/study/decks/new">
-                Create Your First Deck
+              <p>Create, import, or organize your first Study deck from the Decks page.</p>
+              <Link className="button-link" href="/study/decks">
+                Open Decks
               </Link>
             </section>
           ) : (
