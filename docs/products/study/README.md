@@ -62,6 +62,11 @@ The first Study slice is imported:
   pass marks individual cards verified only when the model returns high
   confidence and no substantive factual or safety issue, updates the deck
   verified-card count, and records Study AI usage as `study_evaluate`
+- `/api/study/content-studio/flashcard-draft` provides a Study-owned
+  Content Studio primitive for reviewable flashcard deck drafts. It accepts
+  source text and prompt instructions, returns deck metadata plus generated
+  card drafts with source notes/confidence/warnings, and never publishes,
+  marks Official, or marks cards Verified.
 - `/api/study/tts` supports Study voice paths with Admin AI Usage
   instrumentation and source-style R2 audio caching when R2 environment
   variables are configured
