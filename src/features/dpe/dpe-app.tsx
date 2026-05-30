@@ -148,6 +148,7 @@ type DpeProfileState = {
 };
 
 type DpeProfileResponse = {
+  available?: boolean;
   profile: {
     aircraft: string | null;
     flightSchool: string | null;
@@ -303,9 +304,15 @@ export default function App() {
       const response = await fetch("/api/dpe/profile");
       if (!response.ok) return;
       const data = (await response.json()) as DpeProfileResponse;
+      if (data.available === false) {
+        setDatabaseAvailable(false);
+        return;
+      }
+      setDatabaseAvailable((current) => current ?? true);
       setDpeProfile(profileResponseToState(data));
     } catch {
       // Keep the app usable if profile persistence is not available yet.
+      setDatabaseAvailable(false);
     }
   }
 
@@ -321,6 +328,11 @@ export default function App() {
         throw new Error("Profile save failed.");
       }
       const data = (await response.json()) as DpeProfileResponse;
+      if (data.available === false) {
+        setDatabaseAvailable(false);
+        throw new Error("Profile storage unavailable.");
+      }
+      setDatabaseAvailable(true);
       setDpeProfile(profileResponseToState(data));
       setProfileSaveStatus("saved");
     } catch {
@@ -350,11 +362,6 @@ export default function App() {
       voiceMode
     };
 
-    setSession(draftSession);
-    setCurrentIndex(0);
-    setDraftAnswer("");
-    setStage("live");
-
     try {
       const response = await fetch("/api/dpe/practice-sessions", {
         method: "POST",
@@ -376,11 +383,31 @@ export default function App() {
       setDatabaseAvailable(data.available);
       if (data.available && data.session?.id) {
         setSession({ ...draftSession, id: data.session.id, persisted: true });
+        setCurrentIndex(0);
+        setDraftAnswer("");
+        setStage("live");
         await loadStoredSessions();
+        return;
+      }
+
+      if (voiceMode) {
+        setSession(null);
+        setStage("setup");
+        return;
       }
     } catch {
       setDatabaseAvailable(false);
+      if (voiceMode) {
+        setSession(null);
+        setStage("setup");
+        return;
+      }
     }
+
+    setSession(draftSession);
+    setCurrentIndex(0);
+    setDraftAnswer("");
+    setStage("live");
   }
 
   async function recordAnswer(skipped: boolean) {
@@ -501,7 +528,8 @@ export default function App() {
           },
         }),
       });
-      setDatabaseAvailable(response.ok);
+      const data = (await response.json().catch(() => ({}))) as { available?: boolean };
+      setDatabaseAvailable(data.available ?? response.ok);
       await loadStoredSessions();
     } catch {
       setDatabaseAvailable(false);
@@ -820,7 +848,7 @@ function HomeScreen({
           <Stat label="Aircraft" value={dpeProfile.aircraft || "-"} />
           <Stat label="Voice stack" value="Realtime" />
           <Stat label="DPE" value={dpeProfile.knownDpeName || "-"} />
-          <Stat label="Content" value={questionBankAvailable ? "DB" : "Offline"} />
+          <Stat label="Content" value={questionBankAvailable ? "DB" : "Fallback"} />
         </div>
 
       <div className="grid two-col">
@@ -915,6 +943,7 @@ function PracticeSetupScreen({
   questions,
   questionBankAvailable,
   questionCount,
+  databaseAvailable,
   onAreaChange,
     onTaskChange,
     onModeChange,
@@ -929,6 +958,7 @@ function PracticeSetupScreen({
   questions: DpeQuestion[];
   questionBankAvailable: boolean | null;
   questionCount: number;
+  databaseAvailable: boolean | null;
   onAreaChange: (area: string) => void;
     onTaskChange: (task: string) => void;
     onModeChange: (mode: PracticeMode) => void;
@@ -999,10 +1029,35 @@ function PracticeSetupScreen({
             <Stat label="Session prompts" value={`${Math.min(5, questions.length)}`} />
             <Stat label="Hands-free" value={`${handsFreeCount}`} />
             <Stat label="Visual hints" value={`${visualCount}`} />
-            <Stat label="Content" value={questionBankAvailable ? `${questionCount} DB` : "Offline"} />
+            <Stat
+              label="Content"
+              value={questionBankAvailable ? `${questionCount} DB` : `${questionCount} fallback`}
+            />
           </div>
+          {questionBankAvailable === false && (
+            <div className="raised-card mt-4">
+              <strong>Baseline content fallback active</strong>
+              <p>
+                Seeded DPE question tables are empty or unavailable. Practice can continue with
+                bundled placeholder prompts while admins finish the baseline content setup.
+              </p>
+            </div>
+          )}
+          {databaseAvailable === false && (
+            <div className="raised-card mt-4">
+              <strong>Session storage unavailable</strong>
+              <p>
+                Typed practice can run locally. Voice practice needs a saved DPE session setup, so
+                it will stay disabled until DPE storage is reachable.
+              </p>
+            </div>
+          )}
             <div className="inline-actions mt-4">
-              <button className="button primary" onClick={onStartVoiceSession} disabled={questions.length === 0}>
+              <button
+                className="button primary"
+                onClick={onStartVoiceSession}
+                disabled={questions.length === 0 || databaseAvailable === false}
+              >
                 <Mic />
                 Start Voice Practice
               </button>
@@ -1646,7 +1701,11 @@ function ContentScreen({ summary }: { summary: ContentSummary }) {
         {summary.certificateTypes.length === 0 && (
           <div className="panel">
             <h3>No content found</h3>
-            <p>Run the database seed step to load placeholder certificate and question content.</p>
+            <p>
+              {summary.available
+                ? "The DPE tables are reachable, but baseline certificate and question seed content is empty."
+                : "DPE content storage is not reachable. The learner app will use bundled fallback prompts where possible."}
+            </p>
           </div>
         )}
       </div>

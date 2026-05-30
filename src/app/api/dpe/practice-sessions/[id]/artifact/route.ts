@@ -17,27 +17,38 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const existing = await getOwnedDpePracticeSession(id, session.user.id);
+  try {
+    const existing = await getOwnedDpePracticeSession(id, session.user.id);
 
-  if (!existing) {
-    return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    if (!existing) {
+      return NextResponse.json({ available: true, error: "Session not found" }, { status: 404 });
+    }
+
+    const body = (await request.json()) as {
+      artifact?: unknown;
+      transcriptJson?: unknown;
+    };
+
+    if (!body.artifact || !body.transcriptJson) {
+      return NextResponse.json({ available: true, error: "Missing artifact." }, { status: 400 });
+    }
+
+    const practiceSession = await saveDpeVoiceArtifact({
+      artifact: body.artifact,
+      id,
+      transcriptJson: body.transcriptJson,
+      userId: session.user.id,
+    });
+
+    return NextResponse.json({ available: true, session: practiceSession });
+  } catch (error) {
+    console.error("DPE voice artifact save failed", error);
+    return NextResponse.json(
+      {
+        available: false,
+        error: "DPE session storage is not available yet.",
+      },
+      { status: 200 },
+    );
   }
-
-  const body = (await request.json()) as {
-    artifact?: unknown;
-    transcriptJson?: unknown;
-  };
-
-  if (!body.artifact || !body.transcriptJson) {
-    return NextResponse.json({ error: "Missing artifact." }, { status: 400 });
-  }
-
-  const practiceSession = await saveDpeVoiceArtifact({
-    artifact: body.artifact,
-    id,
-    transcriptJson: body.transcriptJson,
-    userId: session.user.id,
-  });
-
-  return NextResponse.json({ session: practiceSession });
 }
