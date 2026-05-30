@@ -1,6 +1,10 @@
 import { and, eq } from "drizzle-orm";
 
 import { parseSessionEvaluation } from "@/product/session-evaluation";
+import {
+  getTooShortReviewMessage,
+  isArtifactTooShortToReview,
+} from "@/product/review-eligibility";
 import type {
   CoachingMemoryRecord,
   SessionEvaluationResult,
@@ -182,9 +186,6 @@ const evaluationSchema = {
   ],
   type: "object",
 };
-
-const minimumReviewDurationSeconds = 120;
-const minimumIntroReviewDurationSeconds = 30;
 
 function extractResponseText(body: ResponsesApiBody) {
   if (body.output_text) {
@@ -406,10 +407,10 @@ export async function createSessionEvaluation(
         updatedAt: now,
       })
       .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
-    await recordReviewProgression(userId, sessionId, existing.result);
     const [existingSession] = await getDb()
       .select({
         contextSnapshot: sessions.contextSnapshot,
+        voiceArtifact: sessions.voiceArtifact,
       })
       .from(sessions)
       .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)))
@@ -432,6 +433,12 @@ export async function createSessionEvaluation(
         userId,
       });
     }
+    await recordReviewProgression(
+      userId,
+      sessionId,
+      existing.result,
+      existingSession?.voiceArtifact ?? undefined,
+    );
 
     return existing;
   }
@@ -463,24 +470,19 @@ export async function createSessionEvaluation(
     throw new Error("This practice session does not have a saved transcript yet.");
   }
 
-  const minimumDuration = session.contextSnapshot.introductionContext
-    ? minimumIntroReviewDurationSeconds
-    : minimumReviewDurationSeconds;
+  if (isArtifactTooShortToReview(session.contextSnapshot, session.voiceArtifact)) {
+    const message = getTooShortReviewMessage(session.contextSnapshot);
 
-  if (
-    session.voiceArtifact.durationSeconds !== undefined &&
-    session.voiceArtifact.durationSeconds < minimumDuration
-  ) {
     await getDb()
       .update(sessions)
       .set({
-        evaluationError: "This practice session was too short to score.",
+        evaluationError: message,
         evaluationStatus: "too_short",
         updatedAt: now,
       })
       .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
 
-    throw new Error("This practice session was too short to score.");
+    throw new Error(message);
   }
 
   const [promptConfig, promptComponents] = await Promise.all([

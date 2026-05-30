@@ -1,11 +1,13 @@
 import { and, eq } from "drizzle-orm";
 
 import type { VoiceSessionArtifactDraft } from "@/product/interview-types";
+import {
+  getTooShortReviewMessage,
+  isArtifactTooShortToReview,
+} from "@/product/review-eligibility";
 import { getDb } from "@/server/db/client";
 import { sessions } from "@/server/db/schema";
 import { saveRealtimeSessionUsage } from "@/server/realtime-usage/realtime-session-usage";
-
-const minimumReviewDurationSeconds = 120;
 
 function toDate(value?: string) {
   return value ? new Date(value) : undefined;
@@ -16,19 +18,31 @@ export async function saveSessionArtifact(
   userId: string,
   artifact: VoiceSessionArtifactDraft,
 ) {
+  const [existingSession] = await getDb()
+    .select({
+      contextSnapshot: sessions.contextSnapshot,
+    })
+    .from(sessions)
+    .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)))
+    .limit(1);
+
+  if (!existingSession) {
+    return undefined;
+  }
+
+  const hasTranscript = artifact.transcript.length > 0;
   const tooShortToScore =
-    artifact.durationSeconds !== undefined &&
-    artifact.durationSeconds < minimumReviewDurationSeconds;
+    hasTranscript && isArtifactTooShortToReview(existingSession.contextSnapshot, artifact);
   const [session] = await getDb()
     .update(sessions)
     .set({
       endedAt: toDate(artifact.endedAt),
       evaluationError: tooShortToScore
-        ? "This practice session was too short to score."
+        ? getTooShortReviewMessage(existingSession.contextSnapshot)
         : null,
       evaluationStatus: tooShortToScore
         ? "too_short"
-        : artifact.transcript.length > 0
+        : hasTranscript
           ? "pending"
           : "not_started",
       startedAt: toDate(artifact.startedAt),

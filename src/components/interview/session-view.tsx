@@ -4,6 +4,11 @@ import { FeedbackButton } from "@/components/interview/feedback-button";
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import { ReviewDetailSections } from "@/components/interview/review-detail-sections";
 import { getPostReviewFeedbackPrompt } from "@/product/beta-feedback-prompts";
+import {
+  getMinimumReviewDurationSeconds,
+  getTooShortReviewMessage,
+  isArtifactTooShortToReview,
+} from "@/product/review-eligibility";
 import { withOverallScore } from "@/product/scoring";
 import type {
   InterviewCatalog,
@@ -12,8 +17,6 @@ import type {
   SessionSetupSnapshot,
   VoiceSessionArtifactDraft,
 } from "@/product/interview-types";
-
-const minimumReviewDurationSeconds = 120;
 
 type SessionViewProps = {
   catalog: InterviewCatalog;
@@ -44,6 +47,7 @@ export function SessionView({
     "idle" | "ready" | "reviewing" | "unavailable"
   >("idle");
   const evaluationRequestedRef = useRef(false);
+  const [reviewAttempt, setReviewAttempt] = useState(0);
   const reviewFeedbackPrompt = getPostReviewFeedbackPrompt(session.id);
   const savedArtifactRef = useRef<string | undefined>(undefined);
   const mode = catalog.practiceModes.find(
@@ -55,6 +59,8 @@ export function SessionView({
   const style = catalog.interviewStyles.find(
     (interviewStyle) => interviewStyle.key === snapshot.styleKey,
   );
+  const tooShortReviewMessage = getTooShortReviewMessage(snapshot);
+  const minimumReviewDurationSeconds = getMinimumReviewDurationSeconds(snapshot);
 
   useEffect(() => {
     if (!artifactDraft.endedAt || savedArtifactRef.current === artifactDraft.endedAt) {
@@ -106,11 +112,8 @@ export function SessionView({
 
     async function createEvaluation() {
       try {
-        if (
-          artifactDraft.durationSeconds !== undefined &&
-          artifactDraft.durationSeconds < minimumReviewDurationSeconds
-        ) {
-          setEvaluationError("This practice session was too short to score.");
+        if (isArtifactTooShortToReview(snapshot, artifactDraft)) {
+          setEvaluationError(tooShortReviewMessage);
           setEvaluationStatus("unavailable");
           return;
         }
@@ -142,7 +145,14 @@ export function SessionView({
     }
 
     void createEvaluation();
-  }, [artifactDraft.durationSeconds, artifactSaveStatus, session.id]);
+  }, [
+    artifactDraft,
+    artifactSaveStatus,
+    reviewAttempt,
+    session.id,
+    snapshot,
+    tooShortReviewMessage,
+  ]);
 
   return (
     <section className="screen session-screen" aria-labelledby="session-title">
@@ -295,7 +305,7 @@ export function SessionView({
               {evaluationStatus === "reviewing" && "Reviewing"}
               {evaluationStatus === "ready" && "Ready"}
               {evaluationStatus === "unavailable" &&
-                (evaluationError === "This practice session was too short to score."
+                (evaluationError === tooShortReviewMessage
                   ? "Too short to score"
                   : "Try again")}
             </span>
@@ -327,12 +337,24 @@ export function SessionView({
             </div>
           ) : (
             <p>
-              {evaluationError === "This practice session was too short to score."
-                ? "This session is saved in your history, but it was under 120 seconds so it will not be scored."
+              {evaluationError === tooShortReviewMessage
+                ? `This session is saved in your history, but it was under ${minimumReviewDurationSeconds} seconds so it will not be scored.`
                 : "After the voice artifact is saved, Que will review the transcript and prepare your practice feedback here."}
             </p>
           )}
           {evaluationError && <p className="form-error">{evaluationError}</p>}
+          {evaluationStatus === "unavailable" && evaluationError !== tooShortReviewMessage && (
+            <button
+              onClick={() => {
+                evaluationRequestedRef.current = false;
+                setEvaluationStatus("reviewing");
+                setReviewAttempt((current) => current + 1);
+              }}
+              type="button"
+            >
+              Retry Review
+            </button>
+          )}
         </section>
       </div>
     </section>

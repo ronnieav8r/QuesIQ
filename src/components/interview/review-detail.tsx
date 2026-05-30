@@ -87,7 +87,7 @@ export function ReviewDetail({
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Practice review could not be created.";
-      const status = message === "This practice session was too short to score."
+      const status = message.startsWith("This practice session was too short to score")
         ? "too_short"
         : "failed";
 
