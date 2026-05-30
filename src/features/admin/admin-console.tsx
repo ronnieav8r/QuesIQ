@@ -253,6 +253,18 @@ async function DpeAdminPanel() {
                   </div>
                 </div>
 
+                <div className="raised-card">
+                  <strong>Controlled creation workflow</strong>
+                  <div className="question-meta">
+                    {getDpePipelineStages(certificateGaps).map((stage) => (
+                      <span className="pill" key={stage.label}>
+                        {stage.label}: {stage.status}
+                      </span>
+                    ))}
+                  </div>
+                  <p>{getDpeCertificateNextAction(certificateGaps)}</p>
+                </div>
+
                 <div className="question-list mt-4">
                   {taskGroups.map((group) => (
                     <article className="raised-card" key={group.key}>
@@ -270,6 +282,14 @@ async function DpeAdminPanel() {
                           {group.gapCount > 0 ? `${group.gapCount} gaps` : "ready"}
                         </span>
                       </div>
+                      <div className="question-meta">
+                        <span className="pill">certificate selected</span>
+                        <span className="pill">ACS task selected</span>
+                        <span className="pill">{group.questions} oral questions</span>
+                        <span className="pill">{group.missingAnswerKeys} key gaps</span>
+                        <span className="pill">{group.missingRubrics} rubric gaps</span>
+                        <span className="pill">{group.readiness}% ready</span>
+                      </div>
                       {group.gapQuestions.length > 0 ? (
                         <div className="question-list mt-4">
                           {group.gapQuestions.map((question) => (
@@ -285,6 +305,20 @@ async function DpeAdminPanel() {
                                 )}
                               </div>
                               <p>{question.questionText}</p>
+                              <div className="raised-card">
+                                <strong>Creation pipeline</strong>
+                                <div className="question-meta">
+                                  {getDpeQuestionPipelineStages(question).map((stage) => (
+                                    <span className="pill" key={stage.label}>
+                                      {stage.label}: {stage.status}
+                                    </span>
+                                  ))}
+                                </div>
+                                <p>{getDpeQuestionNextAction(question)}</p>
+                                <button disabled type="button">
+                                  Editing endpoint pending
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -359,6 +393,65 @@ function getDpeCertificateGapSummary(certificateType: DpeCertificateSummary) {
           ? "needs answer keys"
           : "needs rubrics",
   };
+}
+
+function getDpePipelineStages(certificateGaps: ReturnType<typeof getDpeCertificateGapSummary>) {
+  return [
+    { label: "Certificate", status: "selected" },
+    { label: "ACS area/task", status: "grouped" },
+    { label: "Oral question", status: certificateGaps.readyQuestions > 0 ? "present" : "needs review" },
+    {
+      label: "Answer key",
+      status: certificateGaps.missingAnswerKeys > 0 ? "gaps" : "complete",
+    },
+    { label: "Rubric", status: certificateGaps.missingRubrics > 0 ? "gaps" : "complete" },
+    { label: "Readiness", status: `${certificateGaps.readiness}%` },
+  ];
+}
+
+function getDpeCertificateNextAction(certificateGaps: ReturnType<typeof getDpeCertificateGapSummary>) {
+  if (certificateGaps.missingAnswerKeys > 0) {
+    return "Next controlled action: author missing answer keys before rubric expansion.";
+  }
+
+  if (certificateGaps.missingRubrics > 0) {
+    return "Next controlled action: add rubrics for questions with completed answer keys.";
+  }
+
+  return "Next controlled action: review ready content for ACS coverage and certificate publishing.";
+}
+
+function getDpeQuestionPipelineStages(question: DpeQuestionSummary) {
+  return [
+    { label: "Oral question", status: question.questionText ? "present" : "missing" },
+    {
+      label: "Answer key",
+      status: question.answerKeyStatus === "missing" ? "needed" : question.answerKeyStatus,
+    },
+    {
+      label: "Rubric",
+      status: question.rubricStatus === "missing" ? "needed" : question.rubricStatus,
+    },
+    {
+      label: "Readiness",
+      status:
+        question.answerKeyStatus !== "missing" && question.rubricStatus !== "missing"
+          ? "ready"
+          : "not ready",
+    },
+  ];
+}
+
+function getDpeQuestionNextAction(question: DpeQuestionSummary) {
+  if (question.answerKeyStatus === "missing") {
+    return "Next controlled action: create an answer key with expected elements, acceptable variations, common misses, and source references.";
+  }
+
+  if (question.rubricStatus === "missing") {
+    return "Next controlled action: create a rubric for knowledge, risk management, scenario judgment, communication, and readiness.";
+  }
+
+  return "Next controlled action: review this question for ACS fit and keep it ready for practice.";
 }
 
 function groupDpeContentByTask(certificateType: DpeCertificateSummary) {
