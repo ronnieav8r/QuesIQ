@@ -1,6 +1,17 @@
 import { execFileSync } from "node:child_process";
 
 const lanes = {
+  admin: [
+    "docs/platform/",
+    "docs/README.md",
+    "package.json",
+    "scripts/guards/",
+    "src/app/admin/",
+    "src/app/api/admin/",
+    "src/features/admin/",
+    "src/server/admin",
+    "src/server/admin-data/",
+  ],
   dpe: [
     "docs/products/dpe/",
     "src/app/api/dpe/",
@@ -45,7 +56,7 @@ const lanes = {
 };
 
 function usage() {
-  console.error("Usage: node scripts/guards/check-lane.mjs <interview|study|dpe> [target-ref] [base-ref]");
+  console.error("Usage: node scripts/guards/check-lane.mjs <admin|interview|study|dpe> [target-ref] [base-ref]");
   console.error("Examples:");
   console.error("  npm run guard:study");
   console.error("  npm run guard:study -- codex/study");
@@ -63,10 +74,11 @@ function changedFiles(baseRef, targetRef) {
       : git(["diff", "--name-only", "--diff-filter=ACMRTUXB", `${baseRef}...${targetRef}`]);
   const staged = targetRef === "HEAD" ? git(["diff", "--cached", "--name-only", "--diff-filter=ACMRTUXB"]) : "";
   const unstaged = targetRef === "HEAD" ? git(["diff", "--name-only", "--diff-filter=ACMRTUXB"]) : "";
+  const untracked = targetRef === "HEAD" ? git(["ls-files", "--others", "--exclude-standard"]) : "";
 
   return Array.from(
     new Set(
-      [committed, staged, unstaged]
+      [committed, staged, unstaged, untracked]
         .flatMap((output) => output.split(/\r?\n/))
         .map((file) => file.trim().replaceAll("\\", "/"))
         .filter(Boolean),

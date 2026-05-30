@@ -16,6 +16,8 @@ Start here for broad resume work and manager handoffs:
   release flow, and branch sync states.
 - `docs/platform/PARALLEL_DEVELOPMENT.md`: product lane boundaries and
   parallel-development guardrails.
+- `docs/platform/ADMIN_CONTENT_STUDIO.md`: shared Admin Content Studio
+  direction, stage boundaries, and product handoff rules.
 - `docs/platform/ONE_SERVICE_PLATFORM.md`: one-service platform architecture.
 
 ## Historical Rebuild Planning
