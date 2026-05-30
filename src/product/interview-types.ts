@@ -1,5 +1,4 @@
 export type AppView =
-  | "admin"
   | "debrief"
   | "home"
   | "history"
