@@ -90,7 +90,7 @@ Prefer this order when multiple branches are active:
 
 ## Clone Guardrails
 
-The current local parallel setup uses one manager clone and three worker clones:
+The current local parallel setup uses one manager clone and four worker clones:
 
 ```txt
 QuesIQ-manager   -> main, manager/integration

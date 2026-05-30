@@ -18,6 +18,9 @@ Last updated: 2026-05-30
     `codex/study`
   - DPE: `C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-dpe` on
     `codex/dpe`
+  - Admin:
+    `C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-admin` on
+    `codex/admin`
 - The older local checkout `C:\Users\weeks\Documents\github\QuesIQ` is
   reference/archive unless a manager explicitly reactivates it.
 - Active Render web service: `quesiq-web`
@@ -34,6 +37,8 @@ Last updated: 2026-05-30
 - User is not expecting to manually review code for correctness. Future Codex
   passes should own verification, explain outcomes plainly, and when requested
   prepare the GitHub push/deploy path instead of leaving that work to the user.
+- Current manager head: `3815223 Merge DPE content studio draft primitive`.
+  `QuesIQ-manager/main` is clean and aligned with `origin/main` at that commit.
 
 ## Built So Far
 
@@ -63,6 +68,22 @@ Last updated: 2026-05-30
   - baseline Private Pilot ASEL placeholder content is seeded in the migration
   - DPE voice uses the existing direct OpenAI Realtime pattern; assume it works
     until the user resumes voice troubleshooting
+- Shared Admin Content Studio:
+  - Admin owns shared Content Studio UI/API work under the protected `/admin`
+    console
+  - `/admin?product=content` supports source intake, pipeline/template
+    selection, custom instructions, Study draft generation, current-session
+    review display, and existing AI-run history
+  - `/api/admin/content-studio/runs` orchestrates Study draft generation and
+    exposes available run history from `ai_runs`
+  - Study draft generation is product-owned at
+    `/api/study/content-studio/flashcard-draft` and returns review-ready deck
+    metadata, cards, confidence, warnings, missing fields, and checklist flags
+  - DPE draft generation is product-owned at `/api/dpe/content/draft` and
+    returns certificate, ACS, oral-question, answer-key, rubric, confidence,
+    warning, and readiness draft JSON without saving live content
+  - Publish, Official, and Verified changes remain disabled until durable
+    Content Studio run storage and product-specific publish controls exist
 - Rebuild plan, architecture, decisions, scope, and handoff docs
 - Next.js TypeScript baseline and Render readiness files
 - Responsive app shell with intentional mobile and desktop compositions

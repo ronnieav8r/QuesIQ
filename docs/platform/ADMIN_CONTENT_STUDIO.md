@@ -45,8 +45,10 @@ The current Admin slice adds a Content Studio run route at
 - `POST` orchestrates Study flashcard draft generation by calling the
   Study-owned draft primitive. The returned deck draft is held as current
   Admin review state in the browser.
-- DPE generation remains disabled until the DPE product lane provides a
-  product-owned DPE draft primitive.
+- DPE has a product-owned draft primitive at `/api/dpe/content/draft` for
+  certificate, ACS, oral-question, answer-key, rubric, confidence, warning, and
+  readiness drafts. Admin UI wiring for that endpoint is the next integration
+  slice.
 - Publish, Official, and Verified state changes remain out of scope.
 
 Existing `ai_runs` storage is useful for AI-call audit history, but it is not a
