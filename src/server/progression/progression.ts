@@ -373,6 +373,16 @@ function getRuleKey(metadata: unknown) {
   return typeof value === "string" ? value : undefined;
 }
 
+function getQuestKey(metadata: unknown) {
+  if (!metadata || typeof metadata !== "object" || !("questKey" in metadata)) {
+    return undefined;
+  }
+
+  const value = (metadata as { questKey?: unknown }).questKey;
+
+  return typeof value === "string" ? value : undefined;
+}
+
 async function getFirstPracticeOfDay(userId: string, now: Date) {
   const day = toPracticeDate(now);
   const [row] = await getDb()
@@ -405,6 +415,25 @@ export async function recordReviewProgression(
   artifact?: VoiceSessionArtifactDraft,
 ) {
   const now = new Date();
+  const existingRuleRows = await getDb()
+    .select({
+      metadata: progressionEvents.metadata,
+    })
+    .from(progressionEvents)
+    .where(
+      and(
+        eq(progressionEvents.sessionId, sessionId),
+        eq(progressionEvents.eventType, "xp_rule_awarded"),
+      ),
+    );
+  const existingRuleKeys = new Set(
+    existingRuleRows.map((row) => getRuleKey(row.metadata)).filter(Boolean),
+  );
+
+  if (existingRuleKeys.size > 0) {
+    return rebuildProgressionSummary(userId);
+  }
+
   const rules = await getDb()
     .select()
     .from(progressionXpRules)
@@ -420,20 +449,6 @@ export async function recordReviewProgression(
     }),
   );
   const awardedRules = selectAwardedRules(matchingRules);
-  const existingRuleRows = await getDb()
-    .select({
-      metadata: progressionEvents.metadata,
-    })
-    .from(progressionEvents)
-    .where(
-      and(
-        eq(progressionEvents.sessionId, sessionId),
-        eq(progressionEvents.eventType, "xp_rule_awarded"),
-      ),
-    );
-  const existingRuleKeys = new Set(
-    existingRuleRows.map((row) => getRuleKey(row.metadata)).filter(Boolean),
-  );
 
   for (const rule of awardedRules) {
     if (existingRuleKeys.has(rule.key)) {
@@ -817,17 +832,33 @@ async function getQuestProgress(
 }
 
 async function syncUserQuests(userId: string, summary: ProgressionSummaryRecord) {
-  const questRows = await getDb()
-    .select({
-      checkDimension: progressionQuests.checkDimension,
-      checkThreshold: progressionQuests.checkThreshold,
-      checkType: progressionQuests.checkType,
-      key: progressionQuests.key,
-      title: progressionQuests.title,
-      xpReward: progressionQuests.xpReward,
-    })
-    .from(progressionQuests)
-    .where(eq(progressionQuests.enabled, true));
+  const [questRows, completedQuestEventRows] = await Promise.all([
+    getDb()
+      .select({
+        checkDimension: progressionQuests.checkDimension,
+        checkThreshold: progressionQuests.checkThreshold,
+        checkType: progressionQuests.checkType,
+        key: progressionQuests.key,
+        title: progressionQuests.title,
+        xpReward: progressionQuests.xpReward,
+      })
+      .from(progressionQuests)
+      .where(eq(progressionQuests.enabled, true)),
+    getDb()
+      .select({
+        metadata: progressionEvents.metadata,
+      })
+      .from(progressionEvents)
+      .where(
+        and(
+          eq(progressionEvents.userId, userId),
+          eq(progressionEvents.eventType, "quest_completed"),
+        ),
+      ),
+  ]);
+  const completedQuestEventKeys = new Set(
+    completedQuestEventRows.map((row) => getQuestKey(row.metadata)).filter(Boolean),
+  );
   let awarded = 0;
 
   for (const quest of questRows) {
@@ -874,17 +905,20 @@ async function syncUserQuests(userId: string, summary: ProgressionSummaryRecord)
           target: [userQuests.userId, userQuests.questKey],
         });
 
-      await getDb().insert(progressionEvents).values({
-        eventType: "quest_completed",
-        metadata: {
-          questKey: quest.key,
-          title: quest.title,
-        },
-        occurredAt: now,
-        userId,
-        xp: quest.xpReward,
-      });
-      awarded += 1;
+      if (!completedQuestEventKeys.has(quest.key)) {
+        await getDb().insert(progressionEvents).values({
+          eventType: "quest_completed",
+          metadata: {
+            questKey: quest.key,
+            title: quest.title,
+          },
+          occurredAt: now,
+          userId,
+          xp: quest.xpReward,
+        });
+        completedQuestEventKeys.add(quest.key);
+        awarded += 1;
+      }
     } else if (!existing) {
       await getDb().insert(userQuests).values({
         progress,
