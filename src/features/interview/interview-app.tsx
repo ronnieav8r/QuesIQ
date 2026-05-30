@@ -818,6 +818,8 @@ export default function Home() {
               jobTargets={jobTargets}
               onPracticeIntroduction={launchIntroductionPractice}
               onPracticeStory={launchStoryPractice}
+              practiceLaunchError={sessionLaunchError}
+              practiceLaunchPending={sessionLaunchPending}
               selectedJobTarget={activeJobTarget}
             />
           )}

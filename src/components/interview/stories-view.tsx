@@ -113,6 +113,8 @@ type StoriesViewProps = {
   jobTargets: JobTargetRecord[];
   onPracticeIntroduction: (introduction: IntroductionRecord) => void;
   onPracticeStory: (story: StoryRecord) => void;
+  practiceLaunchError?: string;
+  practiceLaunchPending?: boolean;
   selectedJobTarget?: JobTargetRecord;
 };
 
@@ -162,6 +164,21 @@ function joinIntroParts(parts: string[]) {
     .map((part) => part.trim())
     .filter(Boolean)
     .join(" ");
+}
+
+function appendCapturedText(baseText: string, capturedText: string) {
+  const base = baseText.trim();
+  const captured = capturedText.trim();
+
+  if (!base) {
+    return captured;
+  }
+
+  if (!captured) {
+    return base;
+  }
+
+  return `${base}\n${captured}`;
 }
 
 function getIntroLengthGuidance(length: IntroLength) {
@@ -218,18 +235,22 @@ export function StoriesView({
   jobTargets,
   onPracticeIntroduction,
   onPracticeStory,
+  practiceLaunchError,
+  practiceLaunchPending = false,
   selectedJobTarget,
 }: StoriesViewProps) {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const conversationArtifactKeyRef = useRef<string | undefined>(undefined);
   const introConversationArtifactKeyRef = useRef<string | undefined>(undefined);
   const introMaterialRef = useRef("");
+  const introSpeechBaseTextRef = useRef("");
   const introSpeechTranscriptRef = useRef("");
   const recordingWantedRef = useRef(false);
   const shouldScrollToDetailRef = useRef(false);
   const storyDetailRef = useRef<HTMLElement | null>(null);
   const draftTextRef = useRef("");
   const restartTimeoutRef = useRef<number | undefined>(undefined);
+  const speechBaseTextRef = useRef("");
   const speechTranscriptRef = useRef("");
   const [draftText, setDraftText] = useState("");
   const [editDraft, setEditDraft] = useState<StoryEditDraft>();
@@ -321,6 +342,10 @@ export function StoriesView({
     introDraft.transition,
   ]);
   const introScript = introDraft.script.trim() || introDraftText || introMaterial.trim();
+  const introHasCapturedMaterial = Boolean(introMaterial.trim());
+  const introHasDraftContent = Object.values(introDraft).some((value) => value.trim());
+  const showIntroDraftEditor =
+    Boolean(editingIntroductionId) || introHasCapturedMaterial || introHasDraftContent;
   const recentIntroductions = introductions.slice(0, 3);
   const recentStories = stories.slice(0, 3);
 
@@ -399,6 +424,7 @@ export function StoriesView({
     window.clearTimeout(restartTimeoutRef.current);
     recognitionRef.current?.stop();
     speechTranscriptRef.current = "";
+    speechBaseTextRef.current = "";
     draftTextRef.current = "";
     conversationArtifactKeyRef.current = undefined;
     setConversationStatus("idle");
@@ -412,6 +438,7 @@ export function StoriesView({
     recordingWantedRef.current = false;
     window.clearTimeout(restartTimeoutRef.current);
     recognitionRef.current?.stop();
+    introSpeechBaseTextRef.current = "";
     introSpeechTranscriptRef.current = "";
     introMaterialRef.current = "";
     introConversationArtifactKeyRef.current = undefined;
@@ -436,6 +463,32 @@ export function StoriesView({
       resetStoryCapture();
     }
     setStoryLabTab(nextTab);
+  }
+
+  function chooseStoryCaptureMode(nextMode: StoryCaptureMode) {
+    if (nextMode === captureMode) {
+      return;
+    }
+
+    if (recording && captureMode === "dictate") {
+      stopRecording();
+    }
+
+    setError(undefined);
+    setCaptureMode(nextMode);
+  }
+
+  function chooseIntroCaptureMode(nextMode: IntroCaptureMode) {
+    if (nextMode === introCaptureMode) {
+      return;
+    }
+
+    if (recording && introCaptureMode === "dictate") {
+      stopIntroRecording();
+    }
+
+    setError(undefined);
+    setIntroCaptureMode(nextMode);
   }
 
   function saveConversationArtifact(artifact: VoiceSessionArtifactDraft) {
@@ -491,12 +544,19 @@ export function StoriesView({
   function commitSpeechTranscript() {
     const finalTranscript = speechTranscriptRef.current.trim();
     const visibleTranscript = draftTextRef.current.trim();
+    const finalCapturedTranscript = appendCapturedText(
+      speechBaseTextRef.current,
+      finalTranscript,
+    );
     const transcript =
-      visibleTranscript.length > finalTranscript.length ? visibleTranscript : finalTranscript;
+      visibleTranscript.length > finalCapturedTranscript.length
+        ? visibleTranscript
+        : finalCapturedTranscript;
 
     if (transcript) {
       addUserTurn(transcript);
       speechTranscriptRef.current = "";
+      speechBaseTextRef.current = "";
     }
   }
 
@@ -523,6 +583,7 @@ export function StoriesView({
 
     const recognition = new Recognition();
 
+    speechBaseTextRef.current = draftTextRef.current;
     speechTranscriptRef.current = "";
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -541,7 +602,12 @@ export function StoriesView({
         }
       }
 
-      setDraftText(`${speechTranscriptRef.current} ${interimTranscript}`.trim());
+      setDraftText(
+        appendCapturedText(
+          speechBaseTextRef.current,
+          `${speechTranscriptRef.current} ${interimTranscript}`,
+        ),
+      );
     };
     recognition.onerror = (event) => {
       if (recordingWantedRef.current && event.error === "no-speech") {
@@ -578,11 +644,18 @@ export function StoriesView({
   function commitIntroSpeechTranscript() {
     const finalTranscript = introSpeechTranscriptRef.current.trim();
     const visibleTranscript = introMaterialRef.current.trim();
+    const finalCapturedTranscript = appendCapturedText(
+      introSpeechBaseTextRef.current,
+      finalTranscript,
+    );
     const transcript =
-      visibleTranscript.length > finalTranscript.length ? visibleTranscript : finalTranscript;
+      visibleTranscript.length > finalCapturedTranscript.length
+        ? visibleTranscript
+        : finalCapturedTranscript;
 
     if (transcript) {
       setIntroMaterial(transcript);
+      introSpeechBaseTextRef.current = "";
       introSpeechTranscriptRef.current = "";
     }
   }
@@ -610,6 +683,7 @@ export function StoriesView({
 
     const recognition = new Recognition();
 
+    introSpeechBaseTextRef.current = introMaterialRef.current;
     introSpeechTranscriptRef.current = "";
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -628,7 +702,12 @@ export function StoriesView({
         }
       }
 
-      setIntroMaterial(`${introSpeechTranscriptRef.current} ${interimTranscript}`.trim());
+      setIntroMaterial(
+        appendCapturedText(
+          introSpeechBaseTextRef.current,
+          `${introSpeechTranscriptRef.current} ${interimTranscript}`,
+        ),
+      );
     };
     recognition.onerror = (event) => {
       if (recordingWantedRef.current && event.error === "no-speech") {
@@ -714,6 +793,7 @@ export function StoriesView({
 
       setStories((current) => [body.story as StoryRecord, ...current]);
       setSelectedStoryId(body.story.id);
+      setStoryLabView("library");
       setTurns([
         createTurn(
           "assistant",
@@ -757,6 +837,11 @@ export function StoriesView({
   }
 
   async function draftCapturedIntroduction(rawNotes: string) {
+    if (!rawNotes.trim()) {
+      setError("Add intro notes or a rough script before asking Que to draft it.");
+      return;
+    }
+
     try {
       setError(undefined);
       setIntroPending(true);
@@ -920,6 +1005,14 @@ export function StoriesView({
   }
 
   async function removeIntroduction(introduction: IntroductionRecord) {
+    const confirmed = window.confirm(
+      `Delete ${introduction.title}? This removes the saved introduction, but not past practice sessions.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
     try {
       setError(undefined);
       const response = await fetch(`/api/introductions/${introduction.id}`, {
@@ -991,8 +1084,17 @@ export function StoriesView({
 
     const outline = draftToOutline(editingStory, editDraft);
 
-    if (!outline.title || !outline.summary || !outline.situation || !outline.task) {
-      setEditError("Title, summary, situation, and task are required.");
+    if (
+      !outline.title ||
+      !outline.summary ||
+      !outline.situation ||
+      !outline.task ||
+      !outline.result ||
+      !outline.practicePrompt
+    ) {
+      setEditError(
+        "Title, summary, situation, task, result, and practice prompt are required.",
+      );
       return;
     }
 
@@ -1134,7 +1236,7 @@ export function StoriesView({
               <button
                 aria-selected={introCaptureMode === "tell"}
                 className={introCaptureMode === "tell" ? "active" : undefined}
-                onClick={() => setIntroCaptureMode("tell")}
+                onClick={() => chooseIntroCaptureMode("tell")}
                 role="tab"
                 type="button"
               >
@@ -1143,7 +1245,7 @@ export function StoriesView({
               <button
                 aria-selected={introCaptureMode === "dictate"}
                 className={introCaptureMode === "dictate" ? "active" : undefined}
-                onClick={() => setIntroCaptureMode("dictate")}
+                onClick={() => chooseIntroCaptureMode("dictate")}
                 role="tab"
                 type="button"
               >
@@ -1152,7 +1254,7 @@ export function StoriesView({
               <button
                 aria-selected={introCaptureMode === "type"}
                 className={introCaptureMode === "type" ? "active" : undefined}
-                onClick={() => setIntroCaptureMode("type")}
+                onClick={() => chooseIntroCaptureMode("type")}
                 role="tab"
                 type="button"
               >
@@ -1234,7 +1336,7 @@ export function StoriesView({
               </div>
             </section>
 
-            {editingIntroductionId && (
+            {showIntroDraftEditor && (
               <>
                 <label>
                   <span>Title</span>
@@ -1272,13 +1374,23 @@ export function StoriesView({
                   </button>
                 </>
               ) : (
-                <button disabled={introPending || !introScript.trim()} onClick={saveIntroduction} type="button">
-                  {introPending
-                    ? introPendingStep === "drafting"
-                      ? "Drafting"
-                      : "Saving"
-                    : "Save Introduction"}
-                </button>
+                <>
+                  <button
+                    className="secondary"
+                    disabled={introPending || !introHasCapturedMaterial}
+                    onClick={() => void draftCapturedIntroduction(introMaterial)}
+                    type="button"
+                  >
+                    {introPendingStep === "drafting" ? "Drafting" : "Draft Introduction"}
+                  </button>
+                  <button disabled={introPending || !introScript.trim()} onClick={saveIntroduction} type="button">
+                    {introPending
+                      ? introPendingStep === "drafting"
+                        ? "Drafting"
+                        : "Saving"
+                      : "Save Introduction"}
+                  </button>
+                </>
               )}
             </div>
             {error && <p className="form-error">{error}</p>}
@@ -1382,10 +1494,11 @@ export function StoriesView({
                           <p>{introduction.script}</p>
                           <div className="inline-actions">
                             <button
+                              disabled={practiceLaunchPending}
                               onClick={() => onPracticeIntroduction(introduction)}
                               type="button"
                             >
-                              Practice Intro
+                              {practiceLaunchPending ? "Launching" : "Practice Intro"}
                             </button>
                             <button
                               className="secondary"
@@ -1402,6 +1515,9 @@ export function StoriesView({
                               Delete
                             </button>
                           </div>
+                          {practiceLaunchError && (
+                            <p className="form-error">{practiceLaunchError}</p>
+                          )}
                           <dl>
                             <div>
                               <dt>Length</dt>
@@ -1477,7 +1593,7 @@ export function StoriesView({
             <button
               aria-selected={captureMode === "tell"}
               className={captureMode === "tell" ? "active" : undefined}
-              onClick={() => setCaptureMode("tell")}
+              onClick={() => chooseStoryCaptureMode("tell")}
               role="tab"
               type="button"
             >
@@ -1486,7 +1602,7 @@ export function StoriesView({
             <button
               aria-selected={captureMode === "dictate"}
               className={captureMode === "dictate" ? "active" : undefined}
-              onClick={() => setCaptureMode("dictate")}
+              onClick={() => chooseStoryCaptureMode("dictate")}
               role="tab"
               type="button"
             >
@@ -1495,7 +1611,7 @@ export function StoriesView({
             <button
               aria-selected={captureMode === "type"}
               className={captureMode === "type" ? "active" : undefined}
-              onClick={() => setCaptureMode("type")}
+              onClick={() => chooseStoryCaptureMode("type")}
               role="tab"
               type="button"
             >
@@ -1861,8 +1977,12 @@ export function StoriesView({
                               )}
                             </div>
                             <div className="inline-actions">
-                              <button onClick={() => onPracticeStory(story)} type="button">
-                                Practice Story
+                              <button
+                                disabled={practiceLaunchPending}
+                                onClick={() => onPracticeStory(story)}
+                                type="button"
+                              >
+                                {practiceLaunchPending ? "Launching" : "Practice Story"}
                               </button>
                               <button
                                 className="secondary danger"
@@ -1872,6 +1992,9 @@ export function StoriesView({
                                 Delete
                               </button>
                             </div>
+                            {practiceLaunchError && (
+                              <p className="form-error">{practiceLaunchError}</p>
+                            )}
                             <dl>
                               <div>
                                 <dt>Situation</dt>
