@@ -1,6 +1,6 @@
 # Branching And Releases
 
-Last updated: 2026-05-29
+Last updated: 2026-05-30
 
 ## Goal
 
@@ -24,12 +24,47 @@ would make the branch name comforting but inaccurate.
 
 1. Start feature work from current `main` on a `codex/*` branch.
 2. Keep changes scoped and update docs when durable decisions change.
-3. Run the relevant local checks before merge. The usual baseline is lint,
+3. For worker branches, run the matching lane guard before merge.
+4. Run the relevant local checks before merge. The usual baseline is lint,
    TypeScript, and production build unless the change is docs-only.
-4. Merge finished work into `main`.
-5. Promote `main` to `live` only when the release is intentionally approved for
+5. Merge finished work into `main`.
+6. Promote `main` to `live` only when the release is intentionally approved for
    production.
-6. Deploy production from `live` after Render is configured for the branch.
+7. Deploy production from `live` after Render is configured for the branch.
+
+## Worktree Manager Flow
+
+For parallel product work, use the original repo folder as the manager and
+separate sibling worktrees for workers:
+
+```txt
+C:\Users\weeks\Documents\github\QuesIQ           -> main, manager/integration
+C:\Users\weeks\Documents\github\QuesIQ-interview -> codex/interview
+C:\Users\weeks\Documents\github\QuesIQ-study     -> codex/study
+C:\Users\weeks\Documents\github\QuesIQ-dpe       -> codex/dpe
+```
+
+The worker Codex projects use separate project folders because Codex Desktop
+assigns folders at the project level. The manager may not be able to message
+those chats directly, so worker assignments and handoffs may need to be pasted
+between projects.
+
+Workers should not merge to `main`. They should finish scoped work, run relevant
+checks, and produce a handoff. The manager should inspect the branch, run the
+matching lane guard, merge one branch at a time into `main`, then run final
+checks.
+
+Lane guard commands, run from the manager folder:
+
+```txt
+npm run guard:interview -- codex/interview
+npm run guard:study -- codex/study
+npm run guard:dpe -- codex/dpe
+```
+
+Each worker worktree has a local-only instruction file at
+`.codex-local/WORKER_INSTRUCTIONS.md`. The `.codex-local/` folder is ignored by
+Git and should not be committed.
 
 ## User Preference
 
@@ -51,6 +86,7 @@ language, then make the next release action explicit.
 
 - Confirm migrations are safe to run once and forward-only.
 - Confirm required Render environment variables are present.
+- For worker branches, confirm the matching lane guard passes.
 - Run lint, TypeScript, and production build unless the release is docs-only.
 - Check high-risk user flows touched by the release.
 - Confirm `docs/rebuild/HANDOFF.md` and `docs/rebuild/CURRENT_STATUS.md` are

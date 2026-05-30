@@ -1,6 +1,6 @@
 # Parallel Development
 
-Last updated: 2026-05-29
+Last updated: 2026-05-30
 
 ## Rule
 
@@ -11,10 +11,13 @@ Products can move in parallel. Platform changes are serialized.
 AI agents or developers may work in parallel when each change stays inside one
 product lane:
 
-- Interview: `src/components/interview`, current Interview server modules, and
-  future `src/features/interview`
-- Study: future `src/features/study` and product-owned routes
-- QuesIQ DPE: future `src/features/dpe` and product-owned routes
+- Interview: `src/features/interview`, `src/components/interview`,
+  Interview-owned API routes, and Interview-owned server modules for sessions,
+  stories, introductions, debriefs, progression, feedback, and coaching memory
+- Study: `src/features/study`, `src/server/study`, `src/app/study`,
+  `src/app/api/study`, `scripts/study`, and `docs/products/study`
+- QuesIQ DPE: `src/features/dpe`, `src/server/dpe`, `src/app/dpe`,
+  `src/app/api/dpe`, and `docs/products/dpe`
 - Marketing: future `src/features/marketing` and public marketing routes
 
 Each product owns its own UI, product services, product copy, prompt configs,
@@ -39,6 +42,11 @@ Only one owner should change these at a time:
 - `render.yaml`
 - deploy, branch, or release docs
 
+Shared env/key routing also belongs to the platform lane. Product workers should
+use existing helpers such as `getOpenAiApiKey("study")` and
+`getOpenAiRealtimeApiKey("dpe")`; they should not invent new environment
+variable names inside product code.
+
 ## Migration Rule
 
 Drizzle migrations are serialized. One active owner creates and verifies
@@ -61,6 +69,34 @@ Prefer this order when multiple branches are active:
 2. Product module changes
 3. Marketing changes
 4. Integration QA and release promotion
+
+## Worktree Guardrails
+
+The current local parallel setup uses one manager checkout and three worker
+worktrees:
+
+```txt
+QuesIQ           -> main, manager/integration
+QuesIQ-interview -> codex/interview
+QuesIQ-study     -> codex/study
+QuesIQ-dpe       -> codex/dpe
+```
+
+Each worker worktree has local instructions in
+`.codex-local/WORKER_INSTRUCTIONS.md`. That folder is ignored by Git so each
+worker can keep lane-specific instructions without copying them into the shared
+repo.
+
+Before merging a worker branch, the manager should run:
+
+```txt
+npm run guard:interview -- codex/interview
+npm run guard:study -- codex/study
+npm run guard:dpe -- codex/dpe
+```
+
+The lane guard checks changed files against allowed path prefixes. It does not
+replace review, but it catches obvious cross-lane edits before merge.
 
 ## Agent Brief
 
