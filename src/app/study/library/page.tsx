@@ -13,7 +13,14 @@ import {
 import { StudyDeckCard } from "@/features/study/study-deck-card";
 
 type Props = {
-  searchParams: Promise<{ official?: string; q?: string; scope?: string; subject?: string; tag?: string }>;
+  searchParams: Promise<{
+    official?: string;
+    q?: string;
+    scope?: string;
+    subject?: string;
+    tag?: string;
+    verified?: string;
+  }>;
 };
 
 function normalize(value: string | null | undefined) {
@@ -24,18 +31,23 @@ function cleanParam(value: string | null | undefined) {
   return value?.trim() || undefined;
 }
 
+function normalizeScope(scope: string | undefined): StudyLibraryScope {
+  if (scope === "mine") {
+    return "mine";
+  }
+  return "all";
+}
+
 export default async function StudyLibraryPage({ searchParams }: Props) {
-  const { official, q, scope, subject, tag } = await searchParams;
+  const { official, q, scope, subject, tag, verified } = await searchParams;
   const session = await auth();
   const userId = session?.user?.id;
   const query = normalize(q);
   const subjectFilter = normalize(subject);
   const tagFilter = normalize(tag);
   const officialOnly = official === "1";
-  const scopeFilter: StudyLibraryScope =
-    scope === "mine" || scope === "official" || scope === "all"
-      ? scope
-      : "all";
+  const verifiedOnly = verified === "1";
+  const scopeFilter = normalizeScope(scope);
 
   const [filteredDecks, optionDecks, subjectTaxonomyOptions, audienceTags] = await Promise.all([
     getStudyLibraryDecks({
@@ -45,6 +57,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
       subject: subjectFilter || undefined,
       tag: tagFilter || undefined,
       userId,
+      verifiedOnly,
     }),
     getStudyLibraryDecks({
       scope: scopeFilter,
@@ -68,7 +81,9 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
     ),
   ).sort((a, b) => a.localeCompare(b));
 
-  const hasFilters = Boolean(query || subjectFilter || tagFilter || officialOnly || scopeFilter !== "all");
+  const hasFilters = Boolean(
+    query || subjectFilter || tagFilter || officialOnly || verifiedOnly || scopeFilter !== "all",
+  );
   const resultLabel = `${filteredDecks.length} result${filteredDecks.length === 1 ? "" : "s"}`;
   const subjectOptions = [
     ...subjectTaxonomyOptions.map((value) => ({ label: value.label, value: value.name })),
@@ -87,6 +102,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
     scope?: StudyLibraryScope | null;
     subject?: string | null;
     tag?: string | null;
+    verified?: string | null;
   }) {
     const params = new URLSearchParams();
     const nextScope = next.scope === undefined ? scopeFilter : next.scope;
@@ -94,12 +110,14 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
     const nextSubject = next.subject === undefined ? cleanParam(subject) : cleanParam(next.subject);
     const nextTag = next.tag === undefined ? cleanParam(tag) : cleanParam(next.tag);
     const nextOfficial = next.official === undefined ? official : next.official;
+    const nextVerified = next.verified === undefined ? verified : next.verified;
 
     if (nextScope && nextScope !== "all") params.set("scope", nextScope);
     if (nextQuery) params.set("q", nextQuery);
     if (nextSubject) params.set("subject", nextSubject);
     if (nextTag) params.set("tag", nextTag);
     if (nextOfficial === "1") params.set("official", "1");
+    if (nextVerified === "1") params.set("verified", "1");
 
     const suffix = params.toString();
     return suffix ? `/study/library?${suffix}` : "/study/library";
@@ -111,7 +129,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
         <div>
           <p className="eyebrow">QuesIQ Study</p>
           <h1>Library</h1>
-          <p>Browse public Study decks shared across QuesIQ.</p>
+          <p>Browse public Study decks and your saved Study library.</p>
         </div>
         <Link className="button-link secondary" href="/study">
           Study Home
@@ -121,8 +139,8 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
       <section className="panel study-library-heading">
         <BookOpen size={20} aria-hidden="true" />
         <div>
-          <h2>{filteredDecks.length} public deck{filteredDecks.length === 1 ? "" : "s"}</h2>
-          <p>Browse by subject, keyword, audience, and official status.</p>
+          <h2>{filteredDecks.length} deck{filteredDecks.length === 1 ? "" : "s"}</h2>
+          <p>Filter by ownership, visibility, and trust/source status.</p>
         </div>
       </section>
 
@@ -132,11 +150,11 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
             <span>Search</span>
             <input defaultValue={q ?? ""} name="q" placeholder="Search title, description, subject, tags..." type="search" />
           </label>
-
-          <label className="study-check-label">
-            <input defaultChecked={officialOnly} name="official" type="checkbox" value="1" />
-            <span>Official decks only</span>
-          </label>
+          {scopeFilter !== "all" && <input name="scope" type="hidden" value={scopeFilter} />}
+          {subjectFilter && <input name="subject" type="hidden" value={subjectFilter} />}
+          {tagFilter && <input name="tag" type="hidden" value={tagFilter} />}
+          {officialOnly && <input name="official" type="hidden" value="1" />}
+          {verifiedOnly && <input name="verified" type="hidden" value="1" />}
 
           <div className="study-library-search__actions">
             <button type="submit">Apply</button>
@@ -151,19 +169,34 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
 
         <div className="study-library-filter-groups">
           <div className="study-library-filter-group">
-            <span>Scope</span>
+            <span>Ownership & Visibility</span>
             <div className="study-filter-pills">
               <Link className={scopeFilter === "all" ? "active" : ""} href={libraryHref({ scope: "all" })}>
-                All public
-              </Link>
-              <Link className={scopeFilter === "official" ? "active" : ""} href={libraryHref({ scope: "official" })}>
-                Official
+                Public
               </Link>
               {userId && (
                 <Link className={scopeFilter === "mine" ? "active" : ""} href={libraryHref({ scope: "mine" })}>
                   Mine
                 </Link>
               )}
+            </div>
+          </div>
+
+          <div className="study-library-filter-group">
+            <span>Trust & Source</span>
+            <div className="study-filter-pills">
+              <Link
+                className={!officialOnly && !verifiedOnly ? "active" : ""}
+                href={libraryHref({ official: null, verified: null })}
+              >
+                Any
+              </Link>
+              <Link className={officialOnly ? "active" : ""} href={libraryHref({ official: "1" })}>
+                Official
+              </Link>
+              <Link className={verifiedOnly ? "active" : ""} href={libraryHref({ verified: "1" })}>
+                Verified
+              </Link>
             </div>
           </div>
 
@@ -220,7 +253,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
               <h2>No decks match these filters.</h2>
               <p>Try broadening search or clearing one or more filters.</p>
               <Link className="button-link" href="/study/library">
-                View All Public Decks
+                View Public Decks
               </Link>
             </>
           )}

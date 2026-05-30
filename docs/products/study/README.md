@@ -51,8 +51,9 @@ The first Study slice is imported:
   images, pasted text, and URLs through `/api/study/decks/[deckId]/import`
 - owned deck pages now support `Export CSV` and `Export TSV` through
   `/api/study/decks/[deckId]/export`
-- `/study/library` shows public Study decks with search, subject filter, and
-  official-only filtering, plus scope filters (`all`, `official`, `mine`) and
+- `/study/library` shows public Study decks and the signed-in user's owned
+  decks with search, subject filter, ownership/visibility filters (`Public`,
+  `Mine`), and trust/source filters (`Official`, `Verified`) backed by
   Study-prefixed taxonomy tables for subjects, audience tags, sources,
   verifications, and deck imports; subject and audience filters now use
   mobile-friendly pill controls

@@ -266,8 +266,9 @@ These are places where the target repo strayed from a strict copy of
 3. The prior `/study/decks/[deckId]/start` intermediate launcher route was
    removed. Study launch now uses the source-style deck-page picker directly.
 
-4. `/study/library` keeps target-only scope filters (`all`, `official`,
-   `mine`) as a product decision. It now has Study-prefixed taxonomy tables,
+4. `/study/library` keeps target-only V1 library filters as a product decision.
+   It separates ownership/visibility (`Public`, `Mine`) from trust/source
+   status (`Official`, `Verified`). It now has Study-prefixed taxonomy tables,
    `getStudyRootSubjects`, `getStudyAudienceTags`, `getStudyLibraryDecks`,
    mapped audience-tag filtering, and mobile-friendly pill filters. It is still
    a target-side implementation rather than a literal copy of source
@@ -306,7 +307,7 @@ These are places where the target repo strayed from a strict copy of
     `R2_BUCKET_NAME`, and `R2_PUBLIC_URL` are configured.
 
 12. Target-only additions deliberately kept: `/study/history`, private
-    owner-only export, and library scope filters. The prior
+    owner-only export, and V1 library visibility/trust filters. The prior
     `/study/decks/[deckId]/start` launcher was removed.
 
 ## Current Functional Gaps To Fix

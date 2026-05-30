@@ -43,15 +43,18 @@ function timeAgo(date: Date) {
 export function StudyDeckCard({ currentUserId, deck }: StudyDeckCardProps) {
   const hasStats = deck.dueCount !== undefined;
   const isOwner = deck.userId === currentUserId;
+  const verifiedCardCount = deck.verifiedCardCount ?? 0;
+  const isVerified = verifiedCardCount > 0;
   const masteryPct =
     deck.cardCount > 0 ? Math.round(((deck.masteredCount ?? 0) / deck.cardCount) * 100) : 0;
 
   return (
     <Link className="study-deck-card" href={`/study/decks/${deck.id}`}>
       <div className="study-deck-card__header">
+        {isOwner && <span className="badge">Mine</span>}
+        {deck.isPublic && <span className="badge">Public</span>}
         {deck.isOfficial && <span className="badge">Official</span>}
-        {deck.isPublic && !deck.isOfficial && <span className="badge">Public</span>}
-        {!deck.isPublic && isOwner && <span className="badge">Private</span>}
+        {isVerified && <span className="badge">Verified</span>}
         {hasStats && (deck.dueCount ?? 0) > 0 && (
           <span className="study-deck-card__due">{deck.dueCount} due</span>
         )}
@@ -71,11 +74,9 @@ export function StudyDeckCard({ currentUserId, deck }: StudyDeckCardProps) {
 
       <div className="study-deck-card__footer">
         {deck.subject && <span className="badge">{deck.subject}</span>}
-        {(deck.verifiedCardCount ?? 0) > 0 && (
+        {verifiedCardCount > 0 && verifiedCardCount < deck.cardCount && (
           <span className="badge">
-            {deck.verifiedCardCount === deck.cardCount
-              ? "All verified"
-              : `${deck.verifiedCardCount} verified`}
+            {verifiedCardCount} verified card{verifiedCardCount === 1 ? "" : "s"}
           </span>
         )}
         <span>
