@@ -32,22 +32,20 @@ would make the branch name comforting but inaccurate.
    production.
 7. Deploy production from `live` after Render is configured for the branch.
 
-## Worktree Manager Flow
+## Manager And Worker Clone Flow
 
-For parallel product work, use the original repo folder as the manager and
-separate sibling worktrees for workers:
+For parallel product work, use separate full clones. Each clone has its own
+`.git` folder so Codex workers do not share Git metadata:
 
 ```txt
-C:\Users\weeks\Documents\github\QuesIQ           -> main, manager/integration
-C:\Users\weeks\Documents\github\QuesIQ-interview -> codex/interview
-C:\Users\weeks\Documents\github\QuesIQ-study     -> codex/study
-C:\Users\weeks\Documents\github\QuesIQ-dpe       -> codex/dpe
+C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-manager   -> main, manager/integration
+C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-interview -> codex/interview
+C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-study     -> codex/study
+C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-dpe       -> codex/dpe
 ```
 
-The worker Codex projects use separate project folders because Codex Desktop
-assigns folders at the project level. The manager may not be able to message
-those chats directly, so worker assignments and handoffs may need to be pasted
-between projects.
+The manager thread owns task routing, review, integration, and pushes to
+`main`. Worker threads work only in their assigned clone and branch.
 
 Workers should not merge to `main`. They should finish scoped work, run relevant
 checks, and produce a handoff. The manager should inspect the branch, run the
@@ -57,14 +55,13 @@ checks.
 Lane guard commands, run from the manager folder:
 
 ```txt
-npm run guard:interview -- codex/interview
-npm run guard:study -- codex/study
-npm run guard:dpe -- codex/dpe
+npm run guard:interview -- origin/codex/interview
+npm run guard:study -- origin/codex/study
+npm run guard:dpe -- origin/codex/dpe
 ```
 
-Each worker worktree has a local-only instruction file at
-`.codex-local/WORKER_INSTRUCTIONS.md`. The `.codex-local/` folder is ignored by
-Git and should not be committed.
+Worker branches may be pushed to `origin/codex/*` for manager integration.
+Only the manager pushes `main`.
 
 ## User Preference
 
