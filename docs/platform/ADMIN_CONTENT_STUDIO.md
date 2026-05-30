@@ -34,6 +34,26 @@ Generation and verification are separate stages:
 The initial UI intentionally keeps scrub, generate, verify, and publish actions
 disabled until backend endpoints and audit storage are ready.
 
+## Runs
+
+The current Admin slice adds a Content Studio run route at
+`/api/admin/content-studio/runs`.
+
+- `GET` returns durable AI-call history for Study flashcard draft runs when
+  existing `ai_runs` records have `rawJson.operation =
+  "study_content_studio_flashcard_draft"`.
+- `POST` orchestrates Study flashcard draft generation by calling the
+  Study-owned draft primitive. The returned deck draft is held as current
+  Admin review state in the browser.
+- DPE generation remains disabled until the DPE product lane provides a
+  product-owned DPE draft primitive.
+- Publish, Official, and Verified state changes remain out of scope.
+
+Existing `ai_runs` storage is useful for AI-call audit history, but it is not a
+complete Content Studio run ledger. Durable review state still needs dedicated
+storage for source intake metadata, selected template, full draft payload,
+reviewer notes, stage transitions, and future publish audit events.
+
 ## Ownership
 
 Shared Admin owns:
