@@ -89,6 +89,16 @@ The first Study slice is imported:
   `source_pack_generation_packet_preview` mode. It validates a posted
   generation packet and returns preview/review sections only; it does not
   generate cards, import decks, publish, or write Official/Verified state.
+- `src/server/study/study-source-pack-verification-queue.ts` builds a
+  preview-only verifier queue packet from a validated
+  `study.sourcePackDeckDraft.v1` payload. It summarizes card counts, status
+  counts, source citation coverage, visual coverage, warning counts, and
+  per-card queue recommendations.
+- `/api/study/content-studio/flashcard-draft` supports admin-only
+  `source_pack_verification_queue_preview` mode. It validates
+  `sourcePackDraftJson` using the existing Study draft parser, returns the
+  queue preview and review sections, and does not call AI, import decks, write
+  cards, publish, or mark Official/Verified.
 - `/api/study/tts` supports Study voice paths with Admin AI Usage
   instrumentation and source-style R2 audio caching when R2 environment
   variables are configured
