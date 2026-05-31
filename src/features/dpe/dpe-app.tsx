@@ -790,8 +790,9 @@ export default function App() {
           session?: { id: string };
         };
 
-        setDatabaseAvailable(data.available);
-        if (data.available && data.session?.id) {
+        const sessionCreated = response.ok && data.available === true && Boolean(data.session?.id);
+        setDatabaseAvailable(sessionCreated);
+        if (sessionCreated && data.session?.id) {
           setPracticeNotice(null);
           setSession({ ...draftSession, id: data.session.id, persisted: true });
           setCurrentIndex(0);
@@ -804,7 +805,7 @@ export default function App() {
         if (voiceMode) {
           setPracticeNotice({
             title: "Voice launch switched to typed practice",
-            detail: data.available
+            detail: response.ok && data.available === true
               ? "Voice mode requires a saved DPE session id before microphone launch. Typed practice started so you can continue now."
               : "DPE session storage is unavailable, so voice evidence cannot be saved right now. Typed practice started so you can keep working.",
           });

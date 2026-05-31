@@ -1261,3 +1261,17 @@ content:
    embedded retries keep the learner on the open review.
 4. Admin DPE preflight now checks for the shared History retry action marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 85 (Session Creation Persistence Hardening)
+
+This slice applies the save-backed response rule to DPE session creation
+without changing content:
+
+1. New DPE sessions are treated as saved only when the create endpoint returns
+   HTTP OK, `available: true`, and a session id.
+2. Non-OK, unavailable, malformed, or id-less create responses now start typed
+   practice through the existing local-only path.
+3. Voice launch fallback copy now uses the same strict session-created check
+   before saying only the saved session id was missing.
+4. Admin DPE preflight now checks for the session creation persistence marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.

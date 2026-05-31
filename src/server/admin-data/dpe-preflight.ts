@@ -277,6 +277,7 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "Voice disabled:",
       "sessionStarting",
       "Starting session",
+      "sessionCreated",
     ]),
     voiceRuntimeConfigContractVisible: hasAll(realtimeRouteText, [
       'getOpenAiRealtimeApiKey("dpe")',

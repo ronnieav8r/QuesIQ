@@ -174,6 +174,7 @@ const codeContracts = [
       "Voice disabled:",
       "sessionStarting",
       "Starting session",
+      "sessionCreated",
     ],
   },
   {
