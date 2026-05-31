@@ -27,7 +27,7 @@ import {
   STUDY_RICH_IMPORT_HEADERS,
   STUDY_RICH_IMPORT_SAMPLE_CSV,
 } from "@/server/study/study-rich-flashcard-import";
-import { getStudyDeck } from "@/features/study/study-data";
+import { createStudyDeck, getStudyDeck } from "@/features/study/study-data";
 
 export const runtime = "nodejs";
 
@@ -39,6 +39,10 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json().catch(() => ({}))) as {
+    createDeckDescription?: string;
+    createDeckSubject?: string;
+    createDeckTags?: string[];
+    createDeckTitle?: string;
     csvText?: string;
     deckId?: string;
     generationPacketJson?: unknown;
@@ -65,18 +69,34 @@ export async function POST(request: Request) {
   }
 
   if (body.mode === "rich_csv_import_save") {
-    const deckId = body.deckId?.trim();
+    let deckId = body.deckId?.trim();
     const csvText = body.csvText?.trim();
-    if (!deckId) {
-      return NextResponse.json({ error: "deckId is required." }, { status: 400 });
-    }
     if (!csvText) {
       return NextResponse.json({ error: "csvText is required." }, { status: 400 });
     }
-
-    const deck = await getStudyDeck(deckId);
-    if (!deck) {
-      return NextResponse.json({ error: "Deck not found." }, { status: 404 });
+    if (!deckId) {
+      const createDeckTitle = body.createDeckTitle?.trim();
+      if (!createDeckTitle) {
+        return NextResponse.json(
+          { error: "deckId or createDeckTitle is required." },
+          { status: 400 },
+        );
+      }
+      const deck = await createStudyDeck({
+        description: body.createDeckDescription?.trim() || undefined,
+        subject: body.createDeckSubject?.trim() || undefined,
+        tags: Array.isArray(body.createDeckTags)
+          ? body.createDeckTags.map((tag) => tag.trim()).filter(Boolean)
+          : undefined,
+        title: createDeckTitle,
+        userId: session.user.id,
+      });
+      deckId = deck.id;
+    } else {
+      const deck = await getStudyDeck(deckId);
+      if (!deck) {
+        return NextResponse.json({ error: "Deck not found." }, { status: 404 });
+      }
     }
 
     const parsed = parseStudyRichFlashcardImportText(csvText);
