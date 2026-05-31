@@ -1,3 +1,6 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
 import {
   dpeTargetTracks,
   inferDpeTargetTrackKeyFromCertificate,
@@ -7,20 +10,22 @@ import { listDpeContentSummary } from "@/server/dpe/dpe-data";
 import { getOpenAiApiKey, getOpenAiRealtimeApiKey } from "@/server/openai/keys";
 
 type PreflightStatus = "blocked" | "ok" | "warning";
+type PreflightRow = {
+  detail: string;
+  key: string;
+  label: string;
+  status: PreflightStatus;
+  value: string;
+};
 
 export type AdminDpePreflightSnapshot = {
   blockers: string[];
   checks: string[];
   contentSummaryAvailable: boolean;
   progressionAvailable: boolean;
+  runtimeRows: PreflightRow[];
   status: PreflightStatus;
-  statusRows: Array<{
-    detail: string;
-    key: string;
-    label: string;
-    status: PreflightStatus;
-    value: string;
-  }>;
+  statusRows: PreflightRow[];
   trackSummary: {
     configured: number;
     needsContentWork: number;
@@ -42,6 +47,14 @@ function asBool(value: unknown) {
 
 function statusFrom(value: boolean): PreflightStatus {
   return value ? "ok" : "blocked";
+}
+
+function warningStatusFrom(value: boolean): PreflightStatus {
+  return value ? "ok" : "warning";
+}
+
+function hasAll(text: string, snippets: string[]) {
+  return snippets.every((snippet) => text.includes(snippet));
 }
 
 function trackSummaryFromContent(summary: Awaited<ReturnType<typeof listDpeContentSummary>>) {
@@ -98,9 +111,13 @@ function trackSummaryFromContent(summary: Awaited<ReturnType<typeof listDpeConte
 }
 
 export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightSnapshot> {
-  const [contentResult, progressionResult] = await Promise.allSettled([
+  const [contentResult, progressionResult, dpeAppSource, realtimeRouteSource, dpeTrackSource] =
+    await Promise.allSettled([
     listDpeContentSummary(),
     listAdminDpeProgressionSnapshot(),
+    readFile(path.join(process.cwd(), "src/features/dpe/dpe-app.tsx"), "utf8"),
+    readFile(path.join(process.cwd(), "src/app/api/dpe/realtime/session/route.ts"), "utf8"),
+    readFile(path.join(process.cwd(), "src/features/dpe/target-tracks.ts"), "utf8"),
   ]);
   const contentSummaryAvailable =
     contentResult.status === "fulfilled" && contentResult.value.available;
@@ -113,6 +130,38 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
   const voiceConfig = {
     apiKeyConfigured: asBool(getOpenAiApiKey("dpe")),
     realtimeKeyConfigured: asBool(getOpenAiRealtimeApiKey("dpe")),
+  };
+  const dpeAppText = dpeAppSource.status === "fulfilled" ? dpeAppSource.value : "";
+  const realtimeRouteText =
+    realtimeRouteSource.status === "fulfilled" ? realtimeRouteSource.value : "";
+  const dpeTrackText = dpeTrackSource.status === "fulfilled" ? dpeTrackSource.value : "";
+  const runtimeSignals = {
+    contentPendingMessagingVisible: hasAll(dpeAppText, [
+      "Content remains pending for this track",
+      "available Private Pilot demo prompts",
+      "Selected target is scaffolded; demo prompt lane is active",
+    ]),
+    learnerTargetAwareChromeVisible: hasAll(dpeAppText, [
+      "Target-track oral prep",
+      "MVP readiness checklist",
+      "Readiness quest track (preview)",
+    ]),
+    requestedTracksConfigured: hasAll(dpeTrackText, [
+      'code: "IRA"',
+      'code: "CAX-ASEL"',
+      'code: "CFI-A"',
+      'code: "CFII-A"',
+      'code: "MEL"',
+      'code: "MEI-A"',
+    ]),
+    voiceLaunchTargetAwareFramingVisible: hasAll(dpeAppText, [
+      "Voice launch switched to typed practice",
+      "selected target remains unchanged",
+    ]),
+    voiceRuntimeConfigContractVisible: hasAll(realtimeRouteText, [
+      'getOpenAiRealtimeApiKey("dpe")',
+      "OPENAI_DPE_REALTIME_API_KEY or OPENAI_DPE_API_KEY",
+    ]),
   };
 
   const blockers: string[] = [];
@@ -139,8 +188,24 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
   if (!voiceConfig.apiKeyConfigured) {
     warnings.push("DPE API key fallback path is missing; only realtime key path may exist.");
   }
+  if (!runtimeSignals.learnerTargetAwareChromeVisible) {
+    warnings.push("DPE learner target-aware readiness chrome markers were not detected.");
+  }
+  if (!runtimeSignals.voiceLaunchTargetAwareFramingVisible) {
+    warnings.push("Voice launch fallback framing did not confirm target-aware messaging.");
+  }
+  if (!runtimeSignals.contentPendingMessagingVisible) {
+    warnings.push("Content-pending non-Private track messaging markers were not detected.");
+  }
+  if (!runtimeSignals.requestedTracksConfigured) {
+    warnings.push("One or more requested airplane-land target track codes are missing.");
+  }
+  if (!runtimeSignals.voiceRuntimeConfigContractVisible) {
+    warnings.push("DPE realtime endpoint key-contract markers were not detected.");
+  }
 
-  const status: PreflightStatus = blockers.length > 0 ? "blocked" : warnings.length > 0 ? "warning" : "ok";
+  const status: PreflightStatus =
+    blockers.length > 0 ? "blocked" : warnings.length > 0 ? "warning" : "ok";
 
   return {
     blockers,
@@ -151,6 +216,43 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
     ],
     contentSummaryAvailable,
     progressionAvailable,
+    runtimeRows: [
+      {
+        detail: "Learner chrome includes target-focused subtitle and MVP readiness checklist markers.",
+        key: "learner_target_chrome",
+        label: "Learner target-aware chrome",
+        status: warningStatusFrom(runtimeSignals.learnerTargetAwareChromeVisible),
+        value: runtimeSignals.learnerTargetAwareChromeVisible ? "Visible" : "Not detected",
+      },
+      {
+        detail: "Voice launch fallback copy keeps selected target context when voice is unavailable.",
+        key: "voice_target_fallback",
+        label: "Voice target-aware fallback",
+        status: warningStatusFrom(runtimeSignals.voiceLaunchTargetAwareFramingVisible),
+        value: runtimeSignals.voiceLaunchTargetAwareFramingVisible ? "Visible" : "Not detected",
+      },
+      {
+        detail: "Requested Instrument/Commercial/CFI/CFII/Multi/MEI track codes remain scaffolded in DPE track config.",
+        key: "requested_track_codes",
+        label: "Requested target tracks",
+        status: warningStatusFrom(runtimeSignals.requestedTracksConfigured),
+        value: runtimeSignals.requestedTracksConfigured ? "Configured" : "Missing markers",
+      },
+      {
+        detail: "Non-Private track content-pending messaging is surfaced so scaffold state is explicit.",
+        key: "non_private_pending_message",
+        label: "Content-pending messaging",
+        status: warningStatusFrom(runtimeSignals.contentPendingMessagingVisible),
+        value: runtimeSignals.contentPendingMessagingVisible ? "Visible" : "Not detected",
+      },
+      {
+        detail: "Realtime session endpoint shows expected DPE key-lookup contract markers.",
+        key: "voice_runtime_contract",
+        label: "Realtime key contract markers",
+        status: warningStatusFrom(runtimeSignals.voiceRuntimeConfigContractVisible),
+        value: runtimeSignals.voiceRuntimeConfigContractVisible ? "Visible" : "Not detected",
+      },
+    ],
     status,
     statusRows: [
       {

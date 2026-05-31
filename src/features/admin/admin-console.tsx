@@ -295,6 +295,23 @@ async function DpeAdminPanel() {
                 ))}
               </div>
 
+              <div className="raised-card">
+                <strong>Learner/runtime target-aware signals</strong>
+                <p>Read-only source-contract checks from current DPE learner/runtime code.</p>
+                <div className="question-list mt-4">
+                  {preflight.runtimeRows.map((row) => (
+                    <div className="raised-card" key={row.key}>
+                      <div className="question-meta">
+                        <span className="pill">{row.label}</span>
+                        <span className="pill">{statusPillLabel(row.status)}</span>
+                        <span className="pill">{row.value}</span>
+                      </div>
+                      <p>{row.detail}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {preflight.blockers.length > 0 && (
                 <div className="raised-card">
                   <strong>Current blockers</strong>
