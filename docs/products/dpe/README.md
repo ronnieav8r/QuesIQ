@@ -51,6 +51,13 @@ First import slice completed locally on 2026-05-29:
 - DPE Me now persists preferred name, aircraft, checkride date, DPE name,
   school/instructor context, weak areas, and notes through `/api/dpe/profile`.
 - DPE Home reflects saved aircraft/checkride/DPE context.
+- DPE practice and content readiness UI now distinguishes draft, incomplete,
+  ready-for-review, not-published, and published/verified states using the
+  existing DPE question, answer-key, rubric, and content-version contracts.
+- The DPE-owned content view can filter by certificate, ACS area, and ACS task,
+  and surfaces missing oral-question coverage, answer-key gaps, rubric gaps, and
+  lightweight readiness percentages without changing storage or publish
+  behavior.
 
 The raw DPE source archive under
 `C:\Users\weeks\Documents\github\DPE\docs\checkride question content` was not
@@ -67,3 +74,6 @@ through a deliberate content-import slice.
 4. Build the real aviation content curation/import path from the DPE source
    workbook/PDF material. Keep placeholder content clearly marked until final
    answer keys and rubrics are authored.
+5. Add durable Content Studio run storage and publish/audit workflow only from
+   the Admin/platform lane; DPE currently treats generated drafts as review
+   inputs, not published content.
