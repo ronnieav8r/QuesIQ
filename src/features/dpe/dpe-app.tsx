@@ -804,6 +804,23 @@ export default function App() {
     await generateReview(nextSession);
   }
 
+  function continueVoiceSessionAsTyped(voiceSession: LocalSession) {
+    const answeredCount = voiceSession.answers.length;
+    setSession({
+      ...voiceSession,
+      voiceMode: false,
+    });
+    setCurrentIndex(Math.min(answeredCount, Math.max(0, voiceSession.questions.length - 1)));
+    setDraftAnswer("");
+    setStage("live");
+    setScreen("practice");
+    setPracticeNotice({
+      title: "Voice unavailable; typed practice ready",
+      detail:
+        "The voice connection or microphone setup did not complete. Continue with the same saved prompts as typed answers, then generate the same readiness review.",
+    });
+  }
+
   function resetPractice() {
     setStage("setup");
     setSession(null);
@@ -915,6 +932,7 @@ export default function App() {
                 onReset={resetPractice}
                 onStartSession={() => startSession(false)}
                 onStartVoiceSession={() => startSession(true)}
+                onVoiceUnavailable={continueVoiceSessionAsTyped}
                 onVoiceArtifactFinalized={saveVoiceArtifact}
                 areaOptions={areaOptions}
                 onTaskChange={setTask}
@@ -1542,12 +1560,13 @@ function PracticeScreen(props: {
   onTaskChange: (task: string) => void;
     onModeChange: (mode: PracticeMode) => void;
     onStartSession: () => void;
-    onStartVoiceSession: () => void;
-    onRecordAnswer: (skipped: boolean) => void;
-    onFinishEarly: () => void;
-    onReset: () => void;
-    onAnswerChange: (value: string) => void;
-    onVoiceArtifactFinalized: (artifact: VoiceSessionArtifactDraft) => void;
+  onStartVoiceSession: () => void;
+  onRecordAnswer: (skipped: boolean) => void;
+  onFinishEarly: () => void;
+  onReset: () => void;
+  onAnswerChange: (value: string) => void;
+  onVoiceUnavailable: (session: LocalSession) => void;
+  onVoiceArtifactFinalized: (artifact: VoiceSessionArtifactDraft) => void;
   }) {
   if (props.stage === "live" && props.session) {
     return (
@@ -1831,6 +1850,7 @@ function PracticeSetupScreen({
     onAnswerChange,
     onRecordAnswer,
     onFinishEarly,
+    onVoiceUnavailable,
     onVoiceArtifactFinalized
   }: {
     session: LocalSession;
@@ -1839,6 +1859,7 @@ function PracticeSetupScreen({
     onAnswerChange: (value: string) => void;
     onRecordAnswer: (skipped: boolean) => void;
     onFinishEarly: () => void;
+    onVoiceUnavailable: (session: LocalSession) => void;
     onVoiceArtifactFinalized: (artifact: VoiceSessionArtifactDraft) => void;
   }) {
     const question = session.questions[currentIndex];
@@ -1861,7 +1882,9 @@ function PracticeSetupScreen({
 
           <RealtimeVoiceSession
             endpoint="/api/dpe/realtime/session"
+            errorActionLabel="Use typed practice"
             firstTurnInstructions={buildVoiceFirstTurnInstructions(session)}
+            onErrorAction={() => onVoiceUnavailable(session)}
             onArtifactFinalized={onVoiceArtifactFinalized}
             sessionId={session.id}
             startButtonLabel="Start Voice Practice"

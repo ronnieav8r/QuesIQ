@@ -311,3 +311,17 @@ This slice fixes DPE voice-practice continuation without changing content:
    save path, and review generation flow.
 3. DPE preflight now checks the shared realtime client contract so this
    endpoint does not regress back to a one-turn voice interaction.
+
+## MVP Learner Polish Slice 11 (Voice Error Recovery)
+
+This slice improves DPE voice-practice recovery without changing content:
+
+1. If microphone permission, browser WebRTC setup, or realtime session exchange
+   fails inside the voice component, DPE now offers `Use typed practice`.
+2. The recovery keeps the same saved DPE session, selected prompts, target
+   track, ACS area/task, and review path, but switches the active session to
+   typed answers.
+3. Learners get a visible notice explaining that voice was unavailable and the
+   same prompts can continue into a readiness review.
+4. The shared realtime component exposes an optional error recovery action, so
+   Interview behavior is unchanged unless a caller opts in.

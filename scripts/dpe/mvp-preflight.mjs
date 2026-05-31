@@ -67,6 +67,9 @@ const codeContracts = [
       "fetch(\"/api/dpe/status\"",
       "DPE production status",
       "Configured airplane-land target tracks",
+      "Voice unavailable; typed practice ready",
+      "Use typed practice",
+      "onVoiceUnavailable",
     ],
   },
   {
@@ -102,6 +105,8 @@ const codeContracts = [
       "shouldAutoCreateResponseAfterUserTurn",
       "\"/api/dpe/realtime/session\"",
       "client.response.create.after_user_turn",
+      "errorActionLabel",
+      "onErrorAction",
     ],
   },
   {

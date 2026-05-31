@@ -14,9 +14,11 @@ import type {
 
 type RealtimeVoiceSessionProps = {
   endpoint?: string;
+  errorActionLabel?: string;
   firstTurnInstructions?: string;
   hideTranscript?: boolean;
   realtimeInstructions?: string;
+  onErrorAction?: () => void;
   onArtifactChange?: (artifact: VoiceSessionArtifactDraft) => void;
   onArtifactFinalized?: (artifact: VoiceSessionArtifactDraft) => void;
   sessionId: string;
@@ -65,9 +67,11 @@ function getPhaseLabel(phase: VoiceSessionPhase, errorMessage?: string) {
 
 export function RealtimeVoiceSession({
   endpoint = "/api/realtime/session",
+  errorActionLabel,
   firstTurnInstructions,
   hideTranscript = false,
   realtimeInstructions,
+  onErrorAction,
   onArtifactChange,
   onArtifactFinalized,
   sessionId,
@@ -496,6 +500,13 @@ export function RealtimeVoiceSession({
         </button>
       </div>
       {errorMessage && <p className="form-error">{errorMessage}</p>}
+      {errorMessage && onErrorAction && (
+        <div className="inline-actions">
+          <button className="secondary" onClick={onErrorAction} type="button">
+            {errorActionLabel ?? "Continue without voice"}
+          </button>
+        </div>
+      )}
 
       <div className="realtime-grid">
         {!hideTranscript && (
