@@ -37,7 +37,7 @@ Last updated: 2026-05-30
 - User is not expecting to manually review code for correctness. Future Codex
   passes should own verification, explain outcomes plainly, and when requested
   prepare the GitHub push/deploy path instead of leaving that work to the user.
-- Current manager head: `ac61ce1 Merge Admin DPE content studio wiring`.
+- Current manager head: `bb2ac92 Update handoff docs after content studio integration`.
   `QuesIQ-manager/main` is clean and aligned with `origin/main` at that commit.
 
 ## Built So Far
