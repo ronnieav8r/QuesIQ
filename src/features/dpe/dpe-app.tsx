@@ -4187,10 +4187,11 @@ function HistoryScreen({
                 {storedSession.reviewJson && (
                   <span className="pill">{formatReviewSource(storedSession.reviewJson)} review</span>
                 )}
-                {targetTrackTitle && <span className="pill">{targetTrackTitle}</span>}
+                {targetTrackTitle && <span className="pill">Target: {targetTrackTitle}</span>}
                 <span className="pill">{voiceEvidence.label}</span>
                 {normalizeStoredCertificateType(storedSession.transcriptJson?.certificateType) && (
                   <span className="pill">
+                    Prompt cert:{" "}
                     {
                       normalizeStoredCertificateType(storedSession.transcriptJson?.certificateType)
                         ?.code

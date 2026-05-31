@@ -1192,3 +1192,16 @@ without changing content:
    fallback behavior.
 4. Admin DPE preflight now checks for the review target-context marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 80 (History Target Context Labels)
+
+This slice makes History session cards clearer for scaffolded target tracks
+without changing content:
+
+1. Stored session cards now label saved target context as `Target: ...`.
+2. Stored session cards now label prompt certificate context as
+   `Prompt cert: ...`.
+3. This keeps selected DPE target and prompt content source distinct when they
+   differ during scaffolded/content-pending track practice.
+4. Admin DPE preflight now checks for the History target-context labels.
+5. No aviation content, schema, publish, Official, or Verified state changed.
