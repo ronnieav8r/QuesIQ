@@ -2640,7 +2640,7 @@ function ReviewScreen({
             </div>
           )}
           <div className="inline-actions mt-4">
-            {onRetryReview && (
+            {session.persisted && onRetryReview && (
               <button className="button" disabled={reviewGenerating} onClick={onRetryReview}>
                 <BadgeCheck />
                 {reviewGenerating ? "Generating" : retryLabel}

@@ -233,6 +233,7 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "setPracticeNotice(null)",
       "No DPE sessions yet",
       "Start first DPE session",
+      "session.persisted && onRetryReview",
     ]),
     requestedTracksConfigured: hasAll(dpeTrackText, [
       'code: "IRA"',

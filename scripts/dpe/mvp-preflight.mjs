@@ -124,6 +124,7 @@ const codeContracts = [
       "No DPE sessions yet",
       "Start first DPE session",
       "onRetryReview",
+      "session.persisted && onRetryReview",
       "formatDpeProfileDate",
       "Profile storage unavailable",
       "target remains on this screen",

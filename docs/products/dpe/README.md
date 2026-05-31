@@ -962,3 +962,15 @@ content:
    to setup.
 4. Admin DPE preflight now checks for the review-generation reset guard markers.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 63 (Local Review Retry Guard)
+
+This slice keeps local-only review recovery honest without changing content:
+
+1. The DPE review screen now shows `Retry AI Review` only for persisted
+   sessions.
+2. Local-only reviews keep the existing storage warning instead of exposing a
+   retry action that cannot create saved History, progression, or diagnostics.
+3. Admin DPE preflight now checks that review retry remains gated by session
+   persistence.
+4. No aviation content, schema, publish, Official, or Verified state changed.
