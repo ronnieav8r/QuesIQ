@@ -17,6 +17,7 @@ const requiredFiles = [
   "src/app/api/dpe/progression/route.ts",
   "src/app/api/dpe/realtime/session/route.ts",
   "src/features/dpe/dpe-app.tsx",
+  "src/features/dpe/question-format.ts",
   "src/features/dpe/target-tracks.ts",
   "src/server/dpe/dpe-data.ts",
   "src/server/dpe/dpe-progression.ts",
@@ -41,6 +42,14 @@ const codeContracts = [
       "Voice launch switched to typed practice",
       "MVP readiness checklist",
       "Readiness quest track",
+      "buildSessionTrackLabel",
+      "Target-track oral prep",
+    ],
+  },
+  {
+    file: "src/features/dpe/question-format.ts",
+    checks: [
+      "selected oral checkride target standard",
     ],
   },
   {
@@ -73,6 +82,27 @@ const codeContracts = [
       "Multi-Engine Land",
       "MEI Airplane",
       "content unchanged",
+    ],
+  },
+];
+
+const forbiddenContracts = [
+  {
+    file: "src/features/dpe/dpe-app.tsx",
+    checks: [
+      {
+        label: "fixed Private Pilot subtitle",
+        snippet: "Private Pilot ASEL oral prep",
+      },
+    ],
+  },
+  {
+    file: "src/features/dpe/question-format.ts",
+    checks: [
+      {
+        label: "Private-only default rubric",
+        snippet: "Private Pilot ASEL oral checkride standard",
+      },
     ],
   },
 ];
@@ -170,6 +200,18 @@ for (const contract of codeContracts) {
       pass(`contract: ${contract.file}`, expected);
     } else {
       fail(`contract: ${contract.file}`, `missing ${expected}`);
+    }
+  }
+}
+
+for (const contract of forbiddenContracts) {
+  if (!(await fileExists(contract.file))) continue;
+  const text = await readText(contract.file);
+  for (const forbidden of contract.checks) {
+    if (text.includes(forbidden.snippet)) {
+      fail(`forbidden: ${contract.file}`, forbidden.label);
+    } else {
+      pass(`forbidden: ${contract.file}`, `${forbidden.label} absent`);
     }
   }
 }
