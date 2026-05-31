@@ -383,3 +383,13 @@ This slice hardens DPE profile persistence without changing content:
 3. Target-track normalization remains unchanged, so Instrument, Commercial,
    CFI, CFII, Multi, and MEI airplane-land tracks keep their configured
    metadata.
+
+## MVP Learner Polish Slice 17 (Profile Date Read Recovery)
+
+This slice hardens DPE profile loading without changing content:
+
+1. DPE profile state now formats stored checkride dates through a guarded
+   helper before filling the Me screen.
+2. Malformed historical date values become an empty checkride date instead of
+   throwing during app render.
+3. Target-track, aircraft, session, review, and content behavior are unchanged.

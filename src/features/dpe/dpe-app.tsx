@@ -2231,9 +2231,7 @@ function profileResponseToState(data: DpeProfileResponse): DpeProfileState {
     aircraft: data.target?.aircraft ?? data.profile?.aircraft ?? "",
     aircraftCategory: data.target?.aircraftCategory ?? selectedTrack.aircraftCategory,
     aircraftClass: data.target?.aircraftClass ?? selectedTrack.aircraftClass,
-    checkrideDate: data.target?.checkrideDate
-      ? new Date(data.target.checkrideDate).toISOString().slice(0, 10)
-      : "",
+    checkrideDate: formatDpeProfileDate(data.target?.checkrideDate),
     flightSchool: data.profile?.flightSchool ?? "",
     instructor: data.profile?.instructor ?? "",
     knownDpeName: data.target?.knownDpeName ?? data.profile?.knownDpeName ?? "",
@@ -2243,6 +2241,12 @@ function profileResponseToState(data: DpeProfileResponse): DpeProfileState {
     targetTrackId: selectedTrack.id,
     weakAreaNotes: data.profile?.weakAreaNotes ?? "",
   };
+}
+
+function formatDpeProfileDate(value: string | null | undefined) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
 }
 
 function formatDateLabel(value: string) {

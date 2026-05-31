@@ -80,6 +80,7 @@ const codeContracts = [
       "Voice AI",
       "Retry AI Review",
       "onRetryReview",
+      "formatDpeProfileDate",
     ],
   },
   {
