@@ -1012,3 +1012,17 @@ content:
 3. The primary action changes to `Saving answer` while the guard is active.
 4. Admin DPE preflight now checks for the typed answer save-guard markers.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 67 (Session Start Guard)
+
+This slice prevents duplicate DPE session setup without changing content:
+
+1. Practice setup now sets a `sessionStarting` guard while typed or voice
+   session creation is running.
+2. Start Voice Practice and Type Answers are disabled during that setup window.
+3. The launch buttons show `Starting session`, and voice launch explains when
+   setup is already in progress.
+4. Practice reset clears the session-starting guard along with review and answer
+   saving state.
+5. Admin DPE preflight now checks for the session-start guard markers.
+6. No aviation content, schema, publish, Official, or Verified state changed.

@@ -424,6 +424,7 @@ export default function App() {
   const [questionBankAvailable, setQuestionBankAvailable] = useState<boolean | null>(null);
   const [reviewGenerating, setReviewGenerating] = useState(false);
   const [answerSaving, setAnswerSaving] = useState(false);
+  const [sessionStarting, setSessionStarting] = useState(false);
   const [practiceNotice, setPracticeNotice] = useState<PracticeNotice | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [draftAnswer, setDraftAnswer] = useState("");
@@ -718,109 +719,116 @@ export default function App() {
   }
 
   async function startSession(voiceMode = false) {
+    if (sessionStarting) return;
+
     const questions = selectedQuestions.slice(0, 5);
     if (questions.length === 0) return;
+    setSessionStarting(true);
     setPracticeNotice(null);
 
-    const draftSession: LocalSession = {
-      id: `local-${Date.now()}`,
-      mode,
-      area: selectedArea,
-      certificateType: selectedCertificateType,
-      targetTrackTitle: selectedTargetTrack.title,
-      task: selectedTask,
-      questions,
-      answers: [],
-      startedAt: new Date(),
-      persisted: false,
-      voiceMode
-    };
-    const typedFallbackSession: LocalSession = {
-      ...draftSession,
-      voiceMode: false,
-    };
-
     try {
-      const response = await fetch("/api/dpe/practice-sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode,
-          acsTitle: selectedTargetTrack.title,
-          acsArea: selectedArea,
-          acsTask: selectedTask,
-          certificateType: selectedCertificateType,
-          questions,
-          targetTrack: {
-            aircraftCategory: selectedTargetTrack.aircraftCategory,
-            aircraftClass: selectedTargetTrack.aircraftClass,
-            code: selectedTargetTrack.code,
-            contentReady: selectedTargetTrack.contentReady,
-            id: selectedTargetTrack.id,
-            title: selectedTargetTrack.title,
-          },
-          startedAt: draftSession.startedAt.toISOString()
-        })
-      });
-      const data = (await response.json()) as {
-        available: boolean;
-        session?: { id: string };
+      const draftSession: LocalSession = {
+        id: `local-${Date.now()}`,
+        mode,
+        area: selectedArea,
+        certificateType: selectedCertificateType,
+        targetTrackTitle: selectedTargetTrack.title,
+        task: selectedTask,
+        questions,
+        answers: [],
+        startedAt: new Date(),
+        persisted: false,
+        voiceMode
+      };
+      const typedFallbackSession: LocalSession = {
+        ...draftSession,
+        voiceMode: false,
       };
 
-      setDatabaseAvailable(data.available);
-      if (data.available && data.session?.id) {
-        setPracticeNotice(null);
-        setSession({ ...draftSession, id: data.session.id, persisted: true });
-        setCurrentIndex(0);
-        setDraftAnswer("");
-        setStage("live");
-        await loadStoredSessions();
-        return;
-      }
-
-      if (voiceMode) {
-        setPracticeNotice({
-          title: "Voice launch switched to typed practice",
-          detail: data.available
-            ? "Voice mode requires a saved DPE session id before microphone launch. Typed practice started so you can continue now."
-            : "DPE session storage is unavailable, so voice evidence cannot be saved right now. Typed practice started so you can keep working.",
+      try {
+        const response = await fetch("/api/dpe/practice-sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode,
+            acsTitle: selectedTargetTrack.title,
+            acsArea: selectedArea,
+            acsTask: selectedTask,
+            certificateType: selectedCertificateType,
+            questions,
+            targetTrack: {
+              aircraftCategory: selectedTargetTrack.aircraftCategory,
+              aircraftClass: selectedTargetTrack.aircraftClass,
+              code: selectedTargetTrack.code,
+              contentReady: selectedTargetTrack.contentReady,
+              id: selectedTargetTrack.id,
+              title: selectedTargetTrack.title,
+            },
+            startedAt: draftSession.startedAt.toISOString()
+          })
         });
-        setSession(typedFallbackSession);
-        setCurrentIndex(0);
-        setDraftAnswer("");
-        setStage("live");
-        return;
-      }
-      setPracticeNotice({
-        title: "Typed practice running locally",
-        detail:
-          "DPE session storage is unavailable, so this typed session will not appear in History, progression, diagnostics, or saved review retry until storage is reachable.",
-      });
-    } catch {
-      setDatabaseAvailable(false);
-      if (voiceMode) {
+        const data = (await response.json()) as {
+          available: boolean;
+          session?: { id: string };
+        };
+
+        setDatabaseAvailable(data.available);
+        if (data.available && data.session?.id) {
+          setPracticeNotice(null);
+          setSession({ ...draftSession, id: data.session.id, persisted: true });
+          setCurrentIndex(0);
+          setDraftAnswer("");
+          setStage("live");
+          await loadStoredSessions();
+          return;
+        }
+
+        if (voiceMode) {
+          setPracticeNotice({
+            title: "Voice launch switched to typed practice",
+            detail: data.available
+              ? "Voice mode requires a saved DPE session id before microphone launch. Typed practice started so you can continue now."
+              : "DPE session storage is unavailable, so voice evidence cannot be saved right now. Typed practice started so you can keep working.",
+          });
+          setSession(typedFallbackSession);
+          setCurrentIndex(0);
+          setDraftAnswer("");
+          setStage("live");
+          return;
+        }
         setPracticeNotice({
-          title: "Voice launch switched to typed practice",
+          title: "Typed practice running locally",
           detail:
-            "The session service did not accept a voice launch request, so typed practice started as a fallback.",
+            "DPE session storage is unavailable, so this typed session will not appear in History, progression, diagnostics, or saved review retry until storage is reachable.",
         });
-        setSession(typedFallbackSession);
-        setCurrentIndex(0);
-        setDraftAnswer("");
-        setStage("live");
-        return;
+      } catch {
+        setDatabaseAvailable(false);
+        if (voiceMode) {
+          setPracticeNotice({
+            title: "Voice launch switched to typed practice",
+            detail:
+              "The session service did not accept a voice launch request, so typed practice started as a fallback.",
+          });
+          setSession(typedFallbackSession);
+          setCurrentIndex(0);
+          setDraftAnswer("");
+          setStage("live");
+          return;
+        }
+        setPracticeNotice({
+          title: "Typed practice running locally",
+          detail:
+            "The session service did not accept a save request. Continue typing answers now, but save-backed History, progression, diagnostics, and review retry require DPE storage.",
+        });
       }
-      setPracticeNotice({
-        title: "Typed practice running locally",
-        detail:
-          "The session service did not accept a save request. Continue typing answers now, but save-backed History, progression, diagnostics, and review retry require DPE storage.",
-      });
-    }
 
-    setSession(draftSession);
-    setCurrentIndex(0);
-    setDraftAnswer("");
-    setStage("live");
+      setSession(draftSession);
+      setCurrentIndex(0);
+      setDraftAnswer("");
+      setStage("live");
+    } finally {
+      setSessionStarting(false);
+    }
   }
 
   async function recordAnswer(skipped: boolean) {
@@ -1014,6 +1022,8 @@ export default function App() {
 
   function resetPractice() {
     setReviewGenerating(false);
+    setAnswerSaving(false);
+    setSessionStarting(false);
     setStage("setup");
     setSession(null);
     setCurrentIndex(0);
@@ -1136,6 +1146,7 @@ export default function App() {
                 databaseAvailable={databaseAvailable}
                 reviewGenerating={reviewGenerating}
                 answerSaving={answerSaving}
+                sessionStarting={sessionStarting}
                 onFinishEarly={finishEarly}
                 onModeChange={setMode}
                 onOpenMe={() => setScreen("me")}
@@ -2068,6 +2079,7 @@ function PracticeScreen(props: {
   dpeProfile: DpeProfileState;
   reviewGenerating: boolean;
   answerSaving: boolean;
+  sessionStarting: boolean;
   onAreaChange: (area: string) => void;
   onClearPracticeNotice: () => void;
   onCertificateChange: (certificateTypeId: string) => void;
@@ -2137,6 +2149,7 @@ function PracticeSetupScreen({
   publicStatus,
   databaseAvailable,
   dpeProfile,
+  sessionStarting,
   onAreaChange,
   onCertificateChange,
     onTaskChange,
@@ -2157,9 +2170,10 @@ function PracticeSetupScreen({
   questionCount: number;
   selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
   practiceNotice: PracticeNotice | null;
-  publicStatus: DpePublicStatus | null;
-  databaseAvailable: boolean | null;
-  dpeProfile: DpeProfileState;
+    publicStatus: DpePublicStatus | null;
+    databaseAvailable: boolean | null;
+    dpeProfile: DpeProfileState;
+    sessionStarting: boolean;
   onAreaChange: (area: string) => void;
   onCertificateChange: (certificateTypeId: string) => void;
     onTaskChange: (task: string) => void;
@@ -2179,9 +2193,12 @@ function PracticeSetupScreen({
   const practiceBlocked = questions.length === 0;
   const reviewAiUnavailable = publicStatus?.reviewAiConfigured === false;
   const voiceAiUnavailable = publicStatus?.realtimeVoiceConfigured === false;
-  const voiceDisabled = practiceBlocked || databaseAvailable === false || voiceAiUnavailable;
+  const voiceDisabled =
+    practiceBlocked || sessionStarting || databaseAvailable === false || voiceAiUnavailable;
   const voiceDisabledReason = practiceBlocked
     ? "Voice disabled: no active prompts match this practice selection."
+    : sessionStarting
+      ? "Voice disabled: session setup is already starting."
     : databaseAvailable === false
       ? "Voice disabled: DPE session storage is unavailable."
       : voiceAiUnavailable
@@ -2370,11 +2387,11 @@ function PracticeSetupScreen({
                 title={voiceDisabledReason || "Start realtime DPE voice practice"}
               >
                 <Mic />
-                Start Voice Practice
+                {sessionStarting ? "Starting session" : "Start Voice Practice"}
               </button>
-              <button className="button" onClick={onStartSession} disabled={practiceBlocked}>
+              <button className="button" onClick={onStartSession} disabled={practiceBlocked || sessionStarting}>
                 <ListChecks />
-                Type Answers
+                {sessionStarting ? "Starting session" : "Type Answers"}
               </button>
             </div>
             {voiceDisabledReason && <p className="muted mt-4">{voiceDisabledReason}</p>}

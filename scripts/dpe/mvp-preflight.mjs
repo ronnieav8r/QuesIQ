@@ -150,6 +150,8 @@ const codeContracts = [
       "voiceAiUnavailable",
       "voiceDisabledReason",
       "Voice disabled:",
+      "sessionStarting",
+      "Starting session",
     ],
   },
   {
