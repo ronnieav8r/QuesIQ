@@ -69,12 +69,6 @@ The first Study slice is imported:
   fingerprint, prompt metadata, card counts, missing-field flags, low-confidence
   indexes, review checklist flags, and review sections; it never publishes,
   marks Official, or marks cards Verified.
-- `src/server/study/study-source-pack-contract.ts` defines the narrow
-  source-pack-to-Study draft contract for reviewed source-pack chunks and
-  reviewed visual assets. The contract preserves source-pack ids, page/source
-  citations, chunk ids, visual asset ids, subjects, and tags while producing
-  draft-only Study deck inputs. Its restrictions explicitly disable Study deck
-  writes, Publish, Official, and Verified state changes.
 - `/api/study/tts` supports Study voice paths with Admin AI Usage
   instrumentation and source-style R2 audio caching when R2 environment
   variables are configured
@@ -109,21 +103,6 @@ The first Study slice is imported:
 
 Detailed import parity, divergence, and remaining-slice notes live in
 `docs/products/study/HANDOFF.md`.
-
-## Source-Pack Draft Contract
-
-Reviewed source-pack material enters Study only as draft inputs. Admin Content
-Studio or a future source-pack worker may provide:
-
-- reviewed chunks with `chunkId`, clean source text, subject, tags, and
-  source-pack citations
-- reviewed visual assets with `assetId`, figure/table/page-crop type, caption,
-  linked chunk ids, tags, and source-pack citations
-
-Study groups accepted or draft-ready chunks into one or more draft deck plans,
-keeps citations and tags attached, and links reviewed visual assets by chunk id.
-This layer is a contract/readiness scaffold only. It does not create Study
-decks, cards, public library entries, Official decks, or Verified cards.
 
 ## Boundaries
 
