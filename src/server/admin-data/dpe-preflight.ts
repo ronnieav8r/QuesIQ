@@ -226,6 +226,8 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "Review is local only",
       "will not appear in History",
       "markSessionLocalOnly",
+      "answerSaving",
+      "Saving answer",
       "DPE session storage stopped accepting updates",
       "artifactSaved",
       "setReviewGenerating(false)",

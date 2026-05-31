@@ -423,6 +423,7 @@ export default function App() {
   );
   const [questionBankAvailable, setQuestionBankAvailable] = useState<boolean | null>(null);
   const [reviewGenerating, setReviewGenerating] = useState(false);
+  const [answerSaving, setAnswerSaving] = useState(false);
   const [practiceNotice, setPracticeNotice] = useState<PracticeNotice | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [draftAnswer, setDraftAnswer] = useState("");
@@ -824,56 +825,70 @@ export default function App() {
 
   async function recordAnswer(skipped: boolean) {
     if (!session) return;
+    if (answerSaving) return;
 
-    const question = session.questions[currentIndex];
-    const nextAnswers = [
-      ...session.answers,
-      {
-        question,
-        response: skipped ? "" : draftAnswer.trim(),
-        skipped
+    setAnswerSaving(true);
+
+    try {
+      const question = session.questions[currentIndex];
+      const nextAnswers = [
+        ...session.answers,
+        {
+          question,
+          response: skipped ? "" : draftAnswer.trim(),
+          skipped
+        }
+      ];
+
+      const isLastQuestion = currentIndex >= session.questions.length - 1;
+      const nextSession = {
+        ...session,
+        answers: nextAnswers,
+        endedAt: isLastQuestion ? new Date() : session.endedAt
+      };
+
+      setSession(nextSession);
+      setDraftAnswer("");
+
+      if (isLastQuestion) {
+        const persisted = await persistSession(nextSession, "completed");
+        const reviewSession = persisted ? nextSession : markSessionLocalOnly(nextSession);
+        setSession(reviewSession);
+        setStage("review");
+        await generateReview(reviewSession);
+      } else {
+        const persisted = await persistSession(nextSession, "in_progress");
+        if (!persisted) {
+          setSession(markSessionLocalOnly(nextSession));
+          setPracticeNotice({
+            title: "Typed practice running locally",
+            detail:
+              "DPE session storage stopped accepting updates. Continue locally, but History, progression, diagnostics, and saved review retry require storage to recover.",
+          });
+        }
+        setCurrentIndex((value) => value + 1);
       }
-    ];
-
-    const isLastQuestion = currentIndex >= session.questions.length - 1;
-    const nextSession = {
-      ...session,
-      answers: nextAnswers,
-      endedAt: isLastQuestion ? new Date() : session.endedAt
-    };
-
-    setSession(nextSession);
-    setDraftAnswer("");
-
-    if (isLastQuestion) {
-      const persisted = await persistSession(nextSession, "completed");
-      const reviewSession = persisted ? nextSession : markSessionLocalOnly(nextSession);
-      setSession(reviewSession);
-      setStage("review");
-      await generateReview(reviewSession);
-    } else {
-      const persisted = await persistSession(nextSession, "in_progress");
-      if (!persisted) {
-        setSession(markSessionLocalOnly(nextSession));
-        setPracticeNotice({
-          title: "Typed practice running locally",
-          detail:
-            "DPE session storage stopped accepting updates. Continue locally, but History, progression, diagnostics, and saved review retry require storage to recover.",
-        });
-      }
-      setCurrentIndex((value) => value + 1);
+    } finally {
+      setAnswerSaving(false);
     }
   }
 
   async function finishEarly() {
     if (!session) return;
-    const nextSession = { ...session, endedAt: new Date() };
-    setSession(nextSession);
-    const persisted = await persistSession(nextSession, "completed");
-    const reviewSession = persisted ? nextSession : markSessionLocalOnly(nextSession);
-    setSession(reviewSession);
-    setStage("review");
-    await generateReview(reviewSession);
+    if (answerSaving) return;
+
+    setAnswerSaving(true);
+    try {
+      const nextSession = { ...session, endedAt: new Date() };
+      setSession(nextSession);
+      const persisted = await persistSession(nextSession, "completed");
+      const reviewSession = persisted ? nextSession : markSessionLocalOnly(nextSession);
+      setSession(reviewSession);
+      setStage("review");
+      await generateReview(reviewSession);
+    } finally {
+      setAnswerSaving(false);
+    }
   }
 
   async function persistSession(nextSession: LocalSession, status: "in_progress" | "completed") {
@@ -1120,6 +1135,7 @@ export default function App() {
                 onClearPracticeNotice={() => setPracticeNotice(null)}
                 databaseAvailable={databaseAvailable}
                 reviewGenerating={reviewGenerating}
+                answerSaving={answerSaving}
                 onFinishEarly={finishEarly}
                 onModeChange={setMode}
                 onOpenMe={() => setScreen("me")}
@@ -2051,6 +2067,7 @@ function PracticeScreen(props: {
   databaseAvailable: boolean | null;
   dpeProfile: DpeProfileState;
   reviewGenerating: boolean;
+  answerSaving: boolean;
   onAreaChange: (area: string) => void;
   onClearPracticeNotice: () => void;
   onCertificateChange: (certificateTypeId: string) => void;
@@ -2400,6 +2417,7 @@ function PracticeSetupScreen({
     session,
     currentIndex,
     draftAnswer,
+    answerSaving,
     onAnswerChange,
     onRecordAnswer,
     onFinishEarly,
@@ -2409,6 +2427,7 @@ function PracticeSetupScreen({
     session: LocalSession;
     currentIndex: number;
     draftAnswer: string;
+    answerSaving: boolean;
     onAnswerChange: (value: string) => void;
     onRecordAnswer: (skipped: boolean) => void;
     onFinishEarly: () => void;
@@ -2482,21 +2501,22 @@ function PracticeSetupScreen({
           <span>Applicant response</span>
           <textarea
             value={draftAnswer}
+            disabled={answerSaving}
             onChange={(event) => onAnswerChange(event.target.value)}
             placeholder="Type the applicant answer as you would say it to an examiner. Short or skipped answers will be flagged in the review."
           />
         </label>
 
         <div className="inline-actions">
-          <button className="button primary" onClick={() => onRecordAnswer(false)}>
+          <button className="button primary" disabled={answerSaving} onClick={() => onRecordAnswer(false)}>
             <CheckCircle2 />
-            Save Typed Answer
+            {answerSaving ? "Saving answer" : "Save Typed Answer"}
           </button>
-          <button className="button" onClick={() => onRecordAnswer(true)}>
+          <button className="button" disabled={answerSaving} onClick={() => onRecordAnswer(true)}>
             <SkipForward />
             Skip
           </button>
-          <button className="button" onClick={onFinishEarly}>
+          <button className="button" disabled={answerSaving} onClick={onFinishEarly}>
             <History />
             Finish
           </button>

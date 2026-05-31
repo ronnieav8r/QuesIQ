@@ -999,3 +999,16 @@ content:
 3. Admin DPE preflight now checks for the current-session and stored-review
    selection markers.
 4. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 66 (Typed Answer Save Guard)
+
+This slice prevents duplicate typed-session transitions without changing
+content:
+
+1. Typed DPE answer actions now set an `answerSaving` guard while persistence,
+   skip, finish, or review transition work is running.
+2. The typed answer field, Save, Skip, and Finish controls are disabled during
+   that transition.
+3. The primary action changes to `Saving answer` while the guard is active.
+4. Admin DPE preflight now checks for the typed answer save-guard markers.
+5. No aviation content, schema, publish, Official, or Verified state changed.

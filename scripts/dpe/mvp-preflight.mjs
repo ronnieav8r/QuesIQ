@@ -110,6 +110,8 @@ const codeContracts = [
       "Transcript-backed fallback reviews remain available",
       "voice evidence",
       "Typed transcript evidence",
+      "answerSaving",
+      "Saving answer",
       "Retry AI Review",
       "Review is local only",
       "will not appear in History",
