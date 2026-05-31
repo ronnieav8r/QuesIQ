@@ -99,6 +99,18 @@ The first Study slice is imported:
   `sourcePackDraftJson` using the existing Study draft parser, returns the
   queue preview and review sections, and does not call AI, import decks, write
   cards, publish, or mark Official/Verified.
+- `src/server/study/study-rich-flashcard-import.ts` defines a stable rich CSV
+  admin import contract for AI-generated Study flashcards with source and
+  verification metadata. It exports required headers, parses CSV/TSV
+  deterministically (including quoted CSV cells), normalizes list fields,
+  and returns row-level validation warnings/errors.
+- `/api/study/content-studio/flashcard-draft` now supports
+  `rich_csv_import_preview` and `rich_csv_import_save` for admin/developer
+  import workflows. Preview returns normalized rows and validation summaries
+  without writes. Save imports cards plus `study_card_sources`,
+  `study_verifications`, and `study_deck_imports` metadata for a target deck.
+  This is still separate from Publish/Official controls and broad Verified
+  promotion.
 - `/api/study/tts` supports Study voice paths with Admin AI Usage
   instrumentation and source-style R2 audio caching when R2 environment
   variables are configured

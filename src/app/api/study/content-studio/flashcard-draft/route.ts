@@ -21,6 +21,13 @@ import {
   parseStudyGenerationPacketContract,
   STUDY_GENERATION_PACKET_SAMPLE,
 } from "@/server/study/study-generation-packet-contract";
+import {
+  parseStudyRichFlashcardImportText,
+  saveStudyRichFlashcardImport,
+  STUDY_RICH_IMPORT_HEADERS,
+  STUDY_RICH_IMPORT_SAMPLE_CSV,
+} from "@/server/study/study-rich-flashcard-import";
+import { getStudyDeck } from "@/features/study/study-data";
 
 export const runtime = "nodejs";
 
@@ -32,12 +39,87 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json().catch(() => ({}))) as {
+    csvText?: string;
+    deckId?: string;
     generationPacketJson?: unknown;
     mode?: string;
     promptInstructions?: string;
     sourcePackDraftJson?: unknown;
     sourceText?: string;
   };
+  if (body.mode === "rich_csv_import_preview") {
+    const csvText = (body.csvText ?? "").trim();
+    const parsed = parseStudyRichFlashcardImportText(csvText || STUDY_RICH_IMPORT_SAMPLE_CSV);
+
+    return NextResponse.json({
+      csvHeaders: STUDY_RICH_IMPORT_HEADERS,
+      delimiter: parsed.delimiter,
+      rowCount: parsed.rowCount,
+      rows: parsed.rows,
+      sourceCoverage: parsed.sourceCoverage,
+      verificationStatusCounts: parsed.verificationStatusCounts,
+      validationErrors: parsed.errors,
+      validationWarnings: parsed.warnings,
+      richCsvImportPreviewOnly: true,
+    });
+  }
+
+  if (body.mode === "rich_csv_import_save") {
+    const deckId = body.deckId?.trim();
+    const csvText = body.csvText?.trim();
+    if (!deckId) {
+      return NextResponse.json({ error: "deckId is required." }, { status: 400 });
+    }
+    if (!csvText) {
+      return NextResponse.json({ error: "csvText is required." }, { status: 400 });
+    }
+
+    const deck = await getStudyDeck(deckId);
+    if (!deck) {
+      return NextResponse.json({ error: "Deck not found." }, { status: 404 });
+    }
+
+    const parsed = parseStudyRichFlashcardImportText(csvText);
+    if (parsed.errors.length > 0) {
+      return NextResponse.json(
+        {
+          error: "CSV contains validation errors.",
+          rowCount: parsed.rowCount,
+          validationErrors: parsed.errors,
+          validationWarnings: parsed.warnings,
+        },
+        { status: 400 },
+      );
+    }
+    if (parsed.rows.length === 0) {
+      return NextResponse.json({ error: "No valid import rows found." }, { status: 400 });
+    }
+
+    const saveResult = await saveStudyRichFlashcardImport({
+      adminUserId: session.user.id,
+      deckId,
+      rows: parsed.rows,
+    });
+
+    return NextResponse.json({
+      csvHeaders: STUDY_RICH_IMPORT_HEADERS,
+      delimiter: parsed.delimiter,
+      rowCount: parsed.rowCount,
+      rows: parsed.rows,
+      saveResult,
+      sourceCoverage: parsed.sourceCoverage,
+      verificationStatusCounts: parsed.verificationStatusCounts,
+      validationErrors: parsed.errors,
+      validationWarnings: parsed.warnings,
+      richCsvImportSaved: true,
+      storage: {
+        detail:
+          "Rich CSV import saved Study cards plus source and verification metadata. Publish, Official, and broad Verified flows remain disabled.",
+        durableReviewState: true,
+      },
+    });
+  }
+
   if (body.mode === "source_pack_generation_packet_preview") {
     const candidatePayload = body.generationPacketJson ?? STUDY_GENERATION_PACKET_SAMPLE;
     const parsed = parseStudyGenerationPacketContract(candidatePayload);

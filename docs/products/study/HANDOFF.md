@@ -260,6 +260,17 @@ the visual/UI level during the conversation:
   admin-only `source_pack_verification_queue_preview` mode that validates a
   source-pack draft and returns verifier queue review data only; it does not
   call AI, import Study decks, write cards, publish, or mark Official/Verified
+- `src/server/study/study-rich-flashcard-import.ts` now provides a Study-owned
+  rich CSV contract/parser for admin imports of AI-generated flashcards with
+  source and verification metadata (question/answer/hint/level/tags, source
+  pack/chunk/page/visual fields, verification status/confidence/notes/evidence,
+  verifier, and draft/external ids)
+- `/api/study/content-studio/flashcard-draft` now supports
+  `rich_csv_import_preview` (no writes) and `rich_csv_import_save` (admin-only
+  target-deck import). Save writes cards plus `study_card_sources`,
+  `study_verifications`, and `study_deck_imports` metadata while keeping
+  Publish/Official controls disabled and keeping conservative Verified policy
+  checks (status must be `verified`, confidence >= 0.8, verifier present)
 - source-style import wizard polish for focus hints, URL failure display,
   CSV/Quizlet/Anki guidance, select/deselect review controls, column swapping,
   row/URL counts, and save/done copy

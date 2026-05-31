@@ -1,0 +1,533 @@
+import { eq, sql } from "drizzle-orm";
+
+import { getDb } from "@/server/db/client";
+import { studyCards, studyCardSources, studyDeckImports, studyDecks, studyVerifications } from "@/server/db/schema";
+
+export const STUDY_RICH_IMPORT_HEADERS = [
+  "question",
+  "answer",
+  "hint",
+  "level",
+  "tags",
+  "sourcePackId",
+  "sourceChunkIds",
+  "sourcePages",
+  "sourceVisualAssetIds",
+  "sourceLabel",
+  "sourceUrl",
+  "verificationStatus",
+  "verificationConfidence",
+  "verificationNotes",
+  "verificationEvidence",
+  "verifier",
+  "draftId",
+  "externalId",
+] as const;
+
+type StudyRichImportLevel = "advanced" | "beginner" | "intermediate";
+type StudyRichVerificationStatus = "blocked" | "needs_review" | "ready_for_verifier" | "unverified" | "verified";
+
+export type StudyRichImportNormalizedRow = {
+  answer: string;
+  draftId?: string;
+  externalId?: string;
+  hint?: string;
+  level?: StudyRichImportLevel;
+  question: string;
+  source: {
+    sourceChunkIds: string[];
+    sourceLabel?: string;
+    sourcePackId?: string;
+    sourcePages: number[];
+    sourceUrl?: string;
+    sourceVisualAssetIds: string[];
+  };
+  tags: string[];
+  verification: {
+    confidence?: number;
+    evidence: string[];
+    notes?: string;
+    status?: StudyRichVerificationStatus;
+    verifier?: string;
+  };
+};
+
+export type StudyRichImportParseIssue = {
+  message: string;
+  row: number;
+  severity: "error" | "warning";
+};
+
+export type StudyRichImportParseResult = {
+  delimiter: "," | "\t";
+  errors: StudyRichImportParseIssue[];
+  rowCount: number;
+  rows: StudyRichImportNormalizedRow[];
+  sourceCoverage: {
+    sourcePackIds: string[];
+    uniqueChunkIds: number;
+    uniquePages: number;
+    uniqueVisualAssetIds: number;
+  };
+  verificationStatusCounts: Partial<Record<StudyRichVerificationStatus, number>>;
+  warnings: StudyRichImportParseIssue[];
+};
+
+export type StudyRichImportSaveResult = {
+  createdCardCount: number;
+  createdSourceCount: number;
+  createdVerificationCount: number;
+  deckImportId: string;
+  deckId: string;
+  rowsProcessed: number;
+  verifiedCardCount: number;
+};
+
+function splitDelimitedField(value: string) {
+  return value
+    .split(/[|;,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseList(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return [];
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => String(item).trim()).filter(Boolean);
+      }
+    } catch {
+      return splitDelimitedField(trimmed.slice(1, -1));
+    }
+  }
+  return splitDelimitedField(trimmed);
+}
+
+function parsePages(value: string) {
+  const parts = parseList(value);
+  const pages = new Set<number>();
+  for (const part of parts) {
+    const anchoredPageMatch = /(?:^|\b)page\s*=\s*(\d+)(?:\s*-\s*(\d+))?/i.exec(part);
+    if (anchoredPageMatch) {
+      const start = Number(anchoredPageMatch[1]);
+      const end = Number(anchoredPageMatch[2] ?? anchoredPageMatch[1]);
+      if (Number.isInteger(start) && Number.isInteger(end) && start > 0 && end >= start) {
+        for (let page = start; page <= end; page += 1) pages.add(page);
+      }
+      continue;
+    }
+    const rangeMatch = /^(\d+)\s*-\s*(\d+)$/.exec(part);
+    if (rangeMatch) {
+      const start = Number(rangeMatch[1]);
+      const end = Number(rangeMatch[2]);
+      if (Number.isInteger(start) && Number.isInteger(end) && start > 0 && end >= start) {
+        for (let page = start; page <= end; page += 1) pages.add(page);
+      }
+      continue;
+    }
+    const page = Number(part);
+    if (Number.isInteger(page) && page > 0) pages.add(page);
+  }
+  return Array.from(pages).sort((a, b) => a - b);
+}
+
+function parseCsvLike(text: string): string[][] {
+  const rows: string[][] = [];
+  let current = "";
+  let row: string[] = [];
+  let inQuotes = false;
+  const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+
+  for (let index = 0; index < normalized.length; index += 1) {
+    const char = normalized[index];
+    const next = normalized[index + 1];
+
+    if (char === "\"") {
+      if (inQuotes && next === "\"") {
+        current += "\"";
+        index += 1;
+        continue;
+      }
+      inQuotes = !inQuotes;
+      continue;
+    }
+    if (!inQuotes && char === ",") {
+      row.push(current);
+      current = "";
+      continue;
+    }
+    if (!inQuotes && char === "\n") {
+      row.push(current);
+      rows.push(row);
+      row = [];
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+
+  row.push(current);
+  rows.push(row);
+  return rows;
+}
+
+function parseTsv(text: string): string[][] {
+  return text
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map((line) => line.split("\t"));
+}
+
+function normalizeLevel(value: string): StudyRichImportLevel | undefined {
+  const lower = value.trim().toLowerCase();
+  if (lower === "advanced" || lower === "beginner" || lower === "intermediate") return lower;
+  return undefined;
+}
+
+function normalizeVerificationStatus(value: string): StudyRichVerificationStatus | undefined {
+  const lower = value.trim().toLowerCase();
+  if (
+    lower === "blocked" ||
+    lower === "needs_review" ||
+    lower === "ready_for_verifier" ||
+    lower === "unverified" ||
+    lower === "verified"
+  ) {
+    return lower;
+  }
+  return undefined;
+}
+
+function parseConfidence(value: string): number | undefined {
+  if (!value.trim()) return undefined;
+  const parsed = Number(value.trim());
+  if (!Number.isFinite(parsed)) return undefined;
+  return Math.max(0, Math.min(1, parsed));
+}
+
+function detectDelimiter(headerLine: string): "," | "\t" {
+  return headerLine.includes("\t") ? "\t" : ",";
+}
+
+function normalizeHeader(value: string) {
+  return value.trim().replace(/^\uFEFF/, "").toLowerCase().replace(/[\s_-]+/g, "");
+}
+
+function shouldVerifyCard(row: StudyRichImportNormalizedRow) {
+  return (
+    row.verification.status === "verified" &&
+    typeof row.verification.confidence === "number" &&
+    row.verification.confidence >= 0.8 &&
+    Boolean(row.verification.verifier?.trim())
+  );
+}
+
+export function parseStudyRichFlashcardImportText(text: string): StudyRichImportParseResult {
+  const trimmed = text.trim();
+  const errors: StudyRichImportParseIssue[] = [];
+  const warnings: StudyRichImportParseIssue[] = [];
+
+  if (!trimmed) {
+    return {
+      delimiter: ",",
+      errors: [{ message: "CSV/TSV text is empty.", row: 0, severity: "error" }],
+      rowCount: 0,
+      rows: [],
+      sourceCoverage: { sourcePackIds: [], uniqueChunkIds: 0, uniquePages: 0, uniqueVisualAssetIds: 0 },
+      verificationStatusCounts: {},
+      warnings: [],
+    };
+  }
+
+  const firstLine = trimmed.split(/\r?\n/, 1)[0] ?? "";
+  const delimiter = detectDelimiter(firstLine);
+  const matrix = delimiter === "\t" ? parseTsv(trimmed) : parseCsvLike(trimmed);
+  const [headerRow, ...dataRows] = matrix;
+
+  if (!headerRow || headerRow.length === 0) {
+    return {
+      delimiter,
+      errors: [{ message: "Header row is required.", row: 0, severity: "error" }],
+      rowCount: 0,
+      rows: [],
+      sourceCoverage: { sourcePackIds: [], uniqueChunkIds: 0, uniquePages: 0, uniqueVisualAssetIds: 0 },
+      verificationStatusCounts: {},
+      warnings: [],
+    };
+  }
+
+  const headers = headerRow.map(normalizeHeader);
+  const headerIndex = new Map<string, number>(headers.map((header, index) => [header, index]));
+  const requiredHeaders = ["question", "answer"];
+  for (const requiredHeader of requiredHeaders) {
+    if (!headerIndex.has(requiredHeader)) {
+      errors.push({ message: `Missing required header: ${requiredHeader}.`, row: 0, severity: "error" });
+    }
+  }
+
+  const rows: StudyRichImportNormalizedRow[] = [];
+  const sourcePackIds = new Set<string>();
+  const chunkIds = new Set<string>();
+  const pages = new Set<number>();
+  const visualIds = new Set<string>();
+  const verificationStatusCounts: Partial<Record<StudyRichVerificationStatus, number>> = {};
+
+  for (let rowOffset = 0; rowOffset < dataRows.length; rowOffset += 1) {
+    const rowNumber = rowOffset + 2;
+    const row = dataRows[rowOffset];
+    const getValue = (...names: string[]) => {
+      for (const name of names) {
+        const index = headerIndex.get(normalizeHeader(name));
+        if (index !== undefined) return (row[index] ?? "").trim();
+      }
+      return "";
+    };
+
+    if (row.every((cell) => !cell || !cell.trim())) continue;
+
+    const question = getValue("question");
+    const answer = getValue("answer");
+    if (!question) errors.push({ message: "Missing question.", row: rowNumber, severity: "error" });
+    if (!answer) errors.push({ message: "Missing answer.", row: rowNumber, severity: "error" });
+    if (!question || !answer) continue;
+
+    const levelRaw = getValue("level");
+    const level = normalizeLevel(levelRaw);
+    if (levelRaw && !level) {
+      warnings.push({ message: `Unknown level '${levelRaw}' (ignored).`, row: rowNumber, severity: "warning" });
+    }
+
+    const verificationStatusRaw = getValue("verificationStatus", "verification_status");
+    const verificationStatus = normalizeVerificationStatus(verificationStatusRaw);
+    if (verificationStatusRaw && !verificationStatus) {
+      warnings.push({
+        message: `Unknown verificationStatus '${verificationStatusRaw}' (ignored).`,
+        row: rowNumber,
+        severity: "warning",
+      });
+    }
+
+    const verificationConfidenceRaw = getValue("verificationConfidence", "verification_confidence");
+    const verificationConfidence = parseConfidence(verificationConfidenceRaw);
+    if (verificationConfidenceRaw && verificationConfidence === undefined) {
+      warnings.push({
+        message: `Invalid verificationConfidence '${verificationConfidenceRaw}' (ignored).`,
+        row: rowNumber,
+        severity: "warning",
+      });
+    }
+
+    const normalizedRow: StudyRichImportNormalizedRow = {
+      answer,
+      draftId: getValue("draftId", "draft_id") || undefined,
+      externalId: getValue("externalId", "external_id", "card_id") || undefined,
+      hint: getValue("hint") || undefined,
+      level,
+      question,
+      source: {
+        sourceChunkIds: parseList(getValue("sourceChunkIds", "source_chunk_ids")),
+        sourceLabel: getValue("sourceLabel", "source_label") || undefined,
+        sourcePackId: getValue("sourcePackId", "source_pack_id") || undefined,
+        sourcePages: parsePages(getValue("sourcePages", "source_pages", "source_page_anchors")),
+        sourceUrl: getValue("sourceUrl", "source_url") || undefined,
+        sourceVisualAssetIds: parseList(
+          getValue("sourceVisualAssetIds", "source_visual_asset_ids", "source_visual_ids"),
+        ),
+      },
+      tags: parseList(getValue("tags")),
+      verification: {
+        confidence: verificationConfidence,
+        evidence: parseList(getValue("verificationEvidence", "verification_evidence")),
+        notes: getValue("verificationNotes", "verification_notes") || undefined,
+        status: verificationStatus,
+        verifier: getValue("verifier") || undefined,
+      },
+    };
+
+    if (normalizedRow.source.sourcePackId) sourcePackIds.add(normalizedRow.source.sourcePackId);
+    for (const chunkId of normalizedRow.source.sourceChunkIds) chunkIds.add(chunkId);
+    for (const page of normalizedRow.source.sourcePages) pages.add(page);
+    for (const visualId of normalizedRow.source.sourceVisualAssetIds) visualIds.add(visualId);
+
+    if (normalizedRow.verification.status) {
+      verificationStatusCounts[normalizedRow.verification.status] =
+        (verificationStatusCounts[normalizedRow.verification.status] ?? 0) + 1;
+    }
+
+    if (normalizedRow.verification.status === "verified" && !shouldVerifyCard(normalizedRow)) {
+      warnings.push({
+        message: "Row marked verified but does not meet import verification policy (status kept as metadata only).",
+        row: rowNumber,
+        severity: "warning",
+      });
+    }
+
+    rows.push(normalizedRow);
+  }
+
+  return {
+    delimiter,
+    errors,
+    rowCount: rows.length,
+    rows,
+    sourceCoverage: {
+      sourcePackIds: Array.from(sourcePackIds),
+      uniqueChunkIds: chunkIds.size,
+      uniquePages: pages.size,
+      uniqueVisualAssetIds: visualIds.size,
+    },
+    verificationStatusCounts,
+    warnings,
+  };
+}
+
+export async function saveStudyRichFlashcardImport(args: {
+  adminUserId: string;
+  deckId: string;
+  rows: StudyRichImportNormalizedRow[];
+}): Promise<StudyRichImportSaveResult> {
+  return getDb().transaction(async (tx) => {
+    const [deck] = await tx
+      .select({ id: studyDecks.id })
+      .from(studyDecks)
+      .where(eq(studyDecks.id, args.deckId))
+      .limit(1);
+
+    if (!deck) {
+      throw new Error("Deck not found.");
+    }
+
+    const [{ maxPosition }] = await tx
+      .select({ maxPosition: sql<number>`coalesce(max(${studyCards.position}), -1)` })
+      .from(studyCards)
+      .where(eq(studyCards.deckId, args.deckId));
+
+    const cardRows = args.rows.map((row, index) => {
+      const verified = shouldVerifyCard(row);
+      return {
+        answer: row.answer,
+        deckId: args.deckId,
+        hint: row.hint ?? null,
+        isVerified: verified,
+        level: row.level ?? null,
+        position: maxPosition + 1 + index,
+        question: row.question,
+        verifiedAt: verified ? new Date() : null,
+        verifiedBy: verified ? `rich_csv:${row.verification.verifier}` : null,
+      };
+    });
+
+    const cards = await tx.insert(studyCards).values(cardRows).returning({
+      id: studyCards.id,
+      isVerified: studyCards.isVerified,
+    });
+
+    const sourceRows = cards.flatMap((card, index) => {
+      const source = args.rows[index].source;
+      const hasSource =
+        Boolean(source.sourceLabel) ||
+        Boolean(source.sourceUrl) ||
+        Boolean(source.sourcePackId) ||
+        source.sourceChunkIds.length > 0 ||
+        source.sourcePages.length > 0 ||
+        source.sourceVisualAssetIds.length > 0;
+      if (!hasSource) return [];
+      const sourceLabelParts = [
+        source.sourceLabel,
+        source.sourcePackId ? `sourcePack=${source.sourcePackId}` : "",
+        source.sourceChunkIds.length > 0 ? `chunks=${source.sourceChunkIds.join(",")}` : "",
+        source.sourcePages.length > 0 ? `pages=${source.sourcePages.join(",")}` : "",
+        source.sourceVisualAssetIds.length > 0 ? `visuals=${source.sourceVisualAssetIds.join(",")}` : "",
+      ].filter(Boolean);
+      const generatedSourceLabel = sourceLabelParts.length > 0 ? sourceLabelParts.join(" | ") : undefined;
+
+      return [
+        {
+          cardId: card.id,
+          sourceLabel: generatedSourceLabel ?? null,
+          sourceType: source.sourcePackId ? "source_pack_csv" : source.sourceUrl ? "url_csv" : "csv",
+          sourceUrl: source.sourceUrl ?? null,
+        },
+      ];
+    });
+
+    if (sourceRows.length > 0) {
+      await tx.insert(studyCardSources).values(sourceRows);
+    }
+
+    const verificationRows = cards.flatMap((card, index) => {
+      const verification = args.rows[index].verification;
+      const hasVerificationMetadata =
+        Boolean(verification.status) ||
+        typeof verification.confidence === "number" ||
+        Boolean(verification.notes) ||
+        verification.evidence.length > 0 ||
+        Boolean(verification.verifier);
+      if (!hasVerificationMetadata) return [];
+      const noteParts = [
+        verification.status ? `status=${verification.status}` : "",
+        verification.verifier ? `verifier=${verification.verifier}` : "",
+        args.rows[index].tags.length > 0 ? `tags=${args.rows[index].tags.join(" | ")}` : "",
+        args.rows[index].draftId ? `draftId=${args.rows[index].draftId}` : "",
+        args.rows[index].externalId ? `externalId=${args.rows[index].externalId}` : "",
+        verification.notes ? `notes=${verification.notes}` : "",
+        verification.evidence.length > 0 ? `evidence=${verification.evidence.join(" | ")}` : "",
+      ].filter(Boolean);
+      return [
+        {
+          cardId: card.id,
+          confidence: verification.confidence ?? null,
+          note: noteParts.join("\n"),
+          verifiedByUserId: card.isVerified ? args.adminUserId : null,
+        },
+      ];
+    });
+
+    if (verificationRows.length > 0) {
+      await tx.insert(studyVerifications).values(verificationRows);
+    }
+
+    const uniqueSourcePacks = Array.from(new Set(args.rows.map((row) => row.source.sourcePackId).filter(Boolean)));
+    const [deckImport] = await tx.insert(studyDeckImports).values({
+      deckId: args.deckId,
+      importType: "rich_admin_csv",
+      sourceCount: args.rows.length,
+      sourceSummary: `rich_csv rows=${args.rows.length}; sourcePacks=${uniqueSourcePacks.join(",") || "none"}`,
+      userId: args.adminUserId,
+    }).returning({ id: studyDeckImports.id });
+
+    await tx
+      .update(studyDecks)
+      .set({
+        cardCount: sql`greatest(${studyDecks.cardCount} + ${args.rows.length}, 0)`,
+        updatedAt: new Date(),
+        verifiedCardCount: sql`(
+          select count(*)::int
+          from ${studyCards}
+          where ${studyCards.deckId} = ${args.deckId}
+            and ${studyCards.isVerified} = true
+        )`,
+      })
+      .where(eq(studyDecks.id, args.deckId));
+
+    return {
+      createdCardCount: cards.length,
+      createdSourceCount: sourceRows.length,
+      createdVerificationCount: verificationRows.length,
+      deckId: args.deckId,
+      deckImportId: deckImport.id,
+      rowsProcessed: args.rows.length,
+      verifiedCardCount: cards.filter((card) => card.isVerified).length,
+    };
+  });
+}
+
+export const STUDY_RICH_IMPORT_SAMPLE_CSV = [
+  STUDY_RICH_IMPORT_HEADERS.join(","),
+  "\"What keeps a visual maneuver stable?\",\"Use pitch, power, and trim before large corrections.\",\"Start with trim\",\"beginner\",\"fundamentals|maneuvers\",\"sample-source-pack\",\"chunk-001|chunk-002\",\"12|13\",\"figure-12-a\",\"Source Pack Guide\",\"https://example.com/source-pack\",\"verified\",\"0.91\",\"Grounded in chunk evidence\",\"[\\\"chunk-001 line 3\\\",\\\"chunk-002 line 1\\\"]\",\"admin_reviewer\",\"sample-draft-001\",\"row-001\"",
+  "\"When should confidence be reduced?\",\"When source evidence is missing or contradictory.\",\"Check source anchors first\",\"intermediate\",\"verification|quality\",\"sample-source-pack\",\"chunk-010\",\"18-19\",\"\",\"Review Notes\",\"\",\"needs_review\",\"0.62\",\"Needs human follow-up\",\"chunk-010 summary\",\"\",\"sample-draft-001\",\"row-002\"",
+].join("\n");
