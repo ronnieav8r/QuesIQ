@@ -284,3 +284,18 @@ airplane-land targets:
    cleanly.
 3. DPE preflight now enforces airplane-land title/class metadata contracts for
    these track codes to prevent regression.
+
+## MVP Learner Polish Slice 9 (Production Status Visibility)
+
+This slice keeps content unchanged and brings production readiness signals into
+the DPE learner Home surface:
+
+1. The app now calls the safe public `/api/dpe/status` probe on load.
+2. Home shows a `DPE production status` panel with content-table reachability,
+   loaded prompt count, ready/scaffolded target-track count, and selected-track
+   status.
+3. The panel lists all configured airplane-land target tracks as ready or
+   scaffolded, making the current no-content boundary visible without requiring
+   admin cookies.
+4. This is deployment/readiness visibility only. It does not approve, publish,
+   seed, or modify aviation content.

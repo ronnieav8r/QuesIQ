@@ -176,6 +176,19 @@ type ContentReadiness = {
   score: number;
 };
 
+type DpePublicStatus = {
+  contentTablesReachable: boolean;
+  questionCount: number;
+  status: "ok" | "degraded";
+  targetTracks: {
+    aircraftCategory: string;
+    aircraftClass: string;
+    code: string;
+    contentReady: boolean;
+    title: string;
+  }[];
+};
+
 type AuthState = {
   loading: boolean;
   authenticated: boolean;
@@ -310,6 +323,7 @@ export default function App() {
     available: false,
     certificateTypes: []
   });
+  const [publicStatus, setPublicStatus] = useState<DpePublicStatus | null>(null);
   const [dpeProfile, setDpeProfile] = useState<DpeProfileState>(emptyDpeProfile);
   const [profileSaveStatus, setProfileSaveStatus] = useState<"idle" | "saved" | "saving" | "error">("idle");
   const [databaseAvailable, setDatabaseAvailable] = useState<boolean | null>(null);
@@ -374,6 +388,7 @@ export default function App() {
 
   useEffect(() => {
     void loadAuthState();
+    void loadPublicStatus();
   }, []);
 
   useEffect(() => {
@@ -437,6 +452,19 @@ export default function App() {
       setContentSummary(data);
     } catch {
       setContentSummary({ available: false, certificateTypes: [] });
+    }
+  }
+
+  async function loadPublicStatus() {
+    try {
+      const response = await fetch("/api/dpe/status");
+      if (!response.ok) {
+        throw new Error("DPE status probe unavailable.");
+      }
+      const data = (await response.json()) as DpePublicStatus;
+      setPublicStatus(data);
+    } catch {
+      setPublicStatus(null);
     }
   }
 
@@ -853,6 +881,7 @@ export default function App() {
                 onPractice={() => setScreen("practice")}
                 progressionAvailable={progressionAvailable}
                 progressionSummary={progressionSummary}
+                publicStatus={publicStatus}
                 selectedTargetTrack={selectedTargetTrack}
                 storedSessions={storedSessions}
               />
@@ -1109,6 +1138,7 @@ function HomeScreen({
   onPractice,
   progressionAvailable,
   progressionSummary,
+  publicStatus,
   selectedTargetTrack,
   storedSessions,
 }: {
@@ -1119,6 +1149,7 @@ function HomeScreen({
   onPractice: () => void;
   progressionAvailable: boolean | null;
   progressionSummary: DpeProgressionSummary | null;
+  publicStatus: DpePublicStatus | null;
   selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
   storedSessions: StoredPracticeSession[];
 }) {
@@ -1264,6 +1295,13 @@ function HomeScreen({
         </div>
       </div>
 
+      <DpeProductionStatusPanel
+        publicStatus={publicStatus}
+        questionBankAvailable={questionBankAvailable}
+        questionCount={questionCount}
+        selectedTargetTrack={selectedTargetTrack}
+      />
+
       <div className="stat-strip">
           <Stat label="Question bank" value={`${questionCount}`} />
           <Stat label="Sessions" value={`${progress.completedSessions}`} />
@@ -1400,6 +1438,82 @@ function HomeScreen({
         </div>
       </div>
     </section>
+  );
+}
+
+function DpeProductionStatusPanel({
+  publicStatus,
+  questionBankAvailable,
+  questionCount,
+  selectedTargetTrack,
+}: {
+  publicStatus: DpePublicStatus | null;
+  questionBankAvailable: boolean | null;
+  questionCount: number;
+  selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
+}) {
+  const loadedQuestionCount = publicStatus?.questionCount ?? questionCount;
+  const reachable = publicStatus?.contentTablesReachable ?? questionBankAvailable;
+  const statusLabel =
+    publicStatus?.status === "ok"
+      ? "status ok"
+      : reachable
+        ? "storage reachable"
+        : publicStatus
+          ? "degraded"
+          : "checking";
+  const selectedStatus =
+    publicStatus?.targetTracks.find((track) => track.code === selectedTargetTrack.code) ??
+    null;
+  const readyTracks =
+    publicStatus?.targetTracks.filter((track) => track.contentReady).length ??
+    dpeTargetTracks.filter((track) => track.contentReady).length;
+  const totalTracks = publicStatus?.targetTracks.length ?? dpeTargetTracks.length;
+  const trackRows = publicStatus?.targetTracks ?? dpeTargetTracks;
+
+  return (
+    <div className="panel">
+      <div className="section-head">
+        <div>
+          <h3>DPE production status</h3>
+          <p>
+            Live readiness signal from the public status probe. It shows storage reachability and
+            target-track scaffolding, not content approval.
+          </p>
+        </div>
+        <Database />
+      </div>
+      <div className="stat-strip mt-4">
+        <Stat label="Status" value={statusLabel} />
+        <Stat label="Content tables" value={reachable ? "reachable" : "fallback"} />
+        <Stat label="Loaded prompts" value={`${loadedQuestionCount}`} />
+        <Stat label="Ready tracks" value={`${readyTracks}/${totalTracks}`} />
+      </div>
+      <div className="question-list mt-4">
+        <div className="raised-card">
+          <div className="section-head">
+            <strong>{selectedTargetTrack.title}</strong>
+            <span className="pill">
+              {selectedStatus?.contentReady ?? selectedTargetTrack.contentReady
+                ? "content ready"
+                : "scaffolded"}
+            </span>
+          </div>
+          <p>
+            {selectedTargetTrack.aircraftCategory} {selectedTargetTrack.aircraftClass}. Selected
+            target stays active for profile, sessions, reviews, and quests.
+          </p>
+        </div>
+        <div className="raised-card">
+          <strong>Configured airplane-land target tracks</strong>
+          <p>
+            {trackRows
+              .map((track) => `${track.code}: ${track.contentReady ? "ready" : "scaffolded"}`)
+              .join(" | ")}
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 

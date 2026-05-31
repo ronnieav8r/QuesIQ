@@ -64,6 +64,9 @@ const codeContracts = [
       "Target-track oral prep",
       "Open visual setup",
       "Open combined setup",
+      "fetch(\"/api/dpe/status\"",
+      "DPE production status",
+      "Configured airplane-land target tracks",
     ],
   },
   {
