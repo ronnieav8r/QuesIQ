@@ -271,6 +271,33 @@ and Codex-side generation/verification skills first, then approved generated
 Study deck drafts or DPE draft handoffs only after product-owned import and
 publish controls exist.
 
+## Product Packet Preview Bridge
+
+Content Studio also includes a preview-only bridge for product packets generated
+by Codex-side tools after Admin source-pack review. This is an Admin UI
+inspection surface only; it does not import content, load Drive files, read
+server source-pack folders, publish content, mark Official content, mark
+Verified content, or persist source-pack storage.
+
+Supported preview packet types:
+
+- Study generation packet: `POST /api/study/content-studio/flashcard-draft`
+  with `mode: "source_pack_generation_packet_preview"` and
+  `generationPacketJson`.
+- DPE reference packet: `POST /api/dpe/content/draft` with
+  `mode: "source_pack_reference_packet_preview"` and `referencePacket`.
+
+The Study preview shows the normalized source pack id/title, chunk count, deck
+request details, and review sections returned by the Study-owned preview
+parser. The DPE preview shows item count, source chunk count, visual asset
+count, track applicability, verification-status counts, source pack details,
+and warnings returned by the DPE-owned reference parser.
+
+This bridge is intentionally downstream of Admin review and upstream of any
+product import. It exists so reviewers can inspect the backend-normalized packet
+shape before future Codex-side generation/export workflows are allowed to create
+Study deck drafts or DPE reference data.
+
 ## Ownership
 
 Shared Admin owns:
