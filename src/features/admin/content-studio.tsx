@@ -498,6 +498,14 @@ type ContentStudioWorkspaceSection =
   | "source_review"
   | "study_import_prep";
 
+const contentStudioWorkspaceSections: ContentStudioWorkspaceSection[] = [
+  "overview",
+  "source_review",
+  "product_packet",
+  "study_import_prep",
+  "draft_review",
+];
+
 const MIN_SOURCE_CHARS = 40;
 
 const sourcePackManifest: SourcePackManifest = {
@@ -960,6 +968,14 @@ function hasDpeCertificateContext(context: DpeDraftContext) {
   );
 }
 
+function parseContentStudioWorkspaceSection(
+  value: string | null,
+): ContentStudioWorkspaceSection {
+  return contentStudioWorkspaceSections.includes(value as ContentStudioWorkspaceSection)
+    ? (value as ContentStudioWorkspaceSection)
+    : "overview";
+}
+
 function initialContentStudioUrlState() {
   if (typeof window === "undefined") {
     return {
@@ -967,10 +983,14 @@ function initialContentStudioUrlState() {
       pipelineKey: "study_flashcards" as ContentStudioPipelineKey,
       selectedTemplate: contentStudioTemplatesByPipeline.study_flashcards[0].value,
       sourceText: "",
+      workspaceSection: "overview" as ContentStudioWorkspaceSection,
     };
   }
 
   const params = new URLSearchParams(window.location.search);
+  const workspaceSection = parseContentStudioWorkspaceSection(
+    params.get("contentStudioWorkspace"),
+  );
 
   if (params.get("pipeline") !== "dpe_content") {
     return {
@@ -978,6 +998,7 @@ function initialContentStudioUrlState() {
       pipelineKey: "study_flashcards" as ContentStudioPipelineKey,
       selectedTemplate: contentStudioTemplatesByPipeline.study_flashcards[0].value,
       sourceText: "",
+      workspaceSection,
     };
   }
 
@@ -986,6 +1007,7 @@ function initialContentStudioUrlState() {
     pipelineKey: "dpe_content" as ContentStudioPipelineKey,
     selectedTemplate: contentStudioTemplatesByPipeline.dpe_content[0].value,
     sourceText: params.get("sourceText") ?? "",
+    workspaceSection,
   };
 }
 
@@ -1025,7 +1047,7 @@ export function ContentStudio() {
   const [productPacketValidationErrors, setProductPacketValidationErrors] =
     useState<string[]>([]);
   const [workspaceSection, setWorkspaceSection] =
-    useState<ContentStudioWorkspaceSection>("overview");
+    useState<ContentStudioWorkspaceSection>(urlState.workspaceSection);
   const [studyImportPrepInput, setStudyImportPrepInput] = useState("");
   const [studyImportDeckId, setStudyImportDeckId] = useState("");
   const [studyImportDeckDescription, setStudyImportDeckDescription] = useState("");
@@ -1095,6 +1117,22 @@ export function ContentStudio() {
       setDpeContext(emptyDpeContext);
     }
     setError(undefined);
+  }
+
+  function handleWorkspaceSectionChange(nextSection: ContentStudioWorkspaceSection) {
+    setWorkspaceSection(nextSection);
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    if (nextSection === "overview") {
+      url.searchParams.delete("contentStudioWorkspace");
+    } else {
+      url.searchParams.set("contentStudioWorkspace", nextSection);
+    }
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
   }
 
   function updateDpeContext(group: "acs" | "certificate", key: string, value: string) {
@@ -1522,7 +1560,7 @@ export function ContentStudio() {
       <div className="component-tabs" aria-label="Content Studio workspace sections">
         <button
           className={workspaceSection === "overview" ? "active" : undefined}
-          onClick={() => setWorkspaceSection("overview")}
+          onClick={() => handleWorkspaceSectionChange("overview")}
           type="button"
         >
           <History size={18} />
@@ -1530,7 +1568,7 @@ export function ContentStudio() {
         </button>
         <button
           className={workspaceSection === "source_review" ? "active" : undefined}
-          onClick={() => setWorkspaceSection("source_review")}
+          onClick={() => handleWorkspaceSectionChange("source_review")}
           type="button"
         >
           <Images size={18} />
@@ -1538,7 +1576,7 @@ export function ContentStudio() {
         </button>
         <button
           className={workspaceSection === "product_packet" ? "active" : undefined}
-          onClick={() => setWorkspaceSection("product_packet")}
+          onClick={() => handleWorkspaceSectionChange("product_packet")}
           type="button"
         >
           <ShieldCheck size={18} />
@@ -1546,7 +1584,7 @@ export function ContentStudio() {
         </button>
         <button
           className={workspaceSection === "study_import_prep" ? "active" : undefined}
-          onClick={() => setWorkspaceSection("study_import_prep")}
+          onClick={() => handleWorkspaceSectionChange("study_import_prep")}
           type="button"
         >
           <UploadCloud size={18} />
@@ -1554,7 +1592,7 @@ export function ContentStudio() {
         </button>
         <button
           className={workspaceSection === "draft_review" ? "active" : undefined}
-          onClick={() => setWorkspaceSection("draft_review")}
+          onClick={() => handleWorkspaceSectionChange("draft_review")}
           type="button"
         >
           <FileText size={18} />
