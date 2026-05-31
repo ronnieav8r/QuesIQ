@@ -189,3 +189,27 @@ Remaining MVP gaps after this slice:
    recovery focuses on completed-session review and voice launch fallback).
 2. Review retry diagnostics/history (attempt count, failure reason timeline).
 3. Track-specific real oral content for non-Private target tracks.
+
+## MVP Learner Polish Slice 4 (In-Progress Resume)
+
+This follow-up slice makes persisted `in_progress` sessions actionable without
+schema or content changes:
+
+1. History now exposes a `Continue session` action for stored `in_progress`
+   sessions.
+2. Continue loads the saved session into Practice live typed flow, preserving
+   saved questions and transcript answers, and resumes at the next unanswered
+   prompt.
+3. If a stored `in_progress` session is missing enough prompt evidence to
+   continue exact prompts, Practice now explains why and routes the learner to
+   start a new session with the same area/task filters where possible.
+4. Lifecycle status labels are tightened for `in progress`, `session open`,
+   `review incomplete`, and `review ready` so each state has an explicit next
+   action.
+
+Remaining MVP gaps after this slice:
+
+1. Resume/continue diagnostics and retry telemetry for partial/invalid stored
+   session payloads.
+2. Review retry diagnostics/history (attempt count, failure reason timeline).
+3. Track-specific real oral content for non-Private target tracks.

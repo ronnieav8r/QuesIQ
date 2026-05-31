@@ -254,6 +254,18 @@ type PracticeNotice = {
   title: string;
 };
 
+type StoredSessionResumePlan =
+  | {
+      kind: "resume";
+      message: string;
+      nextIndex: number;
+      session: LocalSession;
+    }
+  | {
+      kind: "start_new";
+      message: string;
+    };
+
 const navItems = [
   { key: "home", label: "Home", icon: Home },
   { key: "practice", label: "Practice", icon: Mic },
@@ -501,6 +513,44 @@ export default function App() {
     setCertificateTypeId(nextCertificateTypeId);
     setArea(nextArea);
     setTask(nextTask);
+  }
+
+  function continueStoredInProgressSession(storedSession: StoredPracticeSession) {
+    const certificateType = normalizeStoredCertificateType(storedSession.transcriptJson?.certificateType);
+    if (certificateType?.id) {
+      setCertificateTypeId(certificateType.id);
+    }
+    if (storedSession.acsArea) {
+      setArea(storedSession.acsArea);
+    }
+    if (storedSession.acsTask) {
+      setTask(storedSession.acsTask);
+    }
+    setMode(storedSession.mode);
+
+    const resumePlan = buildStoredSessionResumePlan(storedSession);
+    if (resumePlan.kind === "resume") {
+      setSession(resumePlan.session);
+      setCurrentIndex(resumePlan.nextIndex);
+      setDraftAnswer("");
+      setStage("live");
+      setScreen("practice");
+      setPracticeNotice({
+        title: "Resumed in-progress session",
+        detail: resumePlan.message,
+      });
+      return;
+    }
+
+    setSession(null);
+    setCurrentIndex(0);
+    setDraftAnswer("");
+    setStage("setup");
+    setScreen("practice");
+    setPracticeNotice({
+      title: "Cannot resume exact prompts",
+      detail: `${resumePlan.message} Start a new session with the same area/task filters now shown in Practice setup.`,
+    });
   }
 
   async function startSession(voiceMode = false) {
@@ -871,6 +921,7 @@ export default function App() {
                     };
                   }
                 }}
+                onResumeInProgress={continueStoredInProgressSession}
                 onOpenReview={(reviewSession) => {
                   setMode(reviewSession.mode);
                   setSession(reviewSession);
@@ -2803,12 +2854,14 @@ function HistoryScreen({
   storedSessions,
   databaseAvailable,
   onGenerateReview,
+  onResumeInProgress,
   onOpenReview
 }: {
   currentSession: LocalSession | null;
   storedSessions: StoredPracticeSession[];
   databaseAvailable: boolean | null;
   onGenerateReview: (sessionId: string) => Promise<{ ok: boolean; message: string }>;
+  onResumeInProgress: (storedSession: StoredPracticeSession) => void;
   onOpenReview: (reviewSession: LocalSession) => void;
 }) {
   const storedReviews = storedSessions
@@ -2889,14 +2942,17 @@ function HistoryScreen({
               </div>
             </article>
           )}
-          {storedSessions.map((storedSession) => (
-            <article className="raised-card" key={storedSession.id}>
+          {storedSessions.map((storedSession) => {
+            const resumePlan =
+              storedSession.status === "in_progress"
+                ? buildStoredSessionResumePlan(storedSession)
+                : null;
+            return (
+              <article className="raised-card" key={storedSession.id}>
               <div className="question-meta">
                 <span className="pill">{formatSessionStatus(storedSession.status)}</span>
                 <span className="pill">{storedSession.mode}</span>
-                <span className="pill">
-                  {storedSession.reviewJson ? "review ready" : "review incomplete"}
-                </span>
+                <span className="pill">{formatReviewLifecycleStatus(storedSession)}</span>
                 {normalizeStoredCertificateType(storedSession.transcriptJson?.certificateType) && (
                   <span className="pill">
                     {
@@ -2915,6 +2971,16 @@ function HistoryScreen({
               </p>
               <p className="muted">{buildStoredSessionCta(storedSession)}</p>
               <div className="inline-actions mt-4">
+                {storedSession.status === "in_progress" && (
+                  <button
+                    className="button primary"
+                    onClick={() => onResumeInProgress(storedSession)}
+                  >
+                    {resumePlan?.kind === "resume" ? "Continue session" : "Start new with same target"}
+                  </button>
+                )}
+                {storedSession.status !== "in_progress" && (
+                  <>
                 <button
                   className="button"
                   onClick={() => setSelectedReviewId(storedSession.id)}
@@ -2951,9 +3017,12 @@ function HistoryScreen({
                     {retryingReviewId === storedSession.id ? "Generating..." : "Generate review"}
                   </button>
                 )}
+                  </>
+                )}
               </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
           {storedSessions.length === 0 && <ReviewPreview />}
         </div>
       </div>
@@ -2991,6 +3060,12 @@ function summarizeStoredSession(storedSession: StoredPracticeSession) {
   const answers = normalizeStoredAnswers(storedSession.transcriptJson?.answers);
   const answered = answers.filter((answer) => !answer.skipped && answer.response.trim()).length;
   const skipped = answers.filter((answer) => answer.skipped || !answer.response.trim()).length;
+  const resumePlan = buildStoredSessionResumePlan(storedSession);
+  if (storedSession.status === "in_progress") {
+    return resumePlan.kind === "resume"
+      ? `${answered} answered, ${skipped} skipped. Continue at prompt ${resumePlan.nextIndex + 1} of ${resumePlan.session.questions.length}.`
+      : `${answered} answered, ${skipped} skipped. ${resumePlan.message}`;
+  }
   const review = storedSession.reviewJson
     ? normalizeReview(storedSession.reviewJson, buildLocalReview({
         answers,
@@ -3010,6 +3085,56 @@ function summarizeStoredSession(storedSession: StoredPracticeSession) {
   }`;
 }
 
+function buildStoredSessionResumePlan(storedSession: StoredPracticeSession): StoredSessionResumePlan {
+  const questions = normalizeStoredQuestions(storedSession.transcriptJson?.questions);
+  const answers = normalizeStoredAnswers(storedSession.transcriptJson?.answers);
+  const startedAt = new Date(storedSession.startedAt ?? storedSession.createdAt);
+  const safeStartedAt = Number.isNaN(startedAt.getTime())
+    ? new Date(storedSession.createdAt)
+    : startedAt;
+
+  if (storedSession.status !== "in_progress") {
+    return {
+      kind: "start_new",
+      message: "This session is not marked in progress.",
+    };
+  }
+  if (questions.length === 0) {
+    return {
+      kind: "start_new",
+      message:
+        "The stored session does not include enough question data to continue exact prompts.",
+    };
+  }
+  if (answers.length >= questions.length) {
+    return {
+      kind: "start_new",
+      message:
+        "All saved prompts are already answered in this session, so start a new session for the same area/task.",
+    };
+  }
+
+  const session: LocalSession = {
+    id: storedSession.id,
+    mode: storedSession.mode,
+    area: storedSession.acsArea ?? "-",
+    certificateType: normalizeStoredCertificateType(storedSession.transcriptJson?.certificateType),
+    task: storedSession.acsTask ?? "-",
+    questions,
+    answers,
+    startedAt: safeStartedAt,
+    persisted: true,
+    voiceMode: false,
+  };
+
+  return {
+    kind: "resume",
+    message: `Continuing prompt ${answers.length + 1} of ${questions.length} using the saved transcript evidence.`,
+    nextIndex: answers.length,
+    session,
+  };
+}
+
 function formatSessionStatus(status: string | null | undefined) {
   const value = status?.trim().toLowerCase();
   if (value === "in_progress") return "in progress";
@@ -3017,9 +3142,21 @@ function formatSessionStatus(status: string | null | undefined) {
   return value || "unknown";
 }
 
+function formatReviewLifecycleStatus(storedSession: StoredPracticeSession) {
+  if (storedSession.status === "in_progress") return "session open";
+  if (storedSession.status === "completed" && !storedSession.reviewJson) {
+    return "review incomplete";
+  }
+  if (storedSession.reviewJson) return "review ready";
+  return "review pending";
+}
+
 function buildStoredSessionCta(storedSession: StoredPracticeSession) {
+  const resumePlan = buildStoredSessionResumePlan(storedSession);
   if (storedSession.status === "in_progress") {
-    return "Session is still in progress. Complete a session in Practice to unlock a saved review.";
+    return resumePlan.kind === "resume"
+      ? "Use Continue session to resume typed prompts from the saved progress."
+      : `${resumePlan.message} Use Start new with same target.`;
   }
   if (storedSession.status === "completed" && !storedSession.reviewJson) {
     return "Session is complete but review is missing. Generate a saved review or open the fallback preview now.";
