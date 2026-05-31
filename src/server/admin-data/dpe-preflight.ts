@@ -228,6 +228,13 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       'fetch("/api/dpe/runtime-check")',
       "Signed-in runtime check",
     ]),
+    signedInDependencyReadinessVisible: hasAll(runtimeCheckText, [
+      "listDpeContentSummary",
+      "Content tables",
+      "Review AI",
+      "Voice AI",
+      'getOpenAiRealtimeApiKey("dpe")',
+    ]),
   };
 
   const blockers: string[] = [];
@@ -286,6 +293,9 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
   }
   if (!runtimeSignals.signedInRuntimeCheckVisible) {
     warnings.push("DPE signed-in runtime check markers were not detected.");
+  }
+  if (!runtimeSignals.signedInDependencyReadinessVisible) {
+    warnings.push("DPE signed-in dependency readiness markers were not detected.");
   }
 
   const status: PreflightStatus =
@@ -414,6 +424,13 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
         status: warningStatusFrom(runtimeSignals.signedInRuntimeCheckVisible),
         value: runtimeSignals.signedInRuntimeCheckVisible ? "Visible" : "Not detected",
       },
+      {
+        detail: "Signed-in runtime check includes content table, Review AI, and Voice AI dependency readiness markers.",
+        key: "signed_in_dependency_readiness",
+        label: "Signed-in dependency readiness",
+        status: warningStatusFrom(runtimeSignals.signedInDependencyReadinessVisible),
+        value: runtimeSignals.signedInDependencyReadinessVisible ? "Visible" : "Not detected",
+      },
     ],
     status,
     statusRows: [
@@ -461,6 +478,13 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
         label: "Signed-in runtime contract",
         status: warningStatusFrom(runtimeSignals.signedInRuntimeCheckVisible),
         value: runtimeSignals.signedInRuntimeCheckVisible ? "Detected" : "Not detected",
+      },
+      {
+        detail: "Source-contract presence for signed-in content table, Review AI, and Voice AI dependency readiness rows.",
+        key: "signed_in_dependency_contract",
+        label: "Signed-in dependency contract",
+        status: warningStatusFrom(runtimeSignals.signedInDependencyReadinessVisible),
+        value: runtimeSignals.signedInDependencyReadinessVisible ? "Detected" : "Not detected",
       },
       {
         detail: "Source-contract presence for target-track snapshot alignment in realtime voice instructions.",

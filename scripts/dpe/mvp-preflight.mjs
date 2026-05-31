@@ -188,6 +188,14 @@ const codeContracts = [
       "pipelineKey: \"dpe_content\"",
     ],
   },
+  {
+    file: "src/server/admin-data/dpe-preflight.ts",
+    checks: [
+      "signedInDependencyReadinessVisible",
+      "Signed-in dependency readiness",
+      "Signed-in dependency contract",
+    ],
+  },
 ];
 
 const forbiddenContracts = [

@@ -614,3 +614,16 @@ content:
 4. The runtime check still exposes only readiness/count signals; it does not
    expose secrets, transcripts, aviation content, publish, Official, or
    Verified state.
+
+## MVP Learner Polish Slice 36 (Admin Dependency Readiness Visibility)
+
+This slice aligns Admin deployment QA with signed-in DPE runtime readiness
+without changing content:
+
+1. Admin DPE preflight now detects whether `/api/dpe/runtime-check` includes
+   content table, Review AI, and Voice AI dependency readiness rows.
+2. Admin runtime rows show a separate `Signed-in dependency readiness` signal
+   in addition to the existing signed-in runtime check contract.
+3. Admin status rows also show a `Signed-in dependency contract` source marker,
+   keeping deployment review aligned with the learner runtime check.
+4. No aviation content, schema, publish, Official, or Verified state changed.
