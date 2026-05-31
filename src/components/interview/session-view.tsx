@@ -4,6 +4,7 @@ import { FeedbackButton } from "@/components/interview/feedback-button";
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import { ReviewDetailSections } from "@/components/interview/review-detail-sections";
 import { getPostReviewFeedbackPrompt } from "@/product/beta-feedback-prompts";
+import { buildInterviewFirstTurnInstructions } from "@/product/interview-first-turn";
 import {
   getMinimumReviewDurationSeconds,
   getTooShortReviewMessage,
@@ -25,44 +26,6 @@ type SessionViewProps = {
   session: SessionLaunchRecord;
   snapshot: SessionSetupSnapshot;
 };
-
-function formatSnapshotLabel(value: string) {
-  return value
-    .split(/[-_]/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function buildFirstTurnInstructions(snapshot: SessionSetupSnapshot) {
-  const role = snapshot.interviewContext.targetRole?.trim() || "the target role";
-  const company = snapshot.interviewContext.targetCompany?.trim();
-  const target = company ? `${role} at ${company}` : role;
-  const mode = formatSnapshotLabel(snapshot.modeKey);
-  const style = formatSnapshotLabel(snapshot.styleKey);
-  const questionFocus = snapshot.questionTypeKey
-    ? formatSnapshotLabel(snapshot.questionTypeKey)
-    : undefined;
-  const firstImpressionOpening =
-    snapshot.modeKey === "first_impression"
-      ? `For First Impression, ask exactly one natural opening question such as "Tell me about yourself" or "Walk me through your background as it relates to ${target}."`
-      : "Ask exactly one opening interview question appropriate for the selected mode.";
-
-  return [
-    "Speak in English only.",
-    "Start the live voice session now as Que, the interviewer.",
-    "Use only the provided interview session context.",
-    "Do not infer, mention, or react to the user's surroundings, camera view, current activity, food, cooking, location, objects, clothing, or what they appear to be doing.",
-    `Target role/company: ${target}.`,
-    `Practice mode: ${mode}.`,
-    questionFocus ? `Question focus: ${questionFocus}.` : undefined,
-    `Interviewer style: ${style}.`,
-    firstImpressionOpening,
-    "Do not ask if the candidate is ready. Do not explain the session.",
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
 
 export function SessionView({
   catalog,
@@ -223,7 +186,7 @@ export function SessionView({
       </section>
 
       <RealtimeVoiceSession
-        firstTurnInstructions={buildFirstTurnInstructions(snapshot)}
+        firstTurnInstructions={buildInterviewFirstTurnInstructions(snapshot)}
         onArtifactChange={setArtifactDraft}
         sessionId={session.id}
         snapshot={snapshot}

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
+import { interviewFirstTurnInstructionTemplate } from "@/product/interview-first-turn";
 import type {
   AdminEvaluationRecord,
   AdminProfileRecord,
@@ -2964,6 +2965,21 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
                         <li key={item}>{item}</li>
                       ))}
                     </ul>
+                    {selectedConfig.target === "realtime" && (
+                      <>
+                        <h3>First-turn kickoff template</h3>
+                        <p>
+                          This exact template is filled with the selected role/company,
+                          mode, question focus, and style when a live Interview practice
+                          starts.
+                        </p>
+                        <textarea
+                          readOnly
+                          rows={8}
+                          value={interviewFirstTurnInstructionTemplate}
+                        />
+                      </>
+                    )}
                   </section>
                   <div className="inline-actions">
                     <button disabled={pending} onClick={() => saveVersion(true)} type="button">
