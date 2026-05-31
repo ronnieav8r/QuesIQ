@@ -65,7 +65,7 @@ const taskLabels: Record<string, string> = {
 
 const defaultRubric: DpeQuestion["scoringRubric"] = {
   checkrideReadiness:
-    "Evaluate whether the response would likely satisfy a Private Pilot ASEL oral checkride standard.",
+    "Evaluate whether the response would likely satisfy the selected oral checkride target standard.",
   communication:
     "Evaluate clarity, organization, confidence, and whether a DPE could follow the answer.",
   knowledge:

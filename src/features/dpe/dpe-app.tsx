@@ -1709,6 +1709,7 @@ function PracticeSetupScreen({
   }) {
     const question = session.questions[currentIndex];
     const progress = `${currentIndex + 1} of ${session.questions.length}`;
+    const sessionTrackLabel = buildSessionTrackLabel(session);
 
     if (session.voiceMode) {
       return (
@@ -1717,7 +1718,7 @@ function PracticeSetupScreen({
             <div>
               <h2>Voice oral session</h2>
               <p>
-                {session.certificateType?.title ?? "Certificate pending"} - Area {session.area},
+                {sessionTrackLabel} - Area {session.area},
                 Task {session.task} - {session.questions.length} selected prompts
               </p>
             </div>
@@ -1731,7 +1732,7 @@ function PracticeSetupScreen({
             sessionId={session.id}
             startButtonLabel="Start Voice Practice"
             surfaceClassName="panel realtime-session dpe-voice-session"
-            title="DPE oral voice practice"
+            title={`DPE oral voice practice: ${sessionTrackLabel}`}
           />
 
           <QuestionPreview
@@ -1749,7 +1750,7 @@ function PracticeSetupScreen({
         <div>
           <h2>Local oral session</h2>
           <p>
-            {session.certificateType?.title ?? "Certificate pending"} - Area {session.area}, Task{" "}
+            {sessionTrackLabel} - Area {session.area}, Task{" "}
             {session.task} - {progress}
           </p>
         </div>
@@ -2029,8 +2030,7 @@ function buildDpeBrandSubtitle(targetTrackTitle: string) {
 }
 
 function buildVoiceFirstTurnInstructions(session: LocalSession) {
-  const targetTrack =
-    session.targetTrackTitle?.trim() || session.certificateType?.title || "selected target track";
+  const targetTrack = buildSessionTrackLabel(session).trim() || "selected target track";
   const promptCertificate = session.certificateType?.title?.trim() || "";
   const targetLooksPrivate = /private pilot|ppl/i.test(targetTrack);
   const promptLooksPrivate = /private pilot|ppl/i.test(promptCertificate);
@@ -2040,6 +2040,10 @@ function buildVoiceFirstTurnInstructions(session: LocalSession) {
       : "";
 
   return `Speak in English only. Start this DPE oral practice for ${targetTrack}.${fallbackHint} Ask the first selected ACS question, then continue one question at a time.`;
+}
+
+function buildSessionTrackLabel(session: LocalSession) {
+  return session.targetTrackTitle?.trim() || session.certificateType?.title || "Target track pending";
 }
 
 function hasCheckrideTarget(profile: DpeProfileState) {

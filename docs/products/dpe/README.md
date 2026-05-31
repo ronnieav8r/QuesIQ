@@ -266,3 +266,5 @@ target-track metadata:
 5. Stored/resumed session objects now carry `acsTitle` into local
    `targetTrackTitle` where available so resumed voice context remains
    target-aware.
+6. Live/voice session headers now use the same target-track label logic as
+   launch framing, so runtime learner copy stays consistent during practice.
