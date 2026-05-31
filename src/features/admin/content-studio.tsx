@@ -1028,6 +1028,11 @@ export function ContentStudio() {
     useState<ContentStudioWorkspaceSection>("overview");
   const [studyImportPrepInput, setStudyImportPrepInput] = useState("");
   const [studyImportDeckId, setStudyImportDeckId] = useState("");
+  const [studyImportDeckDescription, setStudyImportDeckDescription] = useState("");
+  const [studyImportDeckTags, setStudyImportDeckTags] = useState("");
+  const [studyImportDeckTitle, setStudyImportDeckTitle] = useState("");
+  const [studyImportTargetMode, setStudyImportTargetMode] =
+    useState<"existing" | "new">("new");
   const [studyImportPreview, setStudyImportPreview] =
     useState<StudyRichCsvImportPreviewResponse>();
   const [studyImportStatus, setStudyImportStatus] =
@@ -1323,8 +1328,12 @@ export function ContentStudio() {
   }
 
   async function handleSaveStudyRichCsvImport() {
-    if (!studyImportDeckId.trim()) {
+    if (studyImportTargetMode === "existing" && !studyImportDeckId.trim()) {
       setStudyImportError("Enter the target Study deck id before importing.");
+      return;
+    }
+    if (studyImportTargetMode === "new" && !studyImportDeckTitle.trim()) {
+      setStudyImportError("Enter a Study deck title before importing.");
       return;
     }
     if (!studyImportPrepInput.trim()) {
@@ -1336,10 +1345,18 @@ export function ContentStudio() {
     setStudyImportError(undefined);
 
     try {
+      const createDeckTags = studyImportDeckTags
+        .split(/[|,]/)
+        .map((tag) => tag.trim())
+        .filter(Boolean);
       const response = await fetch("/api/study/content-studio/flashcard-draft", {
         body: JSON.stringify({
+          createDeckDescription:
+            studyImportTargetMode === "new" ? studyImportDeckDescription.trim() || undefined : undefined,
+          createDeckTags: studyImportTargetMode === "new" ? createDeckTags : undefined,
+          createDeckTitle: studyImportTargetMode === "new" ? studyImportDeckTitle.trim() : undefined,
           csvText: studyImportPrepInput,
-          deckId: studyImportDeckId,
+          deckId: studyImportTargetMode === "existing" ? studyImportDeckId.trim() : undefined,
           mode: "rich_csv_import_save",
         }),
         headers: { "Content-Type": "application/json" },
@@ -1960,6 +1977,57 @@ export function ContentStudio() {
                 value={studyImportPrepInput}
               />
             </label>
+          </div>
+
+          <div className="runtime-context-panel">
+            <strong>Study deck target</strong>
+            <div className="component-tabs" aria-label="Study rich CSV deck target">
+              <button
+                className={studyImportTargetMode === "new" ? "active" : undefined}
+                onClick={() => setStudyImportTargetMode("new")}
+                type="button"
+              >
+                <UploadCloud size={18} />
+                Create new deck
+              </button>
+              <button
+                className={studyImportTargetMode === "existing" ? "active" : undefined}
+                onClick={() => setStudyImportTargetMode("existing")}
+                type="button"
+              >
+                <FileText size={18} />
+                Use existing deck
+              </button>
+            </div>
+            {studyImportTargetMode === "new" ? (
+              <div className="field-grid">
+                <label>
+                  <span>New Study deck title</span>
+                  <input
+                    onChange={(event) => setStudyImportDeckTitle(event.target.value)}
+                    placeholder="Example: PHAK Aeronautical Decision Making"
+                    value={studyImportDeckTitle}
+                  />
+                </label>
+                <label>
+                  <span>Deck description</span>
+                  <input
+                    onChange={(event) => setStudyImportDeckDescription(event.target.value)}
+                    placeholder="Optional reviewer-facing deck description"
+                    value={studyImportDeckDescription}
+                  />
+                </label>
+                <label>
+                  <span>Deck tags</span>
+                  <input
+                    onChange={(event) => setStudyImportDeckTags(event.target.value)}
+                    placeholder="Separate tags with commas"
+                    value={studyImportDeckTags}
+                  />
+                </label>
+              </div>
+            ) : (
+              <div className="field-grid">
             <label>
               <span>Target Study deck id</span>
               <input
@@ -1968,6 +2036,8 @@ export function ContentStudio() {
                 value={studyImportDeckId}
               />
             </label>
+              </div>
+            )}
           </div>
 
           {studyImportError && (
@@ -1992,6 +2062,9 @@ export function ContentStudio() {
             <button
               onClick={() => {
                 setStudyImportPrepInput(studyRichCsvPreviewSample);
+                setStudyImportDeckDescription("Imported through Admin Content Studio rich CSV.");
+                setStudyImportDeckTags("content-studio,rich-csv");
+                setStudyImportDeckTitle("Rich CSV Sample Import");
                 setStudyImportError(undefined);
               }}
               type="button"
@@ -2014,7 +2087,9 @@ export function ContentStudio() {
                 ? "Importing"
                 : studyImportStatus === "saved"
                   ? "Import saved"
-                  : "Import to deck"}
+                  : studyImportTargetMode === "new"
+                    ? "Create deck and import"
+                    : "Import to deck"}
             </button>
           </div>
 
