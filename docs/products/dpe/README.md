@@ -118,6 +118,54 @@ Current boundaries:
 5. No real PHAK, FAA PDF, Drive, or source-pack content is imported into this
    repo.
 
+## Reference-Packet Preview Contract
+
+Codex-side tools may hand DPE a bounded reference packet for Admin preview
+before any content-generation or import step. The accepted packet contract is:
+
+1. `packetVersion`: `quesiq.dpeReferencePacket.v1`
+2. `targetContract`: `dpe.draftReference.v1`
+3. `mode`: `draft_admin_reference_only`
+4. `sourcePack`: source-pack id, title, and integer page range.
+5. `restrictions`: every restriction must be explicitly `false` or
+   `disabled`, including publish, Official, Verified, durable storage, and
+   learner-runtime use.
+6. `items`: generated draft reference items compatible with
+   `DpeDraftReferenceItem`.
+
+The existing admin-only `/api/dpe/content/draft` route supports a side-effect
+free preview mode:
+
+```json
+{
+  "mode": "source_pack_reference_packet_preview",
+  "referencePacket": {
+    "packetVersion": "quesiq.dpeReferencePacket.v1",
+    "targetContract": "dpe.draftReference.v1",
+    "mode": "draft_admin_reference_only",
+    "sourcePack": {
+      "id": "source-pack-id",
+      "title": "Reviewed source pack title",
+      "pageRange": { "start": 1, "end": 25 }
+    },
+    "restrictions": {
+      "publishEnabled": false,
+      "officialEnabled": false,
+      "verifiedEnabled": false,
+      "durableSourcePackStorage": false,
+      "learnerRuntimeUse": false
+    },
+    "items": []
+  }
+}
+```
+
+Preview mode only validates and normalizes the packet, then returns a
+`draftReferenceContract` and review summary for Admin/reviewer inspection. It
+does not call the DPE question generator, create oral questions, import
+content, publish, mark Official, mark Verified, write durable source-pack
+storage, or write learner runtime state.
+
 ## DPE Readiness Quest Track
 
 Current DPE lane now has both a non-persistent readiness preview in the client
@@ -1469,3 +1517,21 @@ source-pack reference/prompt drafts without changing learner runtime behavior:
 4. No learner runtime source-pack reads were added.
 5. No real PHAK/source-pack/PDF/Drive content, schema, durable source-pack
    storage, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 97 (Reference-Packet Preview Contract)
+
+This slice adds a DPE-owned preview contract for Codex-generated DPE reference
+packets without changing learner runtime behavior:
+
+1. DPE validates `quesiq.dpeReferencePacket.v1` packets targeting
+   `dpe.draftReference.v1` in `draft_admin_reference_only` mode.
+2. Packet restrictions must all be false or disabled, and source-pack metadata
+   must include id, title, and a valid page range.
+3. Packet items are normalized into the existing `DpeDraftReferenceItem` shape
+   and summarized for Admin review.
+4. The admin-only `/api/dpe/content/draft` route now supports
+   `source_pack_reference_packet_preview`, which validates a packet and returns
+   only `draftReferenceContract` plus a review summary.
+5. Preview mode does not generate questions, import content, publish, mark
+   Official, mark Verified, write durable source-pack storage, or write learner
+   runtime state.

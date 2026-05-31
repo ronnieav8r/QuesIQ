@@ -215,7 +215,8 @@ export function parseDpeContentDraftInput(body: unknown): { error: string; ok: f
   const parsedDraftReferences = parseDpeDraftReferenceItems(
     candidate.dpeDraftReferenceItems ??
       candidate.draftReferenceItems ??
-      candidate.sourcePackDraftReferences,
+      candidate.sourcePackDraftReferences ??
+      candidate.sourcePackDraftReferenceItems,
   );
   if ("error" in parsedDraftReferences) {
     return { error: parsedDraftReferences.error, ok: false };

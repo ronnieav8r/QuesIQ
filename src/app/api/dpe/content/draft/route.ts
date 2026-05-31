@@ -4,6 +4,7 @@ import {
   generateDpeContentStudioDraft,
   parseDpeContentDraftInput,
 } from "@/server/dpe/content-draft";
+import { parseDpeReferencePacketPreview } from "@/server/dpe/draft-reference";
 import { requireAdminSession } from "@/server/admin";
 
 export async function POST(request: Request) {
@@ -13,7 +14,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Admin access required." }, { status: 403 });
   }
 
-  const parsed = parseDpeContentDraftInput(await request.json().catch(() => ({})));
+  const body = await request.json().catch(() => ({}));
+  const bodyRecord = body && typeof body === "object" && !Array.isArray(body)
+    ? (body as Record<string, unknown>)
+    : {};
+
+  if (bodyRecord.mode === "source_pack_reference_packet_preview") {
+    const parsedPreview = parseDpeReferencePacketPreview(
+      bodyRecord.referencePacket ?? bodyRecord.packet ?? bodyRecord,
+    );
+
+    if (!parsedPreview.ok) {
+      return NextResponse.json({ error: parsedPreview.error }, { status: parsedPreview.status ?? 400 });
+    }
+
+    return NextResponse.json({
+      mode: "source_pack_reference_packet_preview",
+      ...parsedPreview.preview,
+    });
+  }
+
+  const parsed = parseDpeContentDraftInput(body);
 
   if (!parsed.ok) {
     return NextResponse.json({ error: parsed.error }, { status: 400 });
