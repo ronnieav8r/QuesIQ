@@ -1789,17 +1789,22 @@ function HomeScreen({
 
 function DpeRuntimeCheckPanel({ runtimeCheck }: { runtimeCheck: DpeRuntimeCheck | null }) {
   const rows = runtimeCheck?.rows ?? [];
+  const runtimeCheckUnavailable = runtimeCheck?.available === false;
   const statusLabel =
     runtimeCheck?.status === "ok"
       ? "ready"
       : runtimeCheck?.status === "warning"
         ? "warning"
+        : runtimeCheckUnavailable
+          ? "unavailable"
         : runtimeCheck
           ? "needs attention"
           : "checking";
   const checkedAt = runtimeCheck?.checkedAt
     ? `Checked ${formatDateTimeLabel(runtimeCheck.checkedAt)}`
-    : "Waiting for signed-in runtime check.";
+    : runtimeCheckUnavailable
+      ? "Signed-in runtime check could not be reached."
+      : "Waiting for signed-in runtime check.";
 
   return (
     <div className="panel">
@@ -1816,16 +1821,28 @@ function DpeRuntimeCheckPanel({ runtimeCheck }: { runtimeCheck: DpeRuntimeCheck 
         <Stat label="Warnings" value={`${runtimeCheck?.summary?.warnings ?? 0}`} />
         <Stat label="Errors" value={`${runtimeCheck?.summary?.errors ?? 0}`} />
       </div>
+      {runtimeCheckUnavailable && (
+        <div className="raised-card mt-4">
+          <strong>Runtime check unavailable</strong>
+          <p>
+            Account service readiness could not be checked from this browser. Profile, practice
+            history, progression, diagnostics, Review AI, and Voice AI will report here when the
+            signed-in runtime check is reachable.
+          </p>
+        </div>
+      )}
       <div className="question-list mt-4">
         {(rows.length > 0
           ? rows
           : [
               {
-                detail: "Profile, practice history, quest progression, and review diagnostics will report here after sign-in.",
+                detail: runtimeCheckUnavailable
+                  ? "Retry after the DPE runtime check endpoint is reachable for this signed-in account."
+                  : "Profile, practice history, quest progression, and review diagnostics will report here after sign-in.",
                 key: "pending",
                 label: "Account services",
                 status: "warning" as const,
-                value: "checking",
+                value: runtimeCheckUnavailable ? "unavailable" : "checking",
               },
             ]).map((check) => (
           <div className="raised-card" key={check.key}>

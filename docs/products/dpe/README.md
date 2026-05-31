@@ -716,3 +716,17 @@ unreachable without changing content:
    notice and points learners toward signed-in runtime checks and local
    fallback signals.
 4. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 44 (Signed-In Runtime Check Recovery)
+
+This slice improves signed-in readiness clarity when the runtime check endpoint
+is unreachable without changing content:
+
+1. The signed-in runtime check panel now distinguishes `unavailable` from
+   normal `checking` and per-service warning/error states.
+2. The panel shows a `Runtime check unavailable` notice explaining that profile,
+   practice history, progression, diagnostics, Review AI, and Voice AI readiness
+   will report when the signed-in runtime check is reachable.
+3. The fallback account-services row now says `unavailable` and tells the
+   learner to retry after the DPE runtime check endpoint is reachable.
+4. No aviation content, schema, publish, Official, or Verified state changed.
