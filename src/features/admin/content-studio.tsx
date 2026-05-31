@@ -29,10 +29,19 @@ type StudyGeneratedFlashcardDraft = {
 
 type StudyGeneratedDeckDraft = {
   cards: StudyGeneratedFlashcardDraft[];
+  cardCount?: number;
+  confidenceSummary?: {
+    average: number;
+    highConfidenceCount: number;
+    lowConfidenceCardIndexes: number[];
+    lowConfidenceCount: number;
+  };
   description: string;
   generationMode: "ai" | "mock";
   generationWarnings: string[];
+  missingFields?: string[];
   promptInstructions?: string;
+  reviewChecklist?: Record<string, boolean>;
   sourceSummary: string;
   subject?: string;
   tags: string[];
@@ -110,53 +119,50 @@ type DpeDraftContext = {
   };
 };
 
-type StudyDraftRun = {
-  completedAt: string;
-  draft: StudyGeneratedDeckDraft;
+type ContentStudioRunStatus =
+  | "approved_for_publish"
+  | "archived"
+  | "draft_ready"
+  | "failed"
+  | "needs_revision";
+
+type BaseContentStudioRun = {
+  adminUserEmail?: string;
+  aiRunId?: string;
+  completedAt?: string;
+  confidence?: number;
+  createdAt: string;
+  customInstructions?: string;
   id: string;
-  pipelineKey: "study_flashcards";
-  stage: "review";
-  status: "draft_ready";
-  storage: "transient_review_state";
+  missingFields: string[];
+  reviewerChecklist?: Record<string, unknown>;
+  reviewerNotes?: string;
+  reviewerSummary?: Record<string, unknown>;
+  sourceMetadata: Record<string, unknown>;
+  sourceTextSnapshot?: string;
+  stage: string;
+  status: ContentStudioRunStatus;
+  storage: "content_studio_runs";
   templateKey: string;
+  updatedAt: string;
+  warnings: string[];
 };
 
-type DpeDraftRun = {
-  completedAt: string;
+type StudyDraftRun = BaseContentStudioRun & {
+  draft: StudyGeneratedDeckDraft;
+  pipelineKey: "study_flashcards";
+};
+
+type DpeDraftRun = BaseContentStudioRun & {
   draft: DpeContentStudioDraft;
-  id: string;
   pipelineKey: "dpe_content";
-  stage: "review";
-  status: "draft_ready";
-  storage: "transient_review_state";
-  templateKey: string;
 };
 
 type ContentStudioDraftRun = DpeDraftRun | StudyDraftRun;
 
-type ContentStudioRunHistoryRecord = {
-  cardCount?: number;
-  completedAt?: string;
-  confidence?: number;
-  errorMessage?: string;
-  generationWarnings: string[];
-  id: string;
-  missingFields: string[];
-  model: string;
-  pipelineKey: "dpe_content" | "study_flashcards";
-  providerRequestId?: string;
-  readyToReview?: boolean;
-  startedAt: string;
-  status: "failed" | "started" | "succeeded";
-  storage: "ai_run_audit_only";
-  templateKey?: string;
-  totalTokens?: number;
-  userEmail?: string;
-};
-
 type RunsResponse = {
   run?: ContentStudioDraftRun;
-  runs?: ContentStudioRunHistoryRecord[];
+  runs?: ContentStudioDraftRun[];
   storage?: {
     detail: string;
     durableReviewState: boolean;
@@ -165,6 +171,7 @@ type RunsResponse = {
 };
 
 type GenerateStatus = "draft_ready" | "generating" | "idle";
+type SaveReviewStatus = "idle" | "saving" | "saved";
 
 const MIN_SOURCE_CHARS = 40;
 
@@ -198,8 +205,30 @@ function confidenceLabel(value: number) {
   return `${Math.round(value * 100)}% generation confidence`;
 }
 
-function pipelineHistoryLabel(pipelineKey: ContentStudioRunHistoryRecord["pipelineKey"]) {
+function pipelineHistoryLabel(pipelineKey: ContentStudioDraftRun["pipelineKey"]) {
   return pipelineKey === "dpe_content" ? "DPE content draft" : "Study flashcard draft";
+}
+
+function statusLabel(status: ContentStudioRunStatus) {
+  const labels: Record<ContentStudioRunStatus, string> = {
+    approved_for_publish: "Approved for publish review",
+    archived: "Archived",
+    draft_ready: "Draft ready",
+    failed: "Failed",
+    needs_revision: "Needs revision",
+  };
+
+  return labels[status];
+}
+
+function cardCount(run: ContentStudioDraftRun) {
+  return run.pipelineKey === "study_flashcards"
+    ? run.draft.cardCount ?? run.draft.cards.length
+    : undefined;
+}
+
+function runWarningText(run: ContentStudioDraftRun) {
+  return run.warnings.length > 0 ? run.warnings.join(" ") : undefined;
 }
 
 function hasDpeCertificateContext(context: DpeDraftContext) {
@@ -222,7 +251,12 @@ export function ContentStudio() {
   const [status, setStatus] = useState<GenerateStatus>("idle");
   const [error, setError] = useState<string>();
   const [draftRun, setDraftRun] = useState<ContentStudioDraftRun>();
-  const [runHistory, setRunHistory] = useState<ContentStudioRunHistoryRecord[]>([]);
+  const [runHistory, setRunHistory] = useState<ContentStudioDraftRun[]>([]);
+  const [reviewerNotes, setReviewerNotes] = useState("");
+  const [reviewStatus, setReviewStatus] =
+    useState<ContentStudioRunStatus>("draft_ready");
+  const [reviewSaveStatus, setReviewSaveStatus] =
+    useState<SaveReviewStatus>("idle");
   const [storageDetail, setStorageDetail] = useState<string>();
 
   const pipeline = useMemo(
@@ -290,6 +324,91 @@ export function ContentStudio() {
     }));
   }
 
+  function selectDraftRun(run: ContentStudioDraftRun) {
+    setDraftRun(run);
+    setReviewerNotes(run.reviewerNotes ?? "");
+    setReviewStatus(run.status);
+    setReviewSaveStatus("idle");
+  }
+
+  function upsertRunHistory(run: ContentStudioDraftRun) {
+    setRunHistory((current) => [
+      run,
+      ...current.filter((candidate) => candidate.id !== run.id),
+    ]);
+  }
+
+  async function handleOpenRun(runId: string) {
+    setError(undefined);
+
+    try {
+      const response = await fetch(
+        `/api/admin/content-studio/runs/${encodeURIComponent(runId)}`,
+        { cache: "no-store" },
+      );
+      const body = (await response.json()) as RunsResponse;
+
+      if (!response.ok || !body.run) {
+        throw new Error(body.error || "Content Studio run could not be opened.");
+      }
+
+      selectDraftRun(body.run);
+      setPipelineKey(body.run.pipelineKey);
+      setSelectedTemplate(body.run.templateKey);
+      setSourceText(body.run.sourceTextSnapshot ?? "");
+      setCustomInstructions(body.run.customInstructions ?? "");
+      setStatus("draft_ready");
+      upsertRunHistory(body.run);
+    } catch (openError) {
+      setError(
+        openError instanceof Error
+          ? openError.message
+          : "Content Studio run could not be opened.",
+      );
+    }
+  }
+
+  async function handleSaveReview() {
+    if (!draftRun) {
+      return;
+    }
+
+    setReviewSaveStatus("saving");
+    setError(undefined);
+
+    try {
+      const response = await fetch(
+        `/api/admin/content-studio/runs/${encodeURIComponent(draftRun.id)}`,
+        {
+          body: JSON.stringify({
+            reviewerNotes,
+            status: reviewStatus,
+          }),
+          headers: { "Content-Type": "application/json" },
+          method: "PATCH",
+        },
+      );
+      const body = (await response.json()) as RunsResponse;
+
+      if (!response.ok || !body.run) {
+        throw new Error(body.error || "Content Studio review state could not be saved.");
+      }
+
+      setDraftRun(body.run);
+      setReviewerNotes(body.run.reviewerNotes ?? "");
+      setReviewStatus(body.run.status);
+      upsertRunHistory(body.run);
+      setReviewSaveStatus("saved");
+    } catch (saveError) {
+      setReviewSaveStatus("idle");
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Content Studio review state could not be saved.",
+      );
+    }
+  }
+
   async function handleGenerateDraft() {
     if (!canGenerateDraft) {
       return;
@@ -316,7 +435,7 @@ export function ContentStudio() {
         throw new Error(body.error || "Content Studio draft generation failed.");
       }
 
-      setDraftRun(body.run);
+      selectDraftRun(body.run);
       setRunHistory(body.runs ?? []);
       setStorageDetail(body.storage?.detail);
       setStatus("draft_ready");
@@ -471,7 +590,20 @@ export function ContentStudio() {
         </div>
       </div>
 
-      {draftRun && <DraftReviewPanel run={draftRun} />}
+      {draftRun && (
+        <>
+          <ReviewStatePanel
+            onNotesChange={setReviewerNotes}
+            onSave={handleSaveReview}
+            onStatusChange={setReviewStatus}
+            reviewerNotes={reviewerNotes}
+            run={draftRun}
+            saveStatus={reviewSaveStatus}
+            status={reviewStatus}
+          />
+          <DraftReviewPanel run={draftRun} />
+        </>
+      )}
 
       <section className="prompt-version-list" aria-labelledby="content-stages-title">
         <div className="section-head">
@@ -512,19 +644,19 @@ export function ContentStudio() {
                 <div className="section-head">
                   <div>
                     <strong>{pipelineHistoryLabel(run.pipelineKey)}</strong>
-                    <p>{formatDate(run.completedAt ?? run.startedAt)}</p>
+                    <p>{formatDate(run.completedAt ?? run.createdAt)}</p>
                   </div>
-                  <span>{run.status}</span>
+                  <span>{statusLabel(run.status)}</span>
                 </div>
                 <div className="question-meta">
-                  <span className="pill">{run.model}</span>
+                  <span className="pill">{run.templateKey}</span>
                   {run.pipelineKey === "study_flashcards" && (
-                    <span className="pill">{run.cardCount ?? 0} cards</span>
+                    <span className="pill">{cardCount(run) ?? 0} cards</span>
                   )}
                   {run.pipelineKey === "dpe_content" && (
                     <>
                       <span className="pill">
-                        {run.readyToReview ? "ready to review" : "needs review"}
+                        {run.draft.readiness.readyToReview ? "ready to review" : "needs review"}
                       </span>
                       <span className="pill">
                         {run.confidence !== undefined
@@ -534,13 +666,14 @@ export function ContentStudio() {
                       <span className="pill">{run.missingFields.length} missing fields</span>
                     </>
                   )}
-                  <span className="pill">{run.totalTokens ?? 0} tokens</span>
                   <span className="pill">{run.storage.replaceAll("_", " ")}</span>
+                  {run.aiRunId && <span className="pill">AI run linked</span>}
                 </div>
-                {run.errorMessage && <p>{run.errorMessage}</p>}
-                {run.generationWarnings.length > 0 && (
-                  <p>{run.generationWarnings.join(" ")}</p>
-                )}
+                {run.reviewerNotes && <p>Reviewer notes: {run.reviewerNotes}</p>}
+                {runWarningText(run) && <p>{runWarningText(run)}</p>}
+                <button onClick={() => void handleOpenRun(run.id)} type="button">
+                  Reopen run
+                </button>
               </article>
             ))}
           </div>
@@ -561,6 +694,103 @@ function DraftReviewPanel({ run }: { run: ContentStudioDraftRun }) {
   }
 
   return <StudyDraftReviewPanel run={run} />;
+}
+
+function ReviewStatePanel({
+  onNotesChange,
+  onSave,
+  onStatusChange,
+  reviewerNotes,
+  run,
+  saveStatus,
+  status,
+}: {
+  onNotesChange: (value: string) => void;
+  onSave: () => void;
+  onStatusChange: (value: ContentStudioRunStatus) => void;
+  reviewerNotes: string;
+  run: ContentStudioDraftRun;
+  saveStatus: SaveReviewStatus;
+  status: ContentStudioRunStatus;
+}) {
+  return (
+    <section className="prompt-version-list" aria-labelledby="review-state-title">
+      <div className="section-head">
+        <div>
+          <p className="eyebrow">Saved review state</p>
+          <h3 id="review-state-title">{pipelineHistoryLabel(run.pipelineKey)}</h3>
+          <p>
+            This run is saved for Admin review. Approved for publish is an internal
+            review status only and does not publish product content.
+          </p>
+        </div>
+        <span>{statusLabel(run.status)}</span>
+      </div>
+
+      <div className="study-stat-strip" aria-label="Saved run status">
+        <div className="study-stat-chip">
+          <strong>{run.id.slice(0, 8)}</strong>
+          <span>Run id</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{formatDate(run.updatedAt)}</strong>
+          <span>Last saved</span>
+        </div>
+        <div className="study-stat-chip highlight">
+          <strong>Disabled</strong>
+          <span>Publish controls</span>
+        </div>
+      </div>
+
+      <div className="field-grid">
+        <label>
+          <span>Review status</span>
+          <select
+            onChange={(event) =>
+              onStatusChange(event.target.value as ContentStudioRunStatus)
+            }
+            value={status}
+          >
+            <option value="draft_ready">Draft ready</option>
+            <option value="needs_revision">Needs revision</option>
+            <option value="approved_for_publish">
+              Approved for publish review (not published)
+            </option>
+            <option value="archived">Archived</option>
+            <option disabled value="failed">Failed</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Reviewer notes</span>
+          <textarea
+            onChange={(event) => onNotesChange(event.target.value)}
+            placeholder="Capture source concerns, revision instructions, approval rationale, or product handoff notes."
+            value={reviewerNotes}
+          />
+        </label>
+      </div>
+
+      <div className="component-tabs" aria-label="Review state actions">
+        <button
+          disabled={saveStatus === "saving" || run.status === "failed"}
+          onClick={onSave}
+          type="button"
+        >
+          <CheckCircle2 size={18} />
+          {saveStatus === "saving"
+            ? "Saving"
+            : saveStatus === "saved"
+              ? "Saved"
+              : "Save review state"}
+        </button>
+        <button disabled type="button">
+          <ShieldCheck size={18} />
+          Publish disabled
+        </button>
+      </div>
+    </section>
+  );
 }
 
 function DpeContextFields({

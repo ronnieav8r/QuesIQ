@@ -36,25 +36,28 @@ disabled until backend endpoints and audit storage are ready.
 
 ## Runs
 
-The current Admin slice adds a Content Studio run route at
-`/api/admin/content-studio/runs`.
+The Admin run ledger now has dedicated durable storage in
+`content_studio_runs`. `ai_runs` remains the AI-call audit table and can be
+linked from a Content Studio run when a provider call exists.
 
-- `GET` returns durable AI-call history for Study flashcard draft runs when
-  existing `ai_runs` records have `rawJson.operation =
-  "study_content_studio_flashcard_draft"`.
-- `POST` orchestrates Study flashcard draft generation by calling the
-  Study-owned draft primitive. The returned deck draft is held as current
-  Admin review state in the browser.
+- `GET /api/admin/content-studio/runs` returns durable Content Studio runs with
+  source snapshots, source metadata, selected template, full draft payload,
+  confidence, warnings, missing fields, reviewer checklist/summary, reviewer
+  notes, stage/status, admin user, timestamps, and optional `ai_run` reference.
+- `POST /api/admin/content-studio/runs` orchestrates Study flashcard draft
+  generation by calling the Study-owned draft primitive, then creates a durable
+  run record for Admin review.
 - DPE content draft generation is wired through the same Admin run route using
   the product-owned `/api/dpe/content/draft` primitive. It returns certificate,
   ACS, oral-question, answer-key, rubric, confidence, warnings, readiness, and
-  missing-field indicators for review without writing to DPE content tables.
-- Publish, Official, and Verified state changes remain out of scope.
-
-Existing `ai_runs` storage is useful for AI-call audit history, but it is not a
-complete Content Studio run ledger. Durable review state still needs dedicated
-storage for source intake metadata, selected template, full draft payload,
-reviewer notes, stage transitions, and future publish audit events.
+  missing-field indicators for review without writing to DPE content tables,
+  then creates the same durable run record.
+- `GET/PATCH /api/admin/content-studio/runs/[runId]` reopens a saved run and
+  persists reviewer notes plus review status changes such as `draft_ready`,
+  `needs_revision`, `approved_for_publish`, and `archived`.
+- Publish, Official, and Verified state changes remain out of scope. The
+  `approved_for_publish` status is an internal review state only; it does not
+  write Study decks, DPE questions, Official status, or Verified state.
 
 ## Ownership
 

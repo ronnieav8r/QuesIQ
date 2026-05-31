@@ -351,6 +351,13 @@
       "when": 1780063200000,
       "tag": "0050_add_dpe_baseline_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1780066800000,
+      "tag": "0051_add_content_studio_runs",
+      "breakpoints": true
     }
   ]
 }

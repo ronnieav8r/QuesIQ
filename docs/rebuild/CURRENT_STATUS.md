@@ -73,18 +73,24 @@ Last updated: 2026-05-30
     console
   - `/admin?product=content` supports source intake, pipeline/template
     selection, custom instructions, Study and DPE draft generation,
-    current-session review display, and existing AI-run history
+    saved-run review display, and durable reviewer notes/status
   - `/api/admin/content-studio/runs` orchestrates Study draft generation and
-    DPE content draft generation, then exposes available run history from
-    `ai_runs`
+    DPE content draft generation, then creates durable run records in
+    `content_studio_runs`
+  - `GET/PATCH /api/admin/content-studio/runs/[runId]` reopens saved draft
+    payloads and persists reviewer notes/status changes for Admin review
+  - Content Studio runs store source snapshots, source metadata, template key,
+    draft JSON, confidence, warnings, missing fields, reviewer
+    checklist/summary, admin user, timestamps, and optional `ai_runs` links
   - Study draft generation is product-owned at
     `/api/study/content-studio/flashcard-draft` and returns review-ready deck
     metadata, cards, confidence, warnings, missing fields, and checklist flags
   - DPE draft generation is product-owned at `/api/dpe/content/draft` and
     returns certificate, ACS, oral-question, answer-key, rubric, confidence,
     warning, readiness, and missing-field draft JSON without saving live content
-  - Publish, Official, and Verified changes remain disabled until durable
-    Content Studio run storage and product-specific publish controls exist
+  - Publish, Official, and Verified changes remain disabled until
+    product-specific publish controls exist; `approved_for_publish` is only an
+    internal review status and does not write product tables
 - Rebuild plan, architecture, decisions, scope, and handoff docs
 - Next.js TypeScript baseline and Render readiness files
 - Responsive app shell with intentional mobile and desktop compositions
