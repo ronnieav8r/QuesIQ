@@ -42,6 +42,7 @@ C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-manager   -> main, manag
 C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-interview -> codex/interview
 C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-study     -> codex/study
 C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-dpe       -> codex/dpe
+C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-quira     -> codex/quira
 ```
 
 The manager thread owns task routing, review, integration, and pushes to
@@ -58,6 +59,7 @@ Lane guard commands, run from the manager folder:
 npm run guard:interview -- origin/codex/interview
 npm run guard:study -- origin/codex/study
 npm run guard:dpe -- origin/codex/dpe
+npm run guard:quira -- origin/codex/quira
 ```
 
 Worker branches may be pushed to `origin/codex/*` for manager integration.

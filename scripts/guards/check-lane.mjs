@@ -48,6 +48,17 @@ const lanes = {
     "src/server/sessions/",
     "src/server/stories/",
   ],
+  quira: [
+    "docs/products/quira/",
+    "scripts/quira/",
+    "src/app/api/admin/support/",
+    "src/app/api/support/",
+    "src/components/interview/quira-support-launcher.tsx",
+    "src/components/support/",
+    "src/features/interview/interview-app.tsx",
+    "src/features/support/",
+    "src/server/support/",
+  ],
   study: [
     "docs/products/study/",
     "scripts/study/",
@@ -59,7 +70,7 @@ const lanes = {
 };
 
 function usage() {
-  console.error("Usage: node scripts/guards/check-lane.mjs <admin|interview|study|dpe> [target-ref] [base-ref]");
+  console.error("Usage: node scripts/guards/check-lane.mjs <admin|interview|study|dpe|quira> [target-ref] [base-ref]");
   console.error("Examples:");
   console.error("  npm run guard:study");
   console.error("  npm run guard:study -- codex/study");

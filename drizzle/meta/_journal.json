@@ -386,6 +386,13 @@
       "when": 1780081200000,
       "tag": "0055_retire_first_impression_practice_mode",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1780264800000,
+      "tag": "0056_add_quira_support_chat",
+      "breakpoints": true
     }
   ]
 }

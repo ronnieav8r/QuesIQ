@@ -547,6 +547,7 @@ export type VoiceSessionArtifactDraft = {
 
 export type PromptConfigKey =
   | "introduction_draft"
+  | "quira_support_chat"
   | "session_debrief"
   | "realtime_interviewer"
   | "session_evaluation"
@@ -556,7 +557,12 @@ export type PromptConfigKey =
   | "story_practice_evaluation"
   | "story_practice_realtime";
 
-export type PromptConfigTarget = "debrief" | "evaluation" | "realtime" | "story";
+export type PromptConfigTarget =
+  | "debrief"
+  | "evaluation"
+  | "realtime"
+  | "story"
+  | "support";
 
 export type PromptConfigRecord = {
   active: boolean;
@@ -605,6 +611,7 @@ export type AiRunRecord = {
     | "evaluation"
     | "introduction_draft"
     | "pricing_review"
+    | "quira_support"
     | "realtime"
     | "study_evaluate"
     | "study_import"

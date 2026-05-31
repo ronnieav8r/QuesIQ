@@ -18,6 +18,10 @@ product lane:
   `src/app/api/study`, `scripts/study`, and `docs/products/study`
 - QuesIQ DPE: `src/features/dpe`, `src/server/dpe`, `src/app/dpe`,
   `src/app/api/dpe`, and `docs/products/dpe`
+- Quira Support: `src/features/support`, `src/components/support`,
+  `src/server/support`, `src/app/api/support`, Admin support API surfaces under
+  `src/app/api/admin/support`, the Interview Quira launcher wrapper while
+  Interview hosts the first signed-in launcher, and `docs/products/quira`
 - Marketing: future `src/features/marketing` and public marketing routes
 
 Each product owns its own UI, product services, product copy, prompt configs,
@@ -98,6 +102,7 @@ QuesIQ-interview -> codex/interview
 QuesIQ-study     -> codex/study
 QuesIQ-dpe       -> codex/dpe
 QuesIQ-admin     -> codex/admin
+QuesIQ-quira     -> codex/quira
 ```
 
 The manager thread sends work to the worker threads, reads their handoffs,
@@ -111,6 +116,7 @@ npm run guard:interview -- origin/codex/interview
 npm run guard:study -- origin/codex/study
 npm run guard:dpe -- origin/codex/dpe
 npm run guard:admin -- origin/codex/admin
+npm run guard:quira -- origin/codex/quira
 ```
 
 The lane guard checks changed files against allowed path prefixes. It does not
@@ -128,6 +134,7 @@ Interview: idle | active | awaiting handoff | needs rebase | ready for review | 
 Study:     idle | active | awaiting handoff | needs rebase | ready for review | merged | blocked
 DPE:       idle | active | awaiting handoff | needs rebase | ready for review | merged | blocked
 Admin:     idle | active | awaiting handoff | needs rebase | ready for review | merged | blocked
+Quira:     idle | active | awaiting handoff | needs rebase | ready for review | merged | blocked
 ```
 
 After `main` changes, the manager only fast-forwards branches in the `idle`

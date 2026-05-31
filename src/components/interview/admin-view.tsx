@@ -135,8 +135,47 @@ type ProgressionSummarySortKey =
 
 type ProgressionEventSortKey = "event" | "occurred" | "session" | "user" | "xp";
 
+type QuiraAdminSupportData = {
+  articles: Array<{
+    category: string;
+    displayOrder: number;
+    id: string;
+    product: string;
+    published: boolean;
+    slug: string;
+    title: string;
+    updatedAt: string;
+  }>;
+  cases: Array<{
+    createdAt: string;
+    id: string;
+    kind: string;
+    product: string;
+    screen: string;
+    sessionId?: string;
+    status: string;
+    summary: string;
+    title: string;
+    urgency: string;
+    userEmail?: string;
+    userId?: string;
+  }>;
+  conversations: Array<{
+    createdAt: string;
+    id: string;
+    product: string;
+    screen: string;
+    status: string;
+    title: string;
+    updatedAt: string;
+    userEmail?: string;
+    userId?: string;
+  }>;
+};
+
 const promptLabels: Record<PromptConfigKey, string> = {
   introduction_draft: "Introduction Draft",
+  quira_support_chat: "Quira Support Chat",
   realtime_interviewer: "Live Voice Interviewer",
   session_debrief: "Session Debrief",
   session_evaluation: "Post-Session Evaluation",
@@ -215,6 +254,12 @@ const runtimeContextByTarget = {
     "Story-building conversation turns",
     "Response format when needed: strict JSON story outline with categories, spins, coach notes, and practice prompt",
     "User-authenticated Story Lab ownership is enforced by the API route",
+  ],
+  support: [
+    "Signed-in user identity and current product/screen",
+    "Published Quira knowledge articles from the Admin support knowledge base",
+    "Safe session status snapshot when the user provides a session id",
+    "Conversation history, support-case creation tools, and bug-report tools",
   ],
 };
 
@@ -579,6 +624,11 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     sessions: AdminSessionRecord[];
     users: AdminUserRecord[];
   }>({ evaluations: [], profiles: [], sessions: [], users: [] });
+  const [quiraSupport, setQuiraSupport] = useState<QuiraAdminSupportData>({
+    articles: [],
+    cases: [],
+    conversations: [],
+  });
   const [dataError, setDataError] = useState<string>();
   const [dataSection, setDataSection] =
     useState<"evaluations" | "profiles" | "sessions" | "users">("users");
@@ -612,7 +662,13 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
   });
   const [adminSection, setAdminSection] =
     useState<
-      "ai_usage" | "data" | "diagnostics" | "feedback" | "progression" | "prompts"
+      | "ai_usage"
+      | "data"
+      | "diagnostics"
+      | "feedback"
+      | "progression"
+      | "prompts"
+      | "support"
     >("prompts");
   const [componentType, setComponentType] =
     useState<PromptComponentRecord["type"]>("mode");
@@ -896,6 +952,35 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
         loadError instanceof Error
           ? loadError.message
           : "Diagnostic events could not be loaded.",
+      );
+    }
+  }
+
+  async function loadQuiraSupport() {
+    try {
+      setError(undefined);
+      const response = await fetch("/api/admin/support");
+      const body = (await response.json()) as {
+        error?: string;
+        support?: QuiraAdminSupportData;
+      };
+
+      if (!response.ok) {
+        throw new Error(body.error || "Quira support data could not be loaded.");
+      }
+
+      setQuiraSupport(
+        body.support ?? {
+          articles: [],
+          cases: [],
+          conversations: [],
+        },
+      );
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Quira support data could not be loaded.",
       );
     }
   }
@@ -1338,6 +1423,18 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     return () => window.clearTimeout(loadTimer);
   }, [adminSection, dataStatus]);
 
+  useEffect(() => {
+    if (adminSection !== "support") {
+      return;
+    }
+
+    const loadTimer = window.setTimeout(() => {
+      void loadQuiraSupport();
+    }, 0);
+
+    return () => window.clearTimeout(loadTimer);
+  }, [adminSection]);
+
   async function saveVersion(activate: boolean) {
     if (!selectedConfig) {
       return;
@@ -1481,6 +1578,11 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
 
     if (adminSection === "diagnostics") {
       void loadDiagnostics();
+      return;
+    }
+
+    if (adminSection === "support") {
+      void loadQuiraSupport();
       return;
     }
 
@@ -1664,6 +1766,13 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
               type="button"
             >
               Feedback
+            </button>
+            <button
+              className={adminSection === "support" ? "active" : ""}
+              onClick={() => setAdminSection("support")}
+              type="button"
+            >
+              Support
             </button>
             <button
               className={adminSection === "diagnostics" ? "active" : ""}
@@ -1880,6 +1989,159 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
               ) : (
                 <p>No feedback has been recorded yet.</p>
               )}
+              {error && <p className="form-error">{error}</p>}
+            </section>
+          )}
+
+          {adminSection === "support" && (
+            <section className="ai-runs-panel" aria-labelledby="support-admin-title">
+              <div className="section-head">
+                <h2 id="support-admin-title">Quira Support</h2>
+                <span>{quiraSupport.cases.length} cases</span>
+              </div>
+
+              <div className="metric-grid">
+                <div className="metric-card">
+                  <strong>{quiraSupport.cases.length}</strong>
+                  <span>Cases</span>
+                </div>
+                <div className="metric-card">
+                  <strong>{quiraSupport.conversations.length}</strong>
+                  <span>Conversations</span>
+                </div>
+                <div className="metric-card">
+                  <strong>{quiraSupport.articles.length}</strong>
+                  <span>Knowledge Articles</span>
+                </div>
+              </div>
+
+              <div className="section-head">
+                <h3>Inbox</h3>
+                <span>new / triage / in progress / resolved</span>
+              </div>
+              {quiraSupport.cases.length > 0 ? (
+                <div className="usage-table-wrap">
+                  <table className="usage-table">
+                    <thead>
+                      <tr>
+                        <th>Created</th>
+                        <th>Status</th>
+                        <th>Urgency</th>
+                        <th>Kind</th>
+                        <th>Product</th>
+                        <th>Screen</th>
+                        <th>User</th>
+                        <th>Title</th>
+                        <th>Summary</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {quiraSupport.cases.map((supportCase) => (
+                        <tr key={supportCase.id}>
+                          <td>{new Date(supportCase.createdAt).toLocaleString()}</td>
+                          <td>{supportCase.status}</td>
+                          <td>{supportCase.urgency}</td>
+                          <td>{supportCase.kind}</td>
+                          <td>{supportCase.product}</td>
+                          <td>{supportCase.screen}</td>
+                          <td>
+                            <ExpandableCell
+                              value={supportCase.userEmail || supportCase.userId}
+                            />
+                          </td>
+                          <td>
+                            <ExpandableCell value={supportCase.title} />
+                          </td>
+                          <td>
+                            <ExpandableCell value={supportCase.summary} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p>No Quira support cases have been created yet.</p>
+              )}
+
+              <div className="section-head">
+                <h3>Recent Conversations</h3>
+                <span>{quiraSupport.conversations.length} shown</span>
+              </div>
+              {quiraSupport.conversations.length > 0 ? (
+                <div className="usage-table-wrap">
+                  <table className="usage-table">
+                    <thead>
+                      <tr>
+                        <th>Updated</th>
+                        <th>Status</th>
+                        <th>Product</th>
+                        <th>Screen</th>
+                        <th>User</th>
+                        <th>Title</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {quiraSupport.conversations.map((conversation) => (
+                        <tr key={conversation.id}>
+                          <td>{new Date(conversation.updatedAt).toLocaleString()}</td>
+                          <td>{conversation.status}</td>
+                          <td>{conversation.product}</td>
+                          <td>{conversation.screen}</td>
+                          <td>
+                            <ExpandableCell
+                              value={conversation.userEmail || conversation.userId}
+                            />
+                          </td>
+                          <td>
+                            <ExpandableCell value={conversation.title} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p>No Quira conversations have been recorded yet.</p>
+              )}
+
+              <div className="section-head">
+                <h3>Knowledge Base</h3>
+                <span>{quiraSupport.articles.length} articles</span>
+              </div>
+              {quiraSupport.articles.length > 0 ? (
+                <div className="usage-table-wrap">
+                  <table className="usage-table">
+                    <thead>
+                      <tr>
+                        <th>Title</th>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Published</th>
+                        <th>Slug</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {quiraSupport.articles.map((article) => (
+                        <tr key={article.id}>
+                          <td>
+                            <ExpandableCell value={article.title} />
+                          </td>
+                          <td>{article.product}</td>
+                          <td>{article.category}</td>
+                          <td>{article.published ? "yes" : "no"}</td>
+                          <td>
+                            <ExpandableCell className="mono-cell" value={article.slug} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p>No Quira knowledge articles are available.</p>
+              )}
+
               {error && <p className="form-error">{error}</p>}
             </section>
           )}

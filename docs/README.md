@@ -58,6 +58,7 @@ Current product docs:
 - `docs/products/study/README.md`
 - `docs/products/study/HANDOFF.md`
 - `docs/products/dpe/README.md`
+- `docs/products/quira/README.md`
 
 ## Strategy Docs
 

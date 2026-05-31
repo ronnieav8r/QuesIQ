@@ -14,6 +14,10 @@ Last updated: 2026-05-30
 - The current worker-thread set is Manager, Admin, Interview, Study, and DPE.
   Admin owns shared `/admin` and Content Studio work; product workers own their
   product lanes and must not work on or push `main`.
+- Quira Support has been added as a new worker lane/clone for signed-in CS/TS
+  chatbot work: `QuesIQ-quira` on `codex/quira`. The first slice adds the
+  Quira storage/API/prompt/Admin-review foundation and replaces the
+  Interview-only static help launcher with a shared support chat UI.
 - Admin Content Studio now has the first usable run/review slice:
   `/admin?product=content` can submit Study flashcard source material or DPE
   content source material through `/api/admin/content-studio/runs`, call the

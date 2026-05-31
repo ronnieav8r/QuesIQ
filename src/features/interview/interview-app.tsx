@@ -952,9 +952,12 @@ export default function Home() {
             ))}
           </nav>
         )}
-        {signedIn && (
-          <QuiraSupportLauncher screen={activeView} sessionId={feedbackSessionId} />
-        )}
+        <QuiraSupportLauncher
+          authLoaded={authSession !== undefined}
+          screen={activeView}
+          sessionId={feedbackSessionId}
+          signedIn={signedIn}
+        />
         {signedIn && (
           <ClientDiagnostics screen={activeView} sessionId={feedbackSessionId} />
         )}

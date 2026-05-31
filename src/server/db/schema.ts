@@ -386,7 +386,9 @@ export const promptConfigs = pgTable(
     key: text("key").notNull(),
     model: text("model").notNull(),
     name: text("name").notNull(),
-    target: text("target").$type<"debrief" | "evaluation" | "realtime" | "story">().notNull(),
+    target: text("target")
+      .$type<"debrief" | "evaluation" | "realtime" | "story" | "support">()
+      .notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     version: integer("version").notNull(),
     voice: text("voice"),
@@ -437,6 +439,7 @@ export const aiRuns = pgTable(
         | "evaluation"
         | "introduction_draft"
         | "pricing_review"
+        | "quira_support"
         | "realtime"
         | "study_evaluate"
         | "study_import"
@@ -633,6 +636,131 @@ export const userFeedback = pgTable(
     sessionIdx: index("user_feedback_session_idx").on(feedback.sessionId),
     statusIdx: index("user_feedback_status_idx").on(feedback.status),
     userIdx: index("user_feedback_user_idx").on(feedback.userId),
+  }),
+);
+
+export const quiraConversations = pgTable(
+  "quira_conversations",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    product: text("product").default("shared").notNull(),
+    screen: text("screen").default("unknown").notNull(),
+    sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "set null" }),
+    source: text("source").$type<"public" | "signed_in">().default("signed_in").notNull(),
+    status: text("status")
+      .$type<"escalated" | "open" | "resolved">()
+      .default("open")
+      .notNull(),
+    title: text("title").default("Support chat").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  },
+  (conversation) => ({
+    createdAtIdx: index("quira_conversations_created_at_idx").on(conversation.createdAt),
+    sessionIdx: index("quira_conversations_session_idx").on(conversation.sessionId),
+    statusIdx: index("quira_conversations_status_idx").on(conversation.status),
+    userIdx: index("quira_conversations_user_idx").on(conversation.userId),
+  }),
+);
+
+export const quiraMessages = pgTable(
+  "quira_messages",
+  {
+    content: text("content").notNull(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => quiraConversations.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}).notNull(),
+    role: text("role").$type<"assistant" | "system" | "tool" | "user">().notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  },
+  (message) => ({
+    conversationIdx: index("quira_messages_conversation_idx").on(
+      message.conversationId,
+      message.createdAt,
+    ),
+    userIdx: index("quira_messages_user_idx").on(message.userId),
+  }),
+);
+
+export const quiraToolEvents = pgTable(
+  "quira_tool_events",
+  {
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => quiraConversations.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    errorMessage: text("error_message"),
+    id: uuid("id").defaultRandom().primaryKey(),
+    input: jsonb("input").$type<Record<string, unknown>>().default({}).notNull(),
+    messageId: uuid("message_id").references(() => quiraMessages.id, { onDelete: "set null" }),
+    output: jsonb("output").$type<Record<string, unknown>>().default({}).notNull(),
+    status: text("status").$type<"failed" | "succeeded">().notNull(),
+    toolName: text("tool_name").notNull(),
+  },
+  (event) => ({
+    conversationIdx: index("quira_tool_events_conversation_idx").on(event.conversationId),
+    messageIdx: index("quira_tool_events_message_idx").on(event.messageId),
+    toolIdx: index("quira_tool_events_tool_idx").on(event.toolName),
+  }),
+);
+
+export const quiraKnowledgeArticles = pgTable(
+  "quira_knowledge_articles",
+  {
+    category: text("category").default("general").notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    displayOrder: integer("display_order").default(0).notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    product: text("product").default("shared").notNull(),
+    published: boolean("published").default(false).notNull(),
+    slug: text("slug").notNull(),
+    tags: jsonb("tags").$type<string[]>().default([]).notNull(),
+    title: text("title").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (article) => ({
+    productIdx: index("quira_knowledge_articles_product_idx").on(article.product),
+    publishedIdx: index("quira_knowledge_articles_published_idx").on(article.published),
+    slugIdx: uniqueIndex("quira_knowledge_articles_slug_idx").on(article.slug),
+  }),
+);
+
+export const quiraSupportCases = pgTable(
+  "quira_support_cases",
+  {
+    conversationId: uuid("conversation_id").references(() => quiraConversations.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    details: jsonb("details").$type<Record<string, unknown>>().default({}).notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    kind: text("kind").$type<"bug" | "feedback" | "support">().default("support").notNull(),
+    product: text("product").default("shared").notNull(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    screen: text("screen").default("unknown").notNull(),
+    sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "set null" }),
+    status: text("status")
+      .$type<"in_progress" | "new" | "resolved" | "triage">()
+      .default("new")
+      .notNull(),
+    summary: text("summary").notNull(),
+    title: text("title").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    urgency: text("urgency").$type<"high" | "low" | "normal">().default("normal").notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  },
+  (supportCase) => ({
+    conversationIdx: index("quira_support_cases_conversation_idx").on(
+      supportCase.conversationId,
+    ),
+    createdAtIdx: index("quira_support_cases_created_at_idx").on(supportCase.createdAt),
+    statusIdx: index("quira_support_cases_status_idx").on(supportCase.status),
+    userIdx: index("quira_support_cases_user_idx").on(supportCase.userId),
   }),
 );
 

@@ -39,6 +39,10 @@ Last updated: 2026-05-30
   prepare the GitHub push/deploy path instead of leaving that work to the user.
 - Latest integration pass: `1c42658 Add admin DPE progression visibility`.
   `QuesIQ-manager/main` is clean and aligned with `origin/main` at that commit.
+- Quira support chatbot V1 foundation is now in progress on top of that
+  baseline. It adds signed-in `/api/support/chat`, Quira storage tables,
+  Admin Support readout, prompt key `quira_support_chat`, and the first shared
+  support chat UI hosted from Interview.
 
 ## Built So Far
 

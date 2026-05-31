@@ -1,6 +1,10 @@
-type OpenAiProduct = "dpe" | "interview" | "study";
+type OpenAiProduct = "dpe" | "interview" | "study" | "support";
 
 export function getOpenAiApiKey(product: OpenAiProduct = "interview") {
+  if (product === "support") {
+    return process.env.OPENAI_QUIRA_API_KEY || process.env.OPENAI_SUPPORT_API_KEY || process.env.OPENAI_API_KEY;
+  }
+
   if (product === "study") {
     return process.env.OPENAI_STUDY_API_KEY || process.env.OPENAI_API_KEY;
   }

@@ -10,6 +10,7 @@
     "guard:admin": "node scripts/guards/check-lane.mjs admin",
     "guard:dpe": "node scripts/guards/check-lane.mjs dpe",
     "guard:interview": "node scripts/guards/check-lane.mjs interview",
+    "guard:quira": "node scripts/guards/check-lane.mjs quira",
     "guard:study": "node scripts/guards/check-lane.mjs study",
     "preflight:dpe": "node scripts/dpe/mvp-preflight.mjs",
     "readiness:dpe": "node scripts/dpe/mvp-preflight.mjs",

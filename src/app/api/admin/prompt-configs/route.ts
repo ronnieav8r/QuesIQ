@@ -26,6 +26,10 @@ type ActivateBody = {
 };
 
 function targetForKey(key: PromptConfigKey): PromptConfigTarget {
+  if (key === "quira_support_chat") {
+    return "support";
+  }
+
   if (key === "session_debrief") {
     return "debrief";
   }
