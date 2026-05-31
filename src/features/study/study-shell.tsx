@@ -70,6 +70,8 @@ const studyNavItems: StudyNavItem[] = [
   },
 ];
 
+const overflowMobileStudyNavItems = studyNavItems.slice(4);
+
 export function StudyShell({ authSession, children }: StudyShellProps) {
   const pathname = usePathname();
   const [adminAccess, setAdminAccess] = useState(false);
@@ -130,6 +132,12 @@ export function StudyShell({ authSession, children }: StudyShellProps) {
                   <Home aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
                   <span>QuesIQ Home</span>
                 </Link>
+                {overflowMobileStudyNavItems.map((item) => (
+                  <Link href={item.href} key={item.href} role="menuitem">
+                    <item.icon aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                    <span>{item.label}</span>
+                  </Link>
+                ))}
                 {authSession?.user && (
                   <button role="menuitem" type="button">
                     <UserRound aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
@@ -192,12 +200,18 @@ export function StudyShell({ authSession, children }: StudyShellProps) {
             <ChevronLeft aria-hidden="true" className="tab-icon study-desktop-hide-icon" strokeWidth={2.4} />
             <span>{navCollapsed ? "Menu" : "Hide"}</span>
           </button>
-          {studyNavItems.map((item) => {
+          {studyNavItems.map((item, index) => {
             const active = item.match(pathname);
             return (
               <Link
                 aria-current={active ? "page" : undefined}
-                className={active ? "tab active" : "tab"}
+                className={[
+                  "tab",
+                  active ? "active" : undefined,
+                  index >= 4 ? "mobile-overflow-tab" : undefined,
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
                 href={item.href}
                 key={item.href}
                 title={item.label}
