@@ -10,11 +10,13 @@ import {
   Home,
   ListChecks,
   Map,
+  Menu,
   Mic,
   Plane,
   Radio,
   RotateCcw,
   Settings,
+  ShieldCheck,
   SkipForward,
   User
 } from "lucide-react";
@@ -429,6 +431,7 @@ export default function App() {
   const [answerSaving, setAnswerSaving] = useState(false);
   const [sessionStarting, setSessionStarting] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [appMenuOpen, setAppMenuOpen] = useState(false);
   const [practiceNotice, setPracticeNotice] = useState<PracticeNotice | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [draftAnswer, setDraftAnswer] = useState("");
@@ -1143,6 +1146,52 @@ export default function App() {
     <div className="product-shell dpe-shell">
       <div className="app-frame">
         <header className="app-header">
+          <div className="app-menu">
+            <button
+              aria-expanded={appMenuOpen}
+              aria-label={appMenuOpen ? "Close menu" : "Open menu"}
+              className={appMenuOpen ? "app-menu-button active" : "app-menu-button"}
+              onClick={() => setAppMenuOpen((current) => !current)}
+              type="button"
+            >
+              <Menu aria-hidden="true" className="tab-icon" strokeWidth={2.4} />
+            </button>
+            {appMenuOpen && (
+              <div className="app-menu-panel" role="menu">
+                <button
+                  className={screen === "me" ? "active" : undefined}
+                  onClick={() => {
+                    setScreen("me");
+                    setAppMenuOpen(false);
+                  }}
+                  role="menuitem"
+                  type="button"
+                >
+                  <User aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                  <span>Me</span>
+                </button>
+                <Link href="/" role="menuitem">
+                  <Home aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                  <span>QuesIQ Home</span>
+                </Link>
+                {authState.user?.email && (
+                  <button role="menuitem" type="button">
+                    <User aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                    <span>{authState.user.email}</span>
+                  </button>
+                )}
+                {authState.isAdmin && (
+                  <Link href="/admin?product=dpe" role="menuitem">
+                    <ShieldCheck aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                    <span>Admin</span>
+                  </Link>
+                )}
+                <button onClick={handleSignOut} role="menuitem" type="button">
+                  <span>{signingOut ? "Signing out..." : "Sign out"}</span>
+                </button>
+              </div>
+            )}
+          </div>
           <div className="brand-lockup">
             <h1 className="brand-title">QuesIQ DPE</h1>
             <span className="brand-subtitle">{brandSubtitle}</span>
