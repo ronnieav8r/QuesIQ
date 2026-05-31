@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { Pool } from "pg";
 
 import { getDb } from "@/server/db/client";
 import { studyCardSources, studyCards, studyDecks, studyVerifications, users } from "@/server/db/schema";
@@ -13,6 +14,34 @@ sample-001,What is trim?,Relieves control pressure in steady flight.,Set pitch f
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
     throw new Error(message);
+  }
+}
+
+async function assertMigration0054Columns(connectionString: string) {
+  const pool = new Pool({ connectionString });
+  try {
+    const result = await pool.query<{ column_name: string; table_name: string }>(
+      `
+        select table_name, column_name
+        from information_schema.columns
+        where table_schema = 'public'
+          and (
+            (table_name = 'study_card_sources' and column_name = 'source_metadata')
+            or (table_name = 'study_verifications' and column_name in ('verification_status', 'evidence', 'verifier'))
+          )
+      `,
+    );
+    const columns = new Set(result.rows.map((row) => `${row.table_name}.${row.column_name}`));
+    for (const requiredColumn of [
+      "study_card_sources.source_metadata",
+      "study_verifications.verification_status",
+      "study_verifications.evidence",
+      "study_verifications.verifier",
+    ]) {
+      assert(columns.has(requiredColumn), `Missing ${requiredColumn}. Apply migrations through 0054 first.`);
+    }
+  } finally {
+    await pool.end();
   }
 }
 
@@ -34,6 +63,8 @@ async function runDbSmoke() {
   if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL is required for DB smoke mode. Use --parse-only without a database.");
   }
+
+  await assertMigration0054Columns(process.env.DATABASE_URL);
 
   const adminUserId = "study-rich-csv-smoke-admin";
   const deckTitle = `[TEST_DELETE] Rich CSV Import Smoke ${new Date().toISOString()}`;
@@ -85,6 +116,12 @@ async function runDbSmoke() {
   assert(verification?.verificationStatus === "verified", "Expected verification status to be saved.");
   assert(verification?.evidence?.includes("chunk-001"), "Expected verification evidence to be saved.");
 
+  if (process.argv.includes("--cleanup")) {
+    await db.delete(studyDecks).where(eq(studyDecks.id, deck.id));
+    console.log("rich CSV DB smoke passed; disposable deck cleaned up");
+    return;
+  }
+
   console.log(`rich CSV DB smoke passed; deckId=${deck.id}; cleanup title prefix=[TEST_DELETE]`);
 }
 
@@ -99,7 +136,11 @@ async function main() {
   await runDbSmoke();
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+main()
+  .then(() => {
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  });

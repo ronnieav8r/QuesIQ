@@ -146,7 +146,9 @@ The first Study slice is imported:
   `node_modules/.bin/tsx scripts/study/rich-csv-import-smoke.ts --parse-only`
   for parser/source-coverage verification, or without `--parse-only` after
   `DATABASE_URL` and migrations through `0054` are available for a disposable
-  `[TEST_DELETE]` DB save/readback check
+  `[TEST_DELETE]` DB save/readback check. DB mode verifies the `0054` metadata
+  columns before writing and accepts `--cleanup` to remove the disposable deck
+  after readback.
 - local Codex skill `quesiq-study-content-pipeline` coordinates the source
   scrubber, Study deck drafter, Study verifier, rich CSV export, and optional
   import smoke checks for raw source-to-Study import work

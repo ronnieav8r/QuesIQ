@@ -227,7 +227,8 @@ the visual/UI level during the conversation:
 - rich CSV import smoke script at `scripts/study/rich-csv-import-smoke.ts`;
   run with `--parse-only` for parser/source-coverage checks or without
   `--parse-only` after migrations through `0054` are applied for a disposable
-  DB save/readback check
+  DB save/readback check. DB mode verifies the `0054` metadata columns before
+  writing and accepts `--cleanup` to remove the disposable deck after readback.
 - local Codex skill `quesiq-study-content-pipeline` coordinates the source
   scrubber, Study deck drafter, Study verifier, rich CSV export, and optional
   import smoke checks for raw source-to-Study import work
