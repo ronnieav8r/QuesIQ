@@ -509,3 +509,15 @@ without changing content:
    existing ACS title and prompt certificate context.
 3. The same fallback order is now used by saved review generation and live
    voice setup: stored target snapshot, session title, then prompt certificate.
+
+## MVP Learner Polish Slice 28 (Admin Realtime Snapshot Preflight)
+
+This slice makes the realtime target snapshot contract visible in Admin without
+changing content:
+
+1. Admin DPE preflight now detects whether `/api/dpe/realtime/session` includes
+   the stored target-track snapshot markers.
+2. The Admin runtime signal list and status rows now include realtime
+   target-snapshot contract visibility.
+3. This protects the live voice prompt path from drifting away from the saved
+   review target-track fallback order.

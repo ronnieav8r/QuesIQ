@@ -209,6 +209,11 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       'getOpenAiRealtimeApiKey("dpe")',
       "OPENAI_DPE_REALTIME_API_KEY or OPENAI_DPE_API_KEY",
     ]),
+    voiceTargetSnapshotContractVisible: hasAll(realtimeRouteText, [
+      "transcriptTargetTitle",
+      "Stored target track",
+      "targetTrack?: { title?: unknown }",
+    ]),
     publicStatusProbeVisible: hasAll(publicStatusText, [
       "contentTablesReachable",
       "dpeTargetTracks.map",
@@ -269,6 +274,9 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
   }
   if (!runtimeSignals.voiceRuntimeConfigContractVisible) {
     warnings.push("DPE realtime endpoint key-contract markers were not detected.");
+  }
+  if (!runtimeSignals.voiceTargetSnapshotContractVisible) {
+    warnings.push("DPE realtime target snapshot markers were not detected.");
   }
   if (!runtimeSignals.adminGapContentStudioRoutingVisible) {
     warnings.push("Admin DPE gap cards do not confirm Content Studio routing markers.");
@@ -379,6 +387,13 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
         value: runtimeSignals.voiceRuntimeConfigContractVisible ? "Visible" : "Not detected",
       },
       {
+        detail: "Realtime session instructions prefer the stored target-track snapshot before fallback labels.",
+        key: "voice_target_snapshot_contract",
+        label: "Realtime target snapshot",
+        status: warningStatusFrom(runtimeSignals.voiceTargetSnapshotContractVisible),
+        value: runtimeSignals.voiceTargetSnapshotContractVisible ? "Visible" : "Not detected",
+      },
+      {
         detail: "Admin gap cards route into Content Studio with DPE context instead of a disabled placeholder.",
         key: "admin_gap_content_studio_routing",
         label: "Admin gap routing",
@@ -446,6 +461,13 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
         label: "Signed-in runtime contract",
         status: warningStatusFrom(runtimeSignals.signedInRuntimeCheckVisible),
         value: runtimeSignals.signedInRuntimeCheckVisible ? "Detected" : "Not detected",
+      },
+      {
+        detail: "Source-contract presence for target-track snapshot alignment in realtime voice instructions.",
+        key: "realtime_target_snapshot_contract",
+        label: "Realtime target snapshot contract",
+        status: warningStatusFrom(runtimeSignals.voiceTargetSnapshotContractVisible),
+        value: runtimeSignals.voiceTargetSnapshotContractVisible ? "Detected" : "Not detected",
       },
     ],
     trackSummary,
