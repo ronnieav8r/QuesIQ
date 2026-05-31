@@ -9,7 +9,7 @@ Last updated: 2026-05-30
   Use the manager/worker clone flow in `docs/rebuild/BRANCHING_AND_RELEASES.md`
   and `docs/platform/PARALLEL_DEVELOPMENT.md`. The older
   `C:\Users\weeks\Documents\github\QuesIQ` checkout is reference/archive.
-- Latest integration pass is `64cb042 Merge Study XP quest progression slice`.
+- Latest integration pass is `2497fb2 Use DPE progression API in readiness UX`.
   `QuesIQ-manager/main` is clean and aligned with `origin/main` at that commit.
 - The current worker-thread set is Manager, Admin, Interview, Study, and DPE.
   Admin owns shared `/admin` and Content Studio work; product workers own their
@@ -30,6 +30,14 @@ Last updated: 2026-05-30
   answer-key, rubric, confidence, warning, readiness, and missing-field draft
   JSON without writing to DPE content tables. This endpoint is now wired into
   the Admin Content Studio run/review flow.
+- QuesIQ DPE now has an MVP-readiness scaffold without expanding content:
+  target-track metadata and DPE Me/Profile support for Private Pilot ASEL plus
+  Instrument Airplane, Commercial Airplane Land, CFI Airplane, CFII Airplane,
+  Multi-Engine Land, and MEI Airplane; track-aware Home/Practice empty states;
+  Admin Content Studio DPE run metadata for those tracks; Admin DPE readiness
+  visibility by configured/no-content/needs-work/review-ready track; and
+  DPE-owned persistent progression tables/API hooked to session completion,
+  voice artifact completion, and readiness review completion.
 - Dedicated durable Content Studio run storage now exists in migration
   `0051_add_content_studio_runs.sql`. Existing `ai_runs` remains AI-call audit
   history and may be linked from a Content Studio run when available. Product
@@ -61,6 +69,9 @@ Last updated: 2026-05-30
   `/api/dpe/*`, using DPE-owned `dpe_*` tables keyed by the shared Auth.js user
   id. Voice is assumed working for now; deeper voice troubleshooting is parked
   for later.
+- DPE content remains intentionally unfinished. Do not seed or import real
+  aviation question/answer/rubric content until Ronnie and the manager work
+  through that content together.
 - Important DPE deploy watch-out: migration
   `drizzle/0050_add_dpe_baseline_tables.sql` exists and the Drizzle journal was
   updated so Render should actually apply it on next deploy. The production log

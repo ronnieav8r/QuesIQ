@@ -37,7 +37,7 @@ Last updated: 2026-05-30
 - User is not expecting to manually review code for correctness. Future Codex
   passes should own verification, explain outcomes plainly, and when requested
   prepare the GitHub push/deploy path instead of leaving that work to the user.
-- Latest integration pass: `64cb042 Merge Study XP quest progression slice`.
+- Latest integration pass: `2497fb2 Use DPE progression API in readiness UX`.
   `QuesIQ-manager/main` is clean and aligned with `origin/main` at that commit.
 
 ## Built So Far
@@ -68,6 +68,19 @@ Last updated: 2026-05-30
   - baseline Private Pilot ASEL placeholder content is seeded in the migration
   - DPE voice uses the existing direct OpenAI Realtime pattern; assume it works
     until the user resumes voice troubleshooting
+  - DPE MVP-readiness scaffolding now supports Private Pilot ASEL plus
+    Instrument Airplane, Commercial Airplane Land, CFI Airplane, CFII Airplane,
+    Multi-Engine Land, and MEI Airplane as selectable target tracks using
+    existing checkride target fields
+  - DPE Home/Practice/Me treat no-content tracks as intentional scaffolding
+    instead of app failure; users can keep a selected target track while using
+    available demo/private-pilot content until real content is authored
+  - DPE now has product-owned persistent progression tables in migration
+    `0053_add_dpe_progression.sql`, XP rule/quest defaults, `GET
+    /api/dpe/progression`, and award hooks on completed DPE sessions, saved
+    voice artifacts, and readiness reviews
+  - Real DPE aviation content remains intentionally untouched for a later
+    user-guided content curation pass
 - Shared Admin Content Studio:
   - Admin owns shared Content Studio UI/API work under the protected `/admin`
     console
@@ -88,6 +101,9 @@ Last updated: 2026-05-30
   - DPE draft generation is product-owned at `/api/dpe/content/draft` and
     returns certificate, ACS, oral-question, answer-key, rubric, confidence,
     warning, readiness, and missing-field draft JSON without saving live content
+  - Admin Content Studio and DPE Admin readiness views now carry/display DPE
+    target-track context for the requested MVP tracks without publishing or
+    writing product content
   - Publish, Official, and Verified changes remain disabled until
     product-specific publish controls exist; `approved_for_publish` is only an
     internal review status and does not write product tables
