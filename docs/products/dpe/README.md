@@ -78,6 +78,46 @@ through a deliberate content-import slice.
    the Admin/platform lane; DPE currently treats generated drafts as review
    inputs, not published content.
 
+## Draft Reference Path From Reviewed Source Packs
+
+DPE must not read raw source-pack folders, PDFs, Drive files, or chunk/asset
+JSON directly from learner runtime. The intended future path is:
+
+1. A Codex-side source-pack workflow creates and reviews chunks, page anchors,
+   figures, tables, and visual assets outside DPE runtime.
+2. A Codex-side generation step turns reviewed material into DPE draft
+   reference/prompt JSON.
+3. Admin review inspects the generated draft references, source anchors,
+   warnings, track applicability, ACS tags, subject tags, and visual asset
+   links.
+4. A verifier stage checks source grounding and product fit before any later
+   DPE import path exists.
+5. A future DPE import/publish workflow may consume approved generated draft
+   references only after product-owned audit controls exist.
+
+The DPE-owned draft reference helper preserves these fields for future
+generated reference items:
+
+1. `sourcePackId`
+2. `sourceChunkIds`
+3. `pageAnchors`
+4. `visualAssetIds`
+5. `trackApplicability`
+6. `acsTags`
+7. `subjectTags`
+8. `verificationStatus`
+9. `warnings`
+
+Current boundaries:
+
+1. Draft references are admin/reviewer inputs only.
+2. Learner runtime does not read source-pack data or draft references.
+3. DPE does not store raw source packs or source-pack folders.
+4. Publish, Official, Verified, and durable source-pack storage writes remain
+   disabled.
+5. No real PHAK, FAA PDF, Drive, or source-pack content is imported into this
+   repo.
+
 ## DPE Readiness Quest Track
 
 Current DPE lane now has both a non-persistent readiness preview in the client
@@ -1410,3 +1450,22 @@ content:
 3. Admin and CLI DPE preflight now check for the runtime retry markers as part
    of the signed-in runtime contract.
 4. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 96 (Draft Reference Contract)
+
+This slice adds DPE-owned backend infrastructure for future generated
+source-pack reference/prompt drafts without changing learner runtime behavior:
+
+1. Added a side-effect-free DPE draft reference helper that normalizes generated
+   reference items and keeps source-pack id, chunk ids, page anchors, visual
+   asset ids, target-track applicability, ACS tags, subject tags,
+   verification status, and warnings.
+2. The existing admin-only `/api/dpe/content/draft` primitive now accepts
+   optional draft reference items and returns a `draft_admin_reference_only`
+   contract marker with Publish, Official, Verified, and durable source-pack
+   storage disabled.
+3. AI-run metadata records only reference counts and source-pack ids for this
+   contract, not raw source-pack text or asset payloads.
+4. No learner runtime source-pack reads were added.
+5. No real PHAK/source-pack/PDF/Drive content, schema, durable source-pack
+   storage, publish, Official, or Verified state changed.

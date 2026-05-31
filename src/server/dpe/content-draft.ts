@@ -1,4 +1,10 @@
 import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
+import {
+  buildDpeDraftReferenceContract,
+  type DpeDraftReferenceContract,
+  type DpeDraftReferenceItem,
+  parseDpeDraftReferenceItems,
+} from "@/server/dpe/draft-reference";
 import { getOpenAiApiKey } from "@/server/openai/keys";
 
 export type DpeContentDraftCertificate = {
@@ -18,6 +24,7 @@ export type DpeContentDraftAcs = {
 export type DpeContentDraftInput = {
   acs?: DpeContentDraftAcs;
   certificate: DpeContentDraftCertificate;
+  draftReferenceItems?: DpeDraftReferenceItem[];
   promptInstructions?: string;
   sourceText: string;
 };
@@ -39,6 +46,7 @@ export type DpeContentStudioDraft = {
     model: string | null;
     saved: false;
   };
+  draftReferenceContract: DpeDraftReferenceContract;
   oralQuestion: {
     acsElementType?: string;
     primarySubject?: string;
@@ -204,12 +212,21 @@ export function parseDpeContentDraftInput(body: unknown): { error: string; ok: f
       acsTitle: candidate.acsTitle,
     },
   );
+  const parsedDraftReferences = parseDpeDraftReferenceItems(
+    candidate.dpeDraftReferenceItems ??
+      candidate.draftReferenceItems ??
+      candidate.sourcePackDraftReferences,
+  );
+  if ("error" in parsedDraftReferences) {
+    return { error: parsedDraftReferences.error, ok: false };
+  }
 
   return {
     ok: true,
     value: {
       acs,
       certificate,
+      draftReferenceItems: parsedDraftReferences.items,
       promptInstructions: truncate(cleanOptional(candidate.promptInstructions), MAX_INSTRUCTION_CHARS),
       sourceText: sourceText.slice(0, MAX_SOURCE_CHARS),
     },
@@ -285,6 +302,7 @@ function buildReadiness(args: {
 function fallbackDraft(args: {
   acs: DpeContentDraftAcs;
   certificate: DpeContentDraftCertificate;
+  draftReferenceItems?: DpeDraftReferenceItem[];
   promptInstructions?: string;
   sourceText: string;
   warnings?: string[];
@@ -339,6 +357,7 @@ function fallbackDraft(args: {
       model: null,
       saved: false,
     },
+    draftReferenceContract: buildDpeDraftReferenceContract(args.draftReferenceItems),
     oralQuestion: {
       acsElementType: args.acs.elementType,
       primarySubject: subject,
@@ -359,9 +378,15 @@ function fallbackDraft(args: {
 function normalizeDraft(raw: RawDraft, args: {
   acs: DpeContentDraftAcs;
   certificate: DpeContentDraftCertificate;
+  draftReferenceItems?: DpeDraftReferenceItem[];
   sourceText: string;
 }): DpeContentStudioDraft {
-  const fallback = fallbackDraft({ acs: args.acs, certificate: args.certificate, sourceText: args.sourceText });
+  const fallback = fallbackDraft({
+    acs: args.acs,
+    certificate: args.certificate,
+    draftReferenceItems: args.draftReferenceItems,
+    sourceText: args.sourceText,
+  });
   const acs = {
     ...args.acs,
     ...definedAcs(raw.acs),
@@ -406,6 +431,7 @@ function normalizeDraft(raw: RawDraft, args: {
       model: GENERATE_MODEL,
       saved: false,
     },
+    draftReferenceContract: buildDpeDraftReferenceContract(args.draftReferenceItems),
     oralQuestion: {
       acsElementType: cleanOptional(raw.oralQuestion?.acsElementType) ?? acs.elementType,
       primarySubject: cleanOptional(raw.oralQuestion?.primarySubject),
@@ -507,6 +533,7 @@ export async function generateDpeContentStudioDraft(args: DpeContentDraftInput &
   const fallbackArgs = {
     acs: args.acs ?? {},
     certificate: args.certificate,
+    draftReferenceItems: args.draftReferenceItems ?? [],
     promptInstructions,
     sourceText,
   };
@@ -528,6 +555,8 @@ export async function generateDpeContentStudioDraft(args: DpeContentDraftInput &
       certificate: fallbackArgs.certificate,
       operation: "dpe_content_studio_draft",
       promptInstructionsLength: promptInstructions?.length ?? 0,
+      sourcePackDraftReferenceCount: fallbackArgs.draftReferenceItems.length,
+      sourcePackIds: buildDpeDraftReferenceContract(fallbackArgs.draftReferenceItems).sourcePackIds,
       sourceTextLength: sourceText.length,
     },
     runType: "dpe_review",
@@ -567,6 +596,7 @@ export async function generateDpeContentStudioDraft(args: DpeContentDraftInput &
     const draft = normalizeDraft(JSON.parse(extractJsonObject(raw)) as RawDraft, {
       acs: fallbackArgs.acs,
       certificate: fallbackArgs.certificate,
+      draftReferenceItems: fallbackArgs.draftReferenceItems,
       sourceText,
     });
 
