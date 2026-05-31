@@ -336,3 +336,14 @@ This slice prevents the DPE shell from getting stuck during access bootstrap:
 3. A later successful auth response can still set the authenticated app state;
    this only protects the initial loading experience.
 4. Content, target-track metadata, and aviation prompts are unchanged.
+
+## MVP Learner Polish Slice 13 (Signed-Out Product Status)
+
+This slice makes the public DPE page clearer before login:
+
+1. The signed-out screen now receives the safe public `/api/dpe/status` signal.
+2. Visitors can see DPE target tracks, content-table reachability, loaded prompt
+   count, and ready/scaffolded track count before signing in.
+3. The page still requires an account for practice sessions, history, reviews,
+   and voice work.
+4. No content is created, approved, published, or modified.

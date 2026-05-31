@@ -854,7 +854,13 @@ export default function App() {
   }
 
   if (!authState.authenticated) {
-    return <SignInScreen googleEnabled={authState.googleEnabled} onSignedIn={loadAuthState} />;
+    return (
+      <SignInScreen
+        googleEnabled={authState.googleEnabled}
+        onSignedIn={loadAuthState}
+        publicStatus={publicStatus}
+      />
+    );
   }
 
   const visibleNavItems = navItems.filter((item) => item.key !== "content" || authState.isAdmin);
@@ -1060,10 +1066,12 @@ function NavButton({
 
 function SignInScreen({
   googleEnabled,
-  onSignedIn
+  onSignedIn,
+  publicStatus,
 }: {
   googleEnabled: boolean;
   onSignedIn: () => Promise<void>;
+  publicStatus: DpePublicStatus | null;
 }) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -1149,8 +1157,54 @@ function SignInScreen({
                   </div>
                 </form>
             </div>
+            <SignedOutDpeStatusPanel publicStatus={publicStatus} />
           </section>
         </main>
+      </div>
+    </div>
+  );
+}
+
+function SignedOutDpeStatusPanel({ publicStatus }: { publicStatus: DpePublicStatus | null }) {
+  const trackRows = publicStatus?.targetTracks ?? dpeTargetTracks;
+  const readyTracks = trackRows.filter((track) => track.contentReady).length;
+  const statusLabel =
+    publicStatus?.status === "ok"
+      ? "status ok"
+      : publicStatus
+        ? "degraded"
+        : "checking";
+
+  return (
+    <div className="panel">
+      <div className="section-head">
+        <div>
+          <h3>DPE target tracks</h3>
+          <p>
+            Production status is visible before sign-in. Practice history, reviews, and voice
+            sessions unlock after account access.
+          </p>
+        </div>
+        <Plane />
+      </div>
+      <div className="stat-strip mt-4">
+        <Stat label="Status" value={statusLabel} />
+        <Stat
+          label="Content tables"
+          value={publicStatus?.contentTablesReachable ? "reachable" : "checking"}
+        />
+        <Stat label="Loaded prompts" value={`${publicStatus?.questionCount ?? 0}`} />
+        <Stat label="Ready tracks" value={`${readyTracks}/${trackRows.length}`} />
+      </div>
+      <div className="question-list mt-4">
+        <div className="raised-card">
+          <strong>Configured airplane-land targets</strong>
+          <p>
+            {trackRows
+              .map((track) => `${track.code}: ${track.contentReady ? "ready" : "scaffolded"}`)
+              .join(" | ")}
+          </p>
+        </div>
       </div>
     </div>
   );

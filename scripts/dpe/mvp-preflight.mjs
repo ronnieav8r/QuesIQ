@@ -72,6 +72,8 @@ const codeContracts = [
       "onVoiceUnavailable",
       "dpeSignedOutAuthState",
       "Loading access",
+      "SignedOutDpeStatusPanel",
+      "DPE target tracks",
     ],
   },
   {
