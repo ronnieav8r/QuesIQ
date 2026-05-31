@@ -115,6 +115,8 @@ const codeContracts = [
       "will not appear in History",
       "History storage unavailable",
       "Stored transcripts, retry AI",
+      "No DPE sessions yet",
+      "Start first DPE session",
       "onRetryReview",
       "formatDpeProfileDate",
       "Profile storage unavailable",

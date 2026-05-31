@@ -1180,6 +1180,7 @@ export default function App() {
                     };
                   }
                 }}
+                onOpenPractice={() => setScreen("practice")}
                 onResumeInProgress={continueStoredInProgressSession}
                 onOpenReview={(reviewSession) => {
                   setMode(reviewSession.mode);
@@ -3788,6 +3789,7 @@ function HistoryScreen({
   databaseAvailable,
   diagnostics,
   onGenerateReview,
+  onOpenPractice,
   onResumeInProgress,
   onOpenReview
 }: {
@@ -3796,6 +3798,7 @@ function HistoryScreen({
   databaseAvailable: boolean | null;
   diagnostics: DpeDiagnosticEvent[];
   onGenerateReview: (sessionId: string) => Promise<ReviewGenerationOutcome>;
+  onOpenPractice: () => void;
   onResumeInProgress: (storedSession: StoredPracticeSession) => void;
   onOpenReview: (reviewSession: LocalSession) => void;
 }) {
@@ -4064,7 +4067,7 @@ function HistoryScreen({
               </article>
             );
           })}
-          {storedSessions.length === 0 && <ReviewPreview />}
+          {storedSessions.length === 0 && <ReviewPreview onOpenPractice={onOpenPractice} />}
         </div>
       </div>
       {historyNotice && (
@@ -4459,7 +4462,7 @@ function MeScreen({
   );
 }
 
-function ReviewPreview() {
+function ReviewPreview({ onOpenPractice }: { onOpenPractice: () => void }) {
   return (
     <div className="panel">
       <div className="section-head">
@@ -4474,6 +4477,14 @@ function ReviewPreview() {
         <Stat label="Risk Mgmt" value="-" />
         <Stat label="Judgment" value="-" />
         <Stat label="Comms" value="-" />
+      </div>
+      <div className="raised-card mt-4">
+        <strong>No DPE sessions yet</strong>
+        <p>Start a typed or voice practice session to create transcript evidence and unlock History reviews.</p>
+        <button className="button primary mt-4" onClick={onOpenPractice}>
+          <Mic />
+          Start first DPE session
+        </button>
       </div>
     </div>
   );

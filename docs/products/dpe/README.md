@@ -884,3 +884,15 @@ providers:
 3. Admin DPE preflight now checks that DPE auth provider visibility is present
    in both the auth status route and signed-out learner UI.
 4. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 57 (History Empty-State Recovery)
+
+This slice removes an early learner dead end without changing content:
+
+1. Empty DPE History now shows `No DPE sessions yet` instead of only the review
+   artifact shape.
+2. The empty state includes `Start first DPE session`, routing directly back to
+   Practice so a new learner can create transcript evidence.
+3. Admin DPE preflight now checks that the learner recovery contract includes
+   the History empty-state recovery markers.
+4. No aviation content, schema, publish, Official, or Verified state changed.
