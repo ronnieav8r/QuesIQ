@@ -521,3 +521,16 @@ changing content:
    target-snapshot contract visibility.
 3. This protects the live voice prompt path from drifting away from the saved
    review target-track fallback order.
+
+## MVP Learner Polish Slice 29 (Voice Runtime Gating)
+
+This slice improves DPE voice recovery before launch without changing content:
+
+1. Practice setup now uses the public `/api/dpe/status` voice-readiness signal
+   to detect when realtime voice is not configured.
+2. When Voice AI is unavailable, the voice launch button is disabled and the UI
+   directs learners to typed practice with the same saved prompts, target
+   track, transcript shape, and review path.
+3. Storage-unavailable and voice-unavailable states are now distinct, so
+   learners and QA can tell whether the issue is session persistence or
+   realtime configuration.

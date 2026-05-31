@@ -1046,6 +1046,7 @@ export default function App() {
                 selectedTask={selectedTask}
                 selectedTargetTrack={selectedTargetTrack}
                 practiceNotice={practiceNotice}
+                publicStatus={publicStatus}
                 session={session}
                 stage={stage}
                 taskOptions={taskOptions}
@@ -1812,6 +1813,7 @@ function PracticeScreen(props: {
   questionCount: number;
   selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
   practiceNotice: PracticeNotice | null;
+  publicStatus: DpePublicStatus | null;
   stage: PracticeStage;
   session: LocalSession | null;
   currentIndex: number;
@@ -1883,6 +1885,7 @@ function PracticeSetupScreen({
   questionCount,
   selectedTargetTrack,
   practiceNotice,
+  publicStatus,
   databaseAvailable,
   onAreaChange,
   onCertificateChange,
@@ -1903,6 +1906,7 @@ function PracticeSetupScreen({
   questionCount: number;
   selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
   practiceNotice: PracticeNotice | null;
+  publicStatus: DpePublicStatus | null;
   databaseAvailable: boolean | null;
   onAreaChange: (area: string) => void;
   onCertificateChange: (certificateTypeId: string) => void;
@@ -1920,6 +1924,8 @@ function PracticeSetupScreen({
     ? Math.round(((readyQuestions / questions.length) * 100))
     : 0;
   const practiceBlocked = questions.length === 0;
+  const voiceAiUnavailable = publicStatus?.realtimeVoiceConfigured === false;
+  const voiceDisabled = practiceBlocked || databaseAvailable === false || voiceAiUnavailable;
   const privatePilotTrack = getDpeTargetTrackById(defaultDpeTargetTrackId) ?? dpeTargetTracks[0];
 
   return (
@@ -2060,11 +2066,20 @@ function PracticeSetupScreen({
               </p>
             </div>
           )}
+          {voiceAiUnavailable && databaseAvailable !== false && (
+            <div className="raised-card mt-4">
+              <strong>Voice AI unavailable</strong>
+              <p>
+                Realtime voice is not configured for this environment. Use typed practice with the
+                same saved prompts, target track, transcript shape, and review path.
+              </p>
+            </div>
+          )}
             <div className="inline-actions mt-4">
               <button
                 className="button primary"
                 onClick={onStartVoiceSession}
-                disabled={practiceBlocked || databaseAvailable === false}
+                disabled={voiceDisabled}
               >
                 <Mic />
                 Start Voice Practice

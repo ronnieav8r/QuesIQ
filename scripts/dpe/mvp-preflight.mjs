@@ -85,6 +85,8 @@ const codeContracts = [
       "onRetryReview",
       "formatDpeProfileDate",
       "targetTrack: {",
+      "Voice AI unavailable",
+      "voiceAiUnavailable",
     ],
   },
   {
