@@ -93,6 +93,8 @@ const codeContracts = [
       "authStateLoaded",
       "signInRequestCompleted",
       "socialSignInRequestStarted",
+      "signOutRequestStarted",
+      "Signing out...",
       "githubEnabled",
       "Loading access",
       "Open profile settings",

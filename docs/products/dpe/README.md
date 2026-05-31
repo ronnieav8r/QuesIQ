@@ -1385,3 +1385,16 @@ This slice tightens DPE Me profile save behavior without changing content:
 3. Admin DPE runtime preflight now reports the profile save guard marker.
 4. DPE CLI preflight now checks for the profile save guard markers.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 94 (Sign-Out Submit Hardening)
+
+This slice tightens DPE signed-in account exit behavior without changing
+content:
+
+1. The Sign out action now has a pending state while the auth request is
+   starting.
+2. The Sign out button is disabled while that request is in flight, preventing
+   duplicate account-exit requests from fast repeat input.
+3. DPE preflight now checks for the sign-out hardening markers alongside the
+   signed-in auth-state markers.
+4. No aviation content, schema, publish, Official, or Verified state changed.

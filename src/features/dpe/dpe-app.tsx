@@ -427,6 +427,7 @@ export default function App() {
   const [reviewGenerating, setReviewGenerating] = useState(false);
   const [answerSaving, setAnswerSaving] = useState(false);
   const [sessionStarting, setSessionStarting] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [practiceNotice, setPracticeNotice] = useState<PracticeNotice | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [draftAnswer, setDraftAnswer] = useState("");
@@ -691,6 +692,18 @@ export default function App() {
     } finally {
       void profileSaveInFlightGuarded;
       profileSaveInFlightRef.current = false;
+    }
+  }
+
+  async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    const signOutRequestStarted = true;
+    try {
+      await signOut();
+    } finally {
+      void signOutRequestStarted;
+      setSigningOut(false);
     }
   }
 
@@ -1136,8 +1149,8 @@ export default function App() {
             >
               <Settings />
             </button>
-            <button className="button" onClick={() => signOut()}>
-              Sign out
+            <button className="button" onClick={handleSignOut} disabled={signingOut}>
+              {signingOut ? "Signing out..." : "Sign out"}
             </button>
           </div>
         </header>
