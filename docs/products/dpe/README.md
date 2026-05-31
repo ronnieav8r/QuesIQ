@@ -547,3 +547,15 @@ changing content:
    them as silent failures.
 3. Signed-in runtime check warnings/errors are summarized in the top checklist
    before the detailed runtime panel.
+
+## MVP Learner Polish Slice 31 (History Evidence Visibility)
+
+This slice makes saved DPE session evidence easier to audit without changing
+content:
+
+1. History session cards now show the stored target-track label from the saved
+   transcript snapshot when available.
+2. History distinguishes voice evidence from typed evidence, including saved
+   voice transcript turn counts when a voice artifact exists.
+3. This helps learners and QA confirm that saved sessions carried the intended
+   target-track context and evidence source into review generation.

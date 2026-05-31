@@ -158,6 +158,7 @@ type StoredPracticeSession = {
     } | null;
     questions?: DpeQuestion[];
     answers?: SessionAnswer[];
+    voiceArtifact?: VoiceSessionArtifactDraft;
   } | null;
   reviewJson: ReviewJson | null;
 };
@@ -3008,6 +3009,24 @@ function getStoredTargetTrackTitle(storedSession: StoredPracticeSession) {
   return transcriptTitle || storedSession.acsTitle?.trim() || undefined;
 }
 
+function getStoredVoiceEvidenceSummary(storedSession: StoredPracticeSession) {
+  const transcript = isRecord(storedSession.transcriptJson) ? storedSession.transcriptJson : {};
+  const voiceArtifact = isRecord(transcript.voiceArtifact) ? transcript.voiceArtifact : null;
+  const turns = Array.isArray(voiceArtifact?.transcript) ? voiceArtifact.transcript.length : 0;
+
+  if (turns > 0) {
+    return {
+      detail: `Voice artifact evidence saved with ${turns} transcript turn${turns === 1 ? "" : "s"}.`,
+      label: "voice evidence",
+    };
+  }
+
+  return {
+    detail: "Typed transcript evidence saved for the same review path.",
+    label: "typed evidence",
+  };
+}
+
 function normalizeStoredCertificateType(value: unknown): CertificateOption | null {
   if (!isRecord(value)) return null;
   if (
@@ -3628,6 +3647,8 @@ function HistoryScreen({
               (event) =>
                 event.sessionId === storedSession.id && event.surface === "post_session_review",
             );
+            const targetTrackTitle = getStoredTargetTrackTitle(storedSession);
+            const voiceEvidence = getStoredVoiceEvidenceSummary(storedSession);
             const resumePlan =
               storedSession.status === "in_progress"
                 ? buildStoredSessionResumePlan(storedSession)
@@ -3641,6 +3662,8 @@ function HistoryScreen({
                 {storedSession.reviewJson && (
                   <span className="pill">{formatReviewSource(storedSession.reviewJson)} review</span>
                 )}
+                {targetTrackTitle && <span className="pill">{targetTrackTitle}</span>}
+                <span className="pill">{voiceEvidence.label}</span>
                 {normalizeStoredCertificateType(storedSession.transcriptJson?.certificateType) && (
                   <span className="pill">
                     {
@@ -3657,6 +3680,7 @@ function HistoryScreen({
               <p>
                 {summarizeStoredSession(storedSession)}
               </p>
+              <p className="muted">{voiceEvidence.detail}</p>
               <p className="muted">{buildStoredSessionCta(storedSession)}</p>
               {reviewAttempt && (
                 <p className="muted">
