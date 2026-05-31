@@ -945,6 +945,8 @@ export default function App() {
 
     setSession(nextSession);
 
+    let artifactSaved = false;
+
     try {
       const response = await fetch(`/api/dpe/practice-sessions/${session.id}/artifact`, {
         method: "POST",
@@ -963,7 +965,8 @@ export default function App() {
         }),
       });
       const data = (await response.json().catch(() => ({}))) as { available?: boolean };
-      setDatabaseAvailable(data.available ?? response.ok);
+      artifactSaved = response.ok && (data.available ?? true);
+      setDatabaseAvailable(artifactSaved);
       await loadStoredSessions();
       await loadDpeProgression();
       await loadDpeRuntimeCheck();
@@ -971,8 +974,10 @@ export default function App() {
       setDatabaseAvailable(false);
     }
 
+    const reviewSession = artifactSaved ? nextSession : markSessionLocalOnly(nextSession);
+    setSession(reviewSession);
     setStage("review");
-    await generateReview(nextSession);
+    await generateReview(reviewSession);
   }
 
   function continueVoiceSessionAsTyped(voiceSession: LocalSession) {

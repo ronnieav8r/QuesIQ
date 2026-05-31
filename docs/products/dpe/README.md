@@ -934,3 +934,17 @@ This slice removes stale recovery copy from the fresh-practice path:
    session setup after review.
 3. Admin DPE preflight now checks that the practice reset path clears notices.
 4. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 61 (Voice Artifact Local Downgrade)
+
+This slice makes failed voice artifact persistence honest without changing
+content:
+
+1. Voice artifact finalization now tracks whether the artifact actually saved.
+2. If artifact save fails or reports storage unavailable, the review session is
+   downgraded to local-only before review generation.
+3. Failed voice artifact persistence now uses the existing local review warning
+   instead of exposing saved-review retry affordances that cannot work.
+4. Admin DPE preflight now checks for the voice artifact local-downgrade
+   marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.
