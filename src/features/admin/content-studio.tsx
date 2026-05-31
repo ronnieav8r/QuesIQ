@@ -287,6 +287,61 @@ type SourcePackPreviewResponse = {
   visualCandidates?: SourcePackVisualReviewCandidate[];
 };
 
+type ProductPacketPreviewKind = "dpe_reference" | "study_generation";
+type ProductPacketPreviewStatus = "idle" | "previewing" | "ready";
+
+type ProductPacketReviewSection = {
+  items: string[];
+  title: string;
+};
+
+type StudyGenerationPacketPreviewResponse = {
+  error?: string;
+  generationPacket?: {
+    chunks?: unknown[];
+    deckRequest?: {
+      cardTarget?: number;
+      subject?: string;
+      title?: string;
+    };
+    sourcePack?: {
+      pageRange?: {
+        endPage?: number;
+        startPage?: number;
+      };
+      sourcePackId?: string;
+      title?: string;
+    };
+  };
+  generationPacketPreviewOnly?: boolean;
+  reviewSections?: ProductPacketReviewSection[];
+  validationErrors?: string[];
+};
+
+type DpeReferencePacketPreviewResponse = {
+  draftReferenceContract?: {
+    items?: unknown[];
+    warnings?: string[];
+  };
+  error?: string;
+  mode?: "source_pack_reference_packet_preview";
+  reviewSummary?: {
+    itemCount: number;
+    itemsByVerificationStatus: Record<string, number>;
+    sourceChunkCount: number;
+    sourcePack: {
+      id: string;
+      title: string;
+    };
+    trackApplicability: string[];
+    visualAssetCount: number;
+  };
+};
+
+type ProductPacketPreviewResponse =
+  | DpeReferencePacketPreviewResponse
+  | StudyGenerationPacketPreviewResponse;
+
 const MIN_SOURCE_CHARS = 40;
 
 const sourcePackManifest: SourcePackManifest = {
@@ -436,6 +491,84 @@ const sourcePackPreviewSample = JSON.stringify(
     figures: sourcePackVisualCandidates.filter((candidate) => candidate.type === "figure"),
     manifest: sourcePackManifest,
     tables: sourcePackVisualCandidates.filter((candidate) => candidate.type === "table"),
+  },
+  null,
+  2,
+);
+
+const studyGenerationPacketPreviewSample = JSON.stringify(
+  {
+    chunks: [
+      {
+        chunkId: "chunk-001",
+        pageAnchors: [{ page: 12, x1: 0.1, x2: 0.8, y1: 0.2, y2: 0.5 }],
+        relatedVisualIds: ["figure-12-a"],
+        snippet: "Stabilize pitch and trim before introducing larger control input.",
+        tags: ["fundamentals", "flight-controls"],
+      },
+    ],
+    deckRequest: {
+      cardTarget: 12,
+      subject: "Flight Fundamentals",
+      title: "Stability And Control Draft",
+    },
+    instructions: "Focus on source-grounded prompts and concise answers.",
+    outputRestrictions: {
+      canMarkOfficial: false,
+      canMarkVerified: false,
+      canPublish: false,
+      canWriteStudyRuntime: false,
+      writesStudyDecks: false,
+    },
+    packetVersion: "quesiq.studyGenerationPacket.v1",
+    sourcePack: {
+      pageRange: {
+        endPage: 20,
+        startPage: 10,
+      },
+      sourcePackId: "sample-source-pack",
+      title: "Sample Source Pack",
+    },
+    targetContract: "study.sourcePackDeckDraft.v1",
+  },
+  null,
+  2,
+);
+
+const dpeReferencePacketPreviewSample = JSON.stringify(
+  {
+    items: [
+      {
+        acsTags: ["PA.I.A.K1"],
+        pageAnchors: ["sample-source-pack#page=12"],
+        promptReference: "Use pitch, power, trim, and outside references to stabilize the airplane.",
+        referenceId: "ref-001",
+        sourceChunkIds: ["chunk-001"],
+        subjectTags: ["flight controls"],
+        trackApplicability: ["PPL-ASEL"],
+        verificationStatus: "needs_admin_review",
+        visualAssetIds: ["figure-12-a"],
+        warnings: [],
+      },
+    ],
+    mode: "draft_admin_reference_only",
+    packetVersion: "quesiq.dpeReferencePacket.v1",
+    restrictions: {
+      durableSourcePackStorage: false,
+      learnerRuntimeReads: false,
+      officialWrites: false,
+      publishWrites: false,
+      verifiedWrites: false,
+    },
+    sourcePack: {
+      id: "sample-source-pack",
+      pageRange: {
+        end: 20,
+        start: 10,
+      },
+      title: "Sample Source Pack",
+    },
+    targetContract: "dpe.draftReference.v1",
   },
   null,
   2,
@@ -655,6 +788,16 @@ export function ContentStudio() {
     useState<"idle" | "previewing" | "ready">("idle");
   const [sourcePackPreviewError, setSourcePackPreviewError] = useState<string>();
   const [sourcePackPreviewVersion, setSourcePackPreviewVersion] = useState(0);
+  const [productPacketKind, setProductPacketKind] =
+    useState<ProductPacketPreviewKind>("study_generation");
+  const [productPacketInput, setProductPacketInput] = useState("");
+  const [productPacketPreview, setProductPacketPreview] =
+    useState<ProductPacketPreviewResponse>();
+  const [productPacketPreviewStatus, setProductPacketPreviewStatus] =
+    useState<ProductPacketPreviewStatus>("idle");
+  const [productPacketPreviewError, setProductPacketPreviewError] = useState<string>();
+  const [productPacketValidationErrors, setProductPacketValidationErrors] =
+    useState<string[]>([]);
 
   const pipeline = useMemo(
     () => contentStudioPipelines.find((option) => option.key === pipelineKey) ?? contentStudioPipelines[0],
@@ -797,6 +940,63 @@ export function ContentStudio() {
           : previewError instanceof Error
             ? previewError.message
             : "Source-pack preview failed.",
+      );
+    }
+  }
+
+  async function handlePreviewProductPacket() {
+    if (!productPacketInput.trim()) {
+      setProductPacketPreviewError("Paste a product packet JSON payload first.");
+      return;
+    }
+
+    setProductPacketPreviewStatus("previewing");
+    setProductPacketPreviewError(undefined);
+    setProductPacketValidationErrors([]);
+
+    try {
+      const parsedPayload = JSON.parse(productPacketInput) as unknown;
+      const endpoint =
+        productPacketKind === "study_generation"
+          ? "/api/study/content-studio/flashcard-draft"
+          : "/api/dpe/content/draft";
+      const requestBody =
+        productPacketKind === "study_generation"
+          ? {
+              generationPacketJson: parsedPayload,
+              mode: "source_pack_generation_packet_preview",
+            }
+          : {
+              mode: "source_pack_reference_packet_preview",
+              referencePacket: parsedPayload,
+            };
+      const response = await fetch(endpoint, {
+        body: JSON.stringify(requestBody),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const body = (await response.json()) as ProductPacketPreviewResponse;
+      const validationErrors =
+        "validationErrors" in body && Array.isArray(body.validationErrors)
+          ? body.validationErrors
+          : [];
+
+      if (!response.ok) {
+        setProductPacketValidationErrors(validationErrors);
+        throw new Error(body.error || "Product packet preview failed.");
+      }
+
+      setProductPacketPreview(body);
+      setProductPacketValidationErrors(validationErrors);
+      setProductPacketPreviewStatus("ready");
+    } catch (previewError) {
+      setProductPacketPreviewStatus("idle");
+      setProductPacketPreviewError(
+        previewError instanceof SyntaxError
+          ? "Product packet payload must be valid JSON."
+          : previewError instanceof Error
+            ? previewError.message
+            : "Product packet preview failed.",
       );
     }
   }
@@ -1158,6 +1358,115 @@ export function ContentStudio() {
         manifest={previewManifest}
         visualCandidates={previewVisualCandidates}
       />
+
+      <section className="prompt-version-list" aria-labelledby="product-packet-preview-title">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">Preview-only bridge</p>
+            <h3 id="product-packet-preview-title">Product packet preview</h3>
+            <p>
+              Paste Codex-generated product packet JSON and preview the product
+              backend normalization. This does not import decks, write DPE
+              references, load Drive/files, publish, or mark Official/Verified.
+            </p>
+          </div>
+          <ShieldCheck size={20} aria-hidden="true" />
+        </div>
+
+        <div className="field-grid">
+          <label>
+            <span>Packet type</span>
+            <select
+              onChange={(event) => {
+                const nextKind = event.target.value as ProductPacketPreviewKind;
+                setProductPacketKind(nextKind);
+                setProductPacketInput("");
+                setProductPacketPreview(undefined);
+                setProductPacketPreviewError(undefined);
+                setProductPacketValidationErrors([]);
+                setProductPacketPreviewStatus("idle");
+              }}
+              value={productPacketKind}
+            >
+              <option value="study_generation">Study generation packet</option>
+              <option value="dpe_reference">DPE reference packet</option>
+            </select>
+          </label>
+          <label>
+            <span>Product packet JSON</span>
+            <textarea
+              onChange={(event) => setProductPacketInput(event.target.value)}
+              placeholder={
+                productPacketKind === "study_generation"
+                  ? "Paste a Study generation packet JSON payload."
+                  : "Paste a DPE reference packet JSON payload."
+              }
+              value={productPacketInput}
+            />
+          </label>
+        </div>
+
+        {productPacketPreviewError && (
+          <div className="form-error" role="alert">
+            {productPacketPreviewError}
+          </div>
+        )}
+
+        {productPacketValidationErrors.length > 0 && (
+          <div className="runtime-context-panel">
+            <AlertCircle size={18} aria-hidden="true" />
+            <div>
+              <strong>Validation errors</strong>
+              <ul>
+                {productPacketValidationErrors.map((validationError) => (
+                  <li key={validationError}>{validationError}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        <div className="component-tabs" aria-label="Product packet preview actions">
+          <button
+            disabled={productPacketPreviewStatus === "previewing"}
+            onClick={() => void handlePreviewProductPacket()}
+            type="button"
+          >
+            <Eye size={18} />
+            {productPacketPreviewStatus === "previewing"
+              ? "Previewing"
+              : productPacketPreviewStatus === "ready"
+                ? "Preview refreshed"
+                : "Preview packet"}
+          </button>
+          <button
+            onClick={() => {
+              setProductPacketInput(
+                productPacketKind === "study_generation"
+                  ? studyGenerationPacketPreviewSample
+                  : dpeReferencePacketPreviewSample,
+              );
+              setProductPacketPreviewError(undefined);
+              setProductPacketValidationErrors([]);
+            }}
+            type="button"
+          >
+            <FileText size={18} />
+            Load sample JSON
+          </button>
+          <button disabled type="button">
+            <CheckCircle2 size={18} />
+            Product import disabled
+          </button>
+        </div>
+
+        {productPacketPreview && (
+          <ProductPacketPreviewPanel
+            kind={productPacketKind}
+            preview={productPacketPreview}
+          />
+        )}
+      </section>
 
       <section className="prompt-version-list" aria-labelledby="content-stages-title">
         <div className="section-head">
@@ -1722,6 +2031,183 @@ function SourcePackReviewSummaryPanel({
           </span>
         ))}
       </div>
+    </div>
+  );
+}
+
+function isStudyGenerationPacketPreview(
+  preview: ProductPacketPreviewResponse,
+): preview is StudyGenerationPacketPreviewResponse {
+  return "generationPacket" in preview || "reviewSections" in preview;
+}
+
+function isDpeReferencePacketPreview(
+  preview: ProductPacketPreviewResponse,
+): preview is DpeReferencePacketPreviewResponse {
+  return "reviewSummary" in preview || "draftReferenceContract" in preview;
+}
+
+function ProductPacketPreviewPanel({
+  kind,
+  preview,
+}: {
+  kind: ProductPacketPreviewKind;
+  preview: ProductPacketPreviewResponse;
+}) {
+  if (kind === "study_generation" && isStudyGenerationPacketPreview(preview)) {
+    return <StudyGenerationPacketPreviewPanel preview={preview} />;
+  }
+
+  if (kind === "dpe_reference" && isDpeReferencePacketPreview(preview)) {
+    return <DpeReferencePacketPreviewPanel preview={preview} />;
+  }
+
+  return (
+    <div className="runtime-context-panel">
+      <p>Product packet preview returned an unexpected shape.</p>
+    </div>
+  );
+}
+
+function StudyGenerationPacketPreviewPanel({
+  preview,
+}: {
+  preview: StudyGenerationPacketPreviewResponse;
+}) {
+  const packet = preview.generationPacket;
+  const sourcePack = packet?.sourcePack;
+  const chunks = packet?.chunks ?? [];
+
+  return (
+    <div className="runtime-context-panel">
+      <div className="section-head">
+        <div>
+          <strong>Study packet preview</strong>
+          <p>
+            Backend accepted the packet for preview only. No Study deck was
+            created.
+          </p>
+        </div>
+        <span className="pill">preview only</span>
+      </div>
+
+      <div className="study-stat-strip" aria-label="Study generation packet summary">
+        <div className="study-stat-chip">
+          <strong>{sourcePack?.sourcePackId ?? "pending"}</strong>
+          <span>Source pack</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{chunks.length}</strong>
+          <span>Chunks</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{packet?.deckRequest?.cardTarget ?? "--"}</strong>
+          <span>Card target</span>
+        </div>
+        <div className="study-stat-chip highlight">
+          <strong>{preview.reviewSections?.length ?? 0}</strong>
+          <span>Review sections</span>
+        </div>
+      </div>
+
+      <div className="question-list">
+        {preview.reviewSections?.map((section) => (
+          <div className="runtime-context-panel" key={section.title}>
+            <strong>{section.title}</strong>
+            <ul>
+              {section.items.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DpeReferencePacketPreviewPanel({
+  preview,
+}: {
+  preview: DpeReferencePacketPreviewResponse;
+}) {
+  const summary = preview.reviewSummary;
+  const warnings = preview.draftReferenceContract?.warnings ?? [];
+  const statusCounts = summary?.itemsByVerificationStatus ?? {};
+
+  return (
+    <div className="runtime-context-panel">
+      <div className="section-head">
+        <div>
+          <strong>DPE reference packet preview</strong>
+          <p>
+            Backend accepted the reference packet for admin preview only. No DPE
+            runtime data was written.
+          </p>
+        </div>
+        <span className="pill">preview only</span>
+      </div>
+
+      <div className="study-stat-strip" aria-label="DPE reference packet summary">
+        <div className="study-stat-chip">
+          <strong>{summary?.itemCount ?? 0}</strong>
+          <span>Items</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{summary?.sourceChunkCount ?? 0}</strong>
+          <span>Source chunks</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{summary?.visualAssetCount ?? 0}</strong>
+          <span>Visual assets</span>
+        </div>
+        <div className="study-stat-chip highlight">
+          <strong>{summary?.trackApplicability.length ?? 0}</strong>
+          <span>Tracks</span>
+        </div>
+      </div>
+
+      <div className="runtime-context-panel">
+        <strong>Source pack</strong>
+        <div className="question-meta">
+          <span className="pill">{summary?.sourcePack.id ?? "missing id"}</span>
+          <span className="pill">{summary?.sourcePack.title ?? "missing title"}</span>
+        </div>
+      </div>
+
+      <div className="runtime-context-panel">
+        <strong>Verification status counts</strong>
+        <div className="question-meta">
+          {Object.entries(statusCounts).map(([status, count]) => (
+            <span className="pill" key={status}>
+              {status}: {count}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="runtime-context-panel">
+        <strong>Track applicability</strong>
+        <p>
+          {summary?.trackApplicability.length
+            ? summary.trackApplicability.join(", ")
+            : "No track applicability returned."}
+        </p>
+      </div>
+
+      {warnings.length > 0 && (
+        <div className="runtime-context-panel">
+          <AlertCircle size={18} aria-hidden="true" />
+          <div>
+            <strong>Warnings</strong>
+            <ul>
+              {warnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
