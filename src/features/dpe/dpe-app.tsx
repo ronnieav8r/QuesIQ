@@ -34,6 +34,12 @@ import {
   buildDpeReadinessQuestProgress,
   dpeQuestDefinitions,
 } from "./progression";
+import {
+  defaultDpeTargetTrackId,
+  dpeTargetTracks,
+  getDpeTargetTrackById,
+  resolveDpeTargetTrack,
+} from "./target-tracks";
 
 type Screen = "home" | "practice" | "scenarios" | "history" | "content" | "me";
 type PracticeMode = "oral" | "visual" | "combined";
@@ -182,6 +188,8 @@ type AuthState = {
 
 type DpeProfileState = {
   aircraft: string;
+  aircraftCategory: string;
+  aircraftClass: string;
   checkrideDate: string;
   flightSchool: string;
   instructor: string;
@@ -189,6 +197,7 @@ type DpeProfileState = {
   personalNotes: string;
   preferredName: string;
   schoolContext: string;
+  targetTrackId: string;
   weakAreaNotes: string;
 };
 
@@ -205,6 +214,9 @@ type DpeProfileResponse = {
   } | null;
   target: {
     aircraft: string | null;
+    aircraftCategory: string | null;
+    aircraftClass: string | null;
+    certificate: string | null;
     checkrideDate: string | null;
     knownDpeName: string | null;
     schoolContext: string | null;
@@ -222,6 +234,8 @@ const navItems = [
 
 const emptyDpeProfile: DpeProfileState = {
   aircraft: "",
+  aircraftCategory: "Airplane",
+  aircraftClass: "Single-Engine Land",
   checkrideDate: "",
   flightSchool: "",
   instructor: "",
@@ -229,6 +243,7 @@ const emptyDpeProfile: DpeProfileState = {
   personalNotes: "",
   preferredName: "",
   schoolContext: "",
+  targetTrackId: defaultDpeTargetTrackId,
   weakAreaNotes: "",
 };
 
@@ -297,6 +312,15 @@ export default function App() {
   const selectedTask = taskOptions.includes(task) ? task : (taskOptions[0] ?? "A");
   const selectedQuestions = certificateQuestions.filter(
     (question) => question.acsArea === selectedArea && question.acsTask === selectedTask
+  );
+  const selectedTargetTrack = useMemo(
+    () =>
+      resolveDpeTargetTrack({
+        aircraftCategory: dpeProfile.aircraftCategory,
+        aircraftClass: dpeProfile.aircraftClass,
+        targetTrackId: dpeProfile.targetTrackId,
+      }),
+    [dpeProfile.aircraftCategory, dpeProfile.aircraftClass, dpeProfile.targetTrackId],
   );
 
   useEffect(() => {
@@ -697,6 +721,7 @@ export default function App() {
                 dpeProfile={dpeProfile}
                 currentSession={session}
                 onPractice={() => setScreen("practice")}
+                selectedTargetTrack={selectedTargetTrack}
                 storedSessions={storedSessions}
               />
             )}
@@ -712,6 +737,7 @@ export default function App() {
                 questionBankAvailable={questionBankAvailable}
                 questionCount={questionState.questions.length}
                 selectedTask={selectedTask}
+                selectedTargetTrack={selectedTargetTrack}
                 session={session}
                 stage={stage}
                 taskOptions={taskOptions}
@@ -743,6 +769,7 @@ export default function App() {
             {screen === "me" && (
               <MeScreen
                 profile={dpeProfile}
+                selectedTargetTrack={selectedTargetTrack}
                 saveStatus={profileSaveStatus}
                 onChange={(nextProfile) => {
                   setDpeProfile(nextProfile);
@@ -892,6 +919,7 @@ function HomeScreen({
   questionCount,
   questionBankAvailable,
   onPractice,
+  selectedTargetTrack,
   storedSessions,
 }: {
   currentSession: LocalSession | null;
@@ -899,6 +927,7 @@ function HomeScreen({
   questionCount: number;
   questionBankAvailable: boolean | null;
   onPractice: () => void;
+  selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
   storedSessions: StoredPracticeSession[];
 }) {
   const sessionHistory = [
@@ -919,8 +948,13 @@ function HomeScreen({
   const readinessPercent = readinessQuestProgress.length
     ? Math.round((readinessCompleted / readinessQuestProgress.length) * 100)
     : 0;
+  const targetMissing = buildTargetMissingFields(dpeProfile);
+  const nextAction = targetMissing.length > 0
+    ? `Complete target setup: ${targetMissing.join(", ")}.`
+    : progress.nextPracticeAction;
   const targetLine = [
-    "Private Pilot ASEL",
+    selectedTargetTrack.title,
+    `${selectedTargetTrack.aircraftCategory} ${selectedTargetTrack.aircraftClass}`,
     dpeProfile.aircraft,
     dpeProfile.checkrideDate ? `checkride ${formatDateLabel(dpeProfile.checkrideDate)}` : "",
   ]
@@ -932,7 +966,7 @@ function HomeScreen({
       <div className="screen-toolbar">
           <div>
             <h2>Next best practice</h2>
-            <p className="muted">{targetLine || "Private Pilot ASEL - Checkride target setup pending"}</p>
+            <p className="muted">{targetLine || `${selectedTargetTrack.title} - Checkride target setup pending`}</p>
           </div>
         <button className="button primary" onClick={onPractice}>
           <Mic />
@@ -944,7 +978,7 @@ function HomeScreen({
         <div className="section-head">
           <div>
             <h3>{progress.latestReview ? "Recommended follow-up" : "Oral warmup"}</h3>
-            <p>{progress.nextPracticeAction}</p>
+            <p>{nextAction}</p>
           </div>
           <BadgeCheck />
         </div>
@@ -955,7 +989,7 @@ function HomeScreen({
           <Stat label="Sessions" value={`${progress.completedSessions}`} />
           <Stat label="Answered" value={`${progress.answeredPrompts}`} />
           <Stat label="Skipped" value={`${progress.skippedPrompts}`} />
-          <Stat label="Certificate" value="PPL ASEL" />
+          <Stat label="Track" value={selectedTargetTrack.code} />
           <Stat label="Aircraft" value={dpeProfile.aircraft || "-"} />
           <Stat label="Content" value={questionBankAvailable ? "DB" : "Fallback"} />
         </div>
@@ -991,6 +1025,16 @@ function HomeScreen({
                 <p>Finish a typed practice set and skipped or short answers will appear here.</p>
               </div>
             )}
+            {!selectedTargetTrack.contentReady && (
+              <div className="raised-card">
+                <strong>Track scaffolded, content pending</strong>
+                <p>
+                  {selectedTargetTrack.title} is ready for profile and readiness scaffolding. Live
+                  oral content for this track is not loaded yet, so current practice still uses
+                  available Private Pilot demo prompts.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1011,6 +1055,12 @@ function HomeScreen({
             <Stat label="Reviewed sessions" value={`${progress.reviewedSessions}`} />
             <Stat label="ACS coverage" value={`${progress.uniqueAreaTasksPracticed}`} />
           </div>
+          {targetMissing.length > 0 && (
+            <div className="raised-card mt-4">
+              <strong>Checkride target completeness</strong>
+              <p>Still needed: {targetMissing.join(", ")}.</p>
+            </div>
+          )}
           <div className="question-list mt-4">
             {readinessQuestProgress.map((quest) => (
               <div className="raised-card" key={quest.id}>
@@ -1043,6 +1093,7 @@ function PracticeScreen(props: {
   questions: DpeQuestion[];
   questionBankAvailable: boolean | null;
   questionCount: number;
+  selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
   stage: PracticeStage;
   session: LocalSession | null;
   currentIndex: number;
@@ -1089,6 +1140,7 @@ function PracticeSetupScreen({
   questions,
   questionBankAvailable,
   questionCount,
+  selectedTargetTrack,
   databaseAvailable,
   onAreaChange,
   onCertificateChange,
@@ -1107,6 +1159,7 @@ function PracticeSetupScreen({
   questions: DpeQuestion[];
   questionBankAvailable: boolean | null;
   questionCount: number;
+  selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
   databaseAvailable: boolean | null;
   onAreaChange: (area: string) => void;
   onCertificateChange: (certificateTypeId: string) => void;
@@ -1124,6 +1177,7 @@ function PracticeSetupScreen({
     ? Math.round(((readyQuestions / questions.length) * 100))
     : 0;
   const practiceBlocked = questions.length === 0;
+  const privatePilotTrack = getDpeTargetTrackById(defaultDpeTargetTrackId) ?? dpeTargetTracks[0];
 
   return (
     <section className="screen">
@@ -1200,7 +1254,7 @@ function PracticeSetupScreen({
           </div>
           <div className="stat-strip mt-4">
             <Stat label="Session prompts" value={`${Math.min(5, questions.length)}`} />
-            <Stat label="Certificate" value={selectedCertificateType?.code ?? "Pending"} />
+            <Stat label="Certificate" value={selectedTargetTrack.code} />
             <Stat label="Hands-free" value={`${handsFreeCount}`} />
             <Stat label="Visual hints" value={`${visualCount}`} />
             <Stat label="Review-ready" value={`${readinessPercent}%`} />
@@ -1209,6 +1263,16 @@ function PracticeSetupScreen({
               value={questionBankAvailable ? `${questionCount} DB` : `${questionCount} fallback`}
             />
           </div>
+          {!selectedTargetTrack.contentReady && (
+            <div className="raised-card mt-4">
+              <strong>Selected track content is not loaded yet</strong>
+              <p>
+                {selectedTargetTrack.title} is scaffolded for readiness tracking, but oral prompts
+                are still pending. You can continue with {privatePilotTrack.title} demo prompts now
+                or update your target in Me.
+              </p>
+            </div>
+          )}
           {practiceBlocked && (
             <div className="raised-card mt-4">
               <strong>No oral questions match this selection</strong>
@@ -1589,8 +1653,16 @@ function answersFromVoiceArtifact(
 }
 
 function profileResponseToState(data: DpeProfileResponse): DpeProfileState {
+  const selectedTrack = resolveDpeTargetTrack({
+    aircraftCategory: data.target?.aircraftCategory,
+    aircraftClass: data.target?.aircraftClass,
+    certificate: data.target?.certificate,
+  });
+
   return {
     aircraft: data.target?.aircraft ?? data.profile?.aircraft ?? "",
+    aircraftCategory: data.target?.aircraftCategory ?? selectedTrack.aircraftCategory,
+    aircraftClass: data.target?.aircraftClass ?? selectedTrack.aircraftClass,
     checkrideDate: data.target?.checkrideDate
       ? new Date(data.target.checkrideDate).toISOString().slice(0, 10)
       : "",
@@ -1600,6 +1672,7 @@ function profileResponseToState(data: DpeProfileResponse): DpeProfileState {
     personalNotes: data.profile?.personalNotes ?? "",
     preferredName: data.profile?.preferredName ?? "",
     schoolContext: data.target?.schoolContext ?? "",
+    targetTrackId: selectedTrack.id,
     weakAreaNotes: data.profile?.weakAreaNotes ?? "",
   };
 }
@@ -1618,7 +1691,17 @@ function formatDateLabel(value: string) {
 }
 
 function hasCheckrideTarget(profile: DpeProfileState) {
-  return Boolean(profile.aircraft.trim() && profile.checkrideDate);
+  return Boolean(profile.targetTrackId && profile.aircraft.trim() && profile.checkrideDate);
+}
+
+function buildTargetMissingFields(profile: DpeProfileState) {
+  const missing: string[] = [];
+  if (!profile.targetTrackId) missing.push("target track");
+  if (!profile.aircraftCategory.trim()) missing.push("aircraft category");
+  if (!profile.aircraftClass.trim()) missing.push("aircraft class");
+  if (!profile.aircraft.trim()) missing.push("aircraft");
+  if (!profile.checkrideDate) missing.push("checkride date");
+  return missing;
 }
 
 function ReviewList({ items, fallback }: { items: string[]; fallback?: string }) {
@@ -2552,23 +2635,28 @@ function MeScreen({
   onChange,
   onSave,
   profile,
+  selectedTargetTrack,
   saveStatus
 }: {
   onChange: (profile: DpeProfileState) => void;
   onSave: () => void;
   profile: DpeProfileState;
+  selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
   saveStatus: "idle" | "saved" | "saving" | "error";
 }) {
   function updateField(key: keyof DpeProfileState, value: string) {
     onChange({ ...profile, [key]: value });
   }
 
+  const categoryOptions = [...new Set(dpeTargetTracks.map((track) => track.aircraftCategory))];
+  const classOptions = [...new Set(dpeTargetTracks.map((track) => track.aircraftClass))];
+
   return (
     <section className="screen">
       <div className="section-head">
         <div>
           <h2>Me</h2>
-          <p>Checkride target, aircraft, school context, known DPE, and personal weak areas.</p>
+          <p>Track target, aircraft/class setup, checkride details, and personal readiness notes.</p>
         </div>
         <User />
       </div>
@@ -2582,8 +2670,52 @@ function MeScreen({
           />
         </label>
         <label className="field">
+          <span>Target track</span>
+          <select
+            value={profile.targetTrackId}
+            onChange={(event) => {
+              const track = getDpeTargetTrackById(event.target.value) ?? dpeTargetTracks[0];
+              onChange({
+                ...profile,
+                aircraftCategory: track.aircraftCategory,
+                aircraftClass: track.aircraftClass,
+                targetTrackId: track.id,
+              });
+            }}
+          >
+            {dpeTargetTracks.map((track) => (
+              <option key={track.id} value={track.id}>
+                {track.title}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
           <span>Certificate / rating</span>
-          <input value="Private Pilot ASEL" readOnly />
+          <input value={selectedTargetTrack.certificate} readOnly />
+        </label>
+        <label className="field">
+          <span>Aircraft category</span>
+          <select
+            value={profile.aircraftCategory}
+            onChange={(event) => updateField("aircraftCategory", event.target.value)}
+          >
+            {categoryOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          <span>Aircraft class</span>
+          <select value={profile.aircraftClass} onChange={(event) => updateField("aircraftClass", event.target.value)}>
+            {classOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="field">
           <span>Aircraft</span>
@@ -2626,6 +2758,16 @@ function MeScreen({
           />
         </label>
       </div>
+      {!selectedTargetTrack.contentReady && (
+        <div className="panel">
+          <strong>Track scaffolding active</strong>
+          <p>
+            {selectedTargetTrack.title} is configured for readiness tracking, profile setup, and
+            quest preview. Content remains pending for this track, so practice can continue on
+            available Private Pilot demo prompts.
+          </p>
+        </div>
+      )}
       <div className="panel grid">
         <label className="field">
           <span>School / aircraft context</span>

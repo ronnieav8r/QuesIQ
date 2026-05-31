@@ -5,6 +5,9 @@ import { getDpeProfile, saveDpeProfile } from "@/server/dpe/dpe-data";
 
 type DpeProfileBody = {
   aircraft?: string;
+  aircraftCategory?: string;
+  aircraftClass?: string;
+  certificate?: string;
   checkrideDate?: string | null;
   flightSchool?: string;
   instructor?: string;
@@ -12,6 +15,7 @@ type DpeProfileBody = {
   personalNotes?: string;
   preferredName?: string;
   schoolContext?: string;
+  targetTrackId?: string;
   weakAreaNotes?: string;
 };
 
@@ -55,6 +59,9 @@ export async function PUT(request: NextRequest) {
       available: true,
       ...(await saveDpeProfile({
         aircraft: body.aircraft,
+        aircraftCategory: body.aircraftCategory,
+        aircraftClass: body.aircraftClass,
+        certificate: body.certificate,
         checkrideDate: body.checkrideDate,
         flightSchool: body.flightSchool,
         instructor: body.instructor,
@@ -62,6 +69,7 @@ export async function PUT(request: NextRequest) {
         personalNotes: body.personalNotes,
         preferredName: body.preferredName,
         schoolContext: body.schoolContext,
+        targetTrackId: body.targetTrackId,
         userId: session.user.id,
         weakAreaNotes: body.weakAreaNotes,
       })),

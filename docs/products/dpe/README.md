@@ -78,7 +78,7 @@ through a deliberate content-import slice.
    the Admin/platform lane; DPE currently treats generated drafts as review
    inputs, not published content.
 
-## DPE Readiness Quest Track (Pre-Migration Shape)
+## DPE Readiness Quest Track
 
 Current DPE lane now has both a non-persistent readiness preview in the client
 and a DPE-owned persistent progression backend. Migration
@@ -111,3 +111,29 @@ The first persistent quest set covers first oral session, first readiness
 review, ACS area/task coverage, answered prompts, a 4+ readiness score, and
 saved checkride target details. Weak-area resolution remains future work after
 more durable DPE review history is available.
+
+## MVP Readiness Scaffolding (No Content Expansion)
+
+DPE now treats checkride target tracks as product scaffolding, independent of
+whether full oral content is loaded.
+
+Supported target-track metadata in DPE lane:
+
+1. Private Pilot ASEL (`PPL-ASEL`) - current default/demo content track.
+2. Instrument Airplane (`IRA`) - scaffolded, content pending.
+3. Commercial Airplane Land (`CAX-ASEL`) - scaffolded, content pending.
+4. CFI Airplane (`CFI-A`) - scaffolded, content pending.
+5. CFII Airplane (`CFII-A`) - scaffolded, content pending.
+6. Multi-Engine Land (`MEL`) - scaffolded, content pending.
+7. MEI Airplane (`MEI-A`) - scaffolded, content pending.
+
+MVP behavior notes:
+
+1. DPE Me stores selected track plus aircraft category/class using existing
+   `dpe_checkride_targets` fields (`certificate`, `aircraftCategory`,
+   `aircraftClass`) with no new schema.
+2. Home and Practice show track-aware readiness messaging so no-content tracks
+   are not mistaken for app failure.
+3. For no-content tracks, users can continue with available Private Pilot demo
+   prompts while keeping their selected target track for readiness scaffolding.
+4. This slice does not add or seed aviation question/answer/rubric content.

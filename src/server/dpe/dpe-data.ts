@@ -6,6 +6,7 @@ import {
   type DpeQuestion,
   type QuestionApiResponse,
 } from "@/features/dpe/questions";
+import { resolveDpeTargetTrack } from "@/features/dpe/target-tracks";
 import { getDb } from "@/server/db/client";
 import {
   dpeCertificateTypes,
@@ -594,6 +595,9 @@ export async function getDpeProfile(userId: string) {
 
 export async function saveDpeProfile(input: {
   aircraft?: string;
+  aircraftCategory?: string;
+  aircraftClass?: string;
+  certificate?: string;
   checkrideDate?: string | null;
   flightSchool?: string;
   instructor?: string;
@@ -601,6 +605,7 @@ export async function saveDpeProfile(input: {
   personalNotes?: string;
   preferredName?: string;
   schoolContext?: string;
+  targetTrackId?: string;
   userId: string;
   weakAreaNotes?: string;
 }) {
@@ -636,11 +641,17 @@ export async function saveDpeProfile(input: {
     .from(dpeCheckrideTargets)
     .where(and(eq(dpeCheckrideTargets.userId, input.userId), eq(dpeCheckrideTargets.active, true)))
     .limit(1);
+  const selectedTrack = resolveDpeTargetTrack({
+    aircraftCategory: input.aircraftCategory,
+    aircraftClass: input.aircraftClass,
+    certificate: input.certificate,
+    targetTrackId: input.targetTrackId,
+  });
   const targetValues = {
     aircraft: input.aircraft?.trim() || null,
-    aircraftCategory: "Airplane",
-    aircraftClass: "Single-Engine Land",
-    certificate: "Private Pilot",
+    aircraftCategory: selectedTrack.aircraftCategory,
+    aircraftClass: selectedTrack.aircraftClass,
+    certificate: selectedTrack.certificate,
     checkrideDate: input.checkrideDate ? new Date(input.checkrideDate) : null,
     knownDpeName: input.knownDpeName?.trim() || null,
     schoolContext: input.schoolContext?.trim() || null,
