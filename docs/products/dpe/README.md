@@ -461,3 +461,15 @@ This slice broadens durable DPE review diagnostics without changing schema:
    failure, review-content parse failure, or review-generation exception.
 3. Learner History can now show durable success and fallback review-attempt
    events after reloads because it already reads `/api/dpe/diagnostics`.
+
+## MVP Learner Polish Slice 24 (Signed-In Runtime Check)
+
+This slice adds account-scoped runtime QA visibility without changing content:
+
+1. A signed-in `/api/dpe/runtime-check` endpoint now verifies that profile,
+   practice history, quest progression, and review diagnostics are reachable
+   for the current learner account.
+2. DPE Home shows a `Signed-in runtime check` panel with ready, warning, and
+   error counts plus safe per-service status rows.
+3. The check exposes only reachability/count signals. It does not expose
+   transcripts, profile details, aviation content, publish state, or secrets.

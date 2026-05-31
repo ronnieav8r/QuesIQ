@@ -16,6 +16,7 @@ const requiredFiles = [
   "src/app/api/dpe/practice-sessions/[id]/review/route.ts",
   "src/app/api/dpe/progression/route.ts",
   "src/app/api/dpe/realtime/session/route.ts",
+  "src/app/api/dpe/runtime-check/route.ts",
   "src/app/api/dpe/status/route.ts",
   "src/features/dpe/dpe-app.tsx",
   "src/features/dpe/question-format.ts",
@@ -67,7 +68,9 @@ const codeContracts = [
       "Open visual setup",
       "Open combined setup",
       "fetch(\"/api/dpe/status\"",
+      "fetch(\"/api/dpe/runtime-check\"",
       "DPE production status",
+      "Signed-in runtime check",
       "Configured airplane-land target tracks",
       "Voice unavailable; typed practice ready",
       "Use typed practice",
@@ -108,6 +111,17 @@ const codeContracts = [
   {
     file: "src/app/api/dpe/practice-sessions/[id]/artifact/route.ts",
     checks: ["recordDpeSessionCompleted", "DPE voice artifact save failed"],
+  },
+  {
+    file: "src/app/api/dpe/runtime-check/route.ts",
+    checks: [
+      "getDpeProfile",
+      "listDpePracticeSessions",
+      "getDpeProgressionSummary",
+      "listDpeDiagnosticEvents",
+      "Practice history",
+      "Quest progression",
+    ],
   },
   {
     file: "src/app/api/dpe/realtime/session/route.ts",

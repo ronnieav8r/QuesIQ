@@ -303,6 +303,24 @@ type DpeProgressionSummary = {
   weakFocusesResolved: number;
 };
 
+type DpeRuntimeCheck = {
+  available: boolean;
+  checkedAt?: string;
+  rows?: {
+    detail: string;
+    key: string;
+    label: string;
+    status: "ok" | "warning" | "error";
+    value: string;
+  }[];
+  status?: "ok" | "warning" | "error";
+  summary?: {
+    errors: number;
+    ok: number;
+    warnings: number;
+  };
+};
+
 type PracticeNotice = {
   detail: string;
   title: string;
@@ -376,6 +394,7 @@ export default function App() {
   const [databaseAvailable, setDatabaseAvailable] = useState<boolean | null>(null);
   const [progressionAvailable, setProgressionAvailable] = useState<boolean | null>(null);
   const [progressionSummary, setProgressionSummary] = useState<DpeProgressionSummary | null>(null);
+  const [runtimeCheck, setRuntimeCheck] = useState<DpeRuntimeCheck | null>(null);
   const [questionState, setQuestionState] = useState<QuestionApiResponse>(
     buildEmptyQuestionResponse()
   );
@@ -452,6 +471,7 @@ export default function App() {
     void loadDpeProfile();
     void loadDpeProgression();
     void loadDpeDiagnostics();
+    void loadDpeRuntimeCheck();
     if (authState.isAdmin) {
       void loadContentSummary();
     }
@@ -563,6 +583,21 @@ export default function App() {
     }
   }
 
+  async function loadDpeRuntimeCheck() {
+    try {
+      const response = await fetch("/api/dpe/runtime-check");
+      const data = (await response.json()) as DpeRuntimeCheck;
+      setRuntimeCheck(data);
+    } catch {
+      setRuntimeCheck({
+        available: false,
+        rows: [],
+        status: "error",
+        summary: { errors: 1, ok: 0, warnings: 0 },
+      });
+    }
+  }
+
   async function saveProfile(nextProfile = dpeProfile) {
     setProfileSaveStatus("saving");
     try {
@@ -582,6 +617,7 @@ export default function App() {
       setDatabaseAvailable(true);
       setDpeProfile(profileResponseToState(data));
       await loadDpeProgression();
+      await loadDpeRuntimeCheck();
       setProfileSaveStatus("saved");
     } catch {
       setProfileSaveStatus("error");
@@ -794,6 +830,7 @@ export default function App() {
       setDatabaseAvailable(data.available);
       await loadStoredSessions();
       await loadDpeProgression();
+      await loadDpeRuntimeCheck();
     } catch {
       setDatabaseAvailable(false);
     }
@@ -821,6 +858,7 @@ export default function App() {
       setSession({ ...nextSession, review });
       await loadStoredSessions();
       await loadDpeProgression();
+      await loadDpeRuntimeCheck();
     } catch {
       setDatabaseAvailable(false);
       setSession({ ...nextSession, review: fallback });
@@ -859,6 +897,7 @@ export default function App() {
       setDatabaseAvailable(data.available ?? response.ok);
       await loadStoredSessions();
       await loadDpeProgression();
+      await loadDpeRuntimeCheck();
     } catch {
       setDatabaseAvailable(false);
     }
@@ -968,6 +1007,7 @@ export default function App() {
                 progressionAvailable={progressionAvailable}
                 progressionSummary={progressionSummary}
                 publicStatus={publicStatus}
+                runtimeCheck={runtimeCheck}
                 selectedTargetTrack={selectedTargetTrack}
                 storedSessions={storedSessions}
               />
@@ -1046,6 +1086,7 @@ export default function App() {
                     await loadStoredSessions();
                     await loadDpeProgression();
                     await loadDpeDiagnostics();
+                    await loadDpeRuntimeCheck();
                     if (data.review) {
                       return {
                         attemptedAt: new Date().toISOString(),
@@ -1299,6 +1340,7 @@ function HomeScreen({
   progressionAvailable,
   progressionSummary,
   publicStatus,
+  runtimeCheck,
   selectedTargetTrack,
   storedSessions,
 }: {
@@ -1310,6 +1352,7 @@ function HomeScreen({
   progressionAvailable: boolean | null;
   progressionSummary: DpeProgressionSummary | null;
   publicStatus: DpePublicStatus | null;
+  runtimeCheck: DpeRuntimeCheck | null;
   selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
   storedSessions: StoredPracticeSession[];
 }) {
@@ -1462,6 +1505,8 @@ function HomeScreen({
         selectedTargetTrack={selectedTargetTrack}
       />
 
+      <DpeRuntimeCheckPanel runtimeCheck={runtimeCheck} />
+
       <div className="stat-strip">
           <Stat label="Question bank" value={`${questionCount}`} />
           <Stat label="Sessions" value={`${progress.completedSessions}`} />
@@ -1598,6 +1643,61 @@ function HomeScreen({
         </div>
       </div>
     </section>
+  );
+}
+
+function DpeRuntimeCheckPanel({ runtimeCheck }: { runtimeCheck: DpeRuntimeCheck | null }) {
+  const rows = runtimeCheck?.rows ?? [];
+  const statusLabel =
+    runtimeCheck?.status === "ok"
+      ? "ready"
+      : runtimeCheck?.status === "warning"
+        ? "warning"
+        : runtimeCheck
+          ? "needs attention"
+          : "checking";
+  const checkedAt = runtimeCheck?.checkedAt
+    ? `Checked ${formatDateTimeLabel(runtimeCheck.checkedAt)}`
+    : "Waiting for signed-in runtime check.";
+
+  return (
+    <div className="panel">
+      <div className="section-head">
+        <div>
+          <h3>Signed-in runtime check</h3>
+          <p>{checkedAt}</p>
+        </div>
+        <ClipboardCheck />
+      </div>
+      <div className="stat-strip mt-4">
+        <Stat label="Status" value={statusLabel} />
+        <Stat label="Ready" value={`${runtimeCheck?.summary?.ok ?? 0}`} />
+        <Stat label="Warnings" value={`${runtimeCheck?.summary?.warnings ?? 0}`} />
+        <Stat label="Errors" value={`${runtimeCheck?.summary?.errors ?? 0}`} />
+      </div>
+      <div className="question-list mt-4">
+        {(rows.length > 0
+          ? rows
+          : [
+              {
+                detail: "Profile, practice history, quest progression, and review diagnostics will report here after sign-in.",
+                key: "pending",
+                label: "Account services",
+                status: "warning" as const,
+                value: "checking",
+              },
+            ]).map((check) => (
+          <div className="raised-card" key={check.key}>
+            <div className="section-head">
+              <strong>{check.label}</strong>
+              <span className="pill">{check.status}</span>
+            </div>
+            <p>{check.value}</p>
+            <p className="muted">{check.detail}</p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -2337,6 +2437,21 @@ function formatDateLabel(value: string) {
 
   return new Intl.DateTimeFormat("en-US", {
     day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatDateTimeLabel(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
     month: "short",
     year: "numeric",
   }).format(date);
