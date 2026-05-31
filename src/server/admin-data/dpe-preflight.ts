@@ -118,6 +118,8 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
     dpeAppSource,
     realtimeRouteSource,
     dpeTrackSource,
+    adminConsoleSource,
+    contentStudioSource,
     baselineMigrationPresent,
     progressionMigrationPresent,
   ] =
@@ -127,6 +129,8 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       readFile(path.join(process.cwd(), "src/features/dpe/dpe-app.tsx"), "utf8"),
       readFile(path.join(process.cwd(), "src/app/api/dpe/realtime/session/route.ts"), "utf8"),
       readFile(path.join(process.cwd(), "src/features/dpe/target-tracks.ts"), "utf8"),
+      readFile(path.join(process.cwd(), "src/features/admin/admin-console.tsx"), "utf8"),
+      readFile(path.join(process.cwd(), "src/features/admin/content-studio.tsx"), "utf8"),
       access(path.join(process.cwd(), "drizzle/0050_add_dpe_baseline_tables.sql"))
         .then(() => true)
         .catch(() => false),
@@ -157,7 +161,20 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
   const realtimeRouteText =
     realtimeRouteSource.status === "fulfilled" ? realtimeRouteSource.value : "";
   const dpeTrackText = dpeTrackSource.status === "fulfilled" ? dpeTrackSource.value : "";
+  const adminConsoleText =
+    adminConsoleSource.status === "fulfilled" ? adminConsoleSource.value : "";
+  const contentStudioText =
+    contentStudioSource.status === "fulfilled" ? contentStudioSource.value : "";
   const runtimeSignals = {
+    adminGapContentStudioRoutingVisible: hasAll(adminConsoleText, [
+      "Open in Content Studio",
+      "buildDpeContentStudioHref",
+      'pipeline: "dpe_content"',
+    ]) && hasAll(contentStudioText, [
+      "dpeContextFromSearchParams",
+      'params.get("pipeline") !== "dpe_content"',
+      "initialContentStudioUrlState",
+    ]),
     contentPendingMessagingVisible: hasAll(dpeAppText, [
       "Content remains pending for this track",
       "available Private Pilot demo prompts",
@@ -230,6 +247,9 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
   }
   if (!runtimeSignals.voiceRuntimeConfigContractVisible) {
     warnings.push("DPE realtime endpoint key-contract markers were not detected.");
+  }
+  if (!runtimeSignals.adminGapContentStudioRoutingVisible) {
+    warnings.push("Admin DPE gap cards do not confirm Content Studio routing markers.");
   }
 
   const status: PreflightStatus =
@@ -329,6 +349,13 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
         label: "Realtime key contract markers",
         status: warningStatusFrom(runtimeSignals.voiceRuntimeConfigContractVisible),
         value: runtimeSignals.voiceRuntimeConfigContractVisible ? "Visible" : "Not detected",
+      },
+      {
+        detail: "Admin gap cards route into Content Studio with DPE context instead of a disabled placeholder.",
+        key: "admin_gap_content_studio_routing",
+        label: "Admin gap routing",
+        status: warningStatusFrom(runtimeSignals.adminGapContentStudioRoutingVisible),
+        value: runtimeSignals.adminGapContentStudioRoutingVisible ? "Visible" : "Not detected",
       },
     ],
     status,

@@ -96,6 +96,22 @@ const codeContracts = [
       "content unchanged",
     ],
   },
+  {
+    file: "src/features/admin/admin-console.tsx",
+    checks: [
+      "Open in Content Studio",
+      "buildDpeContentStudioHref",
+      "dpe_content",
+    ],
+  },
+  {
+    file: "src/features/admin/content-studio.tsx",
+    checks: [
+      "dpeContextFromSearchParams",
+      "initialContentStudioUrlState",
+      "pipelineKey: \"dpe_content\"",
+    ],
+  },
 ];
 
 const forbiddenContracts = [
@@ -109,6 +125,15 @@ const forbiddenContracts = [
       {
         label: "unfinished Scenarios placeholder",
         snippet: "will live here",
+      },
+    ],
+  },
+  {
+    file: "src/features/admin/admin-console.tsx",
+    checks: [
+      {
+        label: "disabled DPE editing placeholder",
+        snippet: "Editing endpoint pending",
       },
     ],
   },

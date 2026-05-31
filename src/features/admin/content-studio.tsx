@@ -313,6 +313,27 @@ function dpeContextFromRun(run: ContentStudioDraftRun): DpeDraftContext {
   };
 }
 
+function dpeContextFromSearchParams(params: URLSearchParams): DpeDraftContext {
+  const trackKey = parseDpeTargetTrackKey(params.get("dpeTrackKey")) ?? "";
+  const track = trackKey ? findDpeTargetTrack(trackKey) : undefined;
+
+  return {
+    acs: {
+      area: params.get("acsArea") ?? "",
+      elementType: params.get("acsElementType") ?? "",
+      reference: params.get("acsReference") ?? "",
+      task: params.get("acsTask") ?? "",
+      title: params.get("acsTitle") ?? "",
+    },
+    certificate: {
+      code: params.get("certificateCode") ?? track?.defaultCertificate.code ?? "",
+      id: params.get("certificateId") ?? track?.defaultCertificate.id ?? "",
+      title: params.get("certificateTitle") ?? track?.defaultCertificate.title ?? "",
+    },
+    targetTrackKey: trackKey,
+  };
+}
+
 function hasDpeCertificateContext(context: DpeDraftContext) {
   return Boolean(
     context.certificate.code.trim() ||
@@ -321,15 +342,43 @@ function hasDpeCertificateContext(context: DpeDraftContext) {
   );
 }
 
+function initialContentStudioUrlState() {
+  if (typeof window === "undefined") {
+    return {
+      dpeContext: emptyDpeContext,
+      pipelineKey: "study_flashcards" as ContentStudioPipelineKey,
+      selectedTemplate: contentStudioTemplatesByPipeline.study_flashcards[0].value,
+      sourceText: "",
+    };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get("pipeline") !== "dpe_content") {
+    return {
+      dpeContext: emptyDpeContext,
+      pipelineKey: "study_flashcards" as ContentStudioPipelineKey,
+      selectedTemplate: contentStudioTemplatesByPipeline.study_flashcards[0].value,
+      sourceText: "",
+    };
+  }
+
+  return {
+    dpeContext: dpeContextFromSearchParams(params),
+    pipelineKey: "dpe_content" as ContentStudioPipelineKey,
+    selectedTemplate: contentStudioTemplatesByPipeline.dpe_content[0].value,
+    sourceText: params.get("sourceText") ?? "",
+  };
+}
+
 export function ContentStudio() {
+  const [urlState] = useState(initialContentStudioUrlState);
   const [pipelineKey, setPipelineKey] =
-    useState<ContentStudioPipelineKey>("study_flashcards");
-  const [selectedTemplate, setSelectedTemplate] = useState(
-    contentStudioTemplatesByPipeline.study_flashcards[0].value,
-  );
-  const [sourceText, setSourceText] = useState("");
+    useState<ContentStudioPipelineKey>(urlState.pipelineKey);
+  const [selectedTemplate, setSelectedTemplate] = useState(urlState.selectedTemplate);
+  const [sourceText, setSourceText] = useState(urlState.sourceText);
   const [customInstructions, setCustomInstructions] = useState("");
-  const [dpeContext, setDpeContext] = useState<DpeDraftContext>(emptyDpeContext);
+  const [dpeContext, setDpeContext] = useState<DpeDraftContext>(urlState.dpeContext);
   const [status, setStatus] = useState<GenerateStatus>("idle");
   const [error, setError] = useState<string>();
   const [draftRun, setDraftRun] = useState<ContentStudioDraftRun>();

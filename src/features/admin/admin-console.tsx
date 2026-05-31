@@ -652,9 +652,12 @@ async function DpeAdminPanel() {
                                   ))}
                                 </div>
                                 <p>{getDpeQuestionNextAction(question)}</p>
-                                <button disabled type="button">
-                                  Editing endpoint pending
-                                </button>
+                                <Link
+                                  className="button"
+                                  href={buildDpeContentStudioHref(certificateType, question)}
+                                >
+                                  Open in Content Studio
+                                </Link>
                               </div>
                             </div>
                           ))}
@@ -683,6 +686,34 @@ async function DpeAdminPanel() {
 type DpeContentSummary = Awaited<ReturnType<typeof listDpeContentSummary>>;
 type DpeCertificateSummary = DpeContentSummary["certificateTypes"][number];
 type DpeQuestionSummary = DpeCertificateSummary["questions"][number];
+
+function buildDpeContentStudioHref(
+  certificateType: DpeCertificateSummary,
+  question: DpeQuestionSummary,
+) {
+  const params = new URLSearchParams({
+    acsArea: question.acsArea,
+    acsReference: question.acsElementReference,
+    acsTask: question.acsTask,
+    certificateCode: certificateType.code,
+    certificateId: certificateType.id,
+    certificateTitle: certificateType.title,
+    pipeline: "dpe_content",
+    product: "content",
+    sourceText: question.questionText,
+  });
+  const trackKey = inferDpeTargetTrackKeyFromCertificate({
+    code: certificateType.code,
+    id: certificateType.id,
+    title: certificateType.title,
+  });
+
+  if (trackKey) {
+    params.set("dpeTrackKey", trackKey);
+  }
+
+  return `/admin?${params.toString()}`;
+}
 
 function calculateDpeReadiness(
   questions: number,
