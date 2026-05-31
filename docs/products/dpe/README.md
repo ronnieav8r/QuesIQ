@@ -1102,3 +1102,17 @@ changing content:
 3. Area, task, certificate, and mode resume behavior is unchanged.
 4. Admin DPE preflight now checks for the stored target restore markers.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 74 (Stored Resume Fallback Target Restore)
+
+This slice keeps the saved target visible when exact prompt resume is not
+possible, without changing content:
+
+1. Stored-session resume fallback now appends the restored saved target track
+   to the `Cannot resume exact prompts` notice when the transcript includes a
+   known target id, code, or title.
+2. The fallback notice still guides learners to start a new session with the
+   same area/task filters already shown in Practice setup.
+3. Resume success and resume fallback now share the same restored-target detail.
+4. Admin DPE preflight now checks for the stored resume fallback marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.

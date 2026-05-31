@@ -146,6 +146,7 @@ const codeContracts = [
       "Open Me",
       "getStoredTargetTrack",
       "Restored saved target track",
+      "Start a new session with the same area/task filters",
       "targetTrack: {",
       "buildDpeContentStudioHref",
       "inferDpeTargetTrackKeyFromCertificate",

@@ -226,6 +226,7 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "Open Me",
       "getStoredTargetTrack",
       "Restored saved target track",
+      "Start a new session with the same area/task filters",
     ]),
     localPersistenceRecoveryVisible: hasAll(dpeAppText, [
       "Typed practice running locally",

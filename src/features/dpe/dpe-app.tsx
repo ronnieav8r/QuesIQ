@@ -703,6 +703,9 @@ export default function App() {
     setMode(storedSession.mode);
 
     const resumePlan = buildStoredSessionResumePlan(storedSession);
+    const restoredTargetDetail = storedTargetTrack
+      ? ` Restored saved target track: ${storedTargetTrack.title}.`
+      : "";
     if (resumePlan.kind === "resume") {
       setSession(resumePlan.session);
       setCurrentIndex(resumePlan.nextIndex);
@@ -711,9 +714,7 @@ export default function App() {
       setScreen("practice");
       setPracticeNotice({
         title: "Resumed in-progress session",
-        detail: storedTargetTrack
-          ? `${resumePlan.message} Restored saved target track: ${storedTargetTrack.title}.`
-          : resumePlan.message,
+        detail: `${resumePlan.message}${restoredTargetDetail}`,
       });
       return;
     }
@@ -725,7 +726,7 @@ export default function App() {
     setScreen("practice");
     setPracticeNotice({
       title: "Cannot resume exact prompts",
-      detail: `${resumePlan.message} Start a new session with the same area/task filters now shown in Practice setup.`,
+      detail: `${resumePlan.message} Start a new session with the same area/task filters now shown in Practice setup.${restoredTargetDetail}`,
     });
   }
 
