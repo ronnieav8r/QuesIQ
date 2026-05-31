@@ -162,7 +162,7 @@ workflow clarity:
 Remaining MVP gaps (outside this slice):
 
 1. Real DPE aviation content curation/import for non-Private tracks.
-2. Review retry diagnostics/history (attempt count, failure reason timeline).
+2. Durable review retry diagnostics/history across browser reloads.
 3. Weak-focus resolution quest logic once richer durable review history is in
    place.
 
@@ -427,3 +427,14 @@ This slice improves DPE review history without changing stored data:
    the latest next-practice action from existing review records.
 3. The trend panel also totals weak signals across reviewed sessions, giving
    learners a quick comparison view before opening individual transcripts.
+
+## MVP Learner Polish Slice 21 (Review Attempt Diagnostics)
+
+This slice improves DPE review retry clarity without changing storage:
+
+1. History now tracks review generation attempts during the current browser
+   visit for each session card.
+2. Generate/retry actions show attempt count, last success/failure, review
+   source, timestamp, and the latest outcome message.
+3. This is client-side retry visibility only. Durable retry timelines remain a
+   later storage/admin diagnostics slice.

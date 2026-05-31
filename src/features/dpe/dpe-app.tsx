@@ -85,6 +85,21 @@ type HistoryTrendSummary = {
   weakSignalCount: number;
 };
 
+type ReviewAttemptState = {
+  attempts: number;
+  lastAttemptAt: string;
+  lastMessage: string;
+  lastOk: boolean;
+  source: "ai" | "fallback" | "none";
+};
+
+type ReviewGenerationOutcome = {
+  attemptedAt: string;
+  message: string;
+  ok: boolean;
+  source: ReviewAttemptState["source"];
+};
+
 type ReviewJson = {
   status: "generated" | "fallback";
   promptConfigKey: string;
@@ -993,6 +1008,7 @@ export default function App() {
                     const data = (await response.json().catch(() => ({}))) as {
                       available?: boolean;
                       error?: string;
+                      generated?: boolean;
                       review?: ReviewJson;
                     };
                     if (typeof data.available === "boolean") {
@@ -1002,22 +1018,28 @@ export default function App() {
                     await loadDpeProgression();
                     if (data.review) {
                       return {
+                        attemptedAt: new Date().toISOString(),
                         ok: true,
                         message:
                           data.review.status === "generated"
                             ? "AI review saved for this completed session."
                             : "Fallback review saved. Retry AI review when the review service is ready.",
+                        source: data.generated || data.review.status === "generated" ? "ai" : "fallback",
                       };
                     }
                     return {
+                      attemptedAt: new Date().toISOString(),
                       ok: false,
                       message: data.error ?? "Review generation is not available for this session yet.",
+                      source: "none",
                     };
                   } catch {
                     setDatabaseAvailable(false);
                     return {
+                      attemptedAt: new Date().toISOString(),
                       ok: false,
                       message: "Review service is unavailable right now. Try again shortly.",
+                      source: "none",
                     };
                   }
                 }}
@@ -2348,6 +2370,12 @@ function formatReviewSource(review: ReviewJson | null | undefined) {
   return review?.status === "generated" ? "AI" : "Fallback";
 }
 
+function formatReviewAttemptSource(source: ReviewAttemptState["source"]) {
+  if (source === "ai") return "AI review";
+  if (source === "fallback") return "fallback review";
+  return "review service";
+}
+
 function normalizeContentStatus(status: string | null | undefined) {
   const value = status?.trim().toLowerCase();
   return value || "missing";
@@ -3240,7 +3268,7 @@ function HistoryScreen({
   currentSession: LocalSession | null;
   storedSessions: StoredPracticeSession[];
   databaseAvailable: boolean | null;
-  onGenerateReview: (sessionId: string) => Promise<{ ok: boolean; message: string }>;
+  onGenerateReview: (sessionId: string) => Promise<ReviewGenerationOutcome>;
   onResumeInProgress: (storedSession: StoredPracticeSession) => void;
   onOpenReview: (reviewSession: LocalSession) => void;
 }) {
@@ -3256,6 +3284,24 @@ function HistoryScreen({
   });
   const [retryingReviewId, setRetryingReviewId] = useState<string | null>(null);
   const [historyNotice, setHistoryNotice] = useState<string | null>(null);
+  const [reviewAttempts, setReviewAttempts] = useState<Record<string, ReviewAttemptState>>({});
+
+  function recordReviewAttempt(sessionId: string, result: ReviewGenerationOutcome) {
+    setReviewAttempts((current) => {
+      const previous = current[sessionId];
+      return {
+        ...current,
+        [sessionId]: {
+          attempts: (previous?.attempts ?? 0) + 1,
+          lastAttemptAt: result.attemptedAt,
+          lastMessage: result.message,
+          lastOk: result.ok,
+          source: result.source,
+        },
+      };
+    });
+    setHistoryNotice(result.message);
+  }
 
   const resolvedReviewId = currentSession?.endedAt
     ? currentSession.id
@@ -3354,6 +3400,7 @@ function HistoryScreen({
             </article>
           )}
           {storedSessions.map((storedSession) => {
+            const reviewAttempt = reviewAttempts[storedSession.id];
             const resumePlan =
               storedSession.status === "in_progress"
                 ? buildStoredSessionResumePlan(storedSession)
@@ -3384,6 +3431,14 @@ function HistoryScreen({
                 {summarizeStoredSession(storedSession)}
               </p>
               <p className="muted">{buildStoredSessionCta(storedSession)}</p>
+              {reviewAttempt && (
+                <p className="muted">
+                  Review attempts this visit: {reviewAttempt.attempts}. Last{" "}
+                  {reviewAttempt.lastOk ? "succeeded" : "failed"} via{" "}
+                  {formatReviewAttemptSource(reviewAttempt.source)} at{" "}
+                  {formatStoredDate(reviewAttempt.lastAttemptAt)}. {reviewAttempt.lastMessage}
+                </p>
+              )}
               <div className="inline-actions mt-4">
                 {storedSession.status === "in_progress" && (
                   <button
@@ -3422,7 +3477,7 @@ function HistoryScreen({
                       setRetryingReviewId(storedSession.id);
                       const result = await onGenerateReview(storedSession.id);
                       setRetryingReviewId(null);
-                      setHistoryNotice(result.message);
+                      recordReviewAttempt(storedSession.id, result);
                       if (result.ok) {
                         setSelectedReviewId(storedSession.id);
                       }
@@ -3439,7 +3494,7 @@ function HistoryScreen({
                       setRetryingReviewId(storedSession.id);
                       const result = await onGenerateReview(storedSession.id);
                       setRetryingReviewId(null);
-                      setHistoryNotice(result.message);
+                      recordReviewAttempt(storedSession.id, result);
                       if (result.ok) {
                         setSelectedReviewId(storedSession.id);
                       }
@@ -3473,7 +3528,7 @@ function HistoryScreen({
                   setRetryingReviewId(selectedReview.id);
                   const result = await onGenerateReview(selectedReview.id);
                   setRetryingReviewId(null);
-                  setHistoryNotice(result.message);
+                  recordReviewAttempt(selectedReview.id, result);
                 }
               : undefined
           }
