@@ -47,11 +47,12 @@ type StudyGeneratedDeckDraft = {
     lowConfidenceCount: number;
   };
   description: string;
-  generationMode: "ai" | "mock";
+  generationMode: "ai" | "mock" | "source_pack_review_export";
   generationWarnings: string[];
   missingFields?: string[];
   promptInstructions?: string;
   reviewChecklist?: Record<string, boolean>;
+  sourcePackReviewExport?: SourcePackReviewExport;
   sourceSummary: string;
   subject?: string;
   tags: string[];
@@ -246,6 +247,32 @@ type SourcePackReviewRun = {
   manifestId: string;
   reviewCounts: Record<SourcePackReviewBucket, number>;
   stage: "admin_review_scaffold";
+};
+
+type SourcePackReviewExport = {
+  acceptedChunkIds: string[];
+  acceptedVisualIds: string[];
+  manifest: {
+    id: string;
+    sourceIds: string[];
+    title: string;
+  };
+  notes: Array<{
+    candidateId: string;
+    candidateType: string;
+    note: string;
+  }>;
+  restrictions: string[];
+  reviewCounts: Record<SourcePackReviewBucket, number>;
+  reviewedVisualIds: string[];
+  reviewRunId: string;
+  sourceAnchors: Array<{
+    candidateId: string;
+    candidateType: string;
+    sourceAnchor: string;
+    sourceId: string;
+  }>;
+  stage: "source_pack_admin_review_export_preview";
 };
 
 type SourcePackVisualReviewCandidate = {
@@ -719,8 +746,20 @@ function confidenceLabel(value: number) {
   return `${Math.round(value * 100)}% generation confidence`;
 }
 
-function pipelineHistoryLabel(pipelineKey: ContentStudioDraftRun["pipelineKey"]) {
-  return pipelineKey === "dpe_content" ? "DPE content draft" : "Study flashcard draft";
+function isSourcePackReviewExportRun(run: ContentStudioDraftRun) {
+  return (
+    run.pipelineKey === "study_flashcards" &&
+    run.stage === "source_pack_admin_review_export_preview" &&
+    run.draft.generationMode === "source_pack_review_export"
+  );
+}
+
+function contentStudioRunLabel(run: ContentStudioDraftRun) {
+  if (isSourcePackReviewExportRun(run)) {
+    return "Source-pack review export";
+  }
+
+  return run.pipelineKey === "dpe_content" ? "DPE content draft" : "Study flashcard draft";
 }
 
 function statusLabel(status: ContentStudioRunStatus) {
@@ -1519,6 +1558,16 @@ export function ContentStudio() {
         chunks={previewChunks}
         key={`${previewManifest.id}-${sourcePackPreviewVersion}`}
         manifest={previewManifest}
+        onSavedRun={(body) => {
+          if (body.run) {
+            selectDraftRun(body.run);
+          }
+          setRunHistory((current) =>
+            body.runs ?? (body.run ? [body.run, ...current.filter((run) => run.id !== body.run?.id)] : current),
+          );
+          setStorageDetail(body.storage?.detail);
+          setStatus("draft_ready");
+        }}
         visualCandidates={previewVisualCandidates}
       />
 
@@ -1674,7 +1723,7 @@ export function ContentStudio() {
               <article className="runtime-context-panel" key={run.id}>
                 <div className="section-head">
                   <div>
-                    <strong>{pipelineHistoryLabel(run.pipelineKey)}</strong>
+                    <strong>{contentStudioRunLabel(run)}</strong>
                     <p>{formatDate(run.completedAt ?? run.createdAt)}</p>
                   </div>
                   <span>{statusLabel(run.status)}</span>
@@ -1683,6 +1732,9 @@ export function ContentStudio() {
                   <span className="pill">{run.templateKey}</span>
                   {run.pipelineKey === "study_flashcards" && (
                     <span className="pill">{cardCount(run) ?? 0} cards</span>
+                  )}
+                  {isSourcePackReviewExportRun(run) && (
+                    <span className="pill">review export artifact</span>
                   )}
                   {run.pipelineKey === "dpe_content" && (
                     <>
@@ -1897,7 +1949,7 @@ function buildSourcePackReviewExport(args: {
     restrictions: [
       "admin_review_export_preview_only",
       "no_drive_loading",
-      "no_database_write",
+      "durable_admin_artifact_only",
       "no_product_import",
       "no_publish_official_or_verified_write",
       "study_generation_first_dpe_later",
@@ -1918,10 +1970,12 @@ function buildSourcePackReviewExport(args: {
 function SourcePackReviewScaffold({
   chunks,
   manifest,
+  onSavedRun,
   visualCandidates,
 }: {
   chunks: SourcePackChunkCandidate[];
   manifest: SourcePackManifest;
+  onSavedRun: (body: RunsResponse) => void;
   visualCandidates: SourcePackVisualReviewCandidate[];
 }) {
   const [activeTab, setActiveTab] = useState<SourcePackReviewTab>("chunks");
@@ -1931,6 +1985,9 @@ function SourcePackReviewScaffold({
   const [localChunks, setLocalChunks] = useState(chunks);
   const [localVisualCandidates, setLocalVisualCandidates] =
     useState(visualCandidates);
+  const [exportSaveStatus, setExportSaveStatus] = useState<SaveReviewStatus>("idle");
+  const [exportSaveError, setExportSaveError] = useState<string>();
+  const [savedExportRunId, setSavedExportRunId] = useState<string>();
 
   const reviewRun = useMemo(
     () =>
@@ -1970,6 +2027,8 @@ function SourcePackReviewScaffold({
     chunkId: string,
     changes: Partial<Pick<SourcePackChunkCandidate, "reviewDecision" | "reviewNotes">>,
   ) {
+    setExportSaveStatus("idle");
+    setSavedExportRunId(undefined);
     setLocalChunks((current) =>
       current.map((chunk) =>
         chunk.chunkId === chunkId ? { ...chunk, ...changes } : chunk,
@@ -1983,11 +2042,48 @@ function SourcePackReviewScaffold({
       Pick<SourcePackVisualReviewCandidate, "reviewDecision" | "reviewNotes">
     >,
   ) {
+    setExportSaveStatus("idle");
+    setSavedExportRunId(undefined);
     setLocalVisualCandidates((current) =>
       current.map((candidate) =>
         candidate.id === candidateId ? { ...candidate, ...changes } : candidate,
       ),
     );
+  }
+
+  async function handleSaveReviewExport() {
+    setExportSaveStatus("saving");
+    setExportSaveError(undefined);
+
+    try {
+      const response = await fetch("/api/admin/content-studio/source-pack-review-runs", {
+        body: JSON.stringify({ reviewExport }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const body = (await response.json()) as RunsResponse & {
+        validationErrors?: string[];
+      };
+
+      if (!response.ok || !body.run) {
+        throw new Error(
+          body.validationErrors?.join(" ") ||
+            body.error ||
+            "Source-pack review export could not be saved.",
+        );
+      }
+
+      setSavedExportRunId(body.run.id);
+      setExportSaveStatus("saved");
+      onSavedRun(body);
+    } catch (saveError) {
+      setExportSaveStatus("idle");
+      setExportSaveError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Source-pack review export could not be saved.",
+      );
+    }
   }
 
   return (
@@ -1998,8 +2094,9 @@ function SourcePackReviewScaffold({
           <h3 id="source-pack-visual-title">Source Pack Review</h3>
           <p>
             Admin-side scaffold for source-pack manifests, chunk candidates,
-            figures, and tables. This does not load Drive files, save review
-            decisions, import product content, or publish anything.
+            figures, and tables. This can save the export as a durable Admin
+            artifact, but does not load Drive files, import product content, or
+            publish anything.
           </p>
         </div>
         <Images size={20} aria-hidden="true" />
@@ -2046,15 +2143,42 @@ function SourcePackReviewScaffold({
             <strong>Export preview</strong>
             <p>
               Copyable local JSON for Codex-side Study draft generation tools.
-              This is not saved and does not call generation endpoints.
+              Saving stores this JSON as a Content Studio review artifact only;
+              it does not call generation endpoints.
             </p>
           </div>
-          <span className="pill">local only</span>
+          <span className="pill">admin artifact</span>
         </div>
         <label>
           <span>Review run export JSON</span>
           <textarea readOnly value={reviewExportJson} />
         </label>
+        <div className="component-tabs" aria-label="Source-pack review export actions">
+          <button
+            disabled={exportSaveStatus === "saving"}
+            onClick={() => void handleSaveReviewExport()}
+            type="button"
+          >
+            <CheckCircle2 size={18} />
+            {exportSaveStatus === "saving"
+              ? "Saving export"
+              : exportSaveStatus === "saved"
+                ? "Export saved"
+                : "Save review export"}
+          </button>
+          <button disabled type="button">
+            <ShieldCheck size={18} />
+            Product import disabled
+          </button>
+        </div>
+        {savedExportRunId && (
+          <div className="form-note">Saved review artifact: {savedExportRunId}</div>
+        )}
+        {exportSaveError && (
+          <div className="form-error" role="alert">
+            {exportSaveError}
+          </div>
+        )}
       </div>
 
       <div className="component-tabs" aria-label="Source-pack review tabs">
@@ -2103,7 +2227,7 @@ function SourcePackReviewScaffold({
         <div className="question-meta">
           <span className="pill">No filesystem reads in browser</span>
           <span className="pill">No Drive integration yet</span>
-          <span className="pill">No durable review writes</span>
+          <span className="pill">Review export save only</span>
           <span className="pill">No publish writes</span>
         </div>
       </div>
@@ -2794,7 +2918,7 @@ function ReviewStatePanel({
       <div className="section-head">
         <div>
           <p className="eyebrow">Saved review state</p>
-          <h3 id="review-state-title">{pipelineHistoryLabel(run.pipelineKey)}</h3>
+          <h3 id="review-state-title">{contentStudioRunLabel(run)}</h3>
           <p>
             This run is saved for Admin review. Approved for publish is an internal
             review status only and does not publish product content.
@@ -2961,6 +3085,64 @@ function DpeContextFields({
 }
 
 function StudyDraftReviewPanel({ run }: { run: StudyDraftRun }) {
+  if (isSourcePackReviewExportRun(run) && run.draft.sourcePackReviewExport) {
+    const exportPayload = run.draft.sourcePackReviewExport;
+
+    return (
+      <section className="prompt-version-list" aria-labelledby="source-pack-artifact-title">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">Saved review artifact</p>
+            <h3 id="source-pack-artifact-title">{run.draft.title}</h3>
+            <p>{run.draft.description}</p>
+          </div>
+          <span>Preview only</span>
+        </div>
+
+        <div className="study-stat-strip" aria-label="Saved source-pack review export summary">
+          <div className="study-stat-chip highlight">
+            <strong>{exportPayload.reviewCounts.accepted}</strong>
+            <span>Accepted</span>
+          </div>
+          <div className="study-stat-chip">
+            <strong>{exportPayload.reviewCounts.needs_edit}</strong>
+            <span>Needs edit</span>
+          </div>
+          <div className="study-stat-chip">
+            <strong>{exportPayload.reviewCounts.rejected}</strong>
+            <span>Rejected</span>
+          </div>
+          <div className="study-stat-chip">
+            <strong>{exportPayload.reviewCounts.candidate}</strong>
+            <span>Candidate</span>
+          </div>
+        </div>
+
+        <div className="runtime-context-panel">
+          <strong>{exportPayload.manifest.title}</strong>
+          <div className="question-meta">
+            <span className="pill">Pack: {exportPayload.manifest.id}</span>
+            <span className="pill">Run: {exportPayload.reviewRunId}</span>
+            <span className="pill">{exportPayload.acceptedChunkIds.length} accepted chunks</span>
+            <span className="pill">{exportPayload.acceptedVisualIds.length} accepted visuals</span>
+            <span className="pill">{exportPayload.reviewedVisualIds.length} reviewed visuals</span>
+            <span className="pill">{exportPayload.notes.length} reviewer notes</span>
+          </div>
+          <p>
+            Reopening currently shows the durable export artifact. Restoring the
+            per-candidate editing controls from a saved artifact is a future
+            follow-up.
+          </p>
+        </div>
+
+        <label>
+          <span>Saved review export JSON</span>
+          <textarea readOnly value={JSON.stringify(exportPayload, null, 2)} />
+        </label>
+      </section>
+    );
+  }
+
   return (
     <section className="prompt-version-list" aria-labelledby="draft-review-title">
       <div className="section-head">

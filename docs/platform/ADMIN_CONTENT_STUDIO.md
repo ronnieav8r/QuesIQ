@@ -47,6 +47,11 @@ linked from a Content Studio run when a provider call exists.
 - `POST /api/admin/content-studio/runs` orchestrates Study flashcard draft
   generation by calling the Study-owned draft primitive, then creates a durable
   run record for Admin review.
+- `POST /api/admin/content-studio/source-pack-review-runs` saves a pasted or
+  locally edited source-pack review export as a durable Admin review artifact
+  in `content_studio_runs` using the Study pipeline lane. It does not run AI,
+  import Study decks, write DPE data, publish content, or mark Official or
+  Verified state.
 - DPE content draft generation is wired through the same Admin run route using
   the product-owned `/api/dpe/content/draft` primitive. It returns certificate,
   ACS, oral-question, answer-key, rubric, confidence, warnings, readiness, and
@@ -196,6 +201,15 @@ review counts, decision records, and validation notes. It does not read server
 files, access Google Drive, persist review decisions, create Content Studio run
 rows, or call Study/DPE generation routes.
 
+`POST /api/admin/content-studio/source-pack-review-runs` is the durable artifact
+boundary for the current export JSON. It requires
+`stage: "source_pack_admin_review_export_preview"`, manifest id/title/source ids,
+review run id, review counts, accepted chunk and visual ids, reviewed visual ids,
+reviewer notes, source anchors, and restrictions that keep Drive loading,
+product imports, Publish, Official, and Verified writes disabled. The saved run uses
+`templateKey: "source_pack_review_export"` and a Study-shaped draft payload with
+`cards: []` so the existing run history and reopen UI remain stable.
+
 The current UI shows disabled future actions for `Accept selected`, `Reject
 selected`, `Generate Study draft from accepted chunks`, and `Generate DPE draft
 later`. These buttons are deliberate affordances only. They must stay disabled
@@ -203,7 +217,10 @@ until review persistence and Codex-side generation/export endpoints exist.
 
 The UI can now edit review decisions and reviewer notes locally for previewed
 chunks, figures, and tables. These controls update the on-screen review summary
-and a copyable export preview only. They do not persist to the database.
+and copyable export preview. The export can also be saved as a durable Admin
+review artifact and reopened from run history. Reopen currently displays the
+saved artifact JSON and summary; restoring each saved decision into the editable
+source-pack candidate controls remains future work.
 
 The export preview contract is intended for Codex-side generation tools:
 
@@ -243,7 +260,7 @@ The export preview contract is intended for Codex-side generation tools:
   "restrictions": [
     "admin_review_export_preview_only",
     "no_drive_loading",
-    "no_database_write",
+    "durable_admin_artifact_only",
     "no_product_import",
     "no_publish_official_or_verified_write",
     "study_generation_first_dpe_later"

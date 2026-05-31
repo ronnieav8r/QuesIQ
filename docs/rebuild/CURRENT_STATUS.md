@@ -108,8 +108,15 @@ Last updated: 2026-05-30
   - Previewed source-pack chunks and visuals now have client-local reviewer
     controls for candidate/accepted/needs-edit/reject/keep decisions and notes.
     The review summary and copyable export-preview JSON update from local state
-    for future Codex-side Study deck generation tools, while persistence,
+    for future Codex-side Study deck generation tools. The export JSON can now
+    be saved as a durable Admin review artifact in `content_studio_runs` and
+    reopened from run history as artifact JSON/summary. Restoring saved
+    decisions back into editable candidate controls remains future work, and
     product imports, Publish, Official, and Verified remain disabled.
+  - `/api/admin/content-studio/source-pack-review-runs` validates
+    `source_pack_admin_review_export_preview` payloads and saves them as
+    Study-lane review artifacts without AI calls, source-pack file storage,
+    Drive reads, Study deck writes, DPE runtime writes, or publish-state writes.
   - `/api/admin/content-studio/runs` orchestrates Study draft generation and
     DPE content draft generation, then creates durable run records in
     `content_studio_runs`
