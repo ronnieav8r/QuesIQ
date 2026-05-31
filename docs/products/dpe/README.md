@@ -790,3 +790,13 @@ surface:
    the existing Admin gap-card routing signal.
 3. This is source-contract visibility only; it does not add content, schema,
    publish, Official, or Verified state.
+
+## MVP Learner Polish Slice 50 (DPE Content Track Routing)
+
+This slice makes DPE app Content Studio links more target-aware:
+
+1. The DPE app's admin-only Content screen now infers `dpeTrackKey` from the
+   visible certificate metadata when building Content Studio links.
+2. Admin DPE preflight now checks that the DPE app content-routing contract
+   includes target-track inference and `dpeTrackKey` propagation.
+3. No aviation content, schema, publish, Official, or Verified state changed.

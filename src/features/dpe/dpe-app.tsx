@@ -22,6 +22,7 @@ import Link from "next/link";
 import { signIn, signOut } from "next-auth/react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
+import { inferDpeTargetTrackKeyFromCertificate } from "@/features/admin/dpe-target-tracks";
 import type { VoiceSessionArtifactDraft } from "@/product/interview-types";
 import {
   areaLabels,
@@ -3720,6 +3721,15 @@ function buildDpeContentStudioHref(
     product: "content",
     sourceText: question.questionText,
   });
+  const trackKey = inferDpeTargetTrackKeyFromCertificate({
+    code: certificateType.code,
+    id: certificateType.id,
+    title: certificateType.title,
+  });
+
+  if (trackKey) {
+    params.set("dpeTrackKey", trackKey);
+  }
 
   return `/admin?${params.toString()}`;
 }

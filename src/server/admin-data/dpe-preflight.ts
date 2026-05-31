@@ -192,6 +192,8 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
     dpeAppContentStudioRoutingVisible: hasAll(dpeAppText, [
       "ContentScreen",
       "buildDpeContentStudioHref",
+      "inferDpeTargetTrackKeyFromCertificate",
+      "dpeTrackKey",
       "Open in Content Studio",
       'pipeline: "dpe_content"',
     ]),

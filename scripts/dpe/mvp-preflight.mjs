@@ -111,6 +111,8 @@ const codeContracts = [
       "target remains on this screen",
       "targetTrack: {",
       "buildDpeContentStudioHref",
+      "inferDpeTargetTrackKeyFromCertificate",
+      "dpeTrackKey",
       "Open in Content Studio",
       "pipeline: \"dpe_content\"",
       "Voice AI unavailable",
