@@ -123,6 +123,8 @@ const codeContracts = [
       "Stored transcripts, retry AI",
       "No DPE sessions yet",
       "Start first DPE session",
+      "currentSessionReviewSelected",
+      "storedReviewSelected",
       "onStartNewSession",
       "onRetryReview",
       "session.persisted && onRetryReview",

@@ -3884,14 +3884,19 @@ function HistoryScreen({
     setHistoryNotice(result.message);
   }
 
-  const resolvedReviewId = currentSession?.endedAt
+  const currentSessionReviewSelected = currentSession?.endedAt && selectedReviewId === currentSession.id;
+  const storedReviewSelected =
+    selectedReviewId && storedReviews.some((item) => item.storedSession.id === selectedReviewId);
+  const resolvedReviewId = currentSessionReviewSelected
     ? currentSession.id
-    : selectedReviewId && storedReviews.some((item) => item.storedSession.id === selectedReviewId)
+    : storedReviewSelected
       ? selectedReviewId
-      : storedReviews[0]?.storedSession.id ?? null;
+      : currentSession?.endedAt
+        ? currentSession.id
+        : storedReviews[0]?.storedSession.id ?? null;
 
   const selectedStoredReview = storedReviews.find((item) => item.storedSession.id === resolvedReviewId)?.reviewSession;
-  const selectedReview = currentSession?.endedAt && resolvedReviewId === currentSession.id
+  const selectedReview = currentSession?.endedAt && currentSessionReviewSelected
     ? currentSession
     : selectedStoredReview ?? (currentSession?.endedAt ? currentSession : null);
   const historyTrend = buildHistoryTrendSummary([

@@ -986,3 +986,16 @@ This slice fixes a History review navigation dead-end without changing content:
 3. Admin DPE preflight now checks that the History review has a real
    `onStartNewSession` path.
 4. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 65 (History Review Selection)
+
+This slice fixes History review selection after a live session without changing
+content:
+
+1. History now distinguishes the current live review from a stored review the
+   learner explicitly selects.
+2. Clicking `Open review` for an older stored session can replace the embedded
+   review even when a just-finished current session is still in memory.
+3. Admin DPE preflight now checks for the current-session and stored-review
+   selection markers.
+4. No aviation content, schema, publish, Official, or Verified state changed.

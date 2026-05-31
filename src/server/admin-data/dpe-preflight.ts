@@ -233,6 +233,8 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "setPracticeNotice(null)",
       "No DPE sessions yet",
       "Start first DPE session",
+      "currentSessionReviewSelected",
+      "storedReviewSelected",
       "onStartNewSession",
       "session.persisted && onRetryReview",
     ]),
