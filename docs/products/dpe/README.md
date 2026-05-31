@@ -347,3 +347,15 @@ This slice makes the public DPE page clearer before login:
 3. The page still requires an account for practice sessions, history, reviews,
    and voice work.
 4. No content is created, approved, published, or modified.
+
+## MVP Learner Polish Slice 14 (Runtime Readiness Signals)
+
+This slice adds safe DPE runtime-readiness visibility without exposing secrets:
+
+1. `/api/dpe/status` now reports boolean `reviewAiConfigured` and
+   `realtimeVoiceConfigured` fields.
+2. Signed-out and signed-in DPE status panels show Review AI and Voice AI
+   readiness alongside content table and target-track status.
+3. These flags only confirm whether server-side prerequisites are configured;
+   they do not reveal key names, values, model details, or user data.
+4. No aviation content is created, approved, published, or modified.

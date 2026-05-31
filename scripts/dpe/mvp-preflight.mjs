@@ -50,6 +50,8 @@ const codeContracts = [
       "contentTablesReachable",
       "dpeTargetTracks.map",
       "questionCount",
+      "reviewAiConfigured",
+      "realtimeVoiceConfigured",
     ],
   },
   {
@@ -74,6 +76,8 @@ const codeContracts = [
       "Loading access",
       "SignedOutDpeStatusPanel",
       "DPE target tracks",
+      "Review AI",
+      "Voice AI",
     ],
   },
   {

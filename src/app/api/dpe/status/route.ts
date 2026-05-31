@@ -2,10 +2,30 @@ import { NextResponse } from "next/server";
 
 import { dpeTargetTracks } from "@/features/dpe/target-tracks";
 import { listDpeContentSummary } from "@/server/dpe/dpe-data";
+import { getOpenAiApiKey, getOpenAiRealtimeApiKey } from "@/server/openai/keys";
 
 export const runtime = "nodejs";
 
+function buildDpeRuntimeReadiness() {
+  return {
+    reviewAiConfigured: Boolean(getOpenAiApiKey("dpe")),
+    realtimeVoiceConfigured: Boolean(getOpenAiRealtimeApiKey("dpe")),
+  };
+}
+
+function buildTargetTrackStatus() {
+  return dpeTargetTracks.map((track) => ({
+    aircraftCategory: track.aircraftCategory,
+    aircraftClass: track.aircraftClass,
+    code: track.code,
+    contentReady: track.contentReady,
+    title: track.title,
+  }));
+}
+
 export async function GET() {
+  const runtimeReadiness = buildDpeRuntimeReadiness();
+
   try {
     const summary = await listDpeContentSummary();
     const questionCount = summary.certificateTypes.reduce(
@@ -16,27 +36,19 @@ export async function GET() {
     return NextResponse.json({
       contentTablesReachable: summary.available,
       questionCount,
+      reviewAiConfigured: runtimeReadiness.reviewAiConfigured,
+      realtimeVoiceConfigured: runtimeReadiness.realtimeVoiceConfigured,
       status: summary.available ? "ok" : "degraded",
-      targetTracks: dpeTargetTracks.map((track) => ({
-        aircraftCategory: track.aircraftCategory,
-        aircraftClass: track.aircraftClass,
-        code: track.code,
-        contentReady: track.contentReady,
-        title: track.title,
-      })),
+      targetTracks: buildTargetTrackStatus(),
     });
   } catch {
     return NextResponse.json({
       contentTablesReachable: false,
       questionCount: 0,
+      reviewAiConfigured: runtimeReadiness.reviewAiConfigured,
+      realtimeVoiceConfigured: runtimeReadiness.realtimeVoiceConfigured,
       status: "degraded",
-      targetTracks: dpeTargetTracks.map((track) => ({
-        aircraftCategory: track.aircraftCategory,
-        aircraftClass: track.aircraftClass,
-        code: track.code,
-        contentReady: track.contentReady,
-        title: track.title,
-      })),
+      targetTracks: buildTargetTrackStatus(),
     });
   }
 }

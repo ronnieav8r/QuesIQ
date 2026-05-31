@@ -179,6 +179,8 @@ type ContentReadiness = {
 type DpePublicStatus = {
   contentTablesReachable: boolean;
   questionCount: number;
+  realtimeVoiceConfigured?: boolean;
+  reviewAiConfigured?: boolean;
   status: "ok" | "degraded";
   targetTracks: {
     aircraftCategory: string;
@@ -1194,6 +1196,8 @@ function SignedOutDpeStatusPanel({ publicStatus }: { publicStatus: DpePublicStat
           value={publicStatus?.contentTablesReachable ? "reachable" : "checking"}
         />
         <Stat label="Loaded prompts" value={`${publicStatus?.questionCount ?? 0}`} />
+        <Stat label="Review AI" value={publicStatus?.reviewAiConfigured ? "ready" : "checking"} />
+        <Stat label="Voice AI" value={publicStatus?.realtimeVoiceConfigured ? "ready" : "checking"} />
         <Stat label="Ready tracks" value={`${readyTracks}/${trackRows.length}`} />
       </div>
       <div className="question-list mt-4">
@@ -1567,6 +1571,8 @@ function DpeProductionStatusPanel({
         <Stat label="Status" value={statusLabel} />
         <Stat label="Content tables" value={reachable ? "reachable" : "fallback"} />
         <Stat label="Loaded prompts" value={`${loadedQuestionCount}`} />
+        <Stat label="Review AI" value={publicStatus?.reviewAiConfigured ? "ready" : "not ready"} />
+        <Stat label="Voice AI" value={publicStatus?.realtimeVoiceConfigured ? "ready" : "not ready"} />
         <Stat label="Ready tracks" value={`${readyTracks}/${totalTracks}`} />
       </div>
       <div className="question-list mt-4">
