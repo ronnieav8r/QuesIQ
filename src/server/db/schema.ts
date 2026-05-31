@@ -1349,6 +1349,7 @@ export const dpeQuests = pgTable("dpe_quests", {
       | "reviewed_session_count"
       | "score_min"
       | "unique_area_task_count"
+      | "weak_focus_resolved_count"
     >()
     .notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

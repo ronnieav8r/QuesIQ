@@ -107,10 +107,12 @@ Migration-backed XP awards are now wired at:
 4. `GET /api/dpe/progression` returns the signed-in user's DPE progression
    summary and quest state.
 
-The first persistent quest set covers first oral session, first readiness
-review, ACS area/task coverage, answered prompts, a 4+ readiness score, and
-saved checkride target details. Weak-area resolution remains future work after
-more durable DPE review history is available.
+The persistent quest set covers first oral session, first readiness review, ACS
+area/task coverage, answered prompts, a 4+ readiness score, weak-focus
+resolution, and saved checkride target details. Weak-focus resolution is derived
+from stored completed sessions by comparing historical weak ACS area/task keys
+against the latest completed session's weak signals; it remains a readiness
+habit signal, not a certification claim.
 
 ## MVP Readiness Scaffolding (No Content Expansion)
 

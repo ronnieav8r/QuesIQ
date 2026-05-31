@@ -249,6 +249,7 @@ type DpeProgressionSummary = {
   reviewedSessions: number;
   totalXp: number;
   uniqueAreaTasks: number;
+  weakFocusesResolved: number;
 };
 
 type PracticeNotice = {
@@ -1118,7 +1119,7 @@ function HomeScreen({
     reviewedSessions: progress.reviewedSessions,
     scoredSessionsAtOrAbove4: progress.scoredSessionsAtOrAbove4,
     uniqueAreaTasksPracticed: progress.uniqueAreaTasksPracticed,
-    weakFocusesResolved: progress.weakFocusesResolved,
+    weakFocusesResolved: progressionSummary?.weakFocusesResolved ?? progress.weakFocusesResolved,
   });
   const readinessCompleted = readinessQuestProgress.filter((quest) => quest.done).length;
   const readinessPercent = readinessQuestProgress.length
@@ -1330,6 +1331,10 @@ function HomeScreen({
             <Stat
               label="ACS coverage"
               value={`${progressionSummary?.uniqueAreaTasks ?? progress.uniqueAreaTasksPracticed}`}
+            />
+            <Stat
+              label="Weak resolved"
+              value={`${progressionSummary?.weakFocusesResolved ?? progress.weakFocusesResolved}`}
             />
           </div>
           {progressionAvailable === false && (

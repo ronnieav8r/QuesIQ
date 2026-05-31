@@ -17,7 +17,8 @@ type DpeQuestCheckType =
   | "completed_session_count"
   | "reviewed_session_count"
   | "score_min"
-  | "unique_area_task_count";
+  | "unique_area_task_count"
+  | "weak_focus_resolved_count";
 type DpeXpAwardMode = "highest_only" | "stack";
 type DpeXpConditionType = "always" | "answered_count_min" | "score_min";
 type DpeSourceEventType = "review_completed" | "session_completed";
@@ -49,6 +50,7 @@ export type DpeProgressionSummary = {
   streakDays: number;
   totalXp: number;
   uniqueAreaTasks: number;
+  weakFocusesResolved: number;
   updatedAt: string;
 };
 
@@ -189,6 +191,16 @@ const DEFAULT_DPE_QUESTS: Array<{
   },
   {
     category: "readiness",
+    checkThreshold: 2,
+    checkType: "weak_focus_resolved_count",
+    description: "Resolve two weak ACS focus areas after re-practice.",
+    displayOrder: 55,
+    key: "dpe_weak_focus_resolved",
+    title: "Weak Focus Resolved",
+    xpReward: 120,
+  },
+  {
+    category: "readiness",
     checkThreshold: 1,
     checkType: "checkride_target_set",
     description: "Save aircraft and checkride target details in DPE Me.",
@@ -277,6 +289,70 @@ function getAnsweredPromptCount(transcriptJson: unknown) {
     const skipped = "skipped" in answer ? answer.skipped : undefined;
     return skipped !== true && typeof response === "string" && response.trim().length > 0;
   }).length;
+}
+
+function getAnswerString(answer: unknown, key: string) {
+  if (!answer || typeof answer !== "object") return "";
+  const value = key in answer ? (answer as Record<string, unknown>)[key] : undefined;
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getAnswerQuestion(answer: unknown) {
+  if (!answer || typeof answer !== "object") return undefined;
+  const question = "question" in answer ? (answer as Record<string, unknown>).question : undefined;
+  return question && typeof question === "object" && !Array.isArray(question)
+    ? (question as Record<string, unknown>)
+    : undefined;
+}
+
+function getAnswerFocusKey(answer: unknown) {
+  const question = getAnswerQuestion(answer);
+  const acsArea = typeof question?.acsArea === "string" ? question.acsArea.trim() : "";
+  const acsTask = typeof question?.acsTask === "string" ? question.acsTask.trim() : "";
+  if (!acsArea || !acsTask) return undefined;
+  return `${acsArea}.${acsTask}`;
+}
+
+function isWeakAnswer(answer: unknown) {
+  if (!answer || typeof answer !== "object") return false;
+  const skipped = "skipped" in answer ? (answer as Record<string, unknown>).skipped : undefined;
+  const response = getAnswerString(answer, "response");
+  return skipped === true || response.split(/\s+/).filter(Boolean).length < 10;
+}
+
+function getWeakFocusKeys(transcriptJson: unknown) {
+  return new Set(
+    getSessionAnswers(transcriptJson)
+      .filter(isWeakAnswer)
+      .map(getAnswerFocusKey)
+      .filter((key): key is string => Boolean(key)),
+  );
+}
+
+function estimateResolvedWeakFocuses(
+  sessions: Array<{ endedAt: Date | null; transcriptJson: unknown }>,
+) {
+  const completedWithEvidence = [...sessions]
+    .filter((session) => session.endedAt)
+    .sort((left, right) => {
+      const leftTime = left.endedAt?.getTime() ?? 0;
+      const rightTime = right.endedAt?.getTime() ?? 0;
+      return rightTime - leftTime;
+    });
+
+  if (completedWithEvidence.length < 2) return 0;
+
+  const latestWeak = getWeakFocusKeys(completedWithEvidence[0]?.transcriptJson);
+  const historicalWeak = new Set(
+    completedWithEvidence
+      .slice(1)
+      .flatMap((session) => [...getWeakFocusKeys(session.transcriptJson)]),
+  );
+  let resolved = 0;
+  for (const key of historicalWeak) {
+    if (!latestWeak.has(key)) resolved += 1;
+  }
+  return resolved;
 }
 
 function getReadinessScore(reviewJson: unknown) {
@@ -379,6 +455,7 @@ async function buildDpeStats(userId: string) {
     readinessScore,
     reviewedSessions: reviewed.length,
     uniqueAreaTasks,
+    weakFocusesResolved: estimateResolvedWeakFocuses(sessions),
   };
 }
 
@@ -455,6 +532,7 @@ async function rebuildDpeProgressionSnapshot(userId: string) {
     streakDays: summary.streakDays,
     totalXp: summary.totalXp,
     uniqueAreaTasks: summary.uniqueAreaTasks,
+    weakFocusesResolved: stats.weakFocusesResolved,
     updatedAt: summary.updatedAt.toISOString(),
   };
 }
@@ -475,6 +553,8 @@ async function getQuestProgress(userId: string, checkType: DpeQuestCheckType, ch
       return stats.readinessScore >= checkThreshold ? checkThreshold : Math.floor(stats.readinessScore);
     case "unique_area_task_count":
       return stats.uniqueAreaTasks;
+    case "weak_focus_resolved_count":
+      return stats.weakFocusesResolved;
     default:
       return 0;
   }

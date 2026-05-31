@@ -57,6 +57,7 @@ const codeContracts = [
     checks: [
       "dpe_session_completed",
       "dpe_review_completed",
+      "weak_focus_resolved_count",
       "recordDpeSessionCompleted",
       "getDpeProgressionSummary",
     ],
