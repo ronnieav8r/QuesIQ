@@ -4392,6 +4392,8 @@ function MeScreen({
   selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
   saveStatus: "idle" | "saved" | "saving" | "error";
 }) {
+  const targetMissing = buildTargetMissingFields(profile);
+
   function updateField(key: keyof DpeProfileState, value: string) {
     onChange({ ...profile, [key]: value });
   }
@@ -4508,6 +4510,16 @@ function MeScreen({
           />
           <Stat label="Category" value={selectedTargetTrack.aircraftCategory} />
           <Stat label="Class" value={selectedTargetTrack.aircraftClass} />
+        </div>
+        <div className="raised-card mt-4">
+          <strong>
+            {targetMissing.length > 0 ? "Profile target setup incomplete" : "Profile target ready"}
+          </strong>
+          <p>
+            {targetMissing.length > 0
+              ? `Complete ${targetMissing.join(", ")} so saved sessions, reviews, runtime checks, and quests use the same target context.`
+              : "Track, aircraft, and checkride date are ready for saved sessions, reviews, runtime checks, and quests."}
+          </p>
         </div>
       </div>
       {!selectedTargetTrack.contentReady && (

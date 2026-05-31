@@ -137,6 +137,8 @@ const codeContracts = [
       "Profile storage unavailable",
       "target remains on this screen",
       "Target readiness",
+      "Profile target setup incomplete",
+      "Profile target ready",
       "scaffolded/content-pending",
       "Checkride target setup incomplete",
       "Open Me",

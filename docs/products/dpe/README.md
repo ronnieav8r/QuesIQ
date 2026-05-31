@@ -1051,3 +1051,15 @@ panel without changing content:
    explanation used by the stored-session buttons.
 4. Admin DPE preflight now checks for the embedded retry-disabled marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 70 (Me Target Setup Summary)
+
+This slice makes target setup readiness visible on the Me screen without
+changing content:
+
+1. Me now shows whether the learner's profile target setup is complete.
+2. Missing target setup fields are listed directly under Target readiness.
+3. Complete target setup confirms that track, aircraft, and checkride date are
+   ready for saved sessions, reviews, runtime checks, and quests.
+4. Admin DPE preflight now checks for the Me target setup summary markers.
+5. No aviation content, schema, publish, Official, or Verified state changed.
