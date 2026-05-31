@@ -270,13 +270,16 @@ the visual/UI level during the conversation:
   call AI, import Study decks, write cards, publish, or mark Official/Verified
 - `src/server/study/study-rich-flashcard-import.ts` now provides a Study-owned
   rich CSV contract/parser for admin imports of AI-generated flashcards with
-  source and verification metadata (question/answer/hint/level/tags, source
-  pack/chunk/page/visual fields, verification status/confidence/notes/evidence,
-  verifier, and draft/external ids)
+  source and verification metadata (deck title/description, subject, audience,
+  question/answer/hint/level/tags, source pack/chunk/page/visual/title/notes
+  fields, draft confidence/warnings, verification status/confidence/notes/
+  evidence, verifier, and draft/external ids)
 - Rich CSV import parser and route modes now support optional `columnMapping`
   (`{ [targetField]: sourceHeader }`) for non-default CSV header shapes while
   preserving the default Codex skill export contract via
-  `STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING`.
+  `STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING`. Create-new-deck saves can use the
+  first parsed row's mapped deck title/description/subject/tags when Admin does
+  not supply separate deck fields.
 - `/api/study/content-studio/flashcard-draft` now supports
   `rich_csv_import_preview` (no writes) and `rich_csv_import_save` (admin-only
   target-deck import). Save writes cards plus `study_card_sources`,

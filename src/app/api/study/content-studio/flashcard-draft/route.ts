@@ -84,30 +84,6 @@ export async function POST(request: Request) {
     if (!csvText) {
       return NextResponse.json({ error: "csvText is required." }, { status: 400 });
     }
-    if (!deckId) {
-      const createDeckTitle = body.createDeckTitle?.trim();
-      if (!createDeckTitle) {
-        return NextResponse.json(
-          { error: "deckId or createDeckTitle is required." },
-          { status: 400 },
-        );
-      }
-      const deck = await createStudyDeck({
-        description: body.createDeckDescription?.trim() || undefined,
-        subject: body.createDeckSubject?.trim() || undefined,
-        tags: Array.isArray(body.createDeckTags)
-          ? body.createDeckTags.map((tag) => tag.trim()).filter(Boolean)
-          : undefined,
-        title: createDeckTitle,
-        userId: session.user.id,
-      });
-      deckId = deck.id;
-    } else {
-      const deck = await getStudyDeck(deckId);
-      if (!deck) {
-        return NextResponse.json({ error: "Deck not found." }, { status: 404 });
-      }
-    }
 
     const parsed = parseStudyRichFlashcardImportText(csvText, {
       columnMapping: body.columnMapping,
@@ -130,6 +106,32 @@ export async function POST(request: Request) {
     }
     if (parsed.rows.length === 0) {
       return NextResponse.json({ error: "No valid import rows found." }, { status: 400 });
+    }
+
+    if (!deckId) {
+      const createDeckTitle = body.createDeckTitle?.trim() || parsed.rows[0]?.deckTitle?.trim();
+      if (!createDeckTitle) {
+        return NextResponse.json(
+          { error: "deckId, createDeckTitle, or a mapped deckTitle CSV field is required." },
+          { status: 400 },
+        );
+      }
+      const requestedDeckTags = Array.isArray(body.createDeckTags)
+        ? body.createDeckTags.map((tag) => tag.trim()).filter(Boolean)
+        : [];
+      const deck = await createStudyDeck({
+        description: body.createDeckDescription?.trim() || parsed.rows[0]?.deckDescription?.trim() || undefined,
+        subject: body.createDeckSubject?.trim() || parsed.rows[0]?.subject?.trim() || undefined,
+        tags: requestedDeckTags.length > 0 ? requestedDeckTags : parsed.rows[0]?.tags.length ? parsed.rows[0].tags : undefined,
+        title: createDeckTitle,
+        userId: session.user.id,
+      });
+      deckId = deck.id;
+    } else {
+      const deck = await getStudyDeck(deckId);
+      if (!deck) {
+        return NextResponse.json({ error: "Deck not found." }, { status: 404 });
+      }
     }
 
     const saveResult = await saveStudyRichFlashcardImport({

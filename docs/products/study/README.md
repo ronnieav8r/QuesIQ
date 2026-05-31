@@ -107,14 +107,18 @@ The first Study slice is imported:
 - Rich CSV parser now supports flexible `columnMapping` for arbitrary CSV
   source headers while preserving the default Codex skill export contract.
   `STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING` maps the expected target fields to
-  canonical rich import headers and keeps old behavior when no mapping is sent.
+  canonical rich import headers, including deck title/description, subject,
+  audience, source-pack title/notes, draft confidence/warnings, and verifier
+  fields. When no mapping is sent, the default skill-export headers are used.
 - `/api/study/content-studio/flashcard-draft` now supports
   `rich_csv_import_preview` and `rich_csv_import_save` for admin/developer
   import workflows. Preview returns normalized rows and validation summaries
   without writes. Save imports cards plus `study_card_sources`,
   `study_verifications`, and `study_deck_imports` metadata for a target deck.
-  This is still separate from Publish/Official controls and broad Verified
-  promotion.
+  Save can create a new Study deck from Admin request fields or from the first
+  parsed row's mapped `deckTitle`, `deckDescription`, `subject`, and `tags`
+  values. This is still separate from Publish/Official controls and broad
+  Verified promotion.
 - `rich_csv_import_preview` and `rich_csv_import_save` accept optional
   `columnMapping` (`{ [targetField]: sourceHeader }`) and both use the same
   parser normalization path. Preview returns detected CSV headers, supported

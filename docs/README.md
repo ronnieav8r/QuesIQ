@@ -18,6 +18,8 @@ Start here for broad resume work and manager handoffs:
   parallel-development guardrails.
 - `docs/platform/ADMIN_CONTENT_STUDIO.md`: shared Admin Content Studio
   direction, stage boundaries, and product handoff rules.
+- `docs/platform/CODEX_CONTENT_SKILLS.md`: local Codex content skills for
+  source ingestion, Study deck generation, verification, and DPE references.
 - `docs/platform/ONE_SERVICE_PLATFORM.md`: one-service platform architecture.
 
 ## Historical Rebuild Planning
@@ -41,6 +43,7 @@ Current platform docs:
 
 - `docs/platform/ONE_SERVICE_PLATFORM.md`
 - `docs/platform/PARALLEL_DEVELOPMENT.md`
+- `docs/platform/CODEX_CONTENT_SKILLS.md`
 
 ## Product Docs
 

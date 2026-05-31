@@ -4,41 +4,57 @@ import { getDb } from "@/server/db/client";
 import { studyCards, studyCardSources, studyDeckImports, studyDecks, studyVerifications } from "@/server/db/schema";
 
 export const STUDY_RICH_IMPORT_HEADERS = [
+  "externalId",
+  "deckTitle",
+  "deckDescription",
+  "subject",
+  "audience",
   "question",
   "answer",
   "hint",
   "level",
   "tags",
   "sourcePackId",
+  "sourcePackTitle",
   "sourceChunkIds",
   "sourcePages",
   "sourceVisualAssetIds",
   "sourceLabel",
   "sourceUrl",
+  "sourceNotes",
+  "draftId",
+  "draftConfidence",
+  "draftWarnings",
   "verificationStatus",
   "verificationConfidence",
   "verificationNotes",
   "verificationEvidence",
   "verifier",
-  "draftId",
-  "externalId",
 ] as const;
 export type StudyRichImportTargetField = (typeof STUDY_RICH_IMPORT_HEADERS)[number];
 export type StudyRichImportColumnMapping = Partial<Record<StudyRichImportTargetField, string>>;
 
 export const STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING: Record<StudyRichImportTargetField, string> = {
+  audience: "audience",
   answer: "answer",
+  deckDescription: "deckDescription",
+  deckTitle: "deckTitle",
+  draftConfidence: "draftConfidence",
   draftId: "draftId",
+  draftWarnings: "draftWarnings",
   externalId: "externalId",
   hint: "hint",
   level: "level",
   question: "question",
   sourceChunkIds: "sourceChunkIds",
   sourceLabel: "sourceLabel",
+  sourceNotes: "sourceNotes",
   sourcePackId: "sourcePackId",
+  sourcePackTitle: "sourcePackTitle",
   sourcePages: "sourcePages",
   sourceUrl: "sourceUrl",
   sourceVisualAssetIds: "sourceVisualAssetIds",
+  subject: "subject",
   tags: "tags",
   verificationConfidence: "verificationConfidence",
   verificationEvidence: "verificationEvidence",
@@ -52,7 +68,12 @@ type StudyRichVerificationStatus = "blocked" | "needs_review" | "ready_for_verif
 
 export type StudyRichImportNormalizedRow = {
   answer: string;
+  audience?: string;
+  deckDescription?: string;
+  deckTitle?: string;
+  draftConfidence?: number;
   draftId?: string;
+  draftWarnings: string[];
   externalId?: string;
   hint?: string;
   level?: StudyRichImportLevel;
@@ -60,11 +81,14 @@ export type StudyRichImportNormalizedRow = {
   source: {
     sourceChunkIds: string[];
     sourceLabel?: string;
+    sourceNotes?: string;
     sourcePackId?: string;
+    sourcePackTitle?: string;
     sourcePages: number[];
     sourceUrl?: string;
     sourceVisualAssetIds: string[];
   };
+  subject?: string;
   tags: string[];
   verification: {
     confidence?: number;
@@ -254,18 +278,26 @@ function shouldVerifyCard(row: StudyRichImportNormalizedRow) {
 
 function targetFieldAliases(target: StudyRichImportTargetField) {
   const aliases: Record<StudyRichImportTargetField, string[]> = {
+    audience: ["audience"],
     answer: ["answer"],
+    deckDescription: ["deckDescription", "deck_description"],
+    deckTitle: ["deckTitle", "deck_title"],
+    draftConfidence: ["draftConfidence", "draft_confidence"],
     draftId: ["draftId", "draft_id"],
+    draftWarnings: ["draftWarnings", "draft_warnings"],
     externalId: ["externalId", "external_id", "card_id"],
     hint: ["hint"],
     level: ["level"],
     question: ["question"],
     sourceChunkIds: ["sourceChunkIds", "source_chunk_ids"],
     sourceLabel: ["sourceLabel", "source_label"],
+    sourceNotes: ["sourceNotes", "source_notes"],
     sourcePackId: ["sourcePackId", "source_pack_id"],
+    sourcePackTitle: ["sourcePackTitle", "source_pack_title"],
     sourcePages: ["sourcePages", "source_pages", "source_page_anchors"],
     sourceUrl: ["sourceUrl", "source_url"],
     sourceVisualAssetIds: ["sourceVisualAssetIds", "source_visual_asset_ids", "source_visual_ids"],
+    subject: ["subject"],
     tags: ["tags"],
     verificationConfidence: ["verificationConfidence", "verification_confidence"],
     verificationEvidence: ["verificationEvidence", "verification_evidence"],
@@ -427,6 +459,16 @@ export function parseStudyRichFlashcardImportText(
       });
     }
 
+    const draftConfidenceRaw = getMappedValue("draftConfidence");
+    const draftConfidence = parseConfidence(draftConfidenceRaw);
+    if (draftConfidenceRaw && draftConfidence === undefined) {
+      warnings.push({
+        message: `Invalid draftConfidence '${draftConfidenceRaw}' (ignored).`,
+        row: rowNumber,
+        severity: "warning",
+      });
+    }
+
     const verificationConfidenceRaw = getMappedValue("verificationConfidence");
     const verificationConfidence = parseConfidence(verificationConfidenceRaw);
     if (verificationConfidenceRaw && verificationConfidence === undefined) {
@@ -439,7 +481,12 @@ export function parseStudyRichFlashcardImportText(
 
     const normalizedRow: StudyRichImportNormalizedRow = {
       answer,
+      audience: getMappedValue("audience") || undefined,
+      deckDescription: getMappedValue("deckDescription") || undefined,
+      deckTitle: getMappedValue("deckTitle") || undefined,
+      draftConfidence,
       draftId: getMappedValue("draftId") || undefined,
+      draftWarnings: parseList(getMappedValue("draftWarnings")),
       externalId: getMappedValue("externalId") || undefined,
       hint: getMappedValue("hint") || undefined,
       level,
@@ -447,11 +494,14 @@ export function parseStudyRichFlashcardImportText(
       source: {
         sourceChunkIds: parseList(getMappedValue("sourceChunkIds")),
         sourceLabel: getMappedValue("sourceLabel") || undefined,
+        sourceNotes: getMappedValue("sourceNotes") || undefined,
         sourcePackId: getMappedValue("sourcePackId") || undefined,
+        sourcePackTitle: getMappedValue("sourcePackTitle") || undefined,
         sourcePages: parsePages(getMappedValue("sourcePages")),
         sourceUrl: getMappedValue("sourceUrl") || undefined,
         sourceVisualAssetIds: parseList(getMappedValue("sourceVisualAssetIds")),
       },
+      subject: getMappedValue("subject") || undefined,
       tags: parseList(getMappedValue("tags")),
       verification: {
         confidence: verificationConfidence,
@@ -556,22 +606,32 @@ export async function saveStudyRichFlashcardImport(args: {
       const sourceLabelParts = [
         source.sourceLabel,
         source.sourcePackId ? `sourcePack=${source.sourcePackId}` : "",
+        source.sourcePackTitle ? `sourcePackTitle=${source.sourcePackTitle}` : "",
         source.sourceChunkIds.length > 0 ? `chunks=${source.sourceChunkIds.join(",")}` : "",
         source.sourcePages.length > 0 ? `pages=${source.sourcePages.join(",")}` : "",
         source.sourceVisualAssetIds.length > 0 ? `visuals=${source.sourceVisualAssetIds.join(",")}` : "",
+        source.sourceNotes ? `notes=${source.sourceNotes}` : "",
       ].filter(Boolean);
       const generatedSourceLabel = sourceLabelParts.length > 0 ? sourceLabelParts.join(" | ") : undefined;
 
       return [
         {
           cardId: card.id,
-          sourceMetadata: {
+        sourceMetadata: {
+            audience: args.rows[index].audience ?? null,
+            deckDescription: args.rows[index].deckDescription ?? null,
+            deckTitle: args.rows[index].deckTitle ?? null,
+            draftConfidence: args.rows[index].draftConfidence ?? null,
             draftId: args.rows[index].draftId ?? null,
+            draftWarnings: args.rows[index].draftWarnings,
             externalId: args.rows[index].externalId ?? null,
             sourceChunkIds: source.sourceChunkIds,
+            sourceNotes: source.sourceNotes ?? null,
             sourcePackId: source.sourcePackId ?? null,
+            sourcePackTitle: source.sourcePackTitle ?? null,
             sourcePages: source.sourcePages,
             sourceVisualAssetIds: source.sourceVisualAssetIds,
+            subject: args.rows[index].subject ?? null,
             tags: args.rows[index].tags,
           },
           sourceLabel: generatedSourceLabel ?? null,
@@ -597,7 +657,11 @@ export async function saveStudyRichFlashcardImport(args: {
       const noteParts = [
         verification.status ? `status=${verification.status}` : "",
         verification.verifier ? `verifier=${verification.verifier}` : "",
+        args.rows[index].subject ? `subject=${args.rows[index].subject}` : "",
+        args.rows[index].audience ? `audience=${args.rows[index].audience}` : "",
         args.rows[index].tags.length > 0 ? `tags=${args.rows[index].tags.join(" | ")}` : "",
+        typeof args.rows[index].draftConfidence === "number" ? `draftConfidence=${args.rows[index].draftConfidence}` : "",
+        args.rows[index].draftWarnings.length > 0 ? `draftWarnings=${args.rows[index].draftWarnings.join(" | ")}` : "",
         args.rows[index].draftId ? `draftId=${args.rows[index].draftId}` : "",
         args.rows[index].externalId ? `externalId=${args.rows[index].externalId}` : "",
         verification.notes ? `notes=${verification.notes}` : "",

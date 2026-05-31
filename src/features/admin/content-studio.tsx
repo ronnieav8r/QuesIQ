@@ -461,7 +461,10 @@ type StudyRichCsvImportPreviewRow = {
 
 type StudyRichCsvImportPreviewResponse = {
   csvHeaders?: string[];
+  defaultColumnMapping?: Partial<Record<string, string>>;
+  detectedHeaders?: string[];
   delimiter?: "," | "\t";
+  effectiveMapping?: Partial<Record<string, string>>;
   error?: string;
   richCsvImportPreviewOnly?: boolean;
   richCsvImportSaved?: boolean;
@@ -489,6 +492,7 @@ type StudyRichCsvImportPreviewResponse = {
   validationErrors?: StudyRichCsvImportIssue[];
   validationWarnings?: StudyRichCsvImportIssue[];
   verificationStatusCounts?: Record<string, number>;
+  unmappedRequiredFields?: string[];
 };
 
 type StudyRichCsvTargetField =
@@ -1206,10 +1210,10 @@ export function ContentStudio() {
   const previewVisualCandidates =
     sourcePackPreview?.visualCandidates ?? sourcePackVisualCandidates;
   const detectedStudyImportHeaders = useMemo(() => {
-    const previewHeaders = studyImportPreview?.csvHeaders ?? [];
+    const previewHeaders = studyImportPreview?.detectedHeaders ?? [];
     const pastedHeaders = detectStudyRichCsvHeaders(studyImportPrepInput).headers;
     return previewHeaders.length > 0 ? previewHeaders : pastedHeaders;
-  }, [studyImportPrepInput, studyImportPreview?.csvHeaders]);
+  }, [studyImportPrepInput, studyImportPreview?.detectedHeaders]);
   const mappedStudyImportFields = useMemo(
     () =>
       studyRichCsvSkillHeaders.filter((field) => {
