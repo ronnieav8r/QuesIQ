@@ -9,8 +9,7 @@ Last updated: 2026-05-30
   Use the manager/worker clone flow in `docs/rebuild/BRANCHING_AND_RELEASES.md`
   and `docs/platform/PARALLEL_DEVELOPMENT.md`. The older
   `C:\Users\weeks\Documents\github\QuesIQ` checkout is reference/archive.
-- Latest integration pass is `793a7d2 Merge DPE readiness UX polish`, followed
-  by a docs-only handoff/status update.
+- Latest integration pass is `64cb042 Merge Study XP quest progression slice`.
   `QuesIQ-manager/main` is clean and aligned with `origin/main` at that commit.
 - The current worker-thread set is Manager, Admin, Interview, Study, and DPE.
   Admin owns shared `/admin` and Content Studio work; product workers own their
@@ -144,6 +143,9 @@ Last updated: 2026-05-30
     source-style folder manager/import/verbal/quiz polish, R2-backed TTS cache
     code, shared Interview-aligned Study shell controls, and `[TEST_DELETE]`
     Study library seed/cleanup SQL under `scripts/study/`.
+  - QuesIQ Study now has first product-owned XP/quest progression tables,
+    rule-driven XP awards from card ratings, starter Study quests, and a Study
+    dashboard momentum panel.
   - QuesIQ brand assets are now split by product: shared icon, main platform
     logo, Interview product logo, and Study product logo under `public/brand/`.
 - Local verification passed on 2026-05-29 with `npm run typecheck`,

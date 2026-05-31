@@ -37,8 +37,7 @@ Last updated: 2026-05-30
 - User is not expecting to manually review code for correctness. Future Codex
   passes should own verification, explain outcomes plainly, and when requested
   prepare the GitHub push/deploy path instead of leaving that work to the user.
-- Latest integration pass: `793a7d2 Merge DPE readiness UX polish`, followed by
-  a docs-only handoff/status update.
+- Latest integration pass: `64cb042 Merge Study XP quest progression slice`.
   `QuesIQ-manager/main` is clean and aligned with `origin/main` at that commit.
 
 ## Built So Far
@@ -527,6 +526,10 @@ Last updated: 2026-05-30
   - Study library has public deck search/filtering, deliberate scope filters
     (`all`, `official`, `mine`), Study-prefixed taxonomy tables, mapped
     audience-tag filtering, and test seed/cleanup SQL under `scripts/study/`
+  - Study now has its first product-owned XP/quest slice in migration
+    `0052_add_study_progression.sql`: Study-prefixed progression events, XP
+    rules, quests, user progression summaries, user quest state, XP awards from
+    card ratings, and a Study dashboard momentum panel
 
 ## Verification
 
