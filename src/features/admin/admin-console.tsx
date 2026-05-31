@@ -8,6 +8,7 @@ import {
 import { AdminView } from "@/components/interview/admin-view";
 import { getStudyLibraryDecks } from "@/features/study/study-data";
 import { getAdminDpePreflightSnapshot } from "@/server/admin-data/dpe-preflight";
+import { listAdminDpeReviewDiagnostics } from "@/server/admin-data/dpe-diagnostics";
 import { listAdminDpeProgressionSnapshot } from "@/server/admin-data/dpe-progression";
 import { listDpeContentSummary } from "@/server/dpe/dpe-data";
 
@@ -169,6 +170,7 @@ async function DpeAdminPanel() {
   };
   let progression: Awaited<ReturnType<typeof listAdminDpeProgressionSnapshot>> | undefined;
   let preflight: Awaited<ReturnType<typeof getAdminDpePreflightSnapshot>> | undefined;
+  let reviewDiagnostics: Awaited<ReturnType<typeof listAdminDpeReviewDiagnostics>> | undefined;
 
   try {
     summary = await listDpeContentSummary();
@@ -186,6 +188,12 @@ async function DpeAdminPanel() {
     preflight = await getAdminDpePreflightSnapshot();
   } catch (error) {
     console.error("DPE admin preflight summary unavailable.", error);
+  }
+
+  try {
+    reviewDiagnostics = await listAdminDpeReviewDiagnostics();
+  } catch (error) {
+    console.error("DPE admin review diagnostics unavailable.", error);
   }
 
   const totalQuestions = summary.certificateTypes.reduce(
@@ -502,6 +510,66 @@ async function DpeAdminPanel() {
             </>
           ) : (
             <p>DPE progression storage is unreachable for Admin right now.</p>
+          )}
+        </article>
+
+        <article className="raised-card">
+          <div className="section-head">
+            <div>
+              <strong>DPE review retry health</strong>
+              <p>
+                Recent durable diagnostics from DPE review generation, including generated,
+                fallback, and failed review attempts.
+              </p>
+            </div>
+          </div>
+          {reviewDiagnostics ? (
+            <>
+              <div className="study-stat-strip" aria-label="DPE review diagnostics totals">
+                <div className="study-stat-chip">
+                  <strong>{reviewDiagnostics.totals.totalEvents}</strong>
+                  <span>Review events</span>
+                </div>
+                <div className="study-stat-chip">
+                  <strong>{reviewDiagnostics.totals.generatedReviews}</strong>
+                  <span>AI generated</span>
+                </div>
+                <div className="study-stat-chip">
+                  <strong>{reviewDiagnostics.totals.fallbackReviews}</strong>
+                  <span>Fallback saved</span>
+                </div>
+                <div className="study-stat-chip">
+                  <strong>{reviewDiagnostics.totals.reviewFailures}</strong>
+                  <span>Failed no fallback</span>
+                </div>
+                <div className="study-stat-chip">
+                  <strong>{reviewDiagnostics.totals.warnings + reviewDiagnostics.totals.errors}</strong>
+                  <span>Warnings/errors</span>
+                </div>
+              </div>
+
+              <div className="question-list mt-4">
+                {reviewDiagnostics.events.slice(0, 12).map((event) => (
+                  <div className="raised-card" key={event.id}>
+                    <div className="question-meta">
+                      <span className="pill">{event.code ?? "review_event"}</span>
+                      <span className="pill">{event.severity}</span>
+                      <span className="pill">{event.userEmail ?? event.userId ?? "unknown user"}</span>
+                      <span className="pill">{formatDate(event.createdAt.toISOString())}</span>
+                    </div>
+                    <p>{String(event.message)}</p>
+                    {event.metadata?.reason !== undefined && (
+                      <p>Reason: {String(event.metadata.reason)}</p>
+                    )}
+                  </div>
+                ))}
+                {reviewDiagnostics.events.length === 0 && (
+                  <p>No DPE review diagnostics have been recorded yet.</p>
+                )}
+              </div>
+            </>
+          ) : (
+            <p>DPE review diagnostics are unreachable for Admin right now.</p>
           )}
         </article>
 
