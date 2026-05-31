@@ -1033,7 +1033,14 @@ export default function App() {
                   setDpeProfile(nextProfile);
                   setProfileSaveStatus("idle");
                 }}
-                onSave={() => saveProfile()}
+                onSave={() =>
+                  saveProfile({
+                    ...dpeProfile,
+                    aircraftCategory: selectedTargetTrack.aircraftCategory,
+                    aircraftClass: selectedTargetTrack.aircraftClass,
+                    targetTrackId: selectedTargetTrack.id,
+                  })
+                }
               />
             )}
           </main>
@@ -3580,9 +3587,6 @@ function MeScreen({
     onChange({ ...profile, [key]: value });
   }
 
-  const categoryOptions = [...new Set(dpeTargetTracks.map((track) => track.aircraftCategory))];
-  const classOptions = [...new Set(dpeTargetTracks.map((track) => track.aircraftClass))];
-
   return (
     <section className="screen">
       <div className="section-head">
@@ -3628,26 +3632,11 @@ function MeScreen({
         </label>
         <label className="field">
           <span>Aircraft category</span>
-          <select
-            value={profile.aircraftCategory}
-            onChange={(event) => updateField("aircraftCategory", event.target.value)}
-          >
-            {categoryOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+          <input value={selectedTargetTrack.aircraftCategory} readOnly />
         </label>
         <label className="field">
           <span>Aircraft class</span>
-          <select value={profile.aircraftClass} onChange={(event) => updateField("aircraftClass", event.target.value)}>
-            {classOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+          <input value={selectedTargetTrack.aircraftClass} readOnly />
         </label>
         <label className="field">
           <span>Aircraft</span>
@@ -3700,6 +3689,14 @@ function MeScreen({
           </p>
         </div>
       )}
+      <div className="panel">
+        <strong>Target-derived aircraft setup</strong>
+        <p>
+          Aircraft category and class are locked to the selected target track so sessions, reviews,
+          and progression use the same airplane-land metadata. Change the target track to change
+          those values.
+        </p>
+      </div>
       <div className="panel grid">
         <label className="field">
           <span>School / aircraft context</span>

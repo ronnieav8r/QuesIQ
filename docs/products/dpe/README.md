@@ -404,3 +404,15 @@ This slice clarifies DPE review state without changing content:
    as incomplete once a deterministic review exists.
 3. History shows AI versus fallback review state and offers `Retry AI review`
    for completed sessions whose saved review is still fallback-only.
+
+## MVP Learner Polish Slice 19 (Target-Derived Aircraft Setup)
+
+This slice keeps DPE profile metadata consistent without changing content:
+
+1. The Me screen now displays aircraft category and class as read-only values
+   derived from the selected DPE target track.
+2. Saving the profile sends the selected track's canonical airplane-land
+   category/class values, matching the existing server-side normalization.
+3. Learners change category/class by changing the target track, preventing
+   temporary UI mismatches between profile setup, sessions, reviews, and
+   progression.
