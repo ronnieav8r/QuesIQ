@@ -1965,6 +1965,7 @@ function PracticeSetupScreen({
     ? Math.round(((readyQuestions / questions.length) * 100))
     : 0;
   const practiceBlocked = questions.length === 0;
+  const reviewAiUnavailable = publicStatus?.reviewAiConfigured === false;
   const voiceAiUnavailable = publicStatus?.realtimeVoiceConfigured === false;
   const voiceDisabled = practiceBlocked || databaseAvailable === false || voiceAiUnavailable;
   const privatePilotTrack = getDpeTargetTrackById(defaultDpeTargetTrackId) ?? dpeTargetTracks[0];
@@ -2095,6 +2096,15 @@ function PracticeSetupScreen({
               <p>
                 Seeded DPE question tables are empty or unavailable. Practice can continue with
                 bundled placeholder prompts while admins finish the baseline content setup.
+              </p>
+            </div>
+          )}
+          {reviewAiUnavailable && (
+            <div className="raised-card mt-4">
+              <strong>Review AI unavailable</strong>
+              <p>
+                Transcript-backed fallback reviews remain available. Finish the session, save the
+                fallback review, then retry AI review after the review service is configured.
               </p>
             </div>
           )}

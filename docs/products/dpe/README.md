@@ -654,3 +654,15 @@ without changing content:
 3. This keeps manual signed-in browser and microphone verification visible
    without treating it as complete automatically.
 4. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 39 (Practice Review Fallback Notice)
+
+This slice improves learner recovery clarity without changing content:
+
+1. Practice setup now shows a `Review AI unavailable` notice when the public
+   DPE status probe reports Review AI is not configured.
+2. The notice tells learners that transcript-backed fallback reviews remain
+   available and that AI review can be retried after the service is configured.
+3. This aligns Practice setup with the Home readiness checklist and History
+   retry behavior.
+4. No aviation content, schema, publish, Official, or Verified state changed.

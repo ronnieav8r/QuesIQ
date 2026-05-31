@@ -87,6 +87,8 @@ const codeContracts = [
       "Review AI ready",
       "Voice AI ready",
       "Signed-in services",
+      "Review AI unavailable",
+      "Transcript-backed fallback reviews remain available",
       "voice evidence",
       "Typed transcript evidence",
       "Retry AI Review",
