@@ -11,6 +11,10 @@ import {
   STUDY_SOURCE_PACK_DRAFT_SAMPLE,
 } from "@/server/study/study-source-pack-draft-contract";
 import {
+  buildStudySourcePackVerificationQueuePreview,
+  getStudySourcePackVerificationQueueReviewSections,
+} from "@/server/study/study-source-pack-verification-queue";
+import {
   getStudyGenerationPacketReviewSections,
   parseStudyGenerationPacketContract,
   STUDY_GENERATION_PACKET_SAMPLE,
@@ -69,6 +73,29 @@ export async function POST(request: Request) {
       draftContract: parsed.draft,
       reviewSections: getStudySourcePackDraftReviewSections(parsed.draft),
       sourcePackPreviewOnly: true,
+    });
+  }
+
+  if (body.mode === "source_pack_verification_queue_preview") {
+    const candidatePayload = body.sourcePackDraftJson ?? STUDY_SOURCE_PACK_DRAFT_SAMPLE;
+    const parsed = parseStudySourcePackGeneratedDeckDraftContract(candidatePayload);
+
+    if (!parsed.ok) {
+      return NextResponse.json(
+        {
+          error: "Invalid source-pack Study draft contract payload.",
+          validationErrors: parsed.errors,
+        },
+        { status: 400 },
+      );
+    }
+
+    const queuePreview = buildStudySourcePackVerificationQueuePreview(parsed.draft);
+
+    return NextResponse.json({
+      queuePreview,
+      reviewSections: getStudySourcePackVerificationQueueReviewSections(queuePreview),
+      sourcePackVerificationQueuePreviewOnly: true,
     });
   }
 

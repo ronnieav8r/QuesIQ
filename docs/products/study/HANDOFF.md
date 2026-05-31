@@ -252,6 +252,14 @@ the visual/UI level during the conversation:
   admin-only `source_pack_generation_packet_preview` mode that validates posted
   generation packets and returns packet review sections without generating
   cards, importing decks, publishing, or writing Official/Verified state
+- `src/server/study/study-source-pack-verification-queue.ts` now provides a
+  preview-only verification queue contract from a validated
+  `study.sourcePackDeckDraft.v1` payload, including source citation coverage,
+  warning/status counts, and per-card queued/blocked recommendations
+- `/api/study/content-studio/flashcard-draft` now includes side-effect-free
+  admin-only `source_pack_verification_queue_preview` mode that validates a
+  source-pack draft and returns verifier queue review data only; it does not
+  call AI, import Study decks, write cards, publish, or mark Official/Verified
 - source-style import wizard polish for focus hints, URL failure display,
   CSV/Quizlet/Anki guidance, select/deselect review controls, column swapping,
   row/URL counts, and save/done copy
