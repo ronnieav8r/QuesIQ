@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { signOut } from "next-auth/react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   BookOpen,
   ChevronDown,
@@ -13,7 +14,11 @@ import {
   History,
   Home,
   Layers,
+  LogOut,
+  Menu,
   Plus,
+  ShieldCheck,
+  UserRound,
   type LucideIcon,
 } from "lucide-react";
 
@@ -67,6 +72,8 @@ const studyNavItems: StudyNavItem[] = [
 
 export function StudyShell({ authSession, children }: StudyShellProps) {
   const pathname = usePathname();
+  const [adminAccess, setAdminAccess] = useState(false);
+  const [appMenuOpen, setAppMenuOpen] = useState(false);
   const [navCollapsed, setNavCollapsed] = useState(() => {
     if (typeof window === "undefined") {
       return false;
@@ -82,6 +89,24 @@ export function StudyShell({ authSession, children }: StudyShellProps) {
     });
   }
 
+  useEffect(() => {
+    if (!authSession?.user) {
+      return;
+    }
+
+    async function loadAdminAccess() {
+      try {
+        const response = await fetch("/api/admin/status");
+        const body = (await response.json()) as { admin?: boolean };
+        setAdminAccess(Boolean(body.admin));
+      } catch {
+        setAdminAccess(false);
+      }
+    }
+
+    void loadAdminAccess();
+  }, [authSession?.user]);
+
   return (
     <main className="product-shell study-shell">
       <section
@@ -89,6 +114,47 @@ export function StudyShell({ authSession, children }: StudyShellProps) {
         className={navCollapsed ? "app-frame study-app-frame nav-collapsed" : "app-frame study-app-frame"}
       >
         <header className="app-header">
+          <div className="app-menu">
+            <button
+              aria-expanded={appMenuOpen}
+              aria-label={appMenuOpen ? "Close menu" : "Open menu"}
+              className={appMenuOpen ? "app-menu-button active" : "app-menu-button"}
+              onClick={() => setAppMenuOpen((current) => !current)}
+              type="button"
+            >
+              <Menu aria-hidden="true" className="tab-icon" strokeWidth={2.4} />
+            </button>
+            {appMenuOpen && (
+              <div className="app-menu-panel" role="menu">
+                <Link href="/" role="menuitem">
+                  <Home aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                  <span>QuesIQ Home</span>
+                </Link>
+                {authSession?.user && (
+                  <button role="menuitem" type="button">
+                    <UserRound aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                    <span>{authSession.user.name || authSession.user.email || "Signed in"}</span>
+                  </button>
+                )}
+                {adminAccess && (
+                  <Link href="/admin?product=study" role="menuitem">
+                    <ShieldCheck aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                    <span>Admin</span>
+                  </Link>
+                )}
+                {authSession?.user && (
+                  <button
+                    onClick={() => signOut({ redirectTo: "/" })}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <LogOut aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                    <span>Sign Out</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
           <div className="brand-lockup">
             <Image
               alt="QuesIQ Study"
