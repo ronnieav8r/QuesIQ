@@ -2211,6 +2211,11 @@ function PracticeSetupScreen({
     : targetMissing.length > 0
       ? "Start with incomplete target"
       : "Type Answers";
+  const voiceStartLabel = sessionStarting
+    ? "Starting session"
+    : targetMissing.length > 0
+      ? "Start voice with incomplete target"
+      : "Start Voice Practice";
 
   return (
     <section className="screen">
@@ -2392,7 +2397,7 @@ function PracticeSetupScreen({
                 title={voiceDisabledReason || "Start realtime DPE voice practice"}
               >
                 <Mic />
-                {sessionStarting ? "Starting session" : "Start Voice Practice"}
+                {voiceStartLabel}
               </button>
               <button className="button" onClick={onStartSession} disabled={practiceBlocked || sessionStarting}>
                 <ListChecks />

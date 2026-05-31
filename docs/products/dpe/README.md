@@ -1076,3 +1076,16 @@ changing content:
 3. Starting state still takes priority and shows `Starting session`.
 4. Admin DPE preflight now checks for the incomplete-target start label marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 72 (Incomplete Target Voice Label)
+
+This slice applies the same target-readiness signal to voice launch without
+changing content:
+
+1. Practice setup now changes the voice launch label to `Start voice with
+   incomplete target` when required target setup fields are missing.
+2. Typed and voice entry points now both reflect incomplete target setup before
+   launch.
+3. Starting state still takes priority and shows `Starting session`.
+4. Admin DPE preflight now checks for the incomplete-target voice label marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.

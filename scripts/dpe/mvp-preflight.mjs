@@ -140,6 +140,7 @@ const codeContracts = [
       "Profile target setup incomplete",
       "Profile target ready",
       "Start with incomplete target",
+      "Start voice with incomplete target",
       "scaffolded/content-pending",
       "Checkride target setup incomplete",
       "Open Me",
