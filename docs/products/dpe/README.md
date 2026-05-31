@@ -1348,3 +1348,15 @@ This slice tightens DPE auth startup recovery without changing content:
    state instead of leaving DPE with an undefined auth shape.
 4. DPE preflight now checks for the auth startup hardening marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 91 (Email Sign-In Submit Hardening)
+
+This slice tightens DPE signed-out email login recovery without changing
+content:
+
+1. Email sign-in submission is now single-flight while the request is pending.
+2. The submitted email is trimmed before requesting a sign-in link.
+3. Auth-provider errors now show the existing sign-in failure message and clear
+   the pending button state through a `finally` block.
+4. DPE preflight now checks for the email sign-in hardening marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.

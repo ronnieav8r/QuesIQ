@@ -185,6 +185,7 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
     ]) && hasAll(dpeAppText, [
       "githubEnabled",
       "authStateLoaded",
+      "signInRequestCompleted",
       "signIn(\"github\"",
     ]),
     adminGapContentStudioRoutingVisible: hasAll(adminConsoleText, [

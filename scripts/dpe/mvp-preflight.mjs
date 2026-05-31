@@ -91,6 +91,7 @@ const codeContracts = [
       "onVoiceUnavailable",
       "dpeSignedOutAuthState",
       "authStateLoaded",
+      "signInRequestCompleted",
       "githubEnabled",
       "Loading access",
       "Open profile settings",

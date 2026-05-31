@@ -1368,25 +1368,30 @@ function SignInScreen({
 
   async function submitEmailSignIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting) return;
     setSubmitting(true);
     setError(null);
     setSent(false);
 
-    const result = await signIn("email", {
-      email,
-      redirect: false,
-      redirectTo: "/dpe"
-    });
+    try {
+      const signInRequestCompleted = await signIn("email", {
+        email: email.trim(),
+        redirect: false,
+        redirectTo: "/dpe"
+      });
 
-    setSubmitting(false);
+      if (!signInRequestCompleted?.ok) {
+        setError("Sign-in email could not be sent.");
+        return;
+      }
 
-    if (!result?.ok) {
+      setSent(true);
+      await onSignedIn();
+    } catch {
       setError("Sign-in email could not be sent.");
-      return;
+    } finally {
+      setSubmitting(false);
     }
-
-    setSent(true);
-    await onSignedIn();
   }
 
   return (
