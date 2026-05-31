@@ -2,6 +2,20 @@
 
 Last updated: 2026-05-29
 
+## V1 Readiness Quick Check (Non-Voice, Static)
+
+Run these before Study V1 QA handoff:
+
+- `node scripts/study/readiness-check.mjs`
+- `node_modules/.bin/tsx scripts/study/rich-csv-import-smoke.ts --parse-only`
+
+Interpretation:
+
+- readiness script fails only on blocker gaps in Study lane contract wiring
+- missing local `DATABASE_URL`, R2, and OpenAI env vars are warnings, not
+  blockers
+- this check does not validate browser/mobile visual QA or voice hardware
+
 ## Objective
 
 Import the existing Study app from

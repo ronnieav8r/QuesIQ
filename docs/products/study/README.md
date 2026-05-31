@@ -176,6 +176,30 @@ The first Study slice is imported:
 Detailed import parity, divergence, and remaining-slice notes live in
 `docs/products/study/HANDOFF.md`.
 
+## V1 Readiness (Static, Non-Voice)
+
+For pre-QA checks that do not require browser automation, DB writes, or voice
+hardware, run:
+
+- `node scripts/study/readiness-check.mjs`
+- `node_modules/.bin/tsx scripts/study/rich-csv-import-smoke.ts --parse-only`
+
+Readiness check behavior:
+
+- reports pass/warn/fail counts for Study route/API/module presence and
+  import/preview/save boundaries
+- exits nonzero only for blocker-level failures
+- treats missing `DATABASE_URL`, R2, and OpenAI env vars as warnings only
+  (local runs remain valid)
+
+V1 readiness for this lane means:
+
+- Study Content Studio import contract paths are present and admin-gated
+- rich CSV default headers/mapping/parser and parse-only smoke path are present
+- source/verification metadata and source-pack preview/save scaffolding are
+  statically detectable
+- Publish, Official, and broad Verified promotion remain disabled
+
 ## Boundaries
 
 Study should not add Study-only fields to the generic Auth.js user table.
