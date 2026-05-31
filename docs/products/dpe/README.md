@@ -1320,3 +1320,18 @@ retry behavior without changing content:
    session creation, typed saves, voice artifacts, and History retries.
 4. Admin DPE preflight now checks for the active review persistence marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 89 (Requested Track QA Matrix)
+
+This slice makes deploy QA explicitly cover the requested airplane-land DPE
+track matrix without changing content:
+
+1. Admin DPE preflight now includes a manual `Requested track matrix` gate for
+   Private ASEL, Instrument, Commercial, CFI, CFII, Multi, and MEI airplane-land
+   tracks.
+2. The QA gate tells the reviewer to walk Me, Practice, runtime readiness, and
+   scaffold/content-pending copy for every requested target.
+3. The preflight check list now includes the requested track matrix as a deploy
+   gate, separate from content curation.
+4. DPE preflight now checks for the requested track matrix marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.

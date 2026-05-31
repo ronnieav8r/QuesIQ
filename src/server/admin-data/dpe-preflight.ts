@@ -420,6 +420,14 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       value: "Manual check required",
     },
     {
+      detail:
+        "Walk the DPE target selector through PPL ASEL, Instrument Airplane Land, Commercial Airplane Land, CFI Airplane Land, CFII Airplane Land, Multi-Engine Airplane Land, and MEI Airplane Land; confirm each target updates Me, Practice, runtime readiness, and scaffold/content-pending copy without changing aviation content.",
+      key: "qa_requested_track_matrix",
+      label: "Requested track matrix",
+      status: "warning",
+      value: "Manual check required",
+    },
+    {
       detail: "Complete one typed DPE session, generate a review, and confirm XP/quest progression appears in learner and Admin views.",
       key: "qa_typed_review_progression",
       label: "Typed review + progression",
@@ -450,6 +458,7 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "Run a browser microphone-permission check and start one realtime DPE session.",
       "Run a DPE voice session start/end and confirm transcript + artifact save.",
       "Run one DPE review generation and confirm progression event/quest updates in Admin.",
+      "Walk the requested DPE target matrix: Private ASEL, Instrument, Commercial, CFI, CFII, Multi, and MEI airplane-land tracks.",
       "Confirm at least one target track has question + answer key + rubric coverage before broader testing.",
     ],
     contentSummaryAvailable,

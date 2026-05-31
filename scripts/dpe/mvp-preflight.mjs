@@ -293,6 +293,7 @@ const codeContracts = [
       "Signed-in dependency contract",
       "signedInTargetReadinessVisible",
       "Target track readiness",
+      "qa_requested_track_matrix",
       "qa_voice_artifact",
     ],
   },
