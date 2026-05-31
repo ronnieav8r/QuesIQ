@@ -11,6 +11,7 @@ import {
   studySessions,
   studySubjects,
 } from "@/server/db/schema";
+import { recordStudyCardAttemptProgression } from "@/server/study/study-progression";
 import { computeNextStudyReview, type StudyVerdict } from "@/features/study/study-srs";
 
 export type StudyLevel = "advanced" | "beginner" | "intermediate";
@@ -782,7 +783,7 @@ export async function rateStudyCard(data: {
           ? 0.5
           : 0;
 
-  await getDb().insert(studyCardAttempts).values({
+  const [attempt] = await getDb().insert(studyCardAttempts).values({
     aiFeedback: data.aiFeedback ?? null,
     cardId: data.cardId,
     isCorrect: correct,
@@ -790,7 +791,7 @@ export async function rateStudyCard(data: {
     studySessionId: activeSessionId,
     userResponse: data.userResponse ?? null,
     verdict: data.verdict,
-  });
+  }).returning({ id: studyCardAttempts.id });
 
   await getDb()
     .update(studyCards)
@@ -805,6 +806,16 @@ export async function rateStudyCard(data: {
       endedAt: new Date(),
     })
     .where(eq(studySessions.id, activeSessionId));
+
+  await recordStudyCardAttemptProgression({
+    cardId: data.cardId,
+    isCorrect: correct,
+    mode: data.mode ?? "visual",
+    studyCardAttemptId: attempt.id,
+    studySessionId: activeSessionId,
+    userId: data.userId,
+    verdict: data.verdict,
+  });
 
   return { nextReview: nextReview.dueAt, sessionId: activeSessionId };
 }

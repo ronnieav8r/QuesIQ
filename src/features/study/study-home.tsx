@@ -3,6 +3,7 @@ import { BookOpen, ChevronRight, Plus } from "lucide-react";
 
 import { auth } from "@/auth";
 import { getStudyDecksWithStats, getStudyUserStats } from "@/features/study/study-data";
+import { getStudyProgressionSummary, type StudyProgressionSummary } from "@/server/study/study-progression";
 import { StudyDeckCard } from "@/features/study/study-deck-card";
 import { isAdminEmail } from "@/server/admin";
 
@@ -14,12 +15,14 @@ export default async function StudyHome() {
   let studyDataError = false;
   let userDecks: Awaited<ReturnType<typeof getStudyDecksWithStats>> = [];
   let userStats: Awaited<ReturnType<typeof getStudyUserStats>> | null = null;
+  let userProgression: StudyProgressionSummary | null = null;
 
   if (userId) {
     try {
-      [userDecks, userStats] = await Promise.all([
+      [userDecks, userStats, userProgression] = await Promise.all([
         getStudyDecksWithStats(userId),
         getStudyUserStats(userId),
+        getStudyProgressionSummary(userId),
       ]);
     } catch (error) {
       studyDataError = true;
@@ -28,6 +31,23 @@ export default async function StudyHome() {
   }
 
   const totalDue = userDecks.reduce((sum, deck) => sum + (deck.dueCount ?? 0), 0);
+  const levelProgressPct =
+    userProgression && userProgression.nextLevelXp > 0
+      ? Math.max(
+          0,
+          Math.min(100, Math.round((userProgression.currentLevelXp / userProgression.nextLevelXp) * 100)),
+        )
+      : 0;
+  const questPreview = userProgression
+    ? [...userProgression.quests]
+        .sort((left, right) => {
+          if (left.status === right.status) {
+            return left.questKey.localeCompare(right.questKey);
+          }
+          return left.status === "open" ? -1 : 1;
+        })
+        .slice(0, 3)
+    : [];
   const topDueDeck = [...userDecks]
     .sort((first, second) => (second.dueCount ?? 0) - (first.dueCount ?? 0))
     .find((deck) => (deck.dueCount ?? 0) > 0);
@@ -82,6 +102,52 @@ export default async function StudyHome() {
               <span>Studied</span>
             </div>
           </section>
+
+          {userProgression && (
+            <section className="panel">
+              <p className="eyebrow">Progress</p>
+              <h2>Study momentum</h2>
+              <p>
+                Level {userProgression.level}
+                {userProgression.levelName ? ` - ${userProgression.levelName}` : ""} · {userProgression.totalXp} XP ·{" "}
+                {userProgression.accuracyPercent.toFixed(1)}% accuracy
+              </p>
+              <div
+                aria-label="Study XP progress"
+                style={{
+                  background: "var(--panel-border)",
+                  borderRadius: "999px",
+                  height: "10px",
+                  margin: "0.75rem 0",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    background: "var(--accent)",
+                    height: "100%",
+                    width: `${levelProgressPct}%`,
+                  }}
+                />
+              </div>
+              <p className="field-note">
+                {userProgression.currentLevelXp}/{userProgression.nextLevelXp} XP toward next level ·{" "}
+                {userProgression.questsCompleted}/{userProgression.questsTotal} quests completed
+              </p>
+              {questPreview.length > 0 && (
+                <div className="study-stat-strip" aria-label="Study quest progress">
+                  {questPreview.map((quest) => (
+                    <div className={quest.status === "completed" ? "study-stat-chip highlight" : "study-stat-chip"} key={quest.questKey}>
+                      <strong>
+                        {Math.min(quest.progress, quest.checkThreshold)}/{quest.checkThreshold}
+                      </strong>
+                      <span>{quest.title}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
 
           {topDueDeck && (
             <section className="next-action">

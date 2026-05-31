@@ -84,6 +84,13 @@ The first Study slice is imported:
 - Study reuses the shared platform Auth.js session
 - baseline Study deck/card/session, folder, and library taxonomy tables are
   added with `study_` prefixes
+- Study now has product-owned progression storage and helpers using
+  `study_progression_events`, `study_xp_rules`, `study_quests`,
+  `study_user_progression`, and `study_user_quests`
+- Study card rating now awards idempotent XP by attempt id, syncs quest
+  progress, and rebuilds a Study-owned progression summary
+- `/study` now includes a Study momentum panel with level, XP-to-next-level,
+  accuracy, and quest progress preview
 - temporary library QA seed scripts live at
   `scripts/study/seed_test_decks.sql` and
   `scripts/study/cleanup_test_decks.sql`; generated decks are marked with
@@ -91,7 +98,8 @@ The first Study slice is imported:
 - `0049_seed_study_library_taxonomy.sql` seeds the imported source taxonomy
   labels for subjects and audience tags
 - remaining work is mostly migration/seed QA, production permission QA, R2 env
-  verification, mobile visual QA, and real library content curation
+  verification, mobile visual QA, Study progression tuning/quest expansion, and
+  real library content curation
 
 Detailed import parity, divergence, and remaining-slice notes live in
 `docs/products/study/HANDOFF.md`.
