@@ -128,6 +128,14 @@ Last updated: 2026-05-30
   - Study draft generation is product-owned at
     `/api/study/content-studio/flashcard-draft` and returns review-ready deck
     metadata, cards, confidence, warnings, missing fields, and checklist flags
+  - Study source-pack draft flow now includes preview-only packet parsing
+    (`source_pack_generation_packet_preview`), draft-contract parsing
+    (`source_pack_preview`), verifier queue preview
+    (`source_pack_verification_queue_preview`), and durable review-artifact save
+    (`source_pack_draft_run_save`) to `content_studio_runs` using pipeline
+    `study_flashcards`. This save mode stores Admin review artifacts only and
+    keeps Study runtime import, Publish, Official, Verified, source-pack file
+    loading, and verifier AI calls disabled.
   - DPE draft generation is product-owned at `/api/dpe/content/draft` and
     returns certificate, ACS, oral-question, answer-key, rubric, confidence,
     warning, readiness, and missing-field draft JSON without saving live content

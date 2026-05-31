@@ -305,6 +305,14 @@ Supported preview packet types:
   `mode: "source_pack_preview"` and then
   `mode: "source_pack_verification_queue_preview"` using the same
   `sourcePackDraftJson`.
+- Study deck draft durable review save:
+  `POST /api/study/content-studio/flashcard-draft` with
+  `mode: "source_pack_draft_run_save"` and `sourcePackDraftJson`. The Study
+  route validates the `study.sourcePackDeckDraft.v1` payload, builds the
+  preview verifier queue, and saves a durable Admin review artifact row in
+  `content_studio_runs` with pipeline `study_flashcards`, template
+  `source_pack_deck_draft`, stage `source_pack_study_deck_draft_review`, and
+  status `draft_ready`.
 - DPE reference packet: `POST /api/dpe/content/draft` with
   `mode: "source_pack_reference_packet_preview"` and `referencePacket`.
 
@@ -320,6 +328,11 @@ This bridge is intentionally downstream of Admin review and upstream of any
 product import. It exists so reviewers can inspect the backend-normalized packet
 shape before future Codex-side generation/export workflows are allowed to create
 Study deck drafts or DPE reference data.
+
+The durable Study source-pack draft save mode is still review-only scaffolding.
+It does not read local source-pack folders, load Drive content, call verifier
+AI, import Study runtime decks/cards, publish content, or mark Official or
+Verified state.
 
 ## Ownership
 
