@@ -191,6 +191,41 @@ type SourcePackVisualStatus =
   | "rendered_page";
 
 type SourcePackKeepRecommendation = "keep" | "review" | "skip";
+type SourcePackReviewDecision =
+  | "accepted"
+  | "candidate"
+  | "keep"
+  | "needs_edit"
+  | "reject";
+type SourcePackReviewTab = "chunks" | "figures" | "tables";
+
+type SourcePackManifest = {
+  chunkCount: number;
+  createdAt: string;
+  figureCount: number;
+  id: string;
+  sourceCount: number;
+  sourceIds: string[];
+  tableCount: number;
+  title: string;
+};
+
+type SourcePackChunkCandidate = {
+  anchor: string;
+  chunkId: string;
+  contextBefore?: string;
+  excerpt: string;
+  page: number;
+  relatedFigureIds: string[];
+  relatedTableIds: string[];
+  reviewDecision: SourcePackReviewDecision;
+  reviewNotes?: string;
+  sourceId: string;
+  sourceTitle: string;
+  subjects: string[];
+  tags: string[];
+  useCases: string[];
+};
 
 type SourcePackVisualReviewCandidate = {
   assetPath?: string;
@@ -203,10 +238,12 @@ type SourcePackVisualReviewCandidate = {
   page: number;
   pageAssetPath?: string;
   relatedChunkIds: string[];
+  reviewDecision: SourcePackReviewDecision;
   reviewAssetPath?: string;
   reviewNotes?: string;
   reviewStatus: SourcePackVisualStatus;
   sourceId: string;
+  sourceTitle: string;
   sourceExcerpt?: string;
   subject?: string;
   subtopics?: string[];
@@ -217,6 +254,70 @@ type SourcePackVisualReviewCandidate = {
 };
 
 const MIN_SOURCE_CHARS = 40;
+
+const sourcePackManifest: SourcePackManifest = {
+  chunkCount: 3,
+  createdAt: "2026-05-31T10:00:00.000Z",
+  figureCount: 1,
+  id: "demo-source-pack-contract",
+  sourceCount: 2,
+  sourceIds: ["source-pack-guide", "dpe-reference-pack"],
+  tableCount: 2,
+  title: "Source-pack review contract demo",
+};
+
+const sourcePackChunkCandidates: SourcePackChunkCandidate[] = [
+  {
+    anchor: "source-pack-guide#page=14&chunk=chunk-source-pack-layout",
+    chunkId: "chunk-source-pack-layout",
+    contextBefore: "manifest.json declares the source set and stable source ids.",
+    excerpt:
+      "Source packs preserve page-level provenance and stable chunk links so generated content can be traced back during review.",
+    page: 14,
+    relatedFigureIds: ["fig-source-pack-flow"],
+    relatedTableIds: [],
+    reviewDecision: "keep",
+    reviewNotes: "Good source-pack overview candidate. Keep as review context, not product content.",
+    sourceId: "source-pack-guide",
+    sourceTitle: "Source Pack Implementation Guide",
+    subjects: ["Admin Content Studio"],
+    tags: ["manifest", "chunks", "provenance"],
+    useCases: ["review orientation", "source QA"],
+  },
+  {
+    anchor: "source-pack-guide#page=18&chunk=chunk-visual-jsonl-schema",
+    chunkId: "chunk-visual-jsonl-schema",
+    excerpt:
+      "Figures and tables may be metadata-only at first, then upgraded to rendered-page or cropped review assets as tooling matures.",
+    page: 18,
+    relatedFigureIds: [],
+    relatedTableIds: ["tbl-visual-schema"],
+    reviewDecision: "needs_edit",
+    reviewNotes: "Needs schema confirmation from manager-owned source-scrubber output.",
+    sourceId: "source-pack-guide",
+    sourceTitle: "Source Pack Implementation Guide",
+    subjects: ["Admin Content Studio"],
+    tags: ["figures.jsonl", "tables.jsonl", "review-state"],
+    useCases: ["API contract", "review model"],
+  },
+  {
+    anchor: "dpe-reference-pack#page=27&chunk=chunk-dpe-acs-example",
+    chunkId: "chunk-dpe-acs-example",
+    contextBefore: "The table is useful only if every row keeps row-level evidence.",
+    excerpt:
+      "Tables should not become product content automatically; reviewers need row-level source confidence before generation.",
+    page: 27,
+    relatedFigureIds: [],
+    relatedTableIds: ["tbl-dpe-readiness-example"],
+    reviewDecision: "candidate",
+    reviewNotes: "Keep in Admin review queue only. Do not import into DPE runtime.",
+    sourceId: "dpe-reference-pack",
+    sourceTitle: "DPE Source Reference Pack",
+    subjects: ["DPE"],
+    tags: ["ACS", "evidence", "review-only"],
+    useCases: ["DPE source review"],
+  },
+];
 
 const sourcePackVisualCandidates: SourcePackVisualReviewCandidate[] = [
   {
@@ -230,12 +331,14 @@ const sourcePackVisualCandidates: SourcePackVisualReviewCandidate[] = [
     page: 14,
     pageAssetPath: "pages/source-pack-guide-page-014.png",
     relatedChunkIds: ["chunk-source-pack-layout", "chunk-manifest-contract"],
+    reviewDecision: "keep",
     reviewAssetPath: "figures/fig-source-pack-flow.review.png",
     reviewNotes: "Needs cropped preview when renderer is available.",
     reviewStatus: "rendered_page",
     sourceExcerpt:
       "Source packs preserve page-level provenance and stable chunk links so generated content can be traced back during review.",
     sourceId: "source-pack-guide",
+    sourceTitle: "Source Pack Implementation Guide",
     subject: "Admin Content Studio",
     subtopics: ["source packs", "provenance", "visual review"],
     topic: "Reusable ingestion contracts",
@@ -251,11 +354,13 @@ const sourcePackVisualCandidates: SourcePackVisualReviewCandidate[] = [
     keepRecommendation: "review",
     page: 18,
     relatedChunkIds: ["chunk-visual-jsonl-schema"],
+    reviewDecision: "needs_edit",
     reviewNotes: "Confirm field names with manager ingestion output before making this editable.",
     reviewStatus: "metadata_only",
     sourceExcerpt:
       "Figures and tables may be metadata-only at first, then upgraded to rendered-page or cropped review assets as tooling matures.",
     sourceId: "source-pack-guide",
+    sourceTitle: "Source Pack Implementation Guide",
     subject: "Admin Content Studio",
     subtopics: ["figures.jsonl", "tables.jsonl", "review state"],
     tableLabel: "Table 1",
@@ -275,11 +380,13 @@ const sourcePackVisualCandidates: SourcePackVisualReviewCandidate[] = [
     page: 27,
     pageAssetPath: "pages/dpe-reference-page-027.png",
     relatedChunkIds: ["chunk-dpe-acs-example", "chunk-dpe-review-evidence"],
+    reviewDecision: "reject",
     reviewNotes: "Skip unless the source pack can link each row back to usable DPE content chunks.",
     reviewStatus: "cropped_candidate",
     sourceExcerpt:
       "Tables should not become product content automatically; reviewers need row-level source confidence before generation.",
     sourceId: "dpe-reference-pack",
+    sourceTitle: "DPE Source Reference Pack",
     subject: "DPE",
     subtopics: ["ACS", "review readiness"],
     tableLabel: "Table 4",
@@ -872,7 +979,11 @@ export function ContentStudio() {
         </>
       )}
 
-      <SourcePackVisualReviewScaffold candidates={sourcePackVisualCandidates} />
+      <SourcePackReviewScaffold
+        chunks={sourcePackChunkCandidates}
+        manifest={sourcePackManifest}
+        visualCandidates={sourcePackVisualCandidates}
+      />
 
       <section className="prompt-version-list" aria-labelledby="content-stages-title">
         <div className="section-head">
@@ -979,6 +1090,18 @@ function keepRecommendationLabel(recommendation: SourcePackKeepRecommendation) {
   return labels[recommendation];
 }
 
+function reviewDecisionLabel(decision: SourcePackReviewDecision) {
+  const labels: Record<SourcePackReviewDecision, string> = {
+    accepted: "Accepted",
+    candidate: "Candidate",
+    keep: "Keep",
+    needs_edit: "Needs edit",
+    reject: "Reject",
+  };
+
+  return labels[decision];
+}
+
 function isPreviewableAssetPath(value?: string) {
   return Boolean(value && (value.startsWith("/") || value.startsWith("http")));
 }
@@ -1001,71 +1124,229 @@ function formatBbox(candidate: SourcePackVisualReviewCandidate) {
   return candidate.bbox?.map((value) => value.toFixed(2)).join(", ") ?? "pending";
 }
 
-function SourcePackVisualReviewScaffold({
-  candidates,
+function SourcePackReviewScaffold({
+  chunks,
+  manifest,
+  visualCandidates,
 }: {
-  candidates: SourcePackVisualReviewCandidate[];
+  chunks: SourcePackChunkCandidate[];
+  manifest: SourcePackManifest;
+  visualCandidates: SourcePackVisualReviewCandidate[];
 }) {
-  const figureCount = candidates.filter((candidate) => candidate.type === "figure").length;
-  const tableCount = candidates.filter((candidate) => candidate.type === "table").length;
-  const needsReviewCount = candidates.filter(
-    (candidate) => candidate.keepRecommendation === "review",
+  const [activeTab, setActiveTab] = useState<SourcePackReviewTab>("chunks");
+  const [decisionFilter, setDecisionFilter] = useState<SourcePackReviewDecision | "all">(
+    "all",
+  );
+  const figures = visualCandidates.filter((candidate) => candidate.type === "figure");
+  const tables = visualCandidates.filter((candidate) => candidate.type === "table");
+  const reviewItems = [...chunks, ...visualCandidates];
+  const filteredChunks = chunks.filter(
+    (candidate) =>
+      decisionFilter === "all" || candidate.reviewDecision === decisionFilter,
+  );
+  const filteredVisuals = (activeTab === "figures" ? figures : tables).filter(
+    (candidate) =>
+      decisionFilter === "all" || candidate.reviewDecision === decisionFilter,
+  );
+  const needsEditCount = reviewItems.filter(
+    (candidate) => candidate.reviewDecision === "needs_edit",
+  ).length;
+  const acceptedCount = reviewItems.filter(
+    (candidate) => candidate.reviewDecision === "accepted",
   ).length;
 
   return (
     <section className="prompt-version-list" aria-labelledby="source-pack-visual-title">
       <div className="section-head">
         <div>
-          <p className="eyebrow">Planned review surface</p>
-          <h3 id="source-pack-visual-title">Source-pack figures and tables</h3>
+          <p className="eyebrow">Read-only source-pack review</p>
+          <h3 id="source-pack-visual-title">Source Pack Review</h3>
           <p>
-            Read-only scaffold for reviewing many visual candidates from
-            figures.jsonl and tables.jsonl once source-pack loading is wired.
+            Admin-side scaffold for source-pack manifests, chunk candidates,
+            figures, and tables. This does not load Drive files, save review
+            decisions, import product content, or publish anything.
           </p>
         </div>
         <Images size={20} aria-hidden="true" />
       </div>
 
+      <div className="runtime-context-panel">
+        <strong>{manifest.title}</strong>
+        <div className="question-meta">
+          <span className="pill">Pack: {manifest.id}</span>
+          <span className="pill">{manifest.sourceCount} sources</span>
+          <span className="pill">{manifest.chunkCount} chunks</span>
+          <span className="pill">{manifest.figureCount} figures</span>
+          <span className="pill">{manifest.tableCount} tables</span>
+          <span className="pill">Created {formatDate(manifest.createdAt)}</span>
+        </div>
+        <p>Sources: {manifest.sourceIds.join(", ")}</p>
+      </div>
+
       <div className="study-stat-strip" aria-label="Source-pack visual review summary">
         <div className="study-stat-chip">
-          <strong>{candidates.length}</strong>
-          <span>Visual candidates</span>
+          <strong>{chunks.length}</strong>
+          <span>Chunk candidates</span>
         </div>
         <div className="study-stat-chip">
-          <strong>{figureCount}</strong>
+          <strong>{figures.length}</strong>
           <span>Figures</span>
         </div>
         <div className="study-stat-chip">
-          <strong>{tableCount}</strong>
+          <strong>{tables.length}</strong>
           <span>Tables</span>
         </div>
-        <div className="study-stat-chip highlight">
-          <strong>{needsReviewCount}</strong>
-          <span>Need review</span>
+        <div className="study-stat-chip">
+          <strong>{needsEditCount}</strong>
+          <span>Need edits</span>
         </div>
+        <div className="study-stat-chip highlight">
+          <strong>{acceptedCount}</strong>
+          <span>Accepted</span>
+        </div>
+      </div>
+
+      <div className="component-tabs" aria-label="Source-pack review tabs">
+        {(["chunks", "figures", "tables"] as SourcePackReviewTab[]).map((tab) => (
+          <button
+            className={activeTab === tab ? "active" : undefined}
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            type="button"
+          >
+            {tab === "chunks" && <FileText size={18} />}
+            {tab === "figures" && <Images size={18} />}
+            {tab === "tables" && <Table2 size={18} />}
+            {tab === "chunks" ? "Chunks" : tab === "figures" ? "Figures" : "Tables"}
+          </button>
+        ))}
+      </div>
+
+      <div className="field-grid">
+        <label>
+          <span>Review state filter</span>
+          <select
+            onChange={(event) =>
+              setDecisionFilter(event.target.value as SourcePackReviewDecision | "all")
+            }
+            value={decisionFilter}
+          >
+            <option value="all">All review states</option>
+            <option value="candidate">Candidate</option>
+            <option value="keep">Keep</option>
+            <option value="reject">Reject</option>
+            <option value="needs_edit">Needs edit</option>
+            <option value="accepted">Accepted</option>
+          </select>
+        </label>
       </div>
 
       <div className="runtime-context-panel">
         <strong>Read-only API contract</strong>
         <p>
-          Future loader should return source-pack candidates with id, sourceId,
-          page, figureLabel/tableLabel, caption, subject/topic/subtopics/useCases,
-          relatedChunkIds, assetPath, pageAssetPath, reviewAssetPath, bbox,
-          instructionalValue, keepRecommendation, reviewStatus, and reviewNotes.
+          Future loader should return manifest metadata, source-page anchors,
+          chunk ids, figure/table ids, captions, source context, tags/subjects,
+          use cases, related item ids, review states, and asset paths when the
+          admin has a browser-safe preview URL.
         </p>
         <div className="question-meta">
           <span className="pill">No filesystem reads in browser</span>
           <span className="pill">No Drive integration yet</span>
+          <span className="pill">No durable review writes</span>
           <span className="pill">No publish writes</span>
         </div>
       </div>
 
+      <div className="component-tabs" aria-label="Future source-pack actions">
+        <button disabled type="button">
+          <CheckCircle2 size={18} />
+          Accept selected
+        </button>
+        <button disabled type="button">
+          <AlertCircle size={18} />
+          Reject selected
+        </button>
+        <button disabled type="button">
+          <ShieldCheck size={18} />
+          Export draft
+        </button>
+      </div>
+
       <div className="question-list">
-        {candidates.map((candidate) => (
-          <VisualCandidateCard candidate={candidate} key={candidate.id} />
-        ))}
+        {activeTab === "chunks" &&
+          filteredChunks.map((candidate) => (
+            <ChunkCandidateCard candidate={candidate} key={candidate.chunkId} />
+          ))}
+        {activeTab !== "chunks" &&
+          filteredVisuals.map((candidate) => (
+            <VisualCandidateCard candidate={candidate} key={candidate.id} />
+          ))}
+        {((activeTab === "chunks" && filteredChunks.length === 0) ||
+          (activeTab !== "chunks" && filteredVisuals.length === 0)) && (
+          <div className="runtime-context-panel">
+            <p>No source-pack candidates match this filter.</p>
+          </div>
+        )}
       </div>
     </section>
+  );
+}
+
+function ChunkCandidateCard({ candidate }: { candidate: SourcePackChunkCandidate }) {
+  return (
+    <article className="runtime-context-panel">
+      <div className="section-head">
+        <div>
+          <div className="question-meta">
+            <span className="pill">Chunk</span>
+            <span className="pill">{reviewDecisionLabel(candidate.reviewDecision)}</span>
+            <span className="pill">Page {candidate.page}</span>
+          </div>
+          <strong>{candidate.chunkId}</strong>
+          <p>{candidate.excerpt}</p>
+        </div>
+        <FileText size={20} aria-hidden="true" />
+      </div>
+
+      {candidate.contextBefore && (
+        <div className="runtime-context-panel">
+          <strong>Context</strong>
+          <p>{candidate.contextBefore}</p>
+        </div>
+      )}
+
+      <div className="question-meta">
+        <span className="pill">Source: {candidate.sourceTitle}</span>
+        <span className="pill">Anchor: {candidate.anchor}</span>
+        {candidate.subjects.map((subject) => (
+          <span className="pill" key={subject}>
+            {subject}
+          </span>
+        ))}
+        {candidate.tags.map((tag) => (
+          <span className="pill" key={tag}>
+            {tag}
+          </span>
+        ))}
+        {candidate.useCases.map((useCase) => (
+          <span className="pill" key={useCase}>
+            Use: {useCase}
+          </span>
+        ))}
+      </div>
+
+      <div className="question-meta">
+        <span className="pill">
+          Figures: {candidate.relatedFigureIds.join(", ") || "none"}
+        </span>
+        <span className="pill">Tables: {candidate.relatedTableIds.join(", ") || "none"}</span>
+      </div>
+
+      <div className="runtime-context-panel">
+        <strong>Reviewer notes</strong>
+        <p>{candidate.reviewNotes ?? "No notes yet."}</p>
+      </div>
+    </article>
   );
 }
 
@@ -1082,6 +1363,7 @@ function VisualCandidateCard({
         <div>
           <div className="question-meta">
             <span className="pill">{candidate.type === "figure" ? "Figure" : "Table"}</span>
+            <span className="pill">{reviewDecisionLabel(candidate.reviewDecision)}</span>
             <span className="pill">{visualStatusLabel(candidate.reviewStatus)}</span>
             <span className="pill">
               Recommendation: {keepRecommendationLabel(candidate.keepRecommendation)}
@@ -1144,7 +1426,9 @@ function VisualCandidateCard({
       )}
 
       <div className="question-meta">
-        <span className="pill">Source: {candidate.sourceId}</span>
+        <span className="pill">Source: {candidate.sourceTitle}</span>
+        <span className="pill">Source id: {candidate.sourceId}</span>
+        <span className="pill">Page {candidate.page}</span>
         <span className="pill">BBox: {formatBbox(candidate)}</span>
         {candidate.subtopics?.map((subtopic) => (
           <span className="pill" key={subtopic}>

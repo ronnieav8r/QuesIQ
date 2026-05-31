@@ -63,13 +63,15 @@ linked from a Content Studio run when a provider call exists.
   `approved_for_publish` status is an internal review state only; it does not
   write Study decks, DPE questions, Official status, or Verified state.
 
-## Source-Pack Visual Review
+## Source-Pack Review
 
-Content Studio now includes a read-only scaffold for source-pack figure and
-table review. This is intentionally contract-first: it does not read local
-source-pack folders, call Google Drive, or write publish state. The first UI
-goal is to let an admin review many visual candidates in one place once the
-manager-owned source ingestion work can provide source-pack data.
+Content Studio now includes a read-only scaffold for source-pack review. This
+is intentionally contract-first and Admin-only: it does not read local
+source-pack folders, call Google Drive, save review decisions, send raw
+source-pack data into Study or DPE runtime paths, or write publish state. The
+first UI goal is to let an admin review a batch of source-pack candidates in
+one place once the manager-owned Codex source-scrubber and generation skills can
+provide source-pack data.
 
 Target source-pack layout:
 
@@ -84,13 +86,53 @@ pages/
 tables/
 ```
 
-Future Admin API boundary should return normalized visual candidates from
-`figures.jsonl` and `tables.jsonl` with these fields where available:
+Future Admin API boundary should return normalized manifest metadata, chunk
+candidates from `chunks.jsonl`, and visual candidates from `figures.jsonl` and
+`tables.jsonl`.
+
+Manifest-level fields:
+
+```json
+{
+  "id": "demo-source-pack-contract",
+  "title": "Source-pack review contract demo",
+  "createdAt": "2026-05-31T10:00:00.000Z",
+  "sourceIds": ["source-pack-guide", "dpe-reference-pack"],
+  "sourceCount": 2,
+  "chunkCount": 3,
+  "figureCount": 1,
+  "tableCount": 2
+}
+```
+
+Chunk candidate fields:
+
+```json
+{
+  "chunkId": "chunk-source-pack-layout",
+  "sourceId": "source-pack-guide",
+  "sourceTitle": "Source Pack Implementation Guide",
+  "page": 14,
+  "anchor": "source-pack-guide#page=14&chunk=chunk-source-pack-layout",
+  "excerpt": "Short chunk text preserved for review.",
+  "contextBefore": "Optional surrounding context.",
+  "subjects": ["Admin Content Studio"],
+  "tags": ["manifest", "chunks", "provenance"],
+  "useCases": ["review orientation", "source QA"],
+  "relatedFigureIds": ["fig-source-pack-flow"],
+  "relatedTableIds": [],
+  "reviewDecision": "candidate",
+  "reviewNotes": "Admin notes for future review persistence."
+}
+```
+
+Visual candidate fields:
 
 ```json
 {
   "id": "fig-source-pack-flow",
   "sourceId": "source-pack-guide",
+  "sourceTitle": "Source Pack Implementation Guide",
   "type": "figure",
   "page": 14,
   "figureLabel": "Figure 2",
@@ -108,10 +150,15 @@ Future Admin API boundary should return normalized visual candidates from
   "bbox": [0.18, 0.24, 0.74, 0.52],
   "instructionalValue": "Useful as an admin orientation visual.",
   "keepRecommendation": "keep",
+  "reviewDecision": "candidate",
   "reviewStatus": "rendered_page",
   "reviewNotes": "Needs final crop review."
 }
 ```
+
+Accepted `reviewDecision` values are `candidate`, `keep`, `reject`,
+`needs_edit`, and `accepted`. These are review labels only until a future
+explicit persistence endpoint exists.
 
 Accepted initial `reviewStatus` values are:
 
@@ -127,6 +174,11 @@ admin-authorized URLs for previewable assets or return metadata-only rows with
 asset paths preserved for traceability. Saving figure/table review decisions
 should be a separate explicit review endpoint and must not publish product
 content, mark Official content, or mark Verified content.
+
+Study and DPE imports remain future work. The intended sequence is Admin review
+and Codex-side generation/verification skills first, then approved generated
+Study deck drafts or DPE draft handoffs only after product-owned import and
+publish controls exist.
 
 ## Ownership
 
