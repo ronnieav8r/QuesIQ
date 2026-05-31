@@ -1131,3 +1131,23 @@ without changing content:
    filters before starting.
 4. Admin DPE preflight now checks for the fallback action label marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 76 (Target-Aligned Certificate Selection)
+
+This slice keeps Practice setup aligned with the selected DPE target track
+without changing content:
+
+1. Practice now detects the certificate option that matches the saved target
+   track when that certificate exists in the loaded question bank.
+2. The matcher covers Private ASEL, Instrument Airplane Land, Commercial
+   Airplane Land, CFI Airplane Land, CFII Airplane Land, Multi-Engine Airplane
+   Land, and MEI Airplane Land aliases.
+3. When a matching certificate option is available, Practice automatically
+   selects it so target track, certificate, area/task filters, saved sessions,
+   and review context stay aligned.
+4. Practice explains that certificate selection follows target track when a
+   matching certificate is detected.
+5. Scaffolded/content-pending target tracks remain content-pending; this only
+   aligns selection when matching product content is present.
+6. Admin DPE preflight now checks for the target-certificate alignment markers.
+7. No aviation content, schema, publish, Official, or Verified state changed.

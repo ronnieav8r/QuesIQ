@@ -38,6 +38,7 @@ import {
 import {
   defaultDpeTargetTrackId,
   dpeTargetTracks,
+  type DpeTargetTrack,
   getDpeTargetTrackById,
   resolveDpeTargetTrack,
 } from "./target-tracks";
@@ -437,7 +438,21 @@ export default function App() {
         : buildCertificateOptionsFromQuestions(questionState.questions),
     [questionState.certificateTypes, questionState.questions],
   );
+  const selectedTargetTrack = useMemo(
+    () =>
+      resolveDpeTargetTrack({
+        aircraftCategory: dpeProfile.aircraftCategory,
+        aircraftClass: dpeProfile.aircraftClass,
+        targetTrackId: dpeProfile.targetTrackId,
+      }),
+    [dpeProfile.aircraftCategory, dpeProfile.aircraftClass, dpeProfile.targetTrackId],
+  );
+  const targetCertificateOption = findCertificateOptionForTargetTrack(
+    selectedTargetTrack,
+    certificateOptions,
+  );
   const selectedCertificateType =
+    targetCertificateOption ??
     certificateOptions.find((certificateType) => certificateType.id === certificateTypeId) ??
     certificateOptions[0] ??
     null;
@@ -466,15 +481,6 @@ export default function App() {
   const selectedTask = taskOptions.includes(task) ? task : (taskOptions[0] ?? "A");
   const selectedQuestions = certificateQuestions.filter(
     (question) => question.acsArea === selectedArea && question.acsTask === selectedTask
-  );
-  const selectedTargetTrack = useMemo(
-    () =>
-      resolveDpeTargetTrack({
-        aircraftCategory: dpeProfile.aircraftCategory,
-        aircraftClass: dpeProfile.aircraftClass,
-        targetTrackId: dpeProfile.targetTrackId,
-      }),
-    [dpeProfile.aircraftCategory, dpeProfile.aircraftClass, dpeProfile.targetTrackId],
   );
 
   useEffect(() => {
@@ -2228,6 +2234,11 @@ function PracticeSetupScreen({
     : targetMissing.length > 0
       ? "Start voice with incomplete target"
       : "Start Voice Practice";
+  const targetAlignedCertificate = findCertificateOptionForTargetTrack(
+    selectedTargetTrack,
+    certificateOptions,
+  );
+  const certificateAlignedToTarget = Boolean(targetAlignedCertificate);
 
   return (
     <section className="screen">
@@ -2264,7 +2275,12 @@ function PracticeSetupScreen({
             <select
               value={selectedCertificateType?.id ?? ""}
               onChange={(event) => onCertificateChange(event.target.value)}
-              disabled={certificateOptions.length <= 1}
+              disabled={certificateOptions.length <= 1 || certificateAlignedToTarget}
+              title={
+                certificateAlignedToTarget
+                  ? "Certificate follows target track"
+                  : "Choose certificate content"
+              }
             >
               {certificateOptions.map((certificateType) => (
                 <option key={certificateType.id} value={certificateType.id}>
@@ -2273,6 +2289,9 @@ function PracticeSetupScreen({
               ))}
               {certificateOptions.length === 0 && <option value="">Certificate pending</option>}
             </select>
+            {certificateAlignedToTarget && (
+              <small>Certificate follows target track.</small>
+            )}
           </label>
 
           <label className="field">
@@ -3285,6 +3304,68 @@ function buildCertificateOptionsFromQuestions(questions: DpeQuestion[]): Certifi
   }, {});
 
   return Object.values(options).sort((left, right) => left.title.localeCompare(right.title));
+}
+
+const targetCertificateAliases: Record<string, string[]> = {
+  "CAX-ASEL": [
+    "commercial-airplane-land",
+    "commercial pilot airplane",
+    "COMM_ASEL",
+  ],
+  "CFI-A": [
+    "cfi-airplane-land",
+    "flight instructor airplane",
+    "CFI_ASEL",
+  ],
+  "CFII-A": [
+    "cfii-airplane-land",
+    "flight instructor instrument airplane",
+    "CFII_ASEL",
+  ],
+  IRA: [
+    "instrument-airplane-land",
+    "instrument rating airplane",
+    "INST_ASEL",
+  ],
+  "MEI-A": [
+    "mei-airplane-land",
+    "multi-engine instructor airplane",
+    "MEI_AMEL",
+  ],
+  MEL: [
+    "multi-engine-airplane",
+    "multi-engine airplane",
+    "COMM_AMEL",
+  ],
+  "PPL-ASEL": [
+    "private-pilot-asel",
+    "private pilot airplane single-engine land",
+    "PRIVATE_PILOT_ASEL",
+  ],
+};
+
+function normalizeCertificateMatchValue(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function findCertificateOptionForTargetTrack(
+  targetTrack: DpeTargetTrack,
+  options: CertificateOption[],
+) {
+  const aliases = [
+    targetTrack.id,
+    targetTrack.code,
+    targetTrack.certificate,
+    targetTrack.title,
+    ...(targetCertificateAliases[targetTrack.code] ?? []),
+  ]
+    .map(normalizeCertificateMatchValue)
+    .filter(Boolean);
+
+  return options.find((option) => {
+    const optionValues = [option.id, option.code, option.title].map(normalizeCertificateMatchValue);
+    return optionValues.some((value) => aliases.includes(value));
+  });
 }
 
 function buildQuestionScope(questions: DpeQuestion[], fallback: QuestionApiResponse) {
