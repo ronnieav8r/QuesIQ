@@ -34,7 +34,7 @@ const emptyArtifactDraft: VoiceSessionArtifactDraft = {
 };
 
 const defaultFirstTurnInstruction =
-  "Speak in English only. Start the live voice session now using the active Admin prompt, mode instructions, question-focus instructions, style instructions, and session context already provided. Ask exactly one opening question.";
+  "Speak in English only. Start the live voice session now using the active Admin prompt, mode instructions, question-focus instructions, style instructions, and session context already provided. Use only provided session context. Do not infer or mention the user's surroundings, camera view, current activity, food, cooking, location, objects, clothing, or what they appear to be doing. Ask exactly one opening question.";
 
 function shouldAutoCreateResponseAfterUserTurn(endpoint: string) {
   return endpoint === "/api/realtime/session" || endpoint === "/api/dpe/realtime/session";

@@ -204,7 +204,9 @@ const runtimeContextByTarget = {
     "Target company",
     "Capped resume context when available",
     "Saved Story or Introduction context when practicing one",
-    "Regular practice uses a minimal client kickoff that asks the model to start using the visible Admin prompt and context; mode-specific opening behavior belongs in Admin prompts",
+    "Regular practice uses a client kickoff that restates role/company, mode, question focus, and style for the first turn",
+    "Opening guardrail: Que must not infer or mention surroundings, camera view, current activity, food, cooking, objects, clothing, or what the user appears to be doing",
+    "Mode-specific opening behavior belongs in Admin prompts and the client kickoff reinforces First Impression as a target-role opening question",
   ],
   story: [
     "Active Story Lab Admin prompt instructions",
