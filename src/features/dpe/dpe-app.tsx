@@ -812,6 +812,14 @@ export default function App() {
               <HistoryScreen
                 currentSession={session}
                 databaseAvailable={databaseAvailable}
+                onOpenReview={(reviewSession) => {
+                  setMode(reviewSession.mode);
+                  setSession(reviewSession);
+                  setStage("review");
+                  setCurrentIndex(0);
+                  setDraftAnswer("");
+                  setScreen("practice");
+                }}
                 storedSessions={storedSessions}
               />
             )}
@@ -1012,6 +1020,67 @@ function HomeScreen({
   const nextAction = targetMissing.length > 0
     ? `Complete target setup: ${targetMissing.join(", ")}.`
     : progress.nextPracticeAction;
+  const completedSessions = progressionSummary?.completedSessions ?? progress.completedSessions;
+  const reviewedSessions = progressionSummary?.reviewedSessions ?? progress.reviewedSessions;
+  const checklistItems = [
+    {
+      id: "target",
+      title: "Checkride target set",
+      detail:
+        targetMissing.length === 0
+          ? "Track, aircraft, and checkride date are set."
+          : `Still needed: ${targetMissing.join(", ")}.`,
+      status: targetMissing.length === 0 ? "ready" : "pending",
+    },
+    {
+      id: "track",
+      title: "Track content status",
+      detail: selectedTargetTrack.contentReady
+        ? `${selectedTargetTrack.title} content is loaded for direct practice.`
+        : `${selectedTargetTrack.title} is scaffolded. Practice continues on available Private Pilot demo prompts.`,
+      status: selectedTargetTrack.contentReady ? "ready" : "scaffolded",
+    },
+    {
+      id: "oral",
+      title: "First oral session",
+      detail:
+        completedSessions > 0
+          ? `${completedSessions} completed session${completedSessions === 1 ? "" : "s"} logged.`
+          : "Complete one session to start readiness history.",
+      status: completedSessions > 0 ? "ready" : "pending",
+    },
+    {
+      id: "review",
+      title: "First review completed",
+      detail:
+        reviewedSessions > 0
+          ? `${reviewedSessions} saved review${reviewedSessions === 1 ? "" : "s"} available.`
+          : "Finish one review to unlock next-practice signals.",
+      status: reviewedSessions > 0 ? "ready" : "pending",
+    },
+    {
+      id: "progression",
+      title: "Progression state",
+      detail:
+        progressionAvailable === false
+          ? "Using local readiness preview. Persisted progression is temporarily unavailable."
+          : progressionSummary
+            ? `Level ${progressionSummary.level} with ${progressionSummary.totalXp} XP stored.`
+            : "Progression is connected and will populate after practice activity.",
+      status:
+        progressionAvailable === false
+          ? "local preview"
+          : progressionSummary
+            ? "ready"
+            : "pending",
+    },
+    {
+      id: "next",
+      title: "Next practice action",
+      detail: nextAction,
+      status: "next",
+    },
+  ] as const;
   const targetLine = [
     selectedTargetTrack.title,
     `${selectedTargetTrack.aircraftCategory} ${selectedTargetTrack.aircraftClass}`,
@@ -1041,6 +1110,27 @@ function HomeScreen({
             <p>{nextAction}</p>
           </div>
           <BadgeCheck />
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="section-head">
+          <div>
+            <h3>MVP readiness checklist</h3>
+            <p>Actionable setup and early milestones for checkride-readiness practice.</p>
+          </div>
+          <CheckCircle2 />
+        </div>
+        <div className="question-list mt-4">
+          {checklistItems.map((item) => (
+            <div className="raised-card" key={item.id}>
+              <div className="section-head">
+                <strong>{item.title}</strong>
+                <span className="pill">{item.status}</span>
+              </div>
+              <p>{item.detail}</p>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -1362,11 +1452,11 @@ function PracticeSetupScreen({
           </div>
           {!selectedTargetTrack.contentReady && (
             <div className="raised-card mt-4">
-              <strong>Selected track content is not loaded yet</strong>
+              <strong>Selected target is scaffolded; demo prompt lane is active</strong>
               <p>
-                {selectedTargetTrack.title} is scaffolded for readiness tracking, but oral prompts
-                are still pending. You can continue with {privatePilotTrack.title} demo prompts now
-                or update your target in Me.
+                {selectedTargetTrack.title} is ready for target/profile scaffolding, but this track
+                does not have loaded oral content yet. Practice currently runs with available{" "}
+                {privatePilotTrack.title} prompts while your selected target remains unchanged.
               </p>
             </div>
           )}
@@ -1374,8 +1464,9 @@ function PracticeSetupScreen({
             <div className="raised-card mt-4">
               <strong>No oral questions match this selection</strong>
               <p>
-                Try another certificate, ACS area, or ACS task. If every selection is empty, Admin
-                still needs to add active oral questions before this certificate can be practiced.
+                Try another certificate, ACS area, or ACS task. If you selected a scaffolded track,
+                continue with available {privatePilotTrack.title} prompts or adjust your target in
+                Me. If every combination is empty, Admin still needs to add active oral questions.
               </p>
             </div>
           )}
@@ -2622,15 +2713,35 @@ function ContentScreen({ summary }: { summary: ContentSummary }) {
 function HistoryScreen({
   currentSession,
   storedSessions,
-  databaseAvailable
+  databaseAvailable,
+  onOpenReview
 }: {
   currentSession: LocalSession | null;
   storedSessions: StoredPracticeSession[];
   databaseAvailable: boolean | null;
+  onOpenReview: (reviewSession: LocalSession) => void;
 }) {
-  const latestStoredReview = storedSessions
-    .map((storedSession) => reviewFromStoredSession(storedSession))
-    .find(Boolean);
+  const storedReviews = storedSessions
+    .map((storedSession) => ({
+      storedSession,
+      reviewSession: reviewFromStoredSession(storedSession),
+    }))
+    .filter((item): item is { storedSession: StoredPracticeSession; reviewSession: LocalSession } => Boolean(item.reviewSession));
+  const [selectedReviewId, setSelectedReviewId] = useState<string | null>(() => {
+    if (currentSession?.endedAt) return currentSession.id;
+    return storedReviews[0]?.storedSession.id ?? null;
+  });
+
+  const resolvedReviewId = currentSession?.endedAt
+    ? currentSession.id
+    : selectedReviewId && storedReviews.some((item) => item.storedSession.id === selectedReviewId)
+      ? selectedReviewId
+      : storedReviews[0]?.storedSession.id ?? null;
+
+  const selectedStoredReview = storedReviews.find((item) => item.storedSession.id === resolvedReviewId)?.reviewSession;
+  const selectedReview = currentSession?.endedAt && resolvedReviewId === currentSession.id
+    ? currentSession
+    : selectedStoredReview ?? (currentSession?.endedAt ? currentSession : null);
 
   return (
     <section className="screen">
@@ -2653,7 +2764,39 @@ function HistoryScreen({
           </div>
           <ListChecks />
         </div>
+        <div className="stat-strip mt-4">
+          <Stat label="Stored sessions" value={`${storedSessions.length}`} />
+          <Stat label="Saved reviews" value={`${storedReviews.length}`} />
+        </div>
         <div className="question-list mt-4">
+          {currentSession?.endedAt && (
+            <article className="raised-card">
+              <div className="question-meta">
+                <span className="pill">current</span>
+                <span className="pill">{currentSession.mode}</span>
+                <span className="pill">review open</span>
+                <span className="pill">
+                  Area {currentSession.area}, Task {currentSession.task}
+                </span>
+              </div>
+              <strong>{formatStoredDate(currentSession.startedAt.toISOString())}</strong>
+              <p>Local review from the active session.</p>
+              <div className="inline-actions mt-4">
+                <button
+                  className="button"
+                  onClick={() => setSelectedReviewId(currentSession.id)}
+                >
+                  Open review
+                </button>
+                <button
+                  className="button"
+                  onClick={() => onOpenReview(currentSession)}
+                >
+                  Reopen in practice
+                </button>
+              </div>
+            </article>
+          )}
           {storedSessions.map((storedSession) => (
             <article className="raised-card" key={storedSession.id}>
               <div className="question-meta">
@@ -2678,14 +2821,38 @@ function HistoryScreen({
               <p>
                 {summarizeStoredSession(storedSession)}
               </p>
+              <div className="inline-actions mt-4">
+                <button
+                  className="button"
+                  onClick={() => setSelectedReviewId(storedSession.id)}
+                  disabled={!storedReviews.some((item) => item.storedSession.id === storedSession.id)}
+                >
+                  Open review
+                </button>
+                <button
+                  className="button"
+                  onClick={() => {
+                    const selected = storedReviews.find(
+                      (item) => item.storedSession.id === storedSession.id,
+                    )?.reviewSession;
+                    if (selected) onOpenReview(selected);
+                  }}
+                  disabled={!storedReviews.some((item) => item.storedSession.id === storedSession.id)}
+                >
+                  Reopen in practice
+                </button>
+              </div>
             </article>
           ))}
           {storedSessions.length === 0 && <ReviewPreview />}
         </div>
       </div>
-      {currentSession?.endedAt && <ReviewScreen session={currentSession} onReset={() => undefined} />}
-      {!currentSession?.endedAt && latestStoredReview && (
-        <ReviewScreen session={latestStoredReview} onReset={() => undefined} />
+      {selectedReview && (
+        <ReviewScreen
+          key={selectedReview.id}
+          session={selectedReview}
+          onReset={() => undefined}
+        />
       )}
     </section>
   );

@@ -137,3 +137,29 @@ MVP behavior notes:
 3. For no-content tracks, users can continue with available Private Pilot demo
    prompts while keeping their selected target track for readiness scaffolding.
 4. This slice does not add or seed aviation question/answer/rubric content.
+
+## MVP Learner Polish Slice 2
+
+This follow-up MVP slice keeps content unchanged and focuses on learner
+workflow clarity:
+
+1. History now supports selecting a specific stored session review instead of
+   always showing only the latest review.
+2. History cards now include a `Reopen in practice` action that loads that
+   exact saved review into the Practice review stage.
+3. Home now includes an actionable readiness checklist that calls out:
+   target completeness, track content/scaffold status, first oral session,
+   first review, progression service state, and the next practice action.
+4. Home uses persisted `/api/dpe/progression` data when available and falls
+   back to local session-derived readiness signals when progression is
+   unavailable.
+5. Practice setup copy is tightened for scaffolded/no-content tracks so users
+   understand they can continue with available Private Pilot demo prompts
+   without losing their selected target track.
+
+Remaining MVP gaps (outside this slice):
+
+1. Real DPE aviation content curation/import for non-Private tracks.
+2. Deeper review history comparison and trend views across saved sessions.
+3. Weak-focus resolution quest logic once richer durable review history is in
+   place.
