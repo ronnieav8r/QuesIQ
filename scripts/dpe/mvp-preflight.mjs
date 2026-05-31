@@ -115,6 +115,7 @@ const codeContracts = [
       "will not appear in History",
       "markSessionLocalOnly",
       "DPE session storage stopped accepting updates",
+      "setPracticeNotice(null)",
       "History storage unavailable",
       "Stored transcripts, retry AI",
       "No DPE sessions yet",

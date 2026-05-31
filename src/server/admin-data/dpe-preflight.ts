@@ -227,6 +227,7 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "will not appear in History",
       "markSessionLocalOnly",
       "DPE session storage stopped accepting updates",
+      "setPracticeNotice(null)",
       "No DPE sessions yet",
       "Start first DPE session",
     ]),

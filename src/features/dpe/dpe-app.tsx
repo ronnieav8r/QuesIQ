@@ -997,6 +997,7 @@ export default function App() {
     setSession(null);
     setCurrentIndex(0);
     setDraftAnswer("");
+    setPracticeNotice(null);
   }
 
   if (authState.loading) {

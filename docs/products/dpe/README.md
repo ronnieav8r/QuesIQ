@@ -923,3 +923,14 @@ This slice makes DPE storage failure behavior honest without changing content:
 4. Admin DPE preflight now checks that the local-only persistence downgrade
    markers remain present.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 60 (New Session Notice Reset)
+
+This slice removes stale recovery copy from the fresh-practice path:
+
+1. The DPE review `New Session` action now clears any active practice notice
+   when returning to setup.
+2. Old storage, voice, or local-only warnings no longer carry into a fresh
+   session setup after review.
+3. Admin DPE preflight now checks that the practice reset path clears notices.
+4. No aviation content, schema, publish, Official, or Verified state changed.
