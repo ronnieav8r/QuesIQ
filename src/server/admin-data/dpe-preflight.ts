@@ -286,6 +286,12 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "profileLoaded",
       "runtimeCheckLoaded",
     ]),
+    profileSaveSingleFlightVisible: hasAll(dpeAppText, [
+      "profileSaveInFlightRef",
+      "profileSaveInFlightGuarded",
+      "setProfileSaveStatus(\"saving\")",
+      "setProfileSaveStatus(\"saved\")",
+    ]),
     voiceRuntimeConfigContractVisible: hasAll(realtimeRouteText, [
       'getOpenAiRealtimeApiKey("dpe")',
       "OPENAI_DPE_REALTIME_API_KEY or OPENAI_DPE_API_KEY",
@@ -396,6 +402,9 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
   }
   if (!runtimeSignals.authProviderVisibilityVisible) {
     warnings.push("DPE auth provider visibility markers were not detected.");
+  }
+  if (!runtimeSignals.profileSaveSingleFlightVisible) {
+    warnings.push("DPE profile save single-flight markers were not detected.");
   }
 
   const status: PreflightStatus =
@@ -528,6 +537,13 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
         label: "Auth provider visibility",
         status: warningStatusFrom(runtimeSignals.authProviderVisibilityVisible),
         value: runtimeSignals.authProviderVisibilityVisible ? "Visible" : "Not detected",
+      },
+      {
+        detail: "DPE Me profile save is guarded against duplicate in-flight submit requests.",
+        key: "profile_save_single_flight",
+        label: "Profile save guard",
+        status: warningStatusFrom(runtimeSignals.profileSaveSingleFlightVisible),
+        value: runtimeSignals.profileSaveSingleFlightVisible ? "Visible" : "Not detected",
       },
       {
         detail: "Learner recovery copy distinguishes local-only typed practice and local-only reviews when storage is unavailable.",

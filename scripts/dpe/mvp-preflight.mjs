@@ -181,6 +181,8 @@ const codeContracts = [
       "sessionCreated",
       "storedSessionsLoaded",
       "profileLoaded",
+      "profileSaveInFlightRef",
+      "profileSaveInFlightGuarded",
       "runtimeCheckLoaded",
     ],
   },

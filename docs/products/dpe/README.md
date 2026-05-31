@@ -1374,3 +1374,14 @@ content:
    silently doing nothing.
 4. DPE preflight now checks for the social sign-in hardening marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 93 (Profile Save Submit Hardening)
+
+This slice tightens DPE Me profile save behavior without changing content:
+
+1. Profile saves now use an in-flight guard before setting save state, so fast
+   repeat input cannot launch duplicate profile save requests.
+2. The guard is cleared in a `finally` path after success or failure.
+3. Admin DPE runtime preflight now reports the profile save guard marker.
+4. DPE CLI preflight now checks for the profile save guard markers.
+5. No aviation content, schema, publish, Official, or Verified state changed.

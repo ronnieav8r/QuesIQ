@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { signIn, signOut } from "next-auth/react";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import { inferDpeTargetTrackKeyFromCertificate } from "@/features/admin/dpe-target-tracks";
 import type { VoiceSessionArtifactDraft } from "@/product/interview-types";
@@ -414,6 +414,7 @@ export default function App() {
   const [dpeDiagnostics, setDpeDiagnostics] = useState<DpeDiagnosticEvent[]>([]);
   const [dpeProfile, setDpeProfile] = useState<DpeProfileState>(emptyDpeProfile);
   const [profileSaveStatus, setProfileSaveStatus] = useState<"idle" | "saved" | "saving" | "error">("idle");
+  const profileSaveInFlightRef = useRef(false);
   const [profileSaveMessage, setProfileSaveMessage] = useState<string | null>(null);
   const [databaseAvailable, setDatabaseAvailable] = useState<boolean | null>(null);
   const [progressionAvailable, setProgressionAvailable] = useState<boolean | null>(null);
@@ -654,6 +655,9 @@ export default function App() {
   }
 
   async function saveProfile(nextProfile = dpeProfile) {
+    if (profileSaveInFlightRef.current) return;
+    profileSaveInFlightRef.current = true;
+    const profileSaveInFlightGuarded = true;
     setProfileSaveStatus("saving");
     setProfileSaveMessage(null);
     try {
@@ -684,6 +688,9 @@ export default function App() {
           ? error.message
           : "DPE profile storage is unavailable right now.",
       );
+    } finally {
+      void profileSaveInFlightGuarded;
+      profileSaveInFlightRef.current = false;
     }
   }
 
