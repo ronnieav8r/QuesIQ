@@ -291,68 +291,67 @@ function getAnsweredPromptCount(transcriptJson: unknown) {
   }).length;
 }
 
-function getAnswerString(answer: unknown, key: string) {
-  if (!answer || typeof answer !== "object") return "";
-  const value = key in answer ? (answer as Record<string, unknown>)[key] : undefined;
-  return typeof value === "string" ? value.trim() : "";
+function normalizeWeakReference(value: unknown) {
+  return typeof value === "string" ? value.trim().toUpperCase() : "";
 }
 
-function getAnswerQuestion(answer: unknown) {
-  if (!answer || typeof answer !== "object") return undefined;
-  const question = "question" in answer ? (answer as Record<string, unknown>).question : undefined;
-  return question && typeof question === "object" && !Array.isArray(question)
-    ? (question as Record<string, unknown>)
-    : undefined;
+function getReviewWeakReferences(reviewJson: unknown) {
+  if (!reviewJson || typeof reviewJson !== "object" || Array.isArray(reviewJson)) return [];
+  const references = (reviewJson as { weakAcsReferences?: unknown }).weakAcsReferences;
+  if (!Array.isArray(references)) return [];
+  return [...new Set(references.map(normalizeWeakReference).filter(Boolean))];
 }
 
-function getAnswerFocusKey(answer: unknown) {
-  const question = getAnswerQuestion(answer);
-  const acsArea = typeof question?.acsArea === "string" ? question.acsArea.trim() : "";
-  const acsTask = typeof question?.acsTask === "string" ? question.acsTask.trim() : "";
-  if (!acsArea || !acsTask) return undefined;
-  return `${acsArea}.${acsTask}`;
+function getSessionFocusKey(session: { acsArea: string | null; acsTask: string | null }) {
+  const acsArea = session.acsArea?.trim();
+  const acsTask = session.acsTask?.trim();
+  return acsArea && acsTask ? `${acsArea}.${acsTask}`.toUpperCase() : undefined;
 }
 
-function isWeakAnswer(answer: unknown) {
-  if (!answer || typeof answer !== "object") return false;
-  const skipped = "skipped" in answer ? (answer as Record<string, unknown>).skipped : undefined;
-  const response = getAnswerString(answer, "response");
-  return skipped === true || response.split(/\s+/).filter(Boolean).length < 10;
-}
-
-function getWeakFocusKeys(transcriptJson: unknown) {
-  return new Set(
-    getSessionAnswers(transcriptJson)
-      .filter(isWeakAnswer)
-      .map(getAnswerFocusKey)
-      .filter((key): key is string => Boolean(key)),
-  );
+function getSessionSortTime(session: { createdAt: Date; endedAt: Date | null }) {
+  return (session.endedAt ?? session.createdAt).getTime();
 }
 
 function estimateResolvedWeakFocuses(
-  sessions: Array<{ endedAt: Date | null; transcriptJson: unknown }>,
+  sessions: Array<{
+    acsArea: string | null;
+    acsTask: string | null;
+    createdAt: Date;
+    endedAt: Date | null;
+    reviewJson: unknown;
+  }>,
 ) {
-  const completedWithEvidence = [...sessions]
-    .filter((session) => session.endedAt)
-    .sort((left, right) => {
-      const leftTime = left.endedAt?.getTime() ?? 0;
-      const rightTime = right.endedAt?.getTime() ?? 0;
-      return rightTime - leftTime;
-    });
+  const reviewedSessions = [...sessions]
+    .filter((session) => session.reviewJson)
+    .sort((left, right) => getSessionSortTime(left) - getSessionSortTime(right));
 
-  if (completedWithEvidence.length < 2) return 0;
+  const openWeakReferences = new Map<string, { focusKey: string }>();
+  const resolvedWeakReferences = new Set<string>();
 
-  const latestWeak = getWeakFocusKeys(completedWithEvidence[0]?.transcriptJson);
-  const historicalWeak = new Set(
-    completedWithEvidence
-      .slice(1)
-      .flatMap((session) => [...getWeakFocusKeys(session.transcriptJson)]),
-  );
-  let resolved = 0;
-  for (const key of historicalWeak) {
-    if (!latestWeak.has(key)) resolved += 1;
+  for (const session of reviewedSessions) {
+    const focusKey = getSessionFocusKey(session);
+    if (!focusKey) continue;
+
+    const weakReferences = new Set(getReviewWeakReferences(session.reviewJson));
+    const readinessScore = getReadinessScore(session.reviewJson) ?? 0;
+
+    if (readinessScore >= 4) {
+      for (const [weakReference, weakFocus] of openWeakReferences) {
+        if (weakFocus.focusKey === focusKey && !weakReferences.has(weakReference)) {
+          resolvedWeakReferences.add(weakReference);
+          openWeakReferences.delete(weakReference);
+        }
+      }
+    }
+
+    for (const weakReference of weakReferences) {
+      if (!resolvedWeakReferences.has(weakReference)) {
+        openWeakReferences.set(weakReference, { focusKey });
+      }
+    }
   }
-  return resolved;
+
+  return resolvedWeakReferences.size;
 }
 
 function getReadinessScore(reviewJson: unknown) {
@@ -412,6 +411,7 @@ async function buildDpeStats(userId: string) {
     .select({
       acsArea: dpePracticeSessions.acsArea,
       acsTask: dpePracticeSessions.acsTask,
+      createdAt: dpePracticeSessions.createdAt,
       endedAt: dpePracticeSessions.endedAt,
       reviewJson: dpePracticeSessions.reviewJson,
       status: dpePracticeSessions.status,

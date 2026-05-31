@@ -108,6 +108,9 @@ const codeContracts = [
       "weak_focus_resolved_count",
       "recordDpeSessionCompleted",
       "getDpeProgressionSummary",
+      "getReviewWeakReferences",
+      "resolvedWeakReferences",
+      "readinessScore >= 4",
     ],
   },
   {

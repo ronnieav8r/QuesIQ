@@ -2887,17 +2887,42 @@ function buildProgressSummary(sessions: LocalSession[]): ProgressSummary {
 }
 
 function estimateResolvedWeakFocuses(sessions: LocalSession[]) {
-  if (sessions.length < 2) return 0;
+  const reviewedSessions = [...sessions]
+    .filter((session) => session.review)
+    .sort((left, right) => {
+      const leftTime = (left.endedAt ?? left.startedAt).getTime();
+      const rightTime = (right.endedAt ?? right.startedAt).getTime();
+      return leftTime - rightTime;
+    });
+  const openWeakReferences = new globalThis.Map<string, string>();
+  const resolvedWeakReferences = new Set<string>();
 
-  const latestWeak = new Set(buildWeakFocuses(sessions[0]?.answers ?? []).map((focus) => focus.key));
-  const historicalWeak = new Set(
-    buildWeakFocuses(sessions.slice(1).flatMap((session) => session.answers)).map((focus) => focus.key),
-  );
-  let resolved = 0;
-  for (const key of historicalWeak) {
-    if (!latestWeak.has(key)) resolved += 1;
+  for (const session of reviewedSessions) {
+    const focusKey = `${session.area}.${session.task}`.toUpperCase();
+    const weakReferences = new Set(
+      (session.review?.weakAcsReferences ?? [])
+        .map((reference) => reference.trim().toUpperCase())
+        .filter(Boolean),
+    );
+    const readinessScore = session.review?.scores.checkrideReadiness ?? 0;
+
+    if (readinessScore >= 4) {
+      for (const [weakReference, weakFocusKey] of openWeakReferences) {
+        if (weakFocusKey === focusKey && !weakReferences.has(weakReference)) {
+          resolvedWeakReferences.add(weakReference);
+          openWeakReferences.delete(weakReference);
+        }
+      }
+    }
+
+    for (const weakReference of weakReferences) {
+      if (!resolvedWeakReferences.has(weakReference)) {
+        openWeakReferences.set(weakReference, focusKey);
+      }
+    }
   }
-  return resolved;
+
+  return resolvedWeakReferences.size;
 }
 
 function average(values: number[]) {

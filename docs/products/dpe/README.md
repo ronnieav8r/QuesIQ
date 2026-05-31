@@ -110,9 +110,10 @@ Migration-backed XP awards are now wired at:
 The persistent quest set covers first oral session, first readiness review, ACS
 area/task coverage, answered prompts, a 4+ readiness score, weak-focus
 resolution, and saved checkride target details. Weak-focus resolution is derived
-from stored completed sessions by comparing historical weak ACS area/task keys
-against the latest completed session's weak signals; it remains a readiness
-habit signal, not a certification claim.
+from stored reviewed sessions by counting a prior weak ACS reference as resolved
+only after a later reviewed session in the same ACS area/task reaches 4+
+checkride readiness without repeating that weak reference; it remains a
+readiness habit signal, not a certification claim.
 
 ## MVP Readiness Scaffolding (No Content Expansion)
 
@@ -164,7 +165,7 @@ Remaining MVP gaps (outside this slice):
 1. Real DPE aviation content curation/import for non-Private tracks.
 2. Admin-facing review retry timeline filters and aggregate retry health.
 3. Weak-focus resolution quest logic once richer durable review history is in
-   place.
+   place. This was later addressed in Slice 33 using stored review history.
 
 ## MVP Learner Polish Slice 3 (Voice/Session Recovery)
 
@@ -571,3 +572,18 @@ changing content:
    turn count when present, and stored target-track label.
 3. This lets Admin compare review retry health against the session evidence and
    target-track metadata captured by the learner History view.
+
+## MVP Learner Polish Slice 33 (Review-Backed Weak Focus Resolution)
+
+This slice tightens DPE quest progression without changing content:
+
+1. Persistent weak-focus resolution now uses saved review records instead of a
+   latest-session transcript estimate.
+2. A prior weak ACS reference is counted as resolved only when a later reviewed
+   session in the same ACS area/task reaches 4+ checkride readiness and no
+   longer repeats that weak reference.
+3. The local learner fallback preview uses the same review-backed rule when
+   persisted progression is unavailable.
+4. This keeps weak-focus quests as habit/readiness signals only; no
+   certification, publish, Official, Verified, or aviation-content state
+   changed.
