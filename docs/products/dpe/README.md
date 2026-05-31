@@ -1089,3 +1089,16 @@ changing content:
 3. Starting state still takes priority and shows `Starting session`.
 4. Admin DPE preflight now checks for the incomplete-target voice label marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 73 (Stored Resume Target Restore)
+
+This slice keeps resumed saved sessions aligned with their target track without
+changing content:
+
+1. Resuming an in-progress stored DPE session now restores the saved target
+   track metadata into local profile state when the transcript includes a known
+   target id, code, or title.
+2. The resume notice confirms the restored saved target track.
+3. Area, task, certificate, and mode resume behavior is unchanged.
+4. Admin DPE preflight now checks for the stored target restore markers.
+5. No aviation content, schema, publish, Official, or Verified state changed.

@@ -224,6 +224,8 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "scaffolded/content-pending",
       "Checkride target setup incomplete",
       "Open Me",
+      "getStoredTargetTrack",
+      "Restored saved target track",
     ]),
     localPersistenceRecoveryVisible: hasAll(dpeAppText, [
       "Typed practice running locally",

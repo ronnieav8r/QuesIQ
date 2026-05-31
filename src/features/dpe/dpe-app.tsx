@@ -681,7 +681,16 @@ export default function App() {
   }
 
   function continueStoredInProgressSession(storedSession: StoredPracticeSession) {
+    const storedTargetTrack = getStoredTargetTrack(storedSession);
     const certificateType = normalizeStoredCertificateType(storedSession.transcriptJson?.certificateType);
+    if (storedTargetTrack) {
+      setDpeProfile((current) => ({
+        ...current,
+        aircraftCategory: storedTargetTrack.aircraftCategory,
+        aircraftClass: storedTargetTrack.aircraftClass,
+        targetTrackId: storedTargetTrack.id,
+      }));
+    }
     if (certificateType?.id) {
       setCertificateTypeId(certificateType.id);
     }
@@ -702,7 +711,9 @@ export default function App() {
       setScreen("practice");
       setPracticeNotice({
         title: "Resumed in-progress session",
-        detail: resumePlan.message,
+        detail: storedTargetTrack
+          ? `${resumePlan.message} Restored saved target track: ${storedTargetTrack.title}.`
+          : resumePlan.message,
       });
       return;
     }
@@ -3355,6 +3366,19 @@ function getStoredTargetTrackTitle(storedSession: StoredPracticeSession) {
   const targetTrack = isRecord(transcript.targetTrack) ? transcript.targetTrack : {};
   const transcriptTitle = typeof targetTrack.title === "string" ? targetTrack.title.trim() : "";
   return transcriptTitle || storedSession.acsTitle?.trim() || undefined;
+}
+
+function getStoredTargetTrack(storedSession: StoredPracticeSession) {
+  const transcript = isRecord(storedSession.transcriptJson) ? storedSession.transcriptJson : {};
+  const targetTrack = isRecord(transcript.targetTrack) ? transcript.targetTrack : {};
+  const id = typeof targetTrack.id === "string" ? targetTrack.id.trim() : "";
+  const code = typeof targetTrack.code === "string" ? targetTrack.code.trim() : "";
+  const title = getStoredTargetTrackTitle(storedSession)?.trim() ?? "";
+
+  return (
+    getDpeTargetTrackById(id) ??
+    dpeTargetTracks.find((track) => track.code === code || track.title === title)
+  );
 }
 
 function getStoredVoiceEvidenceSummary(storedSession: StoredPracticeSession) {

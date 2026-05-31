@@ -144,6 +144,8 @@ const codeContracts = [
       "scaffolded/content-pending",
       "Checkride target setup incomplete",
       "Open Me",
+      "getStoredTargetTrack",
+      "Restored saved target track",
       "targetTrack: {",
       "buildDpeContentStudioHref",
       "inferDpeTargetTrackKeyFromCertificate",
