@@ -702,3 +702,17 @@ This slice improves target/profile setup recovery without changing content:
 3. The notice tells the learner to save again when account storage is reachable
    so future sessions, reviews, and quests use the same target.
 4. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 43 (Public Status Probe Recovery)
+
+This slice improves readiness clarity when the public DPE status probe is
+unreachable without changing content:
+
+1. The signed-out target-track panel now distinguishes `probe unavailable`
+   from `checking` when `/api/dpe/status` cannot be reached.
+2. Home readiness now treats Review AI and Voice AI readiness as `unknown`
+   instead of fallback/not-ready when the public probe itself failed.
+3. The Home production-status panel shows a `Public status probe unavailable`
+   notice and points learners toward signed-in runtime checks and local
+   fallback signals.
+4. No aviation content, schema, publish, Official, or Verified state changed.

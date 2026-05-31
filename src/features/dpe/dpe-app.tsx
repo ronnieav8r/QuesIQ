@@ -402,6 +402,7 @@ export default function App() {
     certificateTypes: []
   });
   const [publicStatus, setPublicStatus] = useState<DpePublicStatus | null>(null);
+  const [publicStatusAvailable, setPublicStatusAvailable] = useState<boolean | null>(null);
   const [dpeDiagnostics, setDpeDiagnostics] = useState<DpeDiagnosticEvent[]>([]);
   const [dpeProfile, setDpeProfile] = useState<DpeProfileState>(emptyDpeProfile);
   const [profileSaveStatus, setProfileSaveStatus] = useState<"idle" | "saved" | "saving" | "error">("idle");
@@ -546,8 +547,10 @@ export default function App() {
       }
       const data = (await response.json()) as DpePublicStatus;
       setPublicStatus(data);
+      setPublicStatusAvailable(true);
     } catch {
       setPublicStatus(null);
+      setPublicStatusAvailable(false);
     }
   }
 
@@ -987,6 +990,7 @@ export default function App() {
       <SignInScreen
         googleEnabled={authState.googleEnabled}
         onSignedIn={loadAuthState}
+        publicStatusAvailable={publicStatusAvailable}
         publicStatus={publicStatus}
       />
     );
@@ -1041,6 +1045,7 @@ export default function App() {
                 onPractice={() => setScreen("practice")}
                 progressionAvailable={progressionAvailable}
                 progressionSummary={progressionSummary}
+                publicStatusAvailable={publicStatusAvailable}
                 publicStatus={publicStatus}
                 runtimeCheck={runtimeCheck}
                 selectedTargetTrack={selectedTargetTrack}
@@ -1224,10 +1229,12 @@ function NavButton({
 function SignInScreen({
   googleEnabled,
   onSignedIn,
+  publicStatusAvailable,
   publicStatus,
 }: {
   googleEnabled: boolean;
   onSignedIn: () => Promise<void>;
+  publicStatusAvailable: boolean | null;
   publicStatus: DpePublicStatus | null;
 }) {
   const [email, setEmail] = useState("");
@@ -1314,7 +1321,10 @@ function SignInScreen({
                   </div>
                 </form>
             </div>
-            <SignedOutDpeStatusPanel publicStatus={publicStatus} />
+            <SignedOutDpeStatusPanel
+              publicStatus={publicStatus}
+              publicStatusAvailable={publicStatusAvailable}
+            />
           </section>
         </main>
       </div>
@@ -1322,7 +1332,13 @@ function SignInScreen({
   );
 }
 
-function SignedOutDpeStatusPanel({ publicStatus }: { publicStatus: DpePublicStatus | null }) {
+function SignedOutDpeStatusPanel({
+  publicStatus,
+  publicStatusAvailable,
+}: {
+  publicStatus: DpePublicStatus | null;
+  publicStatusAvailable: boolean | null;
+}) {
   const trackRows = publicStatus?.targetTracks ?? dpeTargetTracks;
   const readyTracks = trackRows.filter((track) => track.contentReady).length;
   const statusLabel =
@@ -1330,22 +1346,30 @@ function SignedOutDpeStatusPanel({ publicStatus }: { publicStatus: DpePublicStat
       ? "status ok"
       : publicStatus
         ? "degraded"
-        : "checking";
+        : publicStatusAvailable === false
+          ? "probe unavailable"
+          : "checking";
   const contentTableLabel = publicStatus
     ? publicStatus.contentTablesReachable
       ? "reachable"
       : "fallback"
-    : "checking";
+    : publicStatusAvailable === false
+      ? "unknown"
+      : "checking";
   const reviewAiLabel = publicStatus
     ? publicStatus.reviewAiConfigured
       ? "ready"
       : "not ready"
-    : "checking";
+    : publicStatusAvailable === false
+      ? "unknown"
+      : "checking";
   const voiceAiLabel = publicStatus
     ? publicStatus.realtimeVoiceConfigured
       ? "ready"
       : "not ready"
-    : "checking";
+    : publicStatusAvailable === false
+      ? "unknown"
+      : "checking";
 
   return (
     <div className="panel">
@@ -1367,6 +1391,16 @@ function SignedOutDpeStatusPanel({ publicStatus }: { publicStatus: DpePublicStat
         <Stat label="Voice AI" value={voiceAiLabel} />
         <Stat label="Ready tracks" value={`${readyTracks}/${trackRows.length}`} />
       </div>
+      {publicStatusAvailable === false && (
+        <div className="raised-card mt-4">
+          <strong>Status probe unavailable</strong>
+          <p>
+            DPE target tracks remain configured locally, but live storage, Review AI, Voice AI, and
+            prompt counts could not be checked from this browser. Sign in and use the runtime check
+            when service access is reachable.
+          </p>
+        </div>
+      )}
       <div className="question-list mt-4">
         <div className="raised-card">
           <strong>Configured airplane-land targets</strong>
@@ -1389,6 +1423,7 @@ function HomeScreen({
   onPractice,
   progressionAvailable,
   progressionSummary,
+  publicStatusAvailable,
   publicStatus,
   runtimeCheck,
   selectedTargetTrack,
@@ -1401,6 +1436,7 @@ function HomeScreen({
   onPractice: () => void;
   progressionAvailable: boolean | null;
   progressionSummary: DpeProgressionSummary | null;
+  publicStatusAvailable: boolean | null;
   publicStatus: DpePublicStatus | null;
   runtimeCheck: DpeRuntimeCheck | null;
   selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
@@ -1495,18 +1531,42 @@ function HomeScreen({
     {
       id: "review-ai",
       title: "Review AI ready",
-      detail: publicStatus?.reviewAiConfigured
-        ? "Transcript-backed AI review generation is configured."
-        : "AI review is not configured here. Fallback reviews and retry recovery remain available.",
-      status: publicStatus?.reviewAiConfigured ? "ready" : "fallback",
+      detail:
+        publicStatusAvailable === false
+          ? "Public status could not be checked. Signed-in runtime checks will show Review AI readiness when service access is reachable."
+          : publicStatusAvailable === null
+            ? "Public status is still checking Review AI readiness."
+          : publicStatus?.reviewAiConfigured
+            ? "Transcript-backed AI review generation is configured."
+            : "AI review is not configured here. Fallback reviews and retry recovery remain available.",
+      status:
+        publicStatusAvailable === false
+          ? "unknown"
+          : publicStatusAvailable === null
+            ? "checking"
+          : publicStatus?.reviewAiConfigured
+            ? "ready"
+            : "fallback",
     },
     {
       id: "voice-ai",
       title: "Voice AI ready",
-      detail: publicStatus?.realtimeVoiceConfigured
-        ? "Realtime voice setup is configured for live oral practice."
-        : "Voice AI is not configured here. Typed practice uses the same prompts, transcript shape, and review path.",
-      status: publicStatus?.realtimeVoiceConfigured ? "ready" : "typed fallback",
+      detail:
+        publicStatusAvailable === false
+          ? "Public status could not be checked. Typed practice remains available while Voice AI readiness is unknown."
+          : publicStatusAvailable === null
+            ? "Public status is still checking Voice AI readiness."
+          : publicStatus?.realtimeVoiceConfigured
+            ? "Realtime voice setup is configured for live oral practice."
+            : "Voice AI is not configured here. Typed practice uses the same prompts, transcript shape, and review path.",
+      status:
+        publicStatusAvailable === false
+          ? "unknown"
+          : publicStatusAvailable === null
+            ? "checking"
+          : publicStatus?.realtimeVoiceConfigured
+            ? "ready"
+            : "typed fallback",
     },
     {
       id: "runtime-check",
@@ -1580,6 +1640,7 @@ function HomeScreen({
 
       <DpeProductionStatusPanel
         publicStatus={publicStatus}
+        publicStatusAvailable={publicStatusAvailable}
         questionBankAvailable={questionBankAvailable}
         questionCount={questionCount}
         selectedTargetTrack={selectedTargetTrack}
@@ -1783,17 +1844,20 @@ function DpeRuntimeCheckPanel({ runtimeCheck }: { runtimeCheck: DpeRuntimeCheck 
 
 function DpeProductionStatusPanel({
   publicStatus,
+  publicStatusAvailable,
   questionBankAvailable,
   questionCount,
   selectedTargetTrack,
 }: {
   publicStatus: DpePublicStatus | null;
+  publicStatusAvailable: boolean | null;
   questionBankAvailable: boolean | null;
   questionCount: number;
   selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
 }) {
   const loadedQuestionCount = publicStatus?.questionCount ?? questionCount;
   const reachable = publicStatus?.contentTablesReachable ?? questionBankAvailable;
+  const publicProbeUnavailable = publicStatusAvailable === false;
   const statusLabel =
     publicStatus?.status === "ok"
       ? "status ok"
@@ -1801,7 +1865,28 @@ function DpeProductionStatusPanel({
         ? "storage reachable"
         : publicStatus
           ? "degraded"
-          : "checking";
+          : publicProbeUnavailable
+            ? "probe unavailable"
+            : "checking";
+  const contentTableLabel = publicProbeUnavailable && reachable == null
+    ? "unknown"
+    : reachable
+      ? "reachable"
+      : "fallback";
+  const reviewAiLabel = publicProbeUnavailable
+    ? "unknown"
+    : publicStatusAvailable === null
+      ? "checking"
+    : publicStatus?.reviewAiConfigured
+      ? "ready"
+      : "not ready";
+  const voiceAiLabel = publicProbeUnavailable
+    ? "unknown"
+    : publicStatusAvailable === null
+      ? "checking"
+    : publicStatus?.realtimeVoiceConfigured
+      ? "ready"
+      : "not ready";
   const selectedStatus =
     publicStatus?.targetTracks.find((track) => track.code === selectedTargetTrack.code) ??
     null;
@@ -1829,13 +1914,22 @@ function DpeProductionStatusPanel({
       </div>
       <div className="stat-strip mt-4">
         <Stat label="Status" value={statusLabel} />
-        <Stat label="Content tables" value={reachable ? "reachable" : "fallback"} />
+        <Stat label="Content tables" value={contentTableLabel} />
         <Stat label="Loaded prompts" value={`${loadedQuestionCount}`} />
-        <Stat label="Review AI" value={publicStatus?.reviewAiConfigured ? "ready" : "not ready"} />
-        <Stat label="Voice AI" value={publicStatus?.realtimeVoiceConfigured ? "ready" : "not ready"} />
+        <Stat label="Review AI" value={reviewAiLabel} />
+        <Stat label="Voice AI" value={voiceAiLabel} />
         <Stat label="Ready tracks" value={`${readyTracks}/${totalTracks}`} />
         <Stat label="Scaffolded" value={`${scaffoldedTracks}`} />
       </div>
+      {publicProbeUnavailable && (
+        <div className="raised-card mt-4">
+          <strong>Public status probe unavailable</strong>
+          <p>
+            Live public readiness could not be checked. Signed-in runtime checks and local question
+            fallback still show what this account can reach for practice, review, and voice setup.
+          </p>
+        </div>
+      )}
       <div className="question-list mt-4">
         <div className="raised-card">
           <div className="section-head">
