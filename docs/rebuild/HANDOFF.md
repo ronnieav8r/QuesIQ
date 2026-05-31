@@ -9,7 +9,7 @@ Last updated: 2026-05-30
   Use the manager/worker clone flow in `docs/rebuild/BRANCHING_AND_RELEASES.md`
   and `docs/platform/PARALLEL_DEVELOPMENT.md`. The older
   `C:\Users\weeks\Documents\github\QuesIQ` checkout is reference/archive.
-- Latest integration pass is `2497fb2 Use DPE progression API in readiness UX`.
+- Latest integration pass is `1c42658 Add admin DPE progression visibility`.
   `QuesIQ-manager/main` is clean and aligned with `origin/main` at that commit.
 - The current worker-thread set is Manager, Admin, Interview, Study, and DPE.
   Admin owns shared `/admin` and Content Studio work; product workers own their
@@ -38,6 +38,14 @@ Last updated: 2026-05-30
   visibility by configured/no-content/needs-work/review-ready track; and
   DPE-owned persistent progression tables/API hooked to session completion,
   voice artifact completion, and readiness review completion.
+- DPE learner polish now includes a Home MVP readiness checklist, clearer
+  scaffolded-track/demo-content practice messaging, and History review
+  selection so a user can reopen a specific stored session review instead of
+  only seeing the latest saved review.
+- Admin now has read-only DPE progression visibility at
+  `/api/admin/dpe-progression` and in the Admin DPE panel: recent progression
+  users, recent XP/quest events, enabled quests, and active XP rules. This is
+  visibility only; DPE quest/rule editing remains future work.
 - Dedicated durable Content Studio run storage now exists in migration
   `0051_add_content_studio_runs.sql`. Existing `ai_runs` remains AI-call audit
   history and may be linked from a Content Studio run when available. Product

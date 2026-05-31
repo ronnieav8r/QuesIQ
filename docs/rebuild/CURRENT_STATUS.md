@@ -37,7 +37,7 @@ Last updated: 2026-05-30
 - User is not expecting to manually review code for correctness. Future Codex
   passes should own verification, explain outcomes plainly, and when requested
   prepare the GitHub push/deploy path instead of leaving that work to the user.
-- Latest integration pass: `2497fb2 Use DPE progression API in readiness UX`.
+- Latest integration pass: `1c42658 Add admin DPE progression visibility`.
   `QuesIQ-manager/main` is clean and aligned with `origin/main` at that commit.
 
 ## Built So Far
@@ -79,6 +79,9 @@ Last updated: 2026-05-30
     `0053_add_dpe_progression.sql`, XP rule/quest defaults, `GET
     /api/dpe/progression`, and award hooks on completed DPE sessions, saved
     voice artifacts, and readiness reviews
+  - DPE learner polish now includes a Home MVP readiness checklist, clearer
+    scaffolded-track/demo-content practice messaging, and History review
+    selection for reopening a specific stored session review
   - Real DPE aviation content remains intentionally untouched for a later
     user-guided content curation pass
 - Shared Admin Content Studio:
@@ -104,6 +107,9 @@ Last updated: 2026-05-30
   - Admin Content Studio and DPE Admin readiness views now carry/display DPE
     target-track context for the requested MVP tracks without publishing or
     writing product content
+  - Admin has read-only DPE progression visibility through
+    `/api/admin/dpe-progression` and the Admin DPE panel: progression user
+    summaries, recent events, quest definitions, and XP rule definitions
   - Publish, Official, and Verified changes remain disabled until
     product-specific publish controls exist; `approved_for_publish` is only an
     internal review status and does not write product tables
