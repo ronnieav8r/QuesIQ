@@ -1202,6 +1202,10 @@ export default function App() {
                   }
                 }}
                 onOpenPractice={() => setScreen("practice")}
+                onStartNewSession={() => {
+                  resetPractice();
+                  setScreen("practice");
+                }}
                 onResumeInProgress={continueStoredInProgressSession}
                 onOpenReview={(reviewSession) => {
                   setMode(reviewSession.mode);
@@ -3835,6 +3839,7 @@ function HistoryScreen({
   diagnostics,
   onGenerateReview,
   onOpenPractice,
+  onStartNewSession,
   onResumeInProgress,
   onOpenReview
 }: {
@@ -3844,6 +3849,7 @@ function HistoryScreen({
   diagnostics: DpeDiagnosticEvent[];
   onGenerateReview: (sessionId: string) => Promise<ReviewGenerationOutcome>;
   onOpenPractice: () => void;
+  onStartNewSession: () => void;
   onResumeInProgress: (storedSession: StoredPracticeSession) => void;
   onOpenReview: (reviewSession: LocalSession) => void;
 }) {
@@ -4124,7 +4130,7 @@ function HistoryScreen({
         <ReviewScreen
           key={selectedReview.id}
           session={selectedReview}
-          onReset={() => undefined}
+          onReset={onStartNewSession}
           onRetryReview={
             selectedReview.persisted
               ? async () => {

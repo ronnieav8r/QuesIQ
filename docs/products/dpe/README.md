@@ -974,3 +974,15 @@ This slice keeps local-only review recovery honest without changing content:
 3. Admin DPE preflight now checks that review retry remains gated by session
    persistence.
 4. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 64 (History Review New Session)
+
+This slice fixes a History review navigation dead-end without changing content:
+
+1. The embedded History review now wires `New Session` to the same practice
+   reset path used by the live review screen.
+2. Clicking `New Session` from History returns the learner to fresh Practice
+   setup instead of doing nothing.
+3. Admin DPE preflight now checks that the History review has a real
+   `onStartNewSession` path.
+4. No aviation content, schema, publish, Official, or Verified state changed.
