@@ -74,10 +74,21 @@ The first Study slice is imported:
   Studio. The contract preserves source pack id, source chunk ids, page
   anchors, visual asset ids, tags, verification status, and warnings for each
   card/deck.
+- `src/server/study/study-generation-packet-contract.ts` now defines and
+  validates bounded generation packets with
+  `packetVersion=quesiq.studyGenerationPacket.v1` and
+  `targetContract=study.sourcePackDeckDraft.v1`. The packet parser preserves
+  source pack id/title/page range, deck request title/subject/card target,
+  output restrictions, chunk ids, page anchors, text snippets, tags, and
+  related visual ids.
 - `/api/study/content-studio/flashcard-draft` now supports an admin-only
   `source_pack_preview` mode that validates source-pack-generated draft JSON and
   returns review sections. This preview mode is side-effect-free and does not
   write Study runtime content.
+- `/api/study/content-studio/flashcard-draft` also supports admin-only
+  `source_pack_generation_packet_preview` mode. It validates a posted
+  generation packet and returns preview/review sections only; it does not
+  generate cards, import decks, publish, or write Official/Verified state.
 - `/api/study/tts` supports Study voice paths with Admin AI Usage
   instrumentation and source-style R2 audio caching when R2 environment
   variables are configured
@@ -133,9 +144,10 @@ common shell behavior.
 Study should not ingest raw source-pack files directly into learner runtime.
 The intended path is:
 
-1. reviewed source-pack chunks/assets produce Study deck draft JSON
-2. Admin Content Studio review plus verifier checks
-3. later approved Study import step (separate from generation/preview)
+1. reviewed source-pack chunks/assets produce bounded generation packet JSON
+2. generation packet maps to `study.sourcePackDeckDraft.v1` draft JSON
+3. Admin Content Studio review plus verifier checks
+4. later approved Study import step (separate from generation/preview)
 
 The current contract/preview layer intentionally stops before publish, Official,
 Verified, or Study library/runtime writes.

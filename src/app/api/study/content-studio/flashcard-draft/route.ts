@@ -10,6 +10,11 @@ import {
   parseStudySourcePackGeneratedDeckDraftContract,
   STUDY_SOURCE_PACK_DRAFT_SAMPLE,
 } from "@/server/study/study-source-pack-draft-contract";
+import {
+  getStudyGenerationPacketReviewSections,
+  parseStudyGenerationPacketContract,
+  STUDY_GENERATION_PACKET_SAMPLE,
+} from "@/server/study/study-generation-packet-contract";
 
 export async function POST(request: Request) {
   const session = await requireAdminSession();
@@ -19,11 +24,33 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json().catch(() => ({}))) as {
+    generationPacketJson?: unknown;
     mode?: string;
     promptInstructions?: string;
     sourcePackDraftJson?: unknown;
     sourceText?: string;
   };
+  if (body.mode === "source_pack_generation_packet_preview") {
+    const candidatePayload = body.generationPacketJson ?? STUDY_GENERATION_PACKET_SAMPLE;
+    const parsed = parseStudyGenerationPacketContract(candidatePayload);
+
+    if (!parsed.ok) {
+      return NextResponse.json(
+        {
+          error: "Invalid Study generation packet payload.",
+          validationErrors: parsed.errors,
+        },
+        { status: 400 },
+      );
+    }
+
+    return NextResponse.json({
+      generationPacket: parsed.packet,
+      generationPacketPreviewOnly: true,
+      reviewSections: getStudyGenerationPacketReviewSections(parsed.packet),
+    });
+  }
+
   if (body.mode === "source_pack_preview") {
     const candidatePayload = body.sourcePackDraftJson ?? STUDY_SOURCE_PACK_DRAFT_SAMPLE;
     const parsed = parseStudySourcePackGeneratedDeckDraftContract(candidatePayload);
