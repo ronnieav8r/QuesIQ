@@ -1026,3 +1026,15 @@ This slice prevents duplicate DPE session setup without changing content:
    saving state.
 5. Admin DPE preflight now checks for the session-start guard markers.
 6. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 68 (History Review Single-Flight)
+
+This slice prevents overlapping History review jobs without changing content:
+
+1. History now treats review generation as a single active action across all
+   stored sessions.
+2. Generate review and Retry AI review are disabled for every stored session
+   while one review request is already running.
+3. Other sessions explain that another review generation is in progress.
+4. Admin DPE preflight now checks for the History review single-flight markers.
+5. No aviation content, schema, publish, Official, or Verified state changed.

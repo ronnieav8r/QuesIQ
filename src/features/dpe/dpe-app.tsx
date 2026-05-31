@@ -3941,6 +3941,7 @@ function HistoryScreen({
     ...storedReviews.map((item) => item.reviewSession),
   ]);
   const reviewDiagnostics = diagnostics.filter((event) => event.surface === "post_session_review");
+  const historyReviewBusy = Boolean(retryingReviewId);
 
   return (
     <section className="screen">
@@ -4046,6 +4047,8 @@ function HistoryScreen({
               storedSession.status === "in_progress"
                 ? buildStoredSessionResumePlan(storedSession)
                 : null;
+            const storedSessionReviewBusy = retryingReviewId === storedSession.id;
+            const otherReviewBusy = historyReviewBusy && !storedSessionReviewBusy;
             return (
               <article className="raised-card" key={storedSession.id}>
               <div className="question-meta">
@@ -4123,7 +4126,8 @@ function HistoryScreen({
                 {storedSession.status === "completed" && !storedSession.reviewJson && (
                   <button
                     className="button primary"
-                    disabled={retryingReviewId === storedSession.id}
+                    disabled={historyReviewBusy}
+                    title={otherReviewBusy ? "Another review generation is in progress" : undefined}
                     onClick={async () => {
                       setRetryingReviewId(storedSession.id);
                       const result = await onGenerateReview(storedSession.id);
@@ -4134,13 +4138,14 @@ function HistoryScreen({
                       }
                     }}
                   >
-                    {retryingReviewId === storedSession.id ? "Generating..." : "Generate review"}
+                    {storedSessionReviewBusy ? "Generating..." : "Generate review"}
                   </button>
                 )}
                 {storedSession.status === "completed" && storedSession.reviewJson?.status === "fallback" && (
                   <button
                     className="button primary"
-                    disabled={retryingReviewId === storedSession.id}
+                    disabled={historyReviewBusy}
+                    title={otherReviewBusy ? "Another review generation is in progress" : undefined}
                     onClick={async () => {
                       setRetryingReviewId(storedSession.id);
                       const result = await onGenerateReview(storedSession.id);
@@ -4151,7 +4156,7 @@ function HistoryScreen({
                       }
                     }}
                   >
-                    {retryingReviewId === storedSession.id ? "Generating..." : "Retry AI review"}
+                    {storedSessionReviewBusy ? "Generating..." : "Retry AI review"}
                   </button>
                 )}
                   </>

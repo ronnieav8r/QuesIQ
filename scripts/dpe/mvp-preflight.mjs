@@ -127,6 +127,8 @@ const codeContracts = [
       "Start first DPE session",
       "currentSessionReviewSelected",
       "storedReviewSelected",
+      "historyReviewBusy",
+      "Another review generation is in progress",
       "onStartNewSession",
       "onRetryReview",
       "session.persisted && onRetryReview",
