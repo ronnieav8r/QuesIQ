@@ -63,6 +63,71 @@ linked from a Content Studio run when a provider call exists.
   `approved_for_publish` status is an internal review state only; it does not
   write Study decks, DPE questions, Official status, or Verified state.
 
+## Source-Pack Visual Review
+
+Content Studio now includes a read-only scaffold for source-pack figure and
+table review. This is intentionally contract-first: it does not read local
+source-pack folders, call Google Drive, or write publish state. The first UI
+goal is to let an admin review many visual candidates in one place once the
+manager-owned source ingestion work can provide source-pack data.
+
+Target source-pack layout:
+
+```txt
+manifest.json
+source-pages.jsonl
+chunks.jsonl
+figures.jsonl
+tables.jsonl
+figures/
+pages/
+tables/
+```
+
+Future Admin API boundary should return normalized visual candidates from
+`figures.jsonl` and `tables.jsonl` with these fields where available:
+
+```json
+{
+  "id": "fig-source-pack-flow",
+  "sourceId": "source-pack-guide",
+  "type": "figure",
+  "page": 14,
+  "figureLabel": "Figure 2",
+  "tableLabel": null,
+  "caption": "Source-pack flow diagram.",
+  "subject": "Admin Content Studio",
+  "topic": "Reusable ingestion contracts",
+  "subtopics": ["source packs", "provenance"],
+  "useCases": ["review orientation", "content QA"],
+  "relatedChunkIds": ["chunk-source-pack-layout"],
+  "sourceExcerpt": "Short source/chunk context excerpt for review.",
+  "pageAssetPath": "pages/source-pack-guide-page-014.png",
+  "reviewAssetPath": "figures/fig-source-pack-flow.review.png",
+  "assetPath": "figures/fig-source-pack-flow.png",
+  "bbox": [0.18, 0.24, 0.74, 0.52],
+  "instructionalValue": "Useful as an admin orientation visual.",
+  "keepRecommendation": "keep",
+  "reviewStatus": "rendered_page",
+  "reviewNotes": "Needs final crop review."
+}
+```
+
+Accepted initial `reviewStatus` values are:
+
+- `metadata_only`: record exists, but no browser-previewable asset is available.
+- `rendered_page`: the source page has been rendered for page-level review.
+- `cropped_candidate`: a candidate crop exists but has not been accepted.
+- `cropped_reviewed`: a reviewer accepted or intentionally kept the crop.
+
+Accepted `keepRecommendation` values are `keep`, `review`, and `skip`.
+
+The future API should avoid browser filesystem access. It should either return
+admin-authorized URLs for previewable assets or return metadata-only rows with
+asset paths preserved for traceability. Saving figure/table review decisions
+should be a separate explicit review endpoint and must not publish product
+content, mark Official content, or mark Verified content.
+
 ## Ownership
 
 Shared Admin owns:

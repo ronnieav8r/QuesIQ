@@ -3,12 +3,16 @@
 import {
   AlertCircle,
   CheckCircle2,
+  Eye,
   FileText,
   History,
+  Images,
   Play,
   ShieldCheck,
+  Table2,
   UploadCloud,
 } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -180,7 +184,110 @@ type RunsResponse = {
 type GenerateStatus = "draft_ready" | "generating" | "idle";
 type SaveReviewStatus = "idle" | "saving" | "saved";
 
+type SourcePackVisualStatus =
+  | "cropped_candidate"
+  | "cropped_reviewed"
+  | "metadata_only"
+  | "rendered_page";
+
+type SourcePackKeepRecommendation = "keep" | "review" | "skip";
+
+type SourcePackVisualReviewCandidate = {
+  assetPath?: string;
+  bbox?: [number, number, number, number];
+  caption?: string;
+  figureLabel?: string;
+  id: string;
+  instructionalValue?: string;
+  keepRecommendation: SourcePackKeepRecommendation;
+  page: number;
+  pageAssetPath?: string;
+  relatedChunkIds: string[];
+  reviewAssetPath?: string;
+  reviewNotes?: string;
+  reviewStatus: SourcePackVisualStatus;
+  sourceId: string;
+  sourceExcerpt?: string;
+  subject?: string;
+  subtopics?: string[];
+  tableLabel?: string;
+  topic?: string;
+  type: "figure" | "table";
+  useCases?: string[];
+};
+
 const MIN_SOURCE_CHARS = 40;
+
+const sourcePackVisualCandidates: SourcePackVisualReviewCandidate[] = [
+  {
+    bbox: [0.18, 0.24, 0.74, 0.52],
+    caption:
+      "System diagram showing how source pages, chunks, figures, and tables link through stable ids.",
+    figureLabel: "Figure 2",
+    id: "fig-source-pack-flow",
+    instructionalValue: "Good orientation visual for an admin reviewer or source-pack author.",
+    keepRecommendation: "keep",
+    page: 14,
+    pageAssetPath: "pages/source-pack-guide-page-014.png",
+    relatedChunkIds: ["chunk-source-pack-layout", "chunk-manifest-contract"],
+    reviewAssetPath: "figures/fig-source-pack-flow.review.png",
+    reviewNotes: "Needs cropped preview when renderer is available.",
+    reviewStatus: "rendered_page",
+    sourceExcerpt:
+      "Source packs preserve page-level provenance and stable chunk links so generated content can be traced back during review.",
+    sourceId: "source-pack-guide",
+    subject: "Admin Content Studio",
+    subtopics: ["source packs", "provenance", "visual review"],
+    topic: "Reusable ingestion contracts",
+    type: "figure",
+    useCases: ["review orientation", "content QA"],
+  },
+  {
+    bbox: [0.09, 0.18, 0.86, 0.64],
+    caption:
+      "Matrix of figure and table fields including review status, recommendation, linked chunks, and preview asset paths.",
+    id: "tbl-visual-schema",
+    instructionalValue: "Useful as a field checklist before enabling durable source-pack loading.",
+    keepRecommendation: "review",
+    page: 18,
+    relatedChunkIds: ["chunk-visual-jsonl-schema"],
+    reviewNotes: "Confirm field names with manager ingestion output before making this editable.",
+    reviewStatus: "metadata_only",
+    sourceExcerpt:
+      "Figures and tables may be metadata-only at first, then upgraded to rendered-page or cropped review assets as tooling matures.",
+    sourceId: "source-pack-guide",
+    subject: "Admin Content Studio",
+    subtopics: ["figures.jsonl", "tables.jsonl", "review state"],
+    tableLabel: "Table 1",
+    topic: "Visual metadata schema",
+    type: "table",
+    useCases: ["schema review", "API contract"],
+  },
+  {
+    assetPath: "tables/table-dpe-example.csv",
+    bbox: [0.12, 0.31, 0.78, 0.43],
+    caption:
+      "Example oral exam readiness table with ACS task, source reference, and reviewer keep decision.",
+    id: "tbl-dpe-readiness-example",
+    instructionalValue:
+      "Likely useful for DPE content QA if the table is cleanly cropped and source-linked.",
+    keepRecommendation: "skip",
+    page: 27,
+    pageAssetPath: "pages/dpe-reference-page-027.png",
+    relatedChunkIds: ["chunk-dpe-acs-example", "chunk-dpe-review-evidence"],
+    reviewNotes: "Skip unless the source pack can link each row back to usable DPE content chunks.",
+    reviewStatus: "cropped_candidate",
+    sourceExcerpt:
+      "Tables should not become product content automatically; reviewers need row-level source confidence before generation.",
+    sourceId: "dpe-reference-pack",
+    subject: "DPE",
+    subtopics: ["ACS", "review readiness"],
+    tableLabel: "Table 4",
+    topic: "Checkride content QA",
+    type: "table",
+    useCases: ["DPE source review"],
+  },
+];
 
 const emptyDpeContext: DpeDraftContext = {
   acs: {
@@ -765,6 +872,8 @@ export function ContentStudio() {
         </>
       )}
 
+      <SourcePackVisualReviewScaffold candidates={sourcePackVisualCandidates} />
+
       <section className="prompt-version-list" aria-labelledby="content-stages-title">
         <div className="section-head">
           <div>
@@ -846,6 +955,222 @@ export function ContentStudio() {
         )}
       </section>
     </section>
+  );
+}
+
+function visualStatusLabel(status: SourcePackVisualStatus) {
+  const labels: Record<SourcePackVisualStatus, string> = {
+    cropped_candidate: "Cropped candidate",
+    cropped_reviewed: "Cropped reviewed",
+    metadata_only: "Metadata only",
+    rendered_page: "Rendered page",
+  };
+
+  return labels[status];
+}
+
+function keepRecommendationLabel(recommendation: SourcePackKeepRecommendation) {
+  const labels: Record<SourcePackKeepRecommendation, string> = {
+    keep: "Keep",
+    review: "Review",
+    skip: "Skip",
+  };
+
+  return labels[recommendation];
+}
+
+function isPreviewableAssetPath(value?: string) {
+  return Boolean(value && (value.startsWith("/") || value.startsWith("http")));
+}
+
+function firstPreviewPath(candidate: SourcePackVisualReviewCandidate) {
+  return [candidate.reviewAssetPath, candidate.assetPath, candidate.pageAssetPath].find(
+    isPreviewableAssetPath,
+  );
+}
+
+function visualCandidateTitle(candidate: SourcePackVisualReviewCandidate) {
+  return (
+    candidate.figureLabel ??
+    candidate.tableLabel ??
+    `${candidate.type === "figure" ? "Figure" : "Table"} ${candidate.id}`
+  );
+}
+
+function formatBbox(candidate: SourcePackVisualReviewCandidate) {
+  return candidate.bbox?.map((value) => value.toFixed(2)).join(", ") ?? "pending";
+}
+
+function SourcePackVisualReviewScaffold({
+  candidates,
+}: {
+  candidates: SourcePackVisualReviewCandidate[];
+}) {
+  const figureCount = candidates.filter((candidate) => candidate.type === "figure").length;
+  const tableCount = candidates.filter((candidate) => candidate.type === "table").length;
+  const needsReviewCount = candidates.filter(
+    (candidate) => candidate.keepRecommendation === "review",
+  ).length;
+
+  return (
+    <section className="prompt-version-list" aria-labelledby="source-pack-visual-title">
+      <div className="section-head">
+        <div>
+          <p className="eyebrow">Planned review surface</p>
+          <h3 id="source-pack-visual-title">Source-pack figures and tables</h3>
+          <p>
+            Read-only scaffold for reviewing many visual candidates from
+            figures.jsonl and tables.jsonl once source-pack loading is wired.
+          </p>
+        </div>
+        <Images size={20} aria-hidden="true" />
+      </div>
+
+      <div className="study-stat-strip" aria-label="Source-pack visual review summary">
+        <div className="study-stat-chip">
+          <strong>{candidates.length}</strong>
+          <span>Visual candidates</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{figureCount}</strong>
+          <span>Figures</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{tableCount}</strong>
+          <span>Tables</span>
+        </div>
+        <div className="study-stat-chip highlight">
+          <strong>{needsReviewCount}</strong>
+          <span>Need review</span>
+        </div>
+      </div>
+
+      <div className="runtime-context-panel">
+        <strong>Read-only API contract</strong>
+        <p>
+          Future loader should return source-pack candidates with id, sourceId,
+          page, figureLabel/tableLabel, caption, subject/topic/subtopics/useCases,
+          relatedChunkIds, assetPath, pageAssetPath, reviewAssetPath, bbox,
+          instructionalValue, keepRecommendation, reviewStatus, and reviewNotes.
+        </p>
+        <div className="question-meta">
+          <span className="pill">No filesystem reads in browser</span>
+          <span className="pill">No Drive integration yet</span>
+          <span className="pill">No publish writes</span>
+        </div>
+      </div>
+
+      <div className="question-list">
+        {candidates.map((candidate) => (
+          <VisualCandidateCard candidate={candidate} key={candidate.id} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function VisualCandidateCard({
+  candidate,
+}: {
+  candidate: SourcePackVisualReviewCandidate;
+}) {
+  const previewPath = firstPreviewPath(candidate);
+
+  return (
+    <article className="runtime-context-panel">
+      <div className="section-head">
+        <div>
+          <div className="question-meta">
+            <span className="pill">{candidate.type === "figure" ? "Figure" : "Table"}</span>
+            <span className="pill">{visualStatusLabel(candidate.reviewStatus)}</span>
+            <span className="pill">
+              Recommendation: {keepRecommendationLabel(candidate.keepRecommendation)}
+            </span>
+          </div>
+          <strong>{visualCandidateTitle(candidate)}</strong>
+          <p>{candidate.caption ?? "Caption pending."}</p>
+        </div>
+        {candidate.type === "figure" ? (
+          <Images size={20} aria-hidden="true" />
+        ) : (
+          <Table2 size={20} aria-hidden="true" />
+        )}
+      </div>
+
+      <div className="study-stat-strip" aria-label={`${candidate.id} metadata`}>
+        <div className="study-stat-chip">
+          <strong>{candidate.page}</strong>
+          <span>Page</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{candidate.relatedChunkIds.length}</strong>
+          <span>Linked chunks</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{candidate.subject ?? "Pending"}</strong>
+          <span>Subject</span>
+        </div>
+        <div className="study-stat-chip highlight">
+          <strong>{candidate.topic ?? "Pending"}</strong>
+          <span>Topic</span>
+        </div>
+      </div>
+
+      {previewPath ? (
+        <figure className="runtime-context-panel">
+          <Image
+            alt={candidate.caption ?? visualCandidateTitle(candidate)}
+            height={420}
+            src={previewPath}
+            style={{ height: "auto", width: "100%" }}
+            unoptimized
+            width={720}
+          />
+          <figcaption>Preview asset: {previewPath}</figcaption>
+        </figure>
+      ) : (
+        <div className="runtime-context-panel">
+          <Eye size={18} aria-hidden="true" />
+          <div>
+            <strong>Preview pending</strong>
+            <p>
+              No browser-previewable URL is available yet. Stored asset paths:
+              {[candidate.reviewAssetPath, candidate.assetPath, candidate.pageAssetPath]
+                .filter(Boolean)
+                .join(", ") || " none"}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="question-meta">
+        <span className="pill">Source: {candidate.sourceId}</span>
+        <span className="pill">BBox: {formatBbox(candidate)}</span>
+        {candidate.subtopics?.map((subtopic) => (
+          <span className="pill" key={subtopic}>
+            {subtopic}
+          </span>
+        ))}
+        {candidate.useCases?.map((useCase) => (
+          <span className="pill" key={useCase}>
+            Use: {useCase}
+          </span>
+        ))}
+      </div>
+
+      {candidate.sourceExcerpt && (
+        <div className="runtime-context-panel">
+          <strong>Source/chunk context</strong>
+          <p>{candidate.sourceExcerpt}</p>
+        </div>
+      )}
+
+      <div className="runtime-context-panel">
+        <strong>Reviewer notes</strong>
+        <p>{candidate.reviewNotes ?? "No notes yet."}</p>
+        {candidate.instructionalValue && <p>Instructional value: {candidate.instructionalValue}</p>}
+      </div>
+    </article>
   );
 }
 
