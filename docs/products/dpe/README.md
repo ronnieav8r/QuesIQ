@@ -80,9 +80,11 @@ through a deliberate content-import slice.
 
 ## DPE Readiness Quest Track (Pre-Migration Shape)
 
-Current DPE lane now has a non-persistent readiness quest preview using existing
-session/review/profile data. This is not a certification state and does not
-award persisted XP yet.
+Current DPE lane now has both a non-persistent readiness preview in the client
+and a DPE-owned persistent progression backend. Migration
+`0053_add_dpe_progression.sql` adds DPE-prefixed progression events, XP rules,
+quests, user progression summaries, and user quest state. This is not a
+certification state; it is a checkride-readiness habit/progress signal.
 
 Planned DPE quest/rule set:
 
@@ -94,20 +96,18 @@ Planned DPE quest/rule set:
 6. `weak ACS resolved`: resolve 2 weak ACS focus keys after re-practice.
 7. `checkride target set`: set aircraft and checkride date in DPE Me.
 
-Next wiring points for migration-backed XP awards:
+Migration-backed XP awards are now wired at:
 
 1. `PATCH /api/dpe/practice-sessions/[id]` when status transitions to
    `completed` (`dpe_session_completed`).
 2. `POST /api/dpe/practice-sessions/[id]/review` when generated review saves
    (`dpe_review_completed`).
-3. `PATCH /api/dpe/practice-sessions/[id]` and
-   `POST /api/dpe/practice-sessions/[id]/artifact` for unique
-   `acsArea.acsTask` practice keys (`dpe_acs_area_task_practiced`).
-4. `POST /api/dpe/practice-sessions/[id]/review` when
-   `review.scores.checkrideReadiness` crosses threshold
-   (`dpe_score_threshold_reached`).
-5. `POST /api/dpe/practice-sessions/[id]/review` for historical weak-focus
-   resolution (`dpe_weak_acs_resolved`).
+3. `POST /api/dpe/practice-sessions/[id]/artifact` when a voice artifact
+   completes a DPE session.
+4. `GET /api/dpe/progression` returns the signed-in user's DPE progression
+   summary and quest state.
 
-Until DPE has a migration slot, keep this slice read-only and derived from
-existing DPE session/review/profile records.
+The first persistent quest set covers first oral session, first readiness
+review, ACS area/task coverage, answered prompts, a 4+ readiness score, and
+saved checkride target details. Weak-area resolution remains future work after
+more durable DPE review history is available.

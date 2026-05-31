@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { getOwnedDpePracticeSession, saveDpeVoiceArtifact } from "@/server/dpe/dpe-data";
+import { recordDpeSessionCompleted } from "@/server/dpe/dpe-progression";
 
 type RouteContext = {
   params: Promise<{
@@ -37,6 +38,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
       artifact: body.artifact,
       id,
       transcriptJson: body.transcriptJson,
+      userId: session.user.id,
+    });
+    await recordDpeSessionCompleted({
+      dpeSessionId: practiceSession.id,
       userId: session.user.id,
     });
 

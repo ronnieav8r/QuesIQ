@@ -1294,3 +1294,118 @@ export const dpeDiagnosticEvents = pgTable(
     ),
   }),
 );
+
+export const dpeProgressionEvents = pgTable(
+  "dpe_progression_events",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    dpeSessionId: uuid("dpe_session_id").references(() => dpePracticeSessions.id, {
+      onDelete: "set null",
+    }),
+    eventType: text("event_type").$type<"quest_completed" | "xp_rule_awarded">().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    xp: integer("xp").default(0).notNull(),
+  },
+  (event) => ({
+    occurredAtIdx: index("dpe_progression_events_occurred_at_idx").on(event.occurredAt),
+    sessionEventIdx: index("dpe_progression_events_session_event_idx").on(
+      event.dpeSessionId,
+      event.eventType,
+    ),
+    userIdx: index("dpe_progression_events_user_idx").on(event.userId),
+  }),
+);
+
+export const dpeXpRules = pgTable("dpe_xp_rules", {
+  active: boolean("active").default(true).notNull(),
+  awardMode: text("award_mode").$type<"highest_only" | "stack">().default("stack").notNull(),
+  conditionType: text("condition_type").$type<"always" | "answered_count_min" | "score_min">().notNull(),
+  conditionValue: integer("condition_value").default(0).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  description: text("description").notNull(),
+  displayOrder: integer("display_order").default(0).notNull(),
+  eventType: text("event_type").$type<"review_completed" | "session_completed">().notNull(),
+  groupKey: text("group_key").default("general").notNull(),
+  key: text("key").primaryKey(),
+  label: text("label").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  xp: integer("xp").default(0).notNull(),
+});
+
+export const dpeQuests = pgTable("dpe_quests", {
+  category: text("category").default("milestone").notNull(),
+  checkDimension: text("check_dimension"),
+  checkThreshold: integer("check_threshold").notNull(),
+  checkType: text("check_type")
+    .$type<
+      | "answered_prompt_count"
+      | "checkride_target_set"
+      | "completed_session_count"
+      | "reviewed_session_count"
+      | "score_min"
+      | "unique_area_task_count"
+    >()
+    .notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  description: text("description").notNull(),
+  displayOrder: integer("display_order").default(0).notNull(),
+  enabled: boolean("enabled").default(true).notNull(),
+  key: text("key").primaryKey(),
+  title: text("title").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  xpReward: integer("xp_reward").default(0).notNull(),
+});
+
+export const dpeUserProgression = pgTable(
+  "dpe_user_progression",
+  {
+    answeredPrompts: integer("answered_prompts").default(0).notNull(),
+    completedSessions: integer("completed_sessions").default(0).notNull(),
+    currentLevelXp: integer("current_level_xp").default(0).notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    lastPracticeDate: text("last_practice_date"),
+    lastPracticedAt: timestamp("last_practiced_at", { withTimezone: true }),
+    level: integer("level").default(1).notNull(),
+    longestStreakDays: integer("longest_streak_days").default(0).notNull(),
+    nextLevelXp: integer("next_level_xp").default(250).notNull(),
+    readinessScoreBps: integer("readiness_score_bps").default(0).notNull(),
+    reviewedSessions: integer("reviewed_sessions").default(0).notNull(),
+    streakDays: integer("streak_days").default(0).notNull(),
+    totalXp: integer("total_xp").default(0).notNull(),
+    uniqueAreaTasks: integer("unique_area_tasks").default(0).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (progression) => ({
+    userIdIdx: uniqueIndex("dpe_user_progression_user_id_idx").on(progression.userId),
+  }),
+);
+
+export const dpeUserQuests = pgTable(
+  "dpe_user_quests",
+  {
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    progress: integer("progress").default(0).notNull(),
+    questKey: text("quest_key")
+      .notNull()
+      .references(() => dpeQuests.key, { onDelete: "cascade" }),
+    status: text("status").$type<"completed" | "open">().default("open").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (quest) => ({
+    questIdx: index("dpe_user_quests_quest_idx").on(quest.questKey),
+    userQuestIdx: uniqueIndex("dpe_user_quests_user_quest_idx").on(quest.userId, quest.questKey),
+  }),
+);

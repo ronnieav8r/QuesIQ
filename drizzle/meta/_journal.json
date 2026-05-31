@@ -365,6 +365,13 @@
       "when": 1780070400000,
       "tag": "0052_add_study_progression",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1780074000000,
+      "tag": "0053_add_dpe_progression",
+      "breakpoints": true
     }
   ]
 }

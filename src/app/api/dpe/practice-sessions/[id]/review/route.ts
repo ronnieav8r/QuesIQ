@@ -8,6 +8,7 @@ import {
   getOwnedDpePracticeSession,
   saveDpeReview,
 } from "@/server/dpe/dpe-data";
+import { recordDpeReviewCompleted } from "@/server/dpe/dpe-progression";
 import { getDb } from "@/server/db/client";
 import { dpeDiagnosticEvents } from "@/server/db/schema";
 import { getOpenAiApiKey } from "@/server/openai/keys";
@@ -67,6 +68,10 @@ export async function POST(_request: Request, context: RouteContext) {
         promptConfigKey: PROMPT_CONFIG_KEY,
         promptConfigVersion: PROMPT_CONFIG_VERSION,
         review,
+      });
+      await recordDpeReviewCompleted({
+        dpeSessionId: updatedSession.id,
+        userId: session.user.id,
       });
 
       return NextResponse.json({
@@ -175,6 +180,10 @@ export async function POST(_request: Request, context: RouteContext) {
       promptConfigKey: PROMPT_CONFIG_KEY,
       promptConfigVersion: PROMPT_CONFIG_VERSION,
       review,
+    });
+    await recordDpeReviewCompleted({
+      dpeSessionId: updatedSession.id,
+      userId: session.user.id,
     });
 
     await completeAiRun(aiRun.id, {
