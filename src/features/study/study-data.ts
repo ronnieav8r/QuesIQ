@@ -463,6 +463,7 @@ export async function getStudyDeckCards(deckId: string) {
       .select({
         createdAt: studyCardSources.createdAt,
         id: studyCardSources.id,
+        sourceMetadata: studyCardSources.sourceMetadata,
         sourceLabel: studyCardSources.sourceLabel,
         sourceType: studyCardSources.sourceType,
         sourceUrl: studyCardSources.sourceUrl,
@@ -476,8 +477,11 @@ export async function getStudyDeckCards(deckId: string) {
         cardId: studyVerifications.cardId,
         confidence: studyVerifications.confidence,
         createdAt: studyVerifications.createdAt,
+        evidence: studyVerifications.evidence,
         id: studyVerifications.id,
         note: studyVerifications.note,
+        verificationStatus: studyVerifications.verificationStatus,
+        verifier: studyVerifications.verifier,
         verifiedByUserId: studyVerifications.verifiedByUserId,
       })
       .from(studyVerifications)

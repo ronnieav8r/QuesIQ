@@ -448,6 +448,15 @@ export async function saveStudyRichFlashcardImport(args: {
       return [
         {
           cardId: card.id,
+          sourceMetadata: {
+            draftId: args.rows[index].draftId ?? null,
+            externalId: args.rows[index].externalId ?? null,
+            sourceChunkIds: source.sourceChunkIds,
+            sourcePackId: source.sourcePackId ?? null,
+            sourcePages: source.sourcePages,
+            sourceVisualAssetIds: source.sourceVisualAssetIds,
+            tags: args.rows[index].tags,
+          },
           sourceLabel: generatedSourceLabel ?? null,
           sourceType: source.sourcePackId ? "source_pack_csv" : source.sourceUrl ? "url_csv" : "csv",
           sourceUrl: source.sourceUrl ?? null,
@@ -481,7 +490,10 @@ export async function saveStudyRichFlashcardImport(args: {
         {
           cardId: card.id,
           confidence: verification.confidence ?? null,
+          evidence: verification.evidence.length > 0 ? verification.evidence : null,
           note: noteParts.join("\n"),
+          verificationStatus: verification.status ?? null,
+          verifier: verification.verifier ?? null,
           verifiedByUserId: card.isVerified ? args.adminUserId : null,
         },
       ];

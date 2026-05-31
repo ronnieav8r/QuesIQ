@@ -111,6 +111,11 @@ The first Study slice is imported:
   `study_verifications`, and `study_deck_imports` metadata for a target deck.
   This is still separate from Publish/Official controls and broad Verified
   promotion.
+- `drizzle/0054_add_study_source_verification_metadata.sql` adds structured
+  source metadata and verification status/evidence/verifier fields so rich CSV
+  imports do not have to preserve chunk/page/visual details only inside labels
+  or notes. Deck cards surface this evidence in an expandable source and
+  verification section.
 - `/api/study/tts` supports Study voice paths with Admin AI Usage
   instrumentation and source-style R2 audio caching when R2 environment
   variables are configured

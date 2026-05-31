@@ -372,6 +372,13 @@
       "when": 1780074000000,
       "tag": "0053_add_dpe_progression",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1780077600000,
+      "tag": "0054_add_study_source_verification_metadata",
+      "breakpoints": true
     }
   ]
 }

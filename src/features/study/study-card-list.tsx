@@ -4,6 +4,14 @@ import { useState, type FormEvent } from "react";
 
 import { StudyTrustBadge } from "@/features/study/study-trust-badge";
 
+type StudyCardSource = {
+  id: string;
+  sourceMetadata: Record<string, unknown> | null;
+  sourceLabel: string | null;
+  sourceType: string;
+  sourceUrl: string | null;
+};
+
 type StudyCard = {
   answer: string;
   dueAt?: Date | null;
@@ -16,16 +24,14 @@ type StudyCard = {
   level?: string | null;
   position: number;
   question: string;
-  sources?: Array<{
-    id: string;
-    sourceLabel: string | null;
-    sourceType: string;
-    sourceUrl: string | null;
-  }>;
+  sources?: StudyCardSource[];
   verifications?: Array<{
     confidence: number | null;
+    evidence: string[] | null;
     id: string;
     note: string | null;
+    verificationStatus: string | null;
+    verifier: string | null;
     verifiedByUserId: string | null;
   }>;
 };
@@ -175,6 +181,12 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
     return `${Math.round(confidence * 100)}% confidence`;
   }
 
+  function metadataList(source: StudyCardSource, key: string) {
+    const value = source.sourceMetadata?.[key];
+    if (!Array.isArray(value)) return [];
+    return value.map((item) => String(item)).filter(Boolean);
+  }
+
   return (
     <section className="study-card-list">
       {cards.length === 0 && !addingCard && (
@@ -260,6 +272,23 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
                             ) : (
                               <span>{source.sourceLabel || source.sourceType}</span>
                             )}
+                            <div className="study-card-meta">
+                              {metadataList(source, "sourceChunkIds").length > 0 && (
+                                <span className="badge">
+                                  Chunks: {metadataList(source, "sourceChunkIds").join(", ")}
+                                </span>
+                              )}
+                              {metadataList(source, "sourcePages").length > 0 && (
+                                <span className="badge">
+                                  Pages: {metadataList(source, "sourcePages").join(", ")}
+                                </span>
+                              )}
+                              {metadataList(source, "sourceVisualAssetIds").length > 0 && (
+                                <span className="badge">
+                                  Visuals: {metadataList(source, "sourceVisualAssetIds").join(", ")}
+                                </span>
+                              )}
+                            </div>
                           </li>
                         ))}
                       </ul>
@@ -271,8 +300,17 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
                       <ul>
                         {card.verifications?.slice(0, 3).map((verification) => (
                           <li key={verification.id}>
-                            <span>{formatConfidence(verification.confidence)}</span>
+                            <span>
+                              {formatConfidence(verification.confidence)}
+                              {verification.verificationStatus
+                                ? ` - ${verification.verificationStatus.replaceAll("_", " ")}`
+                                : ""}
+                              {verification.verifier ? ` - ${verification.verifier}` : ""}
+                            </span>
                             {verification.note && <p>{verification.note}</p>}
+                            {(verification.evidence?.length ?? 0) > 0 && (
+                              <p>Evidence: {verification.evidence?.join(" | ")}</p>
+                            )}
                           </li>
                         ))}
                       </ul>

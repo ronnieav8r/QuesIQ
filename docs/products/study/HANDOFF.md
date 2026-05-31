@@ -271,6 +271,11 @@ the visual/UI level during the conversation:
   `study_verifications`, and `study_deck_imports` metadata while keeping
   Publish/Official controls disabled and keeping conservative Verified policy
   checks (status must be `verified`, confidence >= 0.8, verifier present)
+- `drizzle/0054_add_study_source_verification_metadata.sql` adds structured
+  metadata storage for rich admin imports: `study_card_sources.source_metadata`
+  and `study_verifications.verification_status`, `evidence`, and `verifier`.
+  Study card review surfaces these source/verification details instead of
+  requiring reviewers to infer all context from packed label/note text.
 - source-style import wizard polish for focus hints, URL failure display,
   CSV/Quizlet/Anki guidance, select/deselect review controls, column swapping,
   row/URL counts, and save/done copy
