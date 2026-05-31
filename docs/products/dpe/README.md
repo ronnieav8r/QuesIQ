@@ -743,3 +743,15 @@ session storage:
 3. Voice fallback behavior remains unchanged and still switches to typed
    practice with target context intact.
 4. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 46 (Local Review Persistence Notice)
+
+This slice improves review clarity for local-only practice sessions:
+
+1. Session Review now shows a `Review is local only` notice when the underlying
+   DPE session was not saved.
+2. The notice explains that the review is available for the current session but
+   will not appear in History, progression, diagnostics, or retry AI review
+   until DPE session storage is reachable and the session can be saved.
+3. Saved sessions keep the existing AI/fallback review and retry behavior.
+4. No aviation content, schema, publish, Official, or Verified state changed.

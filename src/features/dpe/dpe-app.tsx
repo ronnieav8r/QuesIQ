@@ -2556,6 +2556,16 @@ function ReviewScreen({
             </p>
             <p className="muted">Prompt config: {review.promptConfigKey}</p>
           </div>
+          {!session.persisted && (
+            <div className="raised-card mt-4">
+              <strong>Review is local only</strong>
+              <p>
+                This review is available for the current session, but it will not appear in History,
+                progression, diagnostics, or retry AI review until DPE session storage is reachable
+                and the session can be saved.
+              </p>
+            </div>
+          )}
           <div className="inline-actions mt-4">
             {onRetryReview && (
               <button className="button" disabled={reviewGenerating} onClick={onRetryReview}>
