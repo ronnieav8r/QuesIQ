@@ -844,3 +844,19 @@ changing content:
 4. Admin DPE preflight now checks that learner target-aware chrome includes the
    Me target-readiness markers.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 54 (Practice Target Setup Recovery)
+
+This slice keeps DPE practice setup target-aware without blocking fallback
+practice:
+
+1. Practice setup now shows `Checkride target setup incomplete` when aircraft,
+   checkride date, or target metadata is still missing.
+2. The notice links directly back to Me with `Open Me` so learners can complete
+   target setup before expecting saved sessions, reviews, runtime checks, and
+   quests to share one target context.
+3. Typed practice remains available for fallback use; this is guidance, not a
+   content or paywall gate.
+4. Admin DPE preflight now checks that learner target-aware chrome includes the
+   practice target-setup recovery markers.
+5. No aviation content, schema, publish, Official, or Verified state changed.

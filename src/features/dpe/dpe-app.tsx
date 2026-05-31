@@ -1075,6 +1075,7 @@ export default function App() {
                 questions={selectedQuestions}
                 certificateOptions={certificateOptions}
                 selectedCertificateType={selectedCertificateType}
+                dpeProfile={dpeProfile}
                 questionBankAvailable={questionBankAvailable}
                 questionCount={questionState.questions.length}
                 selectedTask={selectedTask}
@@ -1091,6 +1092,7 @@ export default function App() {
                 reviewGenerating={reviewGenerating}
                 onFinishEarly={finishEarly}
                 onModeChange={setMode}
+                onOpenMe={() => setScreen("me")}
                 onCertificateChange={changeCertificate}
                 onRecordAnswer={recordAnswer}
                 onReset={resetPractice}
@@ -2008,12 +2010,14 @@ function PracticeScreen(props: {
   currentIndex: number;
   draftAnswer: string;
   databaseAvailable: boolean | null;
+  dpeProfile: DpeProfileState;
   reviewGenerating: boolean;
   onAreaChange: (area: string) => void;
   onClearPracticeNotice: () => void;
   onCertificateChange: (certificateTypeId: string) => void;
   onTaskChange: (task: string) => void;
-    onModeChange: (mode: PracticeMode) => void;
+  onModeChange: (mode: PracticeMode) => void;
+  onOpenMe: () => void;
     onStartSession: () => void;
   onStartVoiceSession: () => void;
   onRecordAnswer: (skipped: boolean) => void;
@@ -2076,10 +2080,12 @@ function PracticeSetupScreen({
   practiceNotice,
   publicStatus,
   databaseAvailable,
+  dpeProfile,
   onAreaChange,
   onCertificateChange,
     onTaskChange,
     onModeChange,
+    onOpenMe,
     onStartSession,
     onStartVoiceSession
   }: {
@@ -2097,10 +2103,12 @@ function PracticeSetupScreen({
   practiceNotice: PracticeNotice | null;
   publicStatus: DpePublicStatus | null;
   databaseAvailable: boolean | null;
+  dpeProfile: DpeProfileState;
   onAreaChange: (area: string) => void;
   onCertificateChange: (certificateTypeId: string) => void;
     onTaskChange: (task: string) => void;
     onModeChange: (mode: PracticeMode) => void;
+    onOpenMe: () => void;
     onStartSession: () => void;
     onStartVoiceSession: () => void;
   }) {
@@ -2117,6 +2125,7 @@ function PracticeSetupScreen({
   const voiceAiUnavailable = publicStatus?.realtimeVoiceConfigured === false;
   const voiceDisabled = practiceBlocked || databaseAvailable === false || voiceAiUnavailable;
   const privatePilotTrack = getDpeTargetTrackById(defaultDpeTargetTrackId) ?? dpeTargetTracks[0];
+  const targetMissing = buildTargetMissingFields(dpeProfile);
 
   return (
     <section className="screen">
@@ -2245,6 +2254,22 @@ function PracticeSetupScreen({
                 Seeded DPE question tables are empty or unavailable. Practice can continue with
                 bundled placeholder prompts while admins finish the baseline content setup.
               </p>
+            </div>
+          )}
+          {targetMissing.length > 0 && (
+            <div className="raised-card mt-4">
+              <div className="section-head">
+                <div>
+                  <strong>Checkride target setup incomplete</strong>
+                  <p>
+                    Complete {targetMissing.join(", ")} in Me so saved sessions, reviews, runtime
+                    checks, and quests use the same target context.
+                  </p>
+                </div>
+                <button className="button" onClick={onOpenMe}>
+                  Open Me
+                </button>
+              </div>
             </div>
           )}
           {reviewAiUnavailable && (

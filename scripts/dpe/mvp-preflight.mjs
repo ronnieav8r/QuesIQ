@@ -111,6 +111,8 @@ const codeContracts = [
       "target remains on this screen",
       "Target readiness",
       "scaffolded/content-pending",
+      "Checkride target setup incomplete",
+      "Open Me",
       "targetTrack: {",
       "buildDpeContentStudioHref",
       "inferDpeTargetTrackKeyFromCertificate",
