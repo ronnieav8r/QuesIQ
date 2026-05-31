@@ -109,6 +109,8 @@ const codeContracts = [
       "formatDpeProfileDate",
       "Profile storage unavailable",
       "target remains on this screen",
+      "Target readiness",
+      "scaffolded/content-pending",
       "targetTrack: {",
       "buildDpeContentStudioHref",
       "inferDpeTargetTrackKeyFromCertificate",

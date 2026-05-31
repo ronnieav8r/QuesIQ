@@ -204,6 +204,8 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "Target-track oral prep",
       "MVP readiness checklist",
       "Readiness quest track (preview)",
+      "Target readiness",
+      "scaffolded/content-pending",
     ]),
     localPersistenceRecoveryVisible: hasAll(dpeAppText, [
       "Typed practice running locally",

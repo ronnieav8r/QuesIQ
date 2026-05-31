@@ -829,3 +829,18 @@ content:
 4. Admin DPE preflight now checks that the signed-in runtime contract includes
    the target-readiness row.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 53 (Me Target Readiness)
+
+This slice makes target readiness visible in the learner profile flow without
+changing content:
+
+1. The DPE Me screen now shows a `Target readiness` panel for the selected
+   airplane-land target.
+2. The panel displays track code, ready/scaffolded content state, category, and
+   aircraft class before the learner saves or starts practice.
+3. Scaffolded non-Private tracks remain explicitly content-pending and continue
+   to use available demo prompts until curated aviation content is added.
+4. Admin DPE preflight now checks that learner target-aware chrome includes the
+   Me target-readiness markers.
+5. No aviation content, schema, publish, Official, or Verified state changed.

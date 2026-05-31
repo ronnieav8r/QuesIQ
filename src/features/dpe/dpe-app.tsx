@@ -4334,6 +4334,28 @@ function MeScreen({
           />
         </label>
       </div>
+      <div className="panel">
+        <div className="section-head">
+          <div>
+            <h3>Target readiness</h3>
+            <p>
+              {selectedTargetTrack.contentReady
+                ? `${selectedTargetTrack.title} is connected to ready DPE content for practice and review.`
+                : `${selectedTargetTrack.title} is scaffolded/content-pending and will use available demo prompts until curated content is added.`}
+            </p>
+          </div>
+          <BadgeCheck />
+        </div>
+        <div className="stat-strip mt-4">
+          <Stat label="Track" value={selectedTargetTrack.code} />
+          <Stat
+            label="Content"
+            value={selectedTargetTrack.contentReady ? "ready" : "scaffolded"}
+          />
+          <Stat label="Category" value={selectedTargetTrack.aircraftCategory} />
+          <Stat label="Class" value={selectedTargetTrack.aircraftClass} />
+        </div>
+      </div>
       {!selectedTargetTrack.contentReady && (
         <div className="panel">
           <strong>Track scaffolding active</strong>
