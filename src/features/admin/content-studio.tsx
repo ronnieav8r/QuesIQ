@@ -199,6 +199,8 @@ type SourcePackReviewDecision =
   | "reject";
 type SourcePackReviewTab = "chunks" | "figures" | "tables";
 
+type SourcePackReviewBucket = "accepted" | "candidate" | "needs_edit" | "rejected";
+
 type SourcePackManifest = {
   chunkCount: number;
   createdAt: string;
@@ -225,6 +227,25 @@ type SourcePackChunkCandidate = {
   subjects: string[];
   tags: string[];
   useCases: string[];
+};
+
+type SourcePackReviewDecisionRecord = {
+  candidateId: string;
+  candidateType: "chunk" | "figure" | "table";
+  reviewBucket: SourcePackReviewBucket;
+  reviewDecision: SourcePackReviewDecision;
+  reviewerNotes?: string;
+  reviewedAssetIds: string[];
+  sourceAnchor: string;
+  sourceId: string;
+};
+
+type SourcePackReviewRun = {
+  decisions: SourcePackReviewDecisionRecord[];
+  id: string;
+  manifestId: string;
+  reviewCounts: Record<SourcePackReviewBucket, number>;
+  stage: "admin_review_scaffold";
 };
 
 type SourcePackVisualReviewCandidate = {
@@ -276,7 +297,7 @@ const sourcePackChunkCandidates: SourcePackChunkCandidate[] = [
     page: 14,
     relatedFigureIds: ["fig-source-pack-flow"],
     relatedTableIds: [],
-    reviewDecision: "keep",
+    reviewDecision: "accepted",
     reviewNotes: "Good source-pack overview candidate. Keep as review context, not product content.",
     sourceId: "source-pack-guide",
     sourceTitle: "Source Pack Implementation Guide",
@@ -331,7 +352,7 @@ const sourcePackVisualCandidates: SourcePackVisualReviewCandidate[] = [
     page: 14,
     pageAssetPath: "pages/source-pack-guide-page-014.png",
     relatedChunkIds: ["chunk-source-pack-layout", "chunk-manifest-contract"],
-    reviewDecision: "keep",
+    reviewDecision: "accepted",
     reviewAssetPath: "figures/fig-source-pack-flow.review.png",
     reviewNotes: "Needs cropped preview when renderer is available.",
     reviewStatus: "rendered_page",
@@ -1124,6 +1145,86 @@ function formatBbox(candidate: SourcePackVisualReviewCandidate) {
   return candidate.bbox?.map((value) => value.toFixed(2)).join(", ") ?? "pending";
 }
 
+function sourcePackReviewBucket(
+  decision: SourcePackReviewDecision,
+): SourcePackReviewBucket {
+  if (decision === "reject") {
+    return "rejected";
+  }
+
+  if (decision === "needs_edit") {
+    return "needs_edit";
+  }
+
+  if (decision === "accepted" || decision === "keep") {
+    return "accepted";
+  }
+
+  return "candidate";
+}
+
+function emptySourcePackReviewCounts(): Record<SourcePackReviewBucket, number> {
+  return {
+    accepted: 0,
+    candidate: 0,
+    needs_edit: 0,
+    rejected: 0,
+  };
+}
+
+function countSourcePackReviewBuckets(
+  decisions: SourcePackReviewDecisionRecord[],
+) {
+  return decisions.reduce<Record<SourcePackReviewBucket, number>>(
+    (counts, decision) => {
+      counts[decision.reviewBucket] += 1;
+      return counts;
+    },
+    emptySourcePackReviewCounts(),
+  );
+}
+
+function buildSourcePackReviewRun(args: {
+  chunks: SourcePackChunkCandidate[];
+  manifest: SourcePackManifest;
+  visualCandidates: SourcePackVisualReviewCandidate[];
+}): SourcePackReviewRun {
+  const chunkDecisions = args.chunks.map<SourcePackReviewDecisionRecord>((chunk) => ({
+    candidateId: chunk.chunkId,
+    candidateType: "chunk",
+    reviewBucket: sourcePackReviewBucket(chunk.reviewDecision),
+    reviewDecision: chunk.reviewDecision,
+    reviewerNotes: chunk.reviewNotes,
+    reviewedAssetIds: [...chunk.relatedFigureIds, ...chunk.relatedTableIds],
+    sourceAnchor: chunk.anchor,
+    sourceId: chunk.sourceId,
+  }));
+  const visualDecisions =
+    args.visualCandidates.map<SourcePackReviewDecisionRecord>((candidate) => ({
+      candidateId: candidate.id,
+      candidateType: candidate.type,
+      reviewBucket: sourcePackReviewBucket(candidate.reviewDecision),
+      reviewDecision: candidate.reviewDecision,
+      reviewerNotes: candidate.reviewNotes,
+      reviewedAssetIds: [
+        candidate.reviewAssetPath,
+        candidate.assetPath,
+        candidate.pageAssetPath,
+      ].filter((value): value is string => Boolean(value)),
+      sourceAnchor: `${candidate.sourceId}#page=${candidate.page}&visual=${candidate.id}`,
+      sourceId: candidate.sourceId,
+    }));
+  const decisions = [...chunkDecisions, ...visualDecisions];
+
+  return {
+    decisions,
+    id: `${args.manifest.id}-admin-review`,
+    manifestId: args.manifest.id,
+    reviewCounts: countSourcePackReviewBuckets(decisions),
+    stage: "admin_review_scaffold",
+  };
+}
+
 function SourcePackReviewScaffold({
   chunks,
   manifest,
@@ -1137,9 +1238,12 @@ function SourcePackReviewScaffold({
   const [decisionFilter, setDecisionFilter] = useState<SourcePackReviewDecision | "all">(
     "all",
   );
+  const reviewRun = useMemo(
+    () => buildSourcePackReviewRun({ chunks, manifest, visualCandidates }),
+    [chunks, manifest, visualCandidates],
+  );
   const figures = visualCandidates.filter((candidate) => candidate.type === "figure");
   const tables = visualCandidates.filter((candidate) => candidate.type === "table");
-  const reviewItems = [...chunks, ...visualCandidates];
   const filteredChunks = chunks.filter(
     (candidate) =>
       decisionFilter === "all" || candidate.reviewDecision === decisionFilter,
@@ -1148,12 +1252,6 @@ function SourcePackReviewScaffold({
     (candidate) =>
       decisionFilter === "all" || candidate.reviewDecision === decisionFilter,
   );
-  const needsEditCount = reviewItems.filter(
-    (candidate) => candidate.reviewDecision === "needs_edit",
-  ).length;
-  const acceptedCount = reviewItems.filter(
-    (candidate) => candidate.reviewDecision === "accepted",
-  ).length;
 
   return (
     <section className="prompt-version-list" aria-labelledby="source-pack-visual-title">
@@ -1174,6 +1272,7 @@ function SourcePackReviewScaffold({
         <strong>{manifest.title}</strong>
         <div className="question-meta">
           <span className="pill">Pack: {manifest.id}</span>
+          <span className="pill">Run: {reviewRun.id}</span>
           <span className="pill">{manifest.sourceCount} sources</span>
           <span className="pill">{manifest.chunkCount} chunks</span>
           <span className="pill">{manifest.figureCount} figures</span>
@@ -1197,14 +1296,12 @@ function SourcePackReviewScaffold({
           <span>Tables</span>
         </div>
         <div className="study-stat-chip">
-          <strong>{needsEditCount}</strong>
-          <span>Need edits</span>
-        </div>
-        <div className="study-stat-chip highlight">
-          <strong>{acceptedCount}</strong>
-          <span>Accepted</span>
+          <strong>{reviewRun.decisions.length}</strong>
+          <span>Review decisions</span>
         </div>
       </div>
+
+      <SourcePackReviewSummaryPanel reviewRun={reviewRun} />
 
       <div className="component-tabs" aria-label="Source-pack review tabs">
         {(["chunks", "figures", "tables"] as SourcePackReviewTab[]).map((tab) => (
@@ -1268,7 +1365,11 @@ function SourcePackReviewScaffold({
         </button>
         <button disabled type="button">
           <ShieldCheck size={18} />
-          Export draft
+          Generate Study draft from accepted chunks
+        </button>
+        <button disabled type="button">
+          <ShieldCheck size={18} />
+          Generate DPE draft later
         </button>
       </div>
 
@@ -1289,6 +1390,54 @@ function SourcePackReviewScaffold({
         )}
       </div>
     </section>
+  );
+}
+
+function SourcePackReviewSummaryPanel({
+  reviewRun,
+}: {
+  reviewRun: SourcePackReviewRun;
+}) {
+  return (
+    <div className="runtime-context-panel">
+      <div className="section-head">
+        <div>
+          <strong>Review summary</strong>
+          <p>
+            Read-only decision rollup for the next export contract. Accepted
+            chunks are the intended first input for future Study draft
+            generation; DPE handoff stays later.
+          </p>
+        </div>
+        <span className="pill">{reviewRun.stage.replaceAll("_", " ")}</span>
+      </div>
+      <div className="study-stat-strip" aria-label="Source-pack review decision summary">
+        <div className="study-stat-chip highlight">
+          <strong>{reviewRun.reviewCounts.accepted}</strong>
+          <span>Accepted</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{reviewRun.reviewCounts.rejected}</strong>
+          <span>Rejected</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{reviewRun.reviewCounts.needs_edit}</strong>
+          <span>Needs edit</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{reviewRun.reviewCounts.candidate}</strong>
+          <span>Candidate</span>
+        </div>
+      </div>
+      <div className="question-meta">
+        {reviewRun.decisions.slice(0, 5).map((decision) => (
+          <span className="pill" key={`${decision.candidateType}-${decision.candidateId}`}>
+            {decision.candidateType}: {decision.candidateId} {"->"}{" "}
+            {reviewDecisionLabel(decision.reviewDecision)}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 

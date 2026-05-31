@@ -93,10 +93,12 @@ Last updated: 2026-05-30
   - Content Studio now includes a read-only Admin-side scaffold for source-pack
     review. It models manifest metadata, chunk candidates, figure/table
     candidates, source/page anchors, captions/context, tags/subjects/use cases,
-    review-state filters, disabled future accept/reject/export actions, and
-    preview asset placeholders without reading local source-pack folders,
-    calling Drive, saving review decisions, sending raw source-pack data to
-    Study/DPE runtime paths, or writing publish state.
+    review-state filters, reviewed asset ids, a normalized review-run summary,
+    disabled future accept/reject actions, disabled `Generate Study draft from
+    accepted chunks` and `Generate DPE draft later` affordances, and preview
+    asset placeholders without reading local source-pack folders, calling
+    Drive, saving review decisions, sending raw source-pack data to Study/DPE
+    runtime paths, or writing publish state.
   - `/api/admin/content-studio/runs` orchestrates Study draft generation and
     DPE content draft generation, then creates durable run records in
     `content_studio_runs`

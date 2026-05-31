@@ -160,6 +160,40 @@ Accepted `reviewDecision` values are `candidate`, `keep`, `reject`,
 `needs_edit`, and `accepted`. These are review labels only until a future
 explicit persistence endpoint exists.
 
+The Admin-side review run contract should normalize those labels into a summary
+bucket set for workflow decisions:
+
+```json
+{
+  "id": "demo-source-pack-contract-admin-review",
+  "manifestId": "demo-source-pack-contract",
+  "stage": "admin_review_scaffold",
+  "reviewCounts": {
+    "accepted": 2,
+    "rejected": 1,
+    "needs_edit": 2,
+    "candidate": 1
+  },
+  "decisions": [
+    {
+      "candidateId": "chunk-source-pack-layout",
+      "candidateType": "chunk",
+      "sourceId": "source-pack-guide",
+      "sourceAnchor": "source-pack-guide#page=14&chunk=chunk-source-pack-layout",
+      "reviewDecision": "accepted",
+      "reviewBucket": "accepted",
+      "reviewedAssetIds": ["fig-source-pack-flow"],
+      "reviewerNotes": "Keep as review context, not product content."
+    }
+  ]
+}
+```
+
+The current UI shows disabled future actions for `Accept selected`, `Reject
+selected`, `Generate Study draft from accepted chunks`, and `Generate DPE draft
+later`. These buttons are deliberate affordances only. They must stay disabled
+until review persistence and Codex-side generation/export endpoints exist.
+
 Accepted initial `reviewStatus` values are:
 
 - `metadata_only`: record exists, but no browser-previewable asset is available.
