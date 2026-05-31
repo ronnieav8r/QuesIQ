@@ -1116,3 +1116,18 @@ possible, without changing content:
 3. Resume success and resume fallback now share the same restored-target detail.
 4. Admin DPE preflight now checks for the stored resume fallback marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 75 (Stored Resume Fallback Action Label)
+
+This slice makes the stored-session fallback action match what it actually does
+without changing content:
+
+1. In-progress stored sessions that can resume exact prompts still show
+   `Continue session`.
+2. In-progress stored sessions that cannot resume exact prompts now show
+   `Set up same target`, because the action restores the saved target and
+   area/task filters into Practice setup before the learner starts again.
+3. The fallback CTA copy now explains that the action restores target and
+   filters before starting.
+4. Admin DPE preflight now checks for the fallback action label marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.

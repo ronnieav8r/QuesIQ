@@ -4144,7 +4144,7 @@ function HistoryScreen({
                     className="button primary"
                     onClick={() => onResumeInProgress(storedSession)}
                   >
-                    {resumePlan?.kind === "resume" ? "Continue session" : "Start new with same target"}
+                    {resumePlan?.kind === "resume" ? "Continue session" : "Set up same target"}
                   </button>
                 )}
                 {storedSession.status !== "in_progress" && (
@@ -4401,7 +4401,7 @@ function buildStoredSessionCta(storedSession: StoredPracticeSession) {
   if (storedSession.status === "in_progress") {
     return resumePlan.kind === "resume"
       ? "Use Continue session to resume typed prompts from the saved progress."
-      : `${resumePlan.message} Use Start new with same target.`;
+      : `${resumePlan.message} Use Set up same target to restore the saved target and filters before starting.`;
   }
   if (storedSession.status === "completed" && !storedSession.reviewJson) {
     return "Session is complete but review is missing. Generate a saved review now.";
