@@ -461,6 +461,46 @@ export const aiRuns = pgTable(
   }),
 );
 
+export const contentStudioRuns = pgTable(
+  "content_studio_runs",
+  {
+    adminUserId: text("admin_user_id").references(() => users.id, { onDelete: "set null" }),
+    aiRunId: uuid("ai_run_id").references(() => aiRuns.id, { onDelete: "set null" }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    confidence: real("confidence"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    customInstructions: text("custom_instructions"),
+    draftPayload: jsonb("draft_payload").$type<Record<string, unknown>>().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    missingFields: jsonb("missing_fields").$type<string[]>().default([]).notNull(),
+    pipelineKey: text("pipeline_key")
+      .$type<"dpe_content" | "study_flashcards">()
+      .notNull(),
+    reviewerChecklist: jsonb("reviewer_checklist").$type<Record<string, unknown>>(),
+    reviewerNotes: text("reviewer_notes"),
+    reviewerSummary: jsonb("reviewer_summary").$type<Record<string, unknown>>(),
+    sourceMetadata: jsonb("source_metadata").$type<Record<string, unknown>>()
+      .default({})
+      .notNull(),
+    sourceTextSnapshot: text("source_text_snapshot"),
+    stage: text("stage").default("review").notNull(),
+    status: text("status")
+      .$type<"approved_for_publish" | "archived" | "draft_ready" | "failed" | "needs_revision">()
+      .default("draft_ready")
+      .notNull(),
+    templateKey: text("template_key").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    warnings: jsonb("warnings").$type<string[]>().default([]).notNull(),
+  },
+  (run) => ({
+    adminUserIdx: index("content_studio_runs_admin_user_idx").on(run.adminUserId),
+    aiRunIdx: index("content_studio_runs_ai_run_idx").on(run.aiRunId),
+    createdAtIdx: index("content_studio_runs_created_at_idx").on(run.createdAt),
+    pipelineIdx: index("content_studio_runs_pipeline_idx").on(run.pipelineKey),
+    statusIdx: index("content_studio_runs_status_idx").on(run.status),
+  }),
+);
+
 export const realtimeSessionUsage = pgTable(
   "realtime_session_usage",
   {

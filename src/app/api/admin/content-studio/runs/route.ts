@@ -6,7 +6,11 @@ import {
   findContentStudioTemplate,
 } from "@/features/admin/content-studio-config";
 import { requireAdminSession } from "@/server/admin";
-import { listContentStudioRunHistory } from "@/server/admin-content-studio/content-studio-runs";
+import {
+  createContentStudioRun,
+  findLatestContentStudioAiRun,
+  listContentStudioRuns,
+} from "@/server/admin-content-studio/content-studio-runs";
 import { generateDpeContentStudioDraft } from "@/server/dpe/content-draft";
 import { generateStudyFlashcardDeckDraft } from "@/server/study/study-content-studio";
 
@@ -84,11 +88,11 @@ export async function GET() {
 
   try {
     return NextResponse.json({
-      runs: await listContentStudioRunHistory(),
+      runs: await listContentStudioRuns(),
       storage: {
         detail:
-          "ai_runs stores AI-call audit history only. Full draft payloads and reviewer decisions need dedicated Content Studio run storage.",
-        durableReviewState: false,
+          "Content Studio runs are stored durably with source snapshots, draft payloads, reviewer notes, and review status. Publish remains disabled.",
+        durableReviewState: true,
       },
     });
   } catch (error) {
@@ -151,6 +155,7 @@ export async function POST(request: Request) {
       pipelineKey: pipeline.key,
       templateKey,
     });
+    const generationStartedAt = new Date();
     const draft =
       pipeline.key === "dpe_content"
         ? await generateDpeDraft({
@@ -164,23 +169,34 @@ export async function POST(request: Request) {
             sourceText,
             userId: appSession.user.id,
           });
+    const aiRun = await findLatestContentStudioAiRun({
+      pipelineKey: pipeline.key,
+      since: generationStartedAt,
+      userId: appSession.user.id,
+    });
+    const run = await createContentStudioRun({
+      adminUserId: appSession.user.id,
+      aiRunId: aiRun?.id,
+      completedAt: new Date(),
+      customInstructions,
+      draft: draft as Record<string, unknown>,
+      pipelineKey: pipeline.key,
+      sourceMetadata: {
+        aiProviderRequestId: aiRun?.providerRequestId,
+        dpeContext:
+          pipeline.key === "dpe_content" ? trimDraftContext(body.dpeContext) : undefined,
+      },
+      sourceText,
+      templateKey,
+    });
 
     return NextResponse.json({
-      run: {
-        completedAt: new Date().toISOString(),
-        draft,
-        id: crypto.randomUUID(),
-        pipelineKey: pipeline.key,
-        stage: "review",
-        status: "draft_ready",
-        storage: "transient_review_state",
-        templateKey,
-      },
-      runs: await listContentStudioRunHistory(),
+      run,
+      runs: await listContentStudioRuns(),
       storage: {
         detail:
-          "Draft review is held in the current Admin session. Durable draft payloads and reviewer decisions need dedicated Content Studio run storage.",
-        durableReviewState: false,
+          "Draft review state has been saved durably. Publish remains disabled until product publish controls exist.",
+        durableReviewState: true,
       },
     });
   } catch (error) {

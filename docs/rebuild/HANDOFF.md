@@ -17,9 +17,10 @@ Last updated: 2026-05-30
 - Admin Content Studio now has the first usable run/review slice:
   `/admin?product=content` can submit Study flashcard source material or DPE
   content source material through `/api/admin/content-studio/runs`, call the
-  product-owned draft generators, and render transient review state plus
-  existing AI-run history. Publish, Official, and Verified state changes remain
-  disabled.
+  product-owned draft generators, and save durable review state in
+  `content_studio_runs`. Saved runs can be reopened in the Admin review panel,
+  and reviewer notes/status changes persist. Publish, Official, and Verified
+  state changes remain disabled.
 - Study Content Studio draft generation is product-owned at
   `/api/study/content-studio/flashcard-draft`. Draft responses include stable
   draft/fingerprint metadata, card count, confidence summary, warning severity,
@@ -29,9 +30,10 @@ Last updated: 2026-05-30
   answer-key, rubric, confidence, warning, readiness, and missing-field draft
   JSON without writing to DPE content tables. This endpoint is now wired into
   the Admin Content Studio run/review flow.
-- Dedicated durable Content Studio run storage is still missing. Existing
-  `ai_runs` can audit AI calls, but full source intake, draft payloads, reviewer
-  notes, stage transitions, and publish audit state need a future migration.
+- Dedicated durable Content Studio run storage now exists in migration
+  `0051_add_content_studio_runs.sql`. Existing `ai_runs` remains AI-call audit
+  history and may be linked from a Content Studio run when available. Product
+  table publish controls and publish audit events remain future work.
 - Latest local work is the QuesIQ marketing homepage regeneration plus recent
   platform/DPE import work. It is locally verified but not yet visually
   user-confirmed in production.
