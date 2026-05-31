@@ -33,6 +33,15 @@ const requiredTracks = [
   "MEI-A",
 ];
 
+const requiredTrackMetadata = [
+  { code: "IRA", title: "Instrument Airplane Land", aircraftClass: "Single-Engine Land" },
+  { code: "CAX-ASEL", title: "Commercial Airplane Land", aircraftClass: "Single-Engine Land" },
+  { code: "CFI-A", title: "CFI Airplane Land", aircraftClass: "Single-Engine Land" },
+  { code: "CFII-A", title: "CFII Airplane Land", aircraftClass: "Single-Engine Land" },
+  { code: "MEL", title: "Multi-Engine Airplane Land", aircraftClass: "Multi-Engine Land" },
+  { code: "MEI-A", title: "MEI Airplane Land", aircraftClass: "Multi-Engine Land" },
+];
+
 const codeContracts = [
   {
     file: "src/features/dpe/dpe-app.tsx",
@@ -76,12 +85,12 @@ const codeContracts = [
   {
     file: "docs/products/dpe/README.md",
     checks: [
-      "Instrument Airplane",
+      "Instrument Airplane Land",
       "Commercial Airplane Land",
-      "CFI Airplane",
-      "CFII Airplane",
-      "Multi-Engine Land",
-      "MEI Airplane",
+      "CFI Airplane Land",
+      "CFII Airplane Land",
+      "Multi-Engine Airplane Land",
+      "MEI Airplane Land",
       "content unchanged",
     ],
   },
@@ -190,6 +199,32 @@ if (await fileExists("src/features/dpe/target-tracks.ts")) {
     pass("content boundary", "non-Private MVP tracks remain scaffolded/content pending");
   } else {
     fail("content boundary", `unexpected contentReady=true for ${nonPrivateReady.join(", ")}`);
+  }
+
+  for (const expected of requiredTrackMetadata) {
+    const escapedCode = expected.code.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const blockMatch = tracks.match(
+      new RegExp(`\\{[\\s\\S]*?code:\\s*"${escapedCode}"[\\s\\S]*?\\},`, "m"),
+    );
+    if (!blockMatch) {
+      fail(`target metadata: ${expected.code}`, "track object block missing");
+      continue;
+    }
+    const trackBlock = blockMatch[0];
+
+    if (trackBlock.includes(`title: "${expected.title}"`)) {
+      pass(`target metadata: ${expected.code}`, expected.title);
+    } else {
+      fail(`target metadata: ${expected.code}`, `missing title ${expected.title}`);
+    }
+    if (trackBlock.includes(`aircraftClass: "${expected.aircraftClass}"`)) {
+      pass(`target metadata: ${expected.code}`, expected.aircraftClass);
+    } else {
+      fail(
+        `target metadata: ${expected.code}`,
+        `missing aircraftClass ${expected.aircraftClass}`,
+      );
+    }
   }
 }
 

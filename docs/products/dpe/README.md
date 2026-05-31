@@ -122,12 +122,12 @@ whether full oral content is loaded.
 Supported target-track metadata in DPE lane:
 
 1. Private Pilot ASEL (`PPL-ASEL`) - current default/demo content track.
-2. Instrument Airplane (`IRA`) - scaffolded, content pending.
+2. Instrument Airplane Land (`IRA`) - scaffolded, content pending.
 3. Commercial Airplane Land (`CAX-ASEL`) - scaffolded, content pending.
-4. CFI Airplane (`CFI-A`) - scaffolded, content pending.
-5. CFII Airplane (`CFII-A`) - scaffolded, content pending.
-6. Multi-Engine Land (`MEL`) - scaffolded, content pending.
-7. MEI Airplane (`MEI-A`) - scaffolded, content pending.
+4. CFI Airplane Land (`CFI-A`) - scaffolded, content pending.
+5. CFII Airplane Land (`CFII-A`) - scaffolded, content pending.
+6. Multi-Engine Airplane Land (`MEL`) - scaffolded, content pending.
+7. MEI Airplane Land (`MEI-A`) - scaffolded, content pending.
 
 MVP behavior notes:
 
@@ -270,3 +270,17 @@ target-track metadata:
    target-aware.
 6. Live/voice session headers now use the same target-track label logic as
    launch framing, so runtime learner copy stays consistent during practice.
+
+## MVP Learner Polish Slice 8 (Airplane-Land Target Alignment)
+
+This slice makes DPE target metadata explicit that non-Private MVP tracks are
+airplane-land targets:
+
+1. Instrument, Commercial, CFI, CFII, Multi, and MEI target titles/certificate
+   metadata are now consistently labeled as airplane-land tracks in DPE-owned
+   target metadata.
+2. Resolver compatibility keeps older saved certificate strings mappable to the
+   updated airplane-land labels so existing profile/target state still resolves
+   cleanly.
+3. DPE preflight now enforces airplane-land title/class metadata contracts for
+   these track codes to prevent regression.
