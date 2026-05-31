@@ -176,6 +176,8 @@ const codeContracts = [
       "Starting session",
       "sessionCreated",
       "storedSessionsLoaded",
+      "profileLoaded",
+      "runtimeCheckLoaded",
     ],
   },
   {

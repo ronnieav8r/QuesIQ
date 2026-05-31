@@ -1290,3 +1290,18 @@ content:
 4. Admin DPE preflight now checks for the stored-session loader hardening
    marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 87 (Profile and Runtime Probe Hardening)
+
+This slice extends startup response hardening to profile and runtime probes
+without changing content:
+
+1. Profile loading now requires HTTP OK and explicit `available: true` before
+   applying saved target state.
+2. Profile saving now requires explicit `available: true` before reporting a
+   saved profile.
+3. Runtime checks now require HTTP OK and normalize unavailable payloads into
+   the existing unavailable panel state.
+4. Admin DPE preflight now checks for profile and runtime probe hardening
+   markers.
+5. No aviation content, schema, publish, Official, or Verified state changed.

@@ -593,13 +593,14 @@ export default function App() {
   async function loadDpeProfile() {
     try {
       const response = await fetch("/api/dpe/profile");
-      if (!response.ok) return;
+      if (!response.ok) throw new Error("DPE profile unavailable.");
       const data = (await response.json()) as DpeProfileResponse;
-      if (data.available === false) {
+      const profileLoaded = data.available === true;
+      if (!profileLoaded) {
         setDatabaseAvailable(false);
         return;
       }
-      setDatabaseAvailable((current) => current ?? true);
+      setDatabaseAvailable((current) => current ?? profileLoaded);
       setDpeProfile(profileResponseToState(data));
     } catch {
       // Keep the app usable if profile persistence is not available yet.
@@ -626,8 +627,19 @@ export default function App() {
   async function loadDpeRuntimeCheck() {
     try {
       const response = await fetch("/api/dpe/runtime-check");
+      if (!response.ok) throw new Error("DPE runtime check unavailable.");
       const data = (await response.json()) as DpeRuntimeCheck;
-      setRuntimeCheck(data);
+      const runtimeCheckLoaded = data.available === true;
+      setRuntimeCheck(
+        runtimeCheckLoaded
+          ? data
+          : {
+              available: false,
+              rows: data.rows ?? [],
+              status: data.status ?? "error",
+              summary: data.summary ?? { errors: 1, ok: 0, warnings: 0 },
+            },
+      );
     } catch {
       setRuntimeCheck({
         available: false,
@@ -652,7 +664,7 @@ export default function App() {
         throw new Error(data?.error ?? "Profile save failed.");
       }
       const data = (await response.json()) as DpeProfileResponse;
-      if (data.available === false) {
+      if (data.available !== true) {
         setDatabaseAvailable(false);
         throw new Error("Profile storage unavailable.");
       }
