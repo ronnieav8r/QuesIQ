@@ -1360,3 +1360,17 @@ content:
    the pending button state through a `finally` block.
 4. DPE preflight now checks for the email sign-in hardening marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 92 (Social Sign-In Launch Hardening)
+
+This slice tightens DPE signed-out social login behavior without changing
+content:
+
+1. Google and GitHub sign-in launches are now single-flight while a provider
+   redirect is starting.
+2. Social sign-in buttons are disabled while email sign-in or another social
+   provider launch is pending.
+3. Provider launch failures now show the signed-out error message instead of
+   silently doing nothing.
+4. DPE preflight now checks for the social sign-in hardening marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.

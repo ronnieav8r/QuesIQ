@@ -92,6 +92,7 @@ const codeContracts = [
       "dpeSignedOutAuthState",
       "authStateLoaded",
       "signInRequestCompleted",
+      "socialSignInRequestStarted",
       "githubEnabled",
       "Loading access",
       "Open profile settings",

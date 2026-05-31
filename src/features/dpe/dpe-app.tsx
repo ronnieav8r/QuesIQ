@@ -1363,6 +1363,7 @@ function SignInScreen({
 }) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [providerSubmitting, setProviderSubmitting] = useState<"github" | "google" | null>(null);
   const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -1391,6 +1392,21 @@ function SignInScreen({
       setError("Sign-in email could not be sent.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function startSocialSignIn(provider: "github" | "google") {
+    if (providerSubmitting || submitting) return;
+    setProviderSubmitting(provider);
+    setError(null);
+    try {
+      const socialSignInRequestStarted = true;
+      await signIn(provider, { redirectTo: "/dpe" });
+      void socialSignInRequestStarted;
+    } catch {
+      setError("Social sign-in could not be started.");
+    } finally {
+      setProviderSubmitting(null);
     }
   }
 
@@ -1434,19 +1450,21 @@ function SignInScreen({
                     {googleEnabled && (
                       <button
                         className="button"
+                        disabled={submitting || providerSubmitting !== null}
                         type="button"
-                        onClick={() => signIn("google", { redirectTo: "/dpe" })}
+                        onClick={() => startSocialSignIn("google")}
                       >
-                        Google
+                        {providerSubmitting === "google" ? "Opening Google..." : "Google"}
                       </button>
                     )}
                     {githubEnabled && (
                       <button
                         className="button"
+                        disabled={submitting || providerSubmitting !== null}
                         type="button"
-                        onClick={() => signIn("github", { redirectTo: "/dpe" })}
+                        onClick={() => startSocialSignIn("github")}
                       >
-                        GitHub
+                        {providerSubmitting === "github" ? "Opening GitHub..." : "GitHub"}
                       </button>
                     )}
                   </div>
