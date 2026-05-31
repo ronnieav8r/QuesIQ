@@ -3862,6 +3862,10 @@ textarea::placeholder {
     position: static;
   }
 
+  .study-shell .study-tab-bar {
+    grid-template-columns: 1fr;
+  }
+
   .tab-bar.collapsed {
     grid-template-columns: 1fr;
     padding: 1.25rem 0.75rem;
@@ -4046,6 +4050,10 @@ textarea::placeholder {
 
   .app-header .header-actions,
   .dpe-shell .app-header > .inline-actions {
+    display: none;
+  }
+
+  .study-shell .mobile-overflow-tab {
     display: none;
   }
 
