@@ -231,3 +231,20 @@ errors when AI review calls fail:
    available.
 4. DPE review model selection now prefers `OPENAI_DPE_REVIEW_MODEL`, then
    falls back to `OPENAI_REVIEW_MODEL`, then default model.
+
+## MVP Learner Polish Slice 6 (Target-Aware Prompt Framing)
+
+This slice aligns DPE AI/realtime framing with selected target-track metadata
+without changing content tables:
+
+1. DPE review-generation prompt text now uses session target metadata
+   (`acsTitle` and stored prompt certificate metadata when present) instead of
+   hardcoding Private Pilot wording for every learner.
+2. DPE realtime session instructions now frame the learner as the selected
+   target track and include explicit scaffold/content-pending guidance for
+   non-Private tracks.
+3. Prompt context now makes it explicit that non-Private tracks can be
+   scaffolded and may reuse available demo prompts, and that evaluation should
+   stay conservative when answer-key/rubric coverage is incomplete.
+4. Existing deterministic fallback review persistence, AI-run tracking, and
+   progression hooks are unchanged.

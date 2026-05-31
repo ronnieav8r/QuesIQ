@@ -22,6 +22,35 @@ type RouteContext = {
 const PROMPT_CONFIG_KEY = "dpe_post_session_review";
 const PROMPT_CONFIG_VERSION = 1;
 
+function getSessionPromptContext(
+  practiceSession: Awaited<ReturnType<typeof getOwnedDpePracticeSession>>,
+) {
+  const transcript =
+    typeof practiceSession?.transcriptJson === "object" &&
+    practiceSession.transcriptJson !== null &&
+    !Array.isArray(practiceSession.transcriptJson)
+      ? (practiceSession.transcriptJson as { certificateType?: { title?: unknown } | null })
+      : {};
+  const promptCertificateTitle =
+    transcript.certificateType &&
+    typeof transcript.certificateType === "object" &&
+    typeof transcript.certificateType.title === "string"
+      ? transcript.certificateType.title.trim()
+      : "";
+  const targetTrackTitle =
+    typeof practiceSession?.acsTitle === "string" && practiceSession.acsTitle.trim()
+      ? practiceSession.acsTitle.trim()
+      : promptCertificateTitle || "Selected DPE target track";
+  const privateLike = /private pilot|ppl/i.test(targetTrackTitle);
+  const scaffoldedTrack = !privateLike;
+
+  return {
+    promptCertificateTitle,
+    scaffoldedTrack,
+    targetTrackTitle,
+  };
+}
+
 function normalizeReview(value: Partial<DpeReviewJson>, model: string | null): DpeReviewJson {
   return {
     model,
@@ -118,13 +147,21 @@ export async function POST(_request: Request, context: RouteContext) {
       userId: session.user.id,
     });
     aiRunId = aiRun.id;
+    const sessionPromptContext = getSessionPromptContext(practiceSession);
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       body: JSON.stringify({
         messages: [
           {
-            content:
-              "You are a Designated Pilot Examiner-style evaluator for Private Pilot Airplane oral checkride preparation. Evaluate only from the transcript. Be precise, calm, and ACS-oriented. Return valid JSON only.",
+            content: [
+              "You are a Designated Pilot Examiner-style evaluator for oral checkride readiness practice.",
+              "Evaluate only from the transcript evidence and available prompt metadata.",
+              "Be precise, calm, ACS-oriented, and return valid JSON only.",
+              `Session target track: ${sessionPromptContext.targetTrackTitle}.`,
+              sessionPromptContext.scaffoldedTrack
+                ? "Selected target may be scaffolded/content-pending; prompts can reuse available demo content. Do not pretend missing target-specific content exists."
+                : "Target track may still include draft/placeholder content. Evaluate conservatively when answer-key/rubric coverage is incomplete.",
+            ].join(" "),
             role: "system",
           },
           {
@@ -158,8 +195,12 @@ export async function POST(_request: Request, context: RouteContext) {
                 acsArea: practiceSession.acsArea,
                 acsTask: practiceSession.acsTask,
                 acsTitle: practiceSession.acsTitle,
+                sessionTargetTrack: sessionPromptContext.targetTrackTitle,
+                promptCertificate: sessionPromptContext.promptCertificateTitle || null,
                 contentStatus:
-                  "Current questions are placeholders. Use structured answerKey/rubric records when present, use provisional answer keys only as fallback, and identify gaps where answer keys are pending or placeholder.",
+                  sessionPromptContext.scaffoldedTrack
+                    ? "Selected track may be scaffolded/content-pending. Prompts can come from available demo content. Use structured answerKey/rubric records when present, use provisional answer keys only as fallback, and identify content gaps explicitly."
+                    : "Current prompts may still be draft/placeholder. Use structured answerKey/rubric records when present, use provisional answer keys only as fallback, and identify content gaps explicitly.",
                 mode: practiceSession.mode,
                 transcript: practiceSession.transcriptJson,
               },

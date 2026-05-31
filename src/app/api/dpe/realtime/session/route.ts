@@ -39,16 +39,34 @@ function buildDpeInstructions(practiceSession: Awaited<ReturnType<typeof getOwne
     typeof practiceSession?.transcriptJson === "object" &&
     practiceSession.transcriptJson !== null &&
     !Array.isArray(practiceSession.transcriptJson)
-      ? (practiceSession.transcriptJson as { questions?: unknown[] })
+      ? (practiceSession.transcriptJson as {
+          certificateType?: { title?: unknown } | null;
+          questions?: unknown[];
+        })
       : {};
+  const promptCertificateTitle =
+    transcript.certificateType &&
+    typeof transcript.certificateType === "object" &&
+    typeof transcript.certificateType.title === "string"
+      ? transcript.certificateType.title.trim()
+      : "";
+  const targetTrackTitle =
+    typeof practiceSession?.acsTitle === "string" && practiceSession.acsTitle.trim()
+      ? practiceSession.acsTitle.trim()
+      : promptCertificateTitle || "Selected DPE target track";
+  const scaffoldedTrack = !/private pilot|ppl/i.test(targetTrackTitle);
 
   return [
-    "You are Que in QuesIQ DPE, acting as a calm Designated Pilot Examiner-style oral practice partner for a Private Pilot Airplane Single-Engine Land applicant.",
+    `You are Que in QuesIQ DPE, acting as a calm Designated Pilot Examiner-style oral practice partner for a ${targetTrackTitle} applicant.`,
     "Run a realistic oral checkride practice conversation. Ask one question at a time, listen to the answer, then give brief corrective coaching before moving on.",
     "Use FAA/ACS-oriented language, but keep the interaction natural and concise. Do not overstate authority when placeholder content is limited.",
     "If the applicant gives an unsafe or legally incorrect answer, correct it clearly and ask one focused follow-up.",
     "Do not read long answer keys aloud. Use the provided prompts and rubric context quietly to evaluate the response.",
-    `ACS title: ${practiceSession?.acsTitle ?? "Private Pilot Airplane"}.`,
+    scaffoldedTrack
+      ? "Selected target may be scaffolded/content-pending. Prompts can reuse available demo content, so avoid pretending missing target-specific content exists."
+      : "Target prompts may still include draft/placeholder coverage. Stay conservative when content support is incomplete.",
+    `ACS title: ${practiceSession?.acsTitle ?? "Selected DPE target track"}.`,
+    `Prompt certificate context: ${promptCertificateTitle || "not specified"}.`,
     `ACS area: ${practiceSession?.acsArea ?? "I"}. ACS task: ${practiceSession?.acsTask ?? "A"}.`,
     `Practice mode: ${practiceSession?.mode ?? "oral"}.`,
     `Selected prompts JSON: ${JSON.stringify(transcript.questions ?? []).slice(0, 12000)}.`,
