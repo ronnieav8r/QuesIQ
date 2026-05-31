@@ -75,6 +75,16 @@ type ProgressSummary = {
   weakFocuses: ProgressFocus[];
 };
 
+type HistoryTrendSummary = {
+  aiReviews: number;
+  averageReadiness: number | null;
+  fallbackReviews: number;
+  latestNextPracticeAction: string;
+  readinessTrend: string;
+  reviewCount: number;
+  weakSignalCount: number;
+};
+
 type ReviewJson = {
   status: "generated" | "fallback";
   promptConfigKey: string;
@@ -3257,6 +3267,10 @@ function HistoryScreen({
   const selectedReview = currentSession?.endedAt && resolvedReviewId === currentSession.id
     ? currentSession
     : selectedStoredReview ?? (currentSession?.endedAt ? currentSession : null);
+  const historyTrend = buildHistoryTrendSummary([
+    ...(currentSession?.endedAt ? [currentSession] : []),
+    ...storedReviews.map((item) => item.reviewSession),
+  ]);
 
   return (
     <section className="screen">
@@ -3282,6 +3296,33 @@ function HistoryScreen({
         <div className="stat-strip mt-4">
           <Stat label="Stored sessions" value={`${storedSessions.length}`} />
           <Stat label="Saved reviews" value={`${storedReviews.length}`} />
+        </div>
+        <div className="grid two-col mt-4">
+          <div className="raised-card">
+            <strong>Review trend</strong>
+            <div className="stat-strip mt-4">
+              <Stat label="AI reviews" value={`${historyTrend.aiReviews}`} />
+              <Stat label="Fallback" value={`${historyTrend.fallbackReviews}`} />
+              <Stat
+                label="Avg readiness"
+                value={
+                  historyTrend.averageReadiness === null
+                    ? "-"
+                    : historyTrend.averageReadiness.toFixed(1)
+                }
+              />
+              <Stat label="Trend" value={historyTrend.readinessTrend} />
+            </div>
+          </div>
+          <div className="raised-card">
+            <strong>Latest next action</strong>
+            <p>{historyTrend.latestNextPracticeAction}</p>
+            <p className="muted">
+              {historyTrend.reviewCount > 0
+                ? `${historyTrend.weakSignalCount} weak signal${historyTrend.weakSignalCount === 1 ? "" : "s"} across reviewed sessions.`
+                : "Complete and review a session to start readiness comparison."}
+            </p>
+          </div>
         </div>
         <div className="question-list mt-4">
           {currentSession?.endedAt && (
@@ -3484,6 +3525,45 @@ function summarizeStoredSession(storedSession: StoredPracticeSession) {
   return `${answered} answered, ${skipped} skipped. ${
     review ? review.nextPracticeAction : "Open a completed session review to generate the next practice action."
   }`;
+}
+
+function buildHistoryTrendSummary(sessions: LocalSession[]): HistoryTrendSummary {
+  const reviewedSessions = sessions
+    .filter((session) => session.review)
+    .sort((left, right) => {
+      const leftDate = left.endedAt ?? left.startedAt;
+      const rightDate = right.endedAt ?? right.startedAt;
+      return rightDate.getTime() - leftDate.getTime();
+    });
+  const readinessScores = reviewedSessions
+    .map((session) => session.review?.scores.checkrideReadiness)
+    .filter((score): score is number => typeof score === "number" && Number.isFinite(score));
+  const latestScore = readinessScores[0] ?? null;
+  const previousScore = readinessScores[1] ?? null;
+  const latestReview = reviewedSessions[0]?.review;
+
+  return {
+    aiReviews: reviewedSessions.filter((session) => session.review?.status === "generated").length,
+    averageReadiness: readinessScores.length > 0 ? average(readinessScores) : null,
+    fallbackReviews: reviewedSessions.filter((session) => session.review?.status === "fallback").length,
+    latestNextPracticeAction:
+      latestReview?.nextPracticeAction ??
+      "Complete and review a session to generate the next practice action.",
+    readinessTrend: formatReadinessTrend(latestScore, previousScore),
+    reviewCount: reviewedSessions.length,
+    weakSignalCount: reviewedSessions.reduce(
+      (total, session) => total + buildSessionProgress(session).weakFocuses.length,
+      0,
+    ),
+  };
+}
+
+function formatReadinessTrend(latestScore: number | null, previousScore: number | null) {
+  if (latestScore === null) return "-";
+  if (previousScore === null) return "baseline";
+  if (latestScore > previousScore) return "up";
+  if (latestScore < previousScore) return "down";
+  return "steady";
 }
 
 function buildStoredSessionResumePlan(storedSession: StoredPracticeSession): StoredSessionResumePlan {

@@ -162,7 +162,7 @@ workflow clarity:
 Remaining MVP gaps (outside this slice):
 
 1. Real DPE aviation content curation/import for non-Private tracks.
-2. Deeper review history comparison and trend views across saved sessions.
+2. Review retry diagnostics/history (attempt count, failure reason timeline).
 3. Weak-focus resolution quest logic once richer durable review history is in
    place.
 
@@ -416,3 +416,14 @@ This slice keeps DPE profile metadata consistent without changing content:
 3. Learners change category/class by changing the target track, preventing
    temporary UI mismatches between profile setup, sessions, reviews, and
    progression.
+
+## MVP Learner Polish Slice 20 (History Readiness Trend)
+
+This slice improves DPE review history without changing stored data:
+
+1. History now summarizes saved review source counts for AI-generated versus
+   fallback reviews.
+2. History shows average checkride-readiness score, latest trend direction, and
+   the latest next-practice action from existing review records.
+3. The trend panel also totals weak signals across reviewed sessions, giving
+   learners a quick comparison view before opening individual transcripts.
