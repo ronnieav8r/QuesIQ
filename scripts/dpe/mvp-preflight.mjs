@@ -70,6 +70,8 @@ const codeContracts = [
       "Voice unavailable; typed practice ready",
       "Use typed practice",
       "onVoiceUnavailable",
+      "dpeSignedOutAuthState",
+      "Loading access",
     ],
   },
   {

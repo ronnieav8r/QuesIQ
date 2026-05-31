@@ -325,3 +325,14 @@ This slice improves DPE voice-practice recovery without changing content:
    same prompts can continue into a readiness review.
 4. The shared realtime component exposes an optional error recovery action, so
    Interview behavior is unchanged unless a caller opts in.
+
+## MVP Learner Polish Slice 12 (Auth Loading Recovery)
+
+This slice prevents the DPE shell from getting stuck during access bootstrap:
+
+1. DPE auth loading now has an 8-second recovery timer.
+2. If `/api/dpe/me` stalls or fails, the learner is moved to the signed-out
+   screen instead of staying on `Loading access...`.
+3. A later successful auth response can still set the authenticated app state;
+   this only protects the initial loading experience.
+4. Content, target-track metadata, and aviation prompts are unchanged.

@@ -306,6 +306,14 @@ const emptyDpeProfile: DpeProfileState = {
   weakAreaNotes: "",
 };
 
+const dpeSignedOutAuthState: AuthState = {
+  authenticated: false,
+  googleEnabled: false,
+  isAdmin: false,
+  loading: false,
+  user: null,
+};
+
 export default function App() {
   const [authState, setAuthState] = useState<AuthState>({
     loading: true,
@@ -387,8 +395,14 @@ export default function App() {
   );
 
   useEffect(() => {
-    void loadAuthState();
+    const timeout = window.setTimeout(() => {
+      setAuthState((current) => (current.loading ? dpeSignedOutAuthState : current));
+    }, 8000);
+
+    void loadAuthState().finally(() => window.clearTimeout(timeout));
     void loadPublicStatus();
+
+    return () => window.clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
@@ -421,13 +435,7 @@ export default function App() {
       const data = (await response.json()) as Omit<AuthState, "loading">;
       setAuthState({ ...data, loading: false });
     } catch {
-      setAuthState({
-        loading: false,
-        authenticated: false,
-        isAdmin: false,
-        googleEnabled: false,
-        user: null
-      });
+      setAuthState(dpeSignedOutAuthState);
     }
   }
 
