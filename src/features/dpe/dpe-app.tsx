@@ -2329,7 +2329,8 @@ function PracticeSetupScreen({
           </div>
           <div className="stat-strip mt-4">
             <Stat label="Session prompts" value={`${Math.min(5, questions.length)}`} />
-            <Stat label="Certificate" value={selectedTargetTrack.code} />
+            <Stat label="Target" value={selectedTargetTrack.code} />
+            <Stat label="Prompt cert" value={selectedCertificateType?.code ?? "pending"} />
             <Stat label="Hands-free" value={`${handsFreeCount}`} />
             <Stat label="Visual hints" value={`${visualCount}`} />
             <Stat label="Review-ready" value={`${readinessPercent}%`} />

@@ -151,6 +151,7 @@ const codeContracts = [
       "findCertificateOptionForTargetTrack",
       "targetCertificateAliases",
       "Certificate follows target track",
+      "Prompt cert",
       "targetTrack: {",
       "buildDpeContentStudioHref",
       "inferDpeTargetTrackKeyFromCertificate",

@@ -231,6 +231,7 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "findCertificateOptionForTargetTrack",
       "targetCertificateAliases",
       "Certificate follows target track",
+      "Prompt cert",
     ]),
     localPersistenceRecoveryVisible: hasAll(dpeAppText, [
       "Typed practice running locally",

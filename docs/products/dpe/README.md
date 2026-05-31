@@ -1151,3 +1151,16 @@ without changing content:
    aligns selection when matching product content is present.
 6. Admin DPE preflight now checks for the target-certificate alignment markers.
 7. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 77 (Prompt Certificate Visibility)
+
+This slice makes Practice setup clearer when target track and prompt content
+are not the same thing, without changing content:
+
+1. Practice setup now shows `Target` for the selected DPE target track code.
+2. Practice setup now separately shows `Prompt cert` for the certificate option
+   currently driving the loaded prompts.
+3. This keeps scaffolded/content-pending tracks honest when the selected target
+   remains active but available demo prompt content is used.
+4. Admin DPE preflight now checks for the prompt-certificate visibility marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.
