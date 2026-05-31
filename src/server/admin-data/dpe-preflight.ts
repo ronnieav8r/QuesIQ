@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -22,6 +22,7 @@ export type AdminDpePreflightSnapshot = {
   blockers: string[];
   checks: string[];
   contentSummaryAvailable: boolean;
+  deploymentRows: PreflightRow[];
   progressionAvailable: boolean;
   runtimeRows: PreflightRow[];
   status: PreflightStatus;
@@ -111,14 +112,28 @@ function trackSummaryFromContent(summary: Awaited<ReturnType<typeof listDpeConte
 }
 
 export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightSnapshot> {
-  const [contentResult, progressionResult, dpeAppSource, realtimeRouteSource, dpeTrackSource] =
+  const [
+    contentResult,
+    progressionResult,
+    dpeAppSource,
+    realtimeRouteSource,
+    dpeTrackSource,
+    baselineMigrationPresent,
+    progressionMigrationPresent,
+  ] =
     await Promise.allSettled([
-    listDpeContentSummary(),
-    listAdminDpeProgressionSnapshot(),
-    readFile(path.join(process.cwd(), "src/features/dpe/dpe-app.tsx"), "utf8"),
-    readFile(path.join(process.cwd(), "src/app/api/dpe/realtime/session/route.ts"), "utf8"),
-    readFile(path.join(process.cwd(), "src/features/dpe/target-tracks.ts"), "utf8"),
-  ]);
+      listDpeContentSummary(),
+      listAdminDpeProgressionSnapshot(),
+      readFile(path.join(process.cwd(), "src/features/dpe/dpe-app.tsx"), "utf8"),
+      readFile(path.join(process.cwd(), "src/app/api/dpe/realtime/session/route.ts"), "utf8"),
+      readFile(path.join(process.cwd(), "src/features/dpe/target-tracks.ts"), "utf8"),
+      access(path.join(process.cwd(), "drizzle/0050_add_dpe_baseline_tables.sql"))
+        .then(() => true)
+        .catch(() => false),
+      access(path.join(process.cwd(), "drizzle/0053_add_dpe_progression.sql"))
+        .then(() => true)
+        .catch(() => false),
+    ]);
   const contentSummaryAvailable =
     contentResult.status === "fulfilled" && contentResult.value.available;
   const progressionAvailable = progressionResult.status === "fulfilled";
@@ -130,6 +145,13 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
   const voiceConfig = {
     apiKeyConfigured: asBool(getOpenAiApiKey("dpe")),
     realtimeKeyConfigured: asBool(getOpenAiRealtimeApiKey("dpe")),
+  };
+  const authSecretConfigured = asBool(process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET);
+  const migrationSignals = {
+    baselinePresent:
+      baselineMigrationPresent.status === "fulfilled" && baselineMigrationPresent.value,
+    progressionPresent:
+      progressionMigrationPresent.status === "fulfilled" && progressionMigrationPresent.value,
   };
   const dpeAppText = dpeAppSource.status === "fulfilled" ? dpeAppSource.value : "";
   const realtimeRouteText =
@@ -178,6 +200,15 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
   if (!voiceConfig.realtimeKeyConfigured) {
     blockers.push("DPE realtime API key path is missing in environment configuration.");
   }
+  if (!authSecretConfigured) {
+    blockers.push("Auth secret is missing (set AUTH_SECRET or NEXTAUTH_SECRET).");
+  }
+  if (!voiceConfig.apiKeyConfigured) {
+    blockers.push("DPE text AI key path is missing in environment configuration.");
+  }
+  if (!migrationSignals.baselinePresent || !migrationSignals.progressionPresent) {
+    blockers.push("Required DPE migration files are missing from this deploy artifact.");
+  }
 
   if (trackSummary.pending > 0) {
     warnings.push(
@@ -185,9 +216,6 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
     );
   }
 
-  if (!voiceConfig.apiKeyConfigured) {
-    warnings.push("DPE API key fallback path is missing; only realtime key path may exist.");
-  }
   if (!runtimeSignals.learnerTargetAwareChromeVisible) {
     warnings.push("DPE learner target-aware readiness chrome markers were not detected.");
   }
@@ -210,11 +238,61 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
   return {
     blockers,
     checks: [
+      "Confirm migrations 0050 and 0053 are applied in the deployment database.",
+      "Sign in through the deployed browser flow and confirm /dpe renders authenticated state.",
+      "Run a browser microphone-permission check and start one realtime DPE session.",
       "Run a DPE voice session start/end and confirm transcript + artifact save.",
       "Run one DPE review generation and confirm progression event/quest updates in Admin.",
       "Confirm at least one target track has question + answer key + rubric coverage before broader testing.",
     ],
     contentSummaryAvailable,
+    deploymentRows: [
+      {
+        detail: "Deployment artifact contains DPE baseline and progression migration files.",
+        key: "migration_artifacts",
+        label: "DPE migration files",
+        status: statusFrom(migrationSignals.baselinePresent && migrationSignals.progressionPresent),
+        value:
+          migrationSignals.baselinePresent && migrationSignals.progressionPresent
+            ? "Present"
+            : "Missing",
+      },
+      {
+        detail: "Server auth secret must be configured for signed-in browser QA and protected flows.",
+        key: "auth_secret_env",
+        label: "Auth secret env",
+        status: statusFrom(authSecretConfigured),
+        value: authSecretConfigured ? "Configured" : "Missing",
+      },
+      {
+        detail: "DPE text generation path requires OPENAI_DPE_API_KEY or OPENAI_API_KEY.",
+        key: "dpe_text_key_env",
+        label: "DPE text AI key env",
+        status: statusFrom(voiceConfig.apiKeyConfigured),
+        value: voiceConfig.apiKeyConfigured ? "Configured" : "Missing",
+      },
+      {
+        detail: "DPE realtime voice path requires OPENAI_DPE_REALTIME_API_KEY (or configured fallback).",
+        key: "dpe_realtime_key_env",
+        label: "DPE realtime key env",
+        status: statusFrom(voiceConfig.realtimeKeyConfigured),
+        value: voiceConfig.realtimeKeyConfigured ? "Configured" : "Missing",
+      },
+      {
+        detail: "Deployed browser QA requires manual sign-in verification with a real session.",
+        key: "signed_in_browser_qa",
+        label: "Signed-in browser QA",
+        status: "warning",
+        value: "Manual check required",
+      },
+      {
+        detail: "Realtime QA requires manual microphone permission and one live voice launch.",
+        key: "realtime_microphone_qa",
+        label: "Microphone/realtime QA",
+        status: "warning",
+        value: "Manual check required",
+      },
+    ],
     progressionAvailable,
     runtimeRows: [
       {

@@ -296,6 +296,23 @@ async function DpeAdminPanel() {
               </div>
 
               <div className="raised-card">
+                <strong>Deployment gate checks</strong>
+                <p>Read-only deployment blockers and required manual QA gates for DPE MVP.</p>
+                <div className="question-list mt-4">
+                  {preflight.deploymentRows.map((row) => (
+                    <div className="raised-card" key={row.key}>
+                      <div className="question-meta">
+                        <span className="pill">{row.label}</span>
+                        <span className="pill">{statusPillLabel(row.status)}</span>
+                        <span className="pill">{row.value}</span>
+                      </div>
+                      <p>{row.detail}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="raised-card">
                 <strong>Learner/runtime target-aware signals</strong>
                 <p>Read-only source-contract checks from current DPE learner/runtime code.</p>
                 <div className="question-list mt-4">
