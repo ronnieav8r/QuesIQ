@@ -189,6 +189,12 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "available Private Pilot demo prompts",
       "Selected target is scaffolded; demo prompt lane is active",
     ]),
+    dpeAppContentStudioRoutingVisible: hasAll(dpeAppText, [
+      "ContentScreen",
+      "buildDpeContentStudioHref",
+      "Open in Content Studio",
+      'pipeline: "dpe_content"',
+    ]),
     learnerTargetAwareChromeVisible: hasAll(dpeAppText, [
       "Target-track oral prep",
       "MVP readiness checklist",
@@ -285,6 +291,9 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
   }
   if (!runtimeSignals.contentPendingMessagingVisible) {
     warnings.push("Content-pending non-Private track messaging markers were not detected.");
+  }
+  if (!runtimeSignals.dpeAppContentStudioRoutingVisible) {
+    warnings.push("DPE app Content screen routing markers were not detected.");
   }
   if (!runtimeSignals.requestedTracksConfigured) {
     warnings.push("One or more requested airplane-land target track codes are missing.");
@@ -450,6 +459,13 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
         label: "Content-pending messaging",
         status: warningStatusFrom(runtimeSignals.contentPendingMessagingVisible),
         value: runtimeSignals.contentPendingMessagingVisible ? "Visible" : "Not detected",
+      },
+      {
+        detail: "DPE app admin-only Content screen routes visible prompts into Content Studio with DPE pipeline context.",
+        key: "dpe_app_content_studio_routing",
+        label: "DPE app content routing",
+        status: warningStatusFrom(runtimeSignals.dpeAppContentStudioRoutingVisible),
+        value: runtimeSignals.dpeAppContentStudioRoutingVisible ? "Visible" : "Not detected",
       },
       {
         detail: "Realtime session endpoint shows expected DPE key-lookup contract markers.",

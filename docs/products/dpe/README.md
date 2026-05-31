@@ -778,3 +778,15 @@ content:
 2. This mirrors the Admin DPE gap routing pattern and keeps publish, Official,
    and Verified controls disabled.
 3. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 49 (Admin DPE Content Routing Contract)
+
+This slice adds Admin preflight visibility for the DPE app's content-routing
+surface:
+
+1. Admin DPE preflight now checks that the DPE app's admin-only Content screen
+   still has Content Studio routing markers.
+2. The runtime signal list includes `DPE app content routing`, separate from
+   the existing Admin gap-card routing signal.
+3. This is source-contract visibility only; it does not add content, schema,
+   publish, Official, or Verified state.

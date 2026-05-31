@@ -215,6 +215,8 @@ const codeContracts = [
     file: "src/server/admin-data/dpe-preflight.ts",
     checks: [
       "manualQaRows",
+      "dpeAppContentStudioRoutingVisible",
+      "DPE app content routing",
       "localPersistenceRecoveryVisible",
       "Local persistence recovery",
       "signedInDependencyReadinessVisible",
