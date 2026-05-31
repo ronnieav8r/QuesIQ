@@ -98,6 +98,8 @@ const codeContracts = [
       "Stored transcripts, retry AI",
       "onRetryReview",
       "formatDpeProfileDate",
+      "Profile storage unavailable",
+      "target remains on this screen",
       "targetTrack: {",
       "Voice AI unavailable",
       "voiceAiUnavailable",

@@ -405,6 +405,7 @@ export default function App() {
   const [dpeDiagnostics, setDpeDiagnostics] = useState<DpeDiagnosticEvent[]>([]);
   const [dpeProfile, setDpeProfile] = useState<DpeProfileState>(emptyDpeProfile);
   const [profileSaveStatus, setProfileSaveStatus] = useState<"idle" | "saved" | "saving" | "error">("idle");
+  const [profileSaveMessage, setProfileSaveMessage] = useState<string | null>(null);
   const [databaseAvailable, setDatabaseAvailable] = useState<boolean | null>(null);
   const [progressionAvailable, setProgressionAvailable] = useState<boolean | null>(null);
   const [progressionSummary, setProgressionSummary] = useState<DpeProgressionSummary | null>(null);
@@ -614,6 +615,7 @@ export default function App() {
 
   async function saveProfile(nextProfile = dpeProfile) {
     setProfileSaveStatus("saving");
+    setProfileSaveMessage(null);
     try {
       const response = await fetch("/api/dpe/profile", {
         body: JSON.stringify(nextProfile),
@@ -621,7 +623,8 @@ export default function App() {
         method: "PUT",
       });
       if (!response.ok) {
-        throw new Error("Profile save failed.");
+        const data = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error ?? "Profile save failed.");
       }
       const data = (await response.json()) as DpeProfileResponse;
       if (data.available === false) {
@@ -633,8 +636,14 @@ export default function App() {
       await loadDpeProgression();
       await loadDpeRuntimeCheck();
       setProfileSaveStatus("saved");
-    } catch {
+      setProfileSaveMessage(null);
+    } catch (error) {
       setProfileSaveStatus("error");
+      setProfileSaveMessage(
+        error instanceof Error && error.message
+          ? error.message
+          : "DPE profile storage is unavailable right now.",
+      );
     }
   }
 
@@ -1157,11 +1166,13 @@ export default function App() {
             {screen === "me" && (
               <MeScreen
                 profile={dpeProfile}
+                saveMessage={profileSaveMessage}
                 selectedTargetTrack={selectedTargetTrack}
                 saveStatus={profileSaveStatus}
                 onChange={(nextProfile) => {
                   setDpeProfile(nextProfile);
                   setProfileSaveStatus("idle");
+                  setProfileSaveMessage(null);
                 }}
                 onSave={() =>
                   saveProfile({
@@ -4035,12 +4046,14 @@ function MeScreen({
   onChange,
   onSave,
   profile,
+  saveMessage,
   selectedTargetTrack,
   saveStatus
 }: {
   onChange: (profile: DpeProfileState) => void;
   onSave: () => void;
   profile: DpeProfileState;
+  saveMessage: string | null;
   selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
   saveStatus: "idle" | "saved" | "saving" | "error";
 }) {
@@ -4190,6 +4203,16 @@ function MeScreen({
           {saveStatus === "saved" && <span className="pill">Saved</span>}
           {saveStatus === "error" && <span className="pill">Save failed</span>}
         </div>
+        {saveStatus === "error" && (
+          <div className="raised-card">
+            <strong>Profile storage unavailable</strong>
+            <p>
+              {saveMessage ?? "DPE profile storage is unavailable right now."} Your selected
+              target remains on this screen for setup. Save again when account storage is reachable
+              so future sessions, reviews, and quests use the same target.
+            </p>
+          </div>
+        )}
       </div>
     </section>
   );

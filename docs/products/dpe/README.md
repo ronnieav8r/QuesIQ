@@ -690,3 +690,15 @@ content:
    probe loads but storage is not reachable, instead of implying the check is
    still pending.
 3. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 42 (Profile Save Recovery Notice)
+
+This slice improves target/profile setup recovery without changing content:
+
+1. Profile save failures now preserve and surface the server error when one is
+   available.
+2. The Me screen now shows a `Profile storage unavailable` notice explaining
+   that the selected target remains available locally for setup.
+3. The notice tells the learner to save again when account storage is reachable
+   so future sessions, reviews, and quests use the same target.
+4. No aviation content, schema, publish, Official, or Verified state changed.
