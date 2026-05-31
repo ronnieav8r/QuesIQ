@@ -270,6 +270,91 @@ async function readText(relativePath) {
   return readFile(path.join(root, relativePath), "utf8");
 }
 
+function normalizeWeakReference(value) {
+  return typeof value === "string" ? value.trim().toUpperCase() : "";
+}
+
+function estimateResolvedWeakFocusSmoke(sessions) {
+  const reviewedSessions = [...sessions]
+    .filter((session) => session.reviewJson)
+    .sort((left, right) => left.time - right.time);
+  const openWeakReferences = new Map();
+  const resolvedWeakReferences = new Set();
+
+  for (const session of reviewedSessions) {
+    const weakReferences = new Set(
+      (session.reviewJson.weakAcsReferences ?? [])
+        .map(normalizeWeakReference)
+        .filter(Boolean),
+    );
+    const readinessScore = session.reviewJson.scores?.checkrideReadiness ?? 0;
+
+    if (readinessScore >= 4) {
+      for (const [weakReference, focusKey] of openWeakReferences) {
+        if (focusKey === session.focusKey && !weakReferences.has(weakReference)) {
+          resolvedWeakReferences.add(weakReference);
+          openWeakReferences.delete(weakReference);
+        }
+      }
+    }
+
+    for (const weakReference of weakReferences) {
+      if (!resolvedWeakReferences.has(weakReference)) {
+        openWeakReferences.set(weakReference, session.focusKey);
+      }
+    }
+  }
+
+  return resolvedWeakReferences.size;
+}
+
+function runWeakFocusResolutionSmoke() {
+  const sessions = [
+    {
+      focusKey: "I.A",
+      reviewJson: {
+        scores: { checkrideReadiness: 2 },
+        weakAcsReferences: ["PA.I.A.K1", "PA.I.A.R2"],
+      },
+      time: 1,
+    },
+    {
+      focusKey: "II.B",
+      reviewJson: {
+        scores: { checkrideReadiness: 5 },
+        weakAcsReferences: [],
+      },
+      time: 2,
+    },
+    {
+      focusKey: "I.A",
+      reviewJson: {
+        scores: { checkrideReadiness: 3 },
+        weakAcsReferences: [],
+      },
+      time: 3,
+    },
+    {
+      focusKey: "I.A",
+      reviewJson: {
+        scores: { checkrideReadiness: 4 },
+        weakAcsReferences: ["PA.I.A.R2"],
+      },
+      time: 4,
+    },
+  ];
+
+  const resolvedCount = estimateResolvedWeakFocusSmoke(sessions);
+  if (resolvedCount === 1) {
+    pass(
+      "smoke: weak focus resolution",
+      "requires same ACS focus, later review, 4+ readiness, and omitted weak reference",
+    );
+  } else {
+    fail("smoke: weak focus resolution", `expected 1 resolved weak reference, got ${resolvedCount}`);
+  }
+}
+
 for (const file of requiredFiles) {
   if (await fileExists(file)) {
     pass(`file: ${file}`);
@@ -353,6 +438,8 @@ for (const contract of forbiddenContracts) {
     }
   }
 }
+
+runWeakFocusResolutionSmoke();
 
 for (const envCheck of envChecks) {
   const configuredNames = envCheck.names.filter((name) => Boolean(process.env[name]));

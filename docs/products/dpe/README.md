@@ -587,3 +587,16 @@ This slice tightens DPE quest progression without changing content:
 4. This keeps weak-focus quests as habit/readiness signals only; no
    certification, publish, Official, Verified, or aviation-content state
    changed.
+
+## MVP Learner Polish Slice 34 (Weak Focus Progression Smoke Check)
+
+This slice protects the DPE quest loop without changing content:
+
+1. `npm run preflight:dpe` now includes a deterministic weak-focus resolution
+   smoke check.
+2. The smoke check verifies that a weak ACS reference resolves only after a
+   later reviewed session in the same ACS focus reaches 4+ readiness and omits
+   that reference.
+3. This keeps the progression brand behavior covered by the release preflight;
+   it does not add aviation content, schema, publish, Official, or Verified
+   state.
