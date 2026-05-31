@@ -891,7 +891,22 @@ export default function App() {
                 onTaskChange={setTask}
               />
             )}
-            {screen === "scenarios" && <ScenariosScreen />}
+            {screen === "scenarios" && (
+              <ScenariosScreen
+                questionBankAvailable={questionBankAvailable}
+                questions={selectedQuestions}
+                selectedTargetTrack={selectedTargetTrack}
+                onOpenPractice={() => setScreen("practice")}
+                onStartCombined={() => {
+                  setMode("combined");
+                  setScreen("practice");
+                }}
+                onStartVisual={() => {
+                  setMode("visual");
+                  setScreen("practice");
+                }}
+              />
+            )}
             {screen === "history" && (
               <HistoryScreen
                 currentSession={session}
@@ -2606,22 +2621,100 @@ function Transcript({ answers }: { answers: SessionAnswer[] }) {
   );
 }
 
-function ScenariosScreen() {
+function ScenariosScreen({
+  questionBankAvailable,
+  questions,
+  selectedTargetTrack,
+  onOpenPractice,
+  onStartCombined,
+  onStartVisual,
+}: {
+  questionBankAvailable: boolean | null;
+  questions: DpeQuestion[];
+  selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
+  onOpenPractice: () => void;
+  onStartCombined: () => void;
+  onStartVisual: () => void;
+}) {
+  const visualPrompts = questions.filter((question) => question.practiceLane === "visual").length;
+  const reviewReadyPrompts = questions.filter((question) => isQuestionReviewReady(question)).length;
+  const privatePilotTrack = getDpeTargetTrackById(defaultDpeTargetTrackId) ?? dpeTargetTracks[0];
+
   return (
     <section className="screen">
       <div className="section-head">
         <div>
           <h2>Scenarios</h2>
-          <p>Reusable checkride situations will live here, separate from plain oral recall.</p>
+          <p>Use visual and applied-question practice without leaving the current target track.</p>
         </div>
         <Map />
       </div>
-      <div className="panel">
-        <h3>Visual/example lane</h3>
-        <p>
-          This is the natural home for weather products, sectional crops, performance examples, and
-          document-based prompts before they are mixed into live voice sessions.
-        </p>
+
+      <div className="grid two-col">
+        <div className="panel">
+          <div className="section-head">
+            <div>
+              <h3>{selectedTargetTrack.title}</h3>
+              <p>
+                Scenario practice uses the same selected certificate, ACS area, and task filters as
+                Practice setup.
+              </p>
+            </div>
+            <Plane />
+          </div>
+          <div className="stat-strip mt-4">
+            <Stat label="Prompt set" value={`${Math.min(5, questions.length)}`} />
+            <Stat label="Visual hints" value={`${visualPrompts}`} />
+            <Stat label="Review-ready" value={`${reviewReadyPrompts}`} />
+            <Stat label="Source" value={questionBankAvailable ? "Database" : "Fallback"} />
+          </div>
+          {!selectedTargetTrack.contentReady && (
+            <div className="raised-card mt-4">
+              <strong>Scenario lane is scaffolded for this track</strong>
+              <p>
+                {selectedTargetTrack.title} stays selected for readiness tracking. Until dedicated
+                content is loaded, scenario practice can use available {privatePilotTrack.title}
+                demo prompts with conservative review language.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="panel">
+          <div className="section-head">
+            <div>
+              <h3>Practice entry</h3>
+              <p>Choose visual-only review or combine visual context with oral answers.</p>
+            </div>
+            <BookOpenCheck />
+          </div>
+          <div className="question-list mt-4">
+            <div className="raised-card">
+              <strong>Visual check</strong>
+              <p>Use prompts with document, chart, weather, or scenario context where available.</p>
+              <button className="button mt-4" onClick={onStartVisual}>
+                <BookOpenCheck />
+                Open visual setup
+              </button>
+            </div>
+            <div className="raised-card">
+              <strong>Combined oral</strong>
+              <p>Blend applied scenario context with the normal examiner-question flow.</p>
+              <button className="button mt-4" onClick={onStartCombined}>
+                <Radio />
+                Open combined setup
+              </button>
+            </div>
+            <div className="raised-card">
+              <strong>Adjust filters</strong>
+              <p>Change certificate, ACS area, or ACS task before starting a scenario session.</p>
+              <button className="button mt-4" onClick={onOpenPractice}>
+                <ListChecks />
+                Open practice setup
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );

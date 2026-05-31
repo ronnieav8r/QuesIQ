@@ -53,6 +53,8 @@ const codeContracts = [
       "Readiness quest track",
       "buildSessionTrackLabel",
       "Target-track oral prep",
+      "Open visual setup",
+      "Open combined setup",
     ],
   },
   {
@@ -103,6 +105,10 @@ const forbiddenContracts = [
       {
         label: "fixed Private Pilot subtitle",
         snippet: "Private Pilot ASEL oral prep",
+      },
+      {
+        label: "unfinished Scenarios placeholder",
+        snippet: "will live here",
       },
     ],
   },
