@@ -16,6 +16,7 @@ const requiredFiles = [
   "src/app/api/dpe/practice-sessions/[id]/review/route.ts",
   "src/app/api/dpe/progression/route.ts",
   "src/app/api/dpe/realtime/session/route.ts",
+  "src/app/api/dpe/status/route.ts",
   "src/features/dpe/dpe-app.tsx",
   "src/features/dpe/question-format.ts",
   "src/features/dpe/target-tracks.ts",
@@ -43,6 +44,14 @@ const requiredTrackMetadata = [
 ];
 
 const codeContracts = [
+  {
+    file: "src/app/api/dpe/status/route.ts",
+    checks: [
+      "contentTablesReachable",
+      "dpeTargetTracks.map",
+      "questionCount",
+    ],
+  },
   {
     file: "src/features/dpe/dpe-app.tsx",
     checks: [

@@ -120,6 +120,7 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
     dpeTrackSource,
     adminConsoleSource,
     contentStudioSource,
+    publicStatusSource,
     baselineMigrationPresent,
     progressionMigrationPresent,
   ] =
@@ -131,6 +132,7 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       readFile(path.join(process.cwd(), "src/features/dpe/target-tracks.ts"), "utf8"),
       readFile(path.join(process.cwd(), "src/features/admin/admin-console.tsx"), "utf8"),
       readFile(path.join(process.cwd(), "src/features/admin/content-studio.tsx"), "utf8"),
+      readFile(path.join(process.cwd(), "src/app/api/dpe/status/route.ts"), "utf8"),
       access(path.join(process.cwd(), "drizzle/0050_add_dpe_baseline_tables.sql"))
         .then(() => true)
         .catch(() => false),
@@ -165,6 +167,8 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
     adminConsoleSource.status === "fulfilled" ? adminConsoleSource.value : "";
   const contentStudioText =
     contentStudioSource.status === "fulfilled" ? contentStudioSource.value : "";
+  const publicStatusText =
+    publicStatusSource.status === "fulfilled" ? publicStatusSource.value : "";
   const runtimeSignals = {
     adminGapContentStudioRoutingVisible: hasAll(adminConsoleText, [
       "Open in Content Studio",
@@ -200,6 +204,11 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
     voiceRuntimeConfigContractVisible: hasAll(realtimeRouteText, [
       'getOpenAiRealtimeApiKey("dpe")',
       "OPENAI_DPE_REALTIME_API_KEY or OPENAI_DPE_API_KEY",
+    ]),
+    publicStatusProbeVisible: hasAll(publicStatusText, [
+      "contentTablesReachable",
+      "dpeTargetTracks.map",
+      "questionCount",
     ]),
   };
 
@@ -250,6 +259,9 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
   }
   if (!runtimeSignals.adminGapContentStudioRoutingVisible) {
     warnings.push("Admin DPE gap cards do not confirm Content Studio routing markers.");
+  }
+  if (!runtimeSignals.publicStatusProbeVisible) {
+    warnings.push("DPE public status probe markers were not detected.");
   }
 
   const status: PreflightStatus =
@@ -356,6 +368,13 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
         label: "Admin gap routing",
         status: warningStatusFrom(runtimeSignals.adminGapContentStudioRoutingVisible),
         value: runtimeSignals.adminGapContentStudioRoutingVisible ? "Visible" : "Not detected",
+      },
+      {
+        detail: "Public DPE status route exposes safe target-track and content-table reachability signals.",
+        key: "public_status_probe",
+        label: "Public status probe",
+        status: warningStatusFrom(runtimeSignals.publicStatusProbeVisible),
+        value: runtimeSignals.publicStatusProbeVisible ? "Visible" : "Not detected",
       },
     ],
     status,
