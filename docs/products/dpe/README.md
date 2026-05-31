@@ -163,3 +163,29 @@ Remaining MVP gaps (outside this slice):
 2. Deeper review history comparison and trend views across saved sessions.
 3. Weak-focus resolution quest logic once richer durable review history is in
    place.
+
+## MVP Learner Polish Slice 3 (Voice/Session Recovery)
+
+This slice focuses on learner reliability and recovery without changing
+content, schema, or publish behavior:
+
+1. Voice launch now has a clear recovery path when a persisted DPE session
+   cannot be created. Instead of a dead end, the app falls back to typed
+   practice immediately with explicit messaging.
+2. Practice surfaces a visible fallback notice (`voice -> typed`) so users
+   understand why microphone flow did not continue.
+3. History now provides a `Generate review` action for completed sessions that
+   still have no saved review, using existing
+   `POST /api/dpe/practice-sessions/[id]/review`.
+4. History status labels and CTA copy are tightened around session lifecycle
+   states: in progress, completed, review incomplete, review ready.
+5. Completed/no-review cards are no longer dead-end; users can either open the
+   fallback review preview or generate/save a review and then reopen it in
+   Practice.
+
+Remaining MVP gaps after this slice:
+
+1. Resume/continue behavior for persisted `in_progress` sessions (currently
+   recovery focuses on completed-session review and voice launch fallback).
+2. Review retry diagnostics/history (attempt count, failure reason timeline).
+3. Track-specific real oral content for non-Private target tracks.

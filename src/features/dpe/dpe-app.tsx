@@ -249,6 +249,11 @@ type DpeProgressionSummary = {
   uniqueAreaTasks: number;
 };
 
+type PracticeNotice = {
+  detail: string;
+  title: string;
+};
+
 const navItems = [
   { key: "home", label: "Home", icon: Home },
   { key: "practice", label: "Practice", icon: Mic },
@@ -300,6 +305,7 @@ export default function App() {
   );
   const [questionBankAvailable, setQuestionBankAvailable] = useState<boolean | null>(null);
   const [reviewGenerating, setReviewGenerating] = useState(false);
+  const [practiceNotice, setPracticeNotice] = useState<PracticeNotice | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [draftAnswer, setDraftAnswer] = useState("");
   const [certificateTypeId, setCertificateTypeId] = useState("");
@@ -500,6 +506,7 @@ export default function App() {
   async function startSession(voiceMode = false) {
     const questions = selectedQuestions.slice(0, 5);
     if (questions.length === 0) return;
+    setPracticeNotice(null);
 
     const draftSession: LocalSession = {
       id: `local-${Date.now()}`,
@@ -512,6 +519,10 @@ export default function App() {
       startedAt: new Date(),
       persisted: false,
       voiceMode
+    };
+    const typedFallbackSession: LocalSession = {
+      ...draftSession,
+      voiceMode: false,
     };
 
     try {
@@ -535,6 +546,7 @@ export default function App() {
 
       setDatabaseAvailable(data.available);
       if (data.available && data.session?.id) {
+        setPracticeNotice(null);
         setSession({ ...draftSession, id: data.session.id, persisted: true });
         setCurrentIndex(0);
         setDraftAnswer("");
@@ -544,15 +556,30 @@ export default function App() {
       }
 
       if (voiceMode) {
-        setSession(null);
-        setStage("setup");
+        setPracticeNotice({
+          title: "Voice launch switched to typed practice",
+          detail: data.available
+            ? "Voice mode requires a saved DPE session id before microphone launch. Typed practice started so you can continue now."
+            : "DPE session storage is unavailable, so voice evidence cannot be saved right now. Typed practice started so you can keep working.",
+        });
+        setSession(typedFallbackSession);
+        setCurrentIndex(0);
+        setDraftAnswer("");
+        setStage("live");
         return;
       }
     } catch {
       setDatabaseAvailable(false);
       if (voiceMode) {
-        setSession(null);
-        setStage("setup");
+        setPracticeNotice({
+          title: "Voice launch switched to typed practice",
+          detail:
+            "The session service did not accept a voice launch request, so typed practice started as a fallback.",
+        });
+        setSession(typedFallbackSession);
+        setCurrentIndex(0);
+        setDraftAnswer("");
+        setStage("live");
         return;
       }
     }
@@ -788,11 +815,13 @@ export default function App() {
                 questionCount={questionState.questions.length}
                 selectedTask={selectedTask}
                 selectedTargetTrack={selectedTargetTrack}
+                practiceNotice={practiceNotice}
                 session={session}
                 stage={stage}
                 taskOptions={taskOptions}
                 onAnswerChange={setDraftAnswer}
                 onAreaChange={changeArea}
+                onClearPracticeNotice={() => setPracticeNotice(null)}
                 databaseAvailable={databaseAvailable}
                 reviewGenerating={reviewGenerating}
                 onFinishEarly={finishEarly}
@@ -812,6 +841,36 @@ export default function App() {
               <HistoryScreen
                 currentSession={session}
                 databaseAvailable={databaseAvailable}
+                onGenerateReview={async (sessionId) => {
+                  try {
+                    const response = await fetch(`/api/dpe/practice-sessions/${sessionId}/review`, {
+                      method: "POST",
+                    });
+                    const data = (await response.json().catch(() => ({}))) as {
+                      available?: boolean;
+                      error?: string;
+                      review?: ReviewJson;
+                    };
+                    if (typeof data.available === "boolean") {
+                      setDatabaseAvailable(data.available);
+                    }
+                    await loadStoredSessions();
+                    await loadDpeProgression();
+                    if (data.review) {
+                      return { ok: true, message: "Saved review generated for this completed session." };
+                    }
+                    return {
+                      ok: false,
+                      message: data.error ?? "Review generation is not available for this session yet.",
+                    };
+                  } catch {
+                    setDatabaseAvailable(false);
+                    return {
+                      ok: false,
+                      message: "Review service is unavailable right now. Try again shortly.",
+                    };
+                  }
+                }}
                 onOpenReview={(reviewSession) => {
                   setMode(reviewSession.mode);
                   setSession(reviewSession);
@@ -1281,6 +1340,7 @@ function PracticeScreen(props: {
   questionBankAvailable: boolean | null;
   questionCount: number;
   selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
+  practiceNotice: PracticeNotice | null;
   stage: PracticeStage;
   session: LocalSession | null;
   currentIndex: number;
@@ -1288,6 +1348,7 @@ function PracticeScreen(props: {
   databaseAvailable: boolean | null;
   reviewGenerating: boolean;
   onAreaChange: (area: string) => void;
+  onClearPracticeNotice: () => void;
   onCertificateChange: (certificateTypeId: string) => void;
   onTaskChange: (task: string) => void;
     onModeChange: (mode: PracticeMode) => void;
@@ -1300,7 +1361,26 @@ function PracticeScreen(props: {
     onVoiceArtifactFinalized: (artifact: VoiceSessionArtifactDraft) => void;
   }) {
   if (props.stage === "live" && props.session) {
-    return <LiveSessionScreen {...props} session={props.session} />;
+    return (
+      <>
+        {props.practiceNotice && (
+          <section className="screen">
+            <div className="panel">
+              <div className="section-head">
+                <div>
+                  <h3>{props.practiceNotice.title}</h3>
+                  <p>{props.practiceNotice.detail}</p>
+                </div>
+                <button className="button" onClick={props.onClearPracticeNotice}>
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+        <LiveSessionScreen {...props} session={props.session} />
+      </>
+    );
   }
 
   if (props.stage === "review" && props.session) {
@@ -1328,6 +1408,7 @@ function PracticeSetupScreen({
   questionBankAvailable,
   questionCount,
   selectedTargetTrack,
+  practiceNotice,
   databaseAvailable,
   onAreaChange,
   onCertificateChange,
@@ -1347,6 +1428,7 @@ function PracticeSetupScreen({
   questionBankAvailable: boolean | null;
   questionCount: number;
   selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
+  practiceNotice: PracticeNotice | null;
   databaseAvailable: boolean | null;
   onAreaChange: (area: string) => void;
   onCertificateChange: (certificateTypeId: string) => void;
@@ -1388,6 +1470,12 @@ function PracticeSetupScreen({
             Combined
           </ModeButton>
         </div>
+        {practiceNotice && (
+          <div className="raised-card mt-4">
+            <strong>{practiceNotice.title}</strong>
+            <p>{practiceNotice.detail}</p>
+          </div>
+        )}
 
         <div className="grid two-col mt-4">
           <label className="field">
@@ -2714,11 +2802,13 @@ function HistoryScreen({
   currentSession,
   storedSessions,
   databaseAvailable,
+  onGenerateReview,
   onOpenReview
 }: {
   currentSession: LocalSession | null;
   storedSessions: StoredPracticeSession[];
   databaseAvailable: boolean | null;
+  onGenerateReview: (sessionId: string) => Promise<{ ok: boolean; message: string }>;
   onOpenReview: (reviewSession: LocalSession) => void;
 }) {
   const storedReviews = storedSessions
@@ -2731,6 +2821,8 @@ function HistoryScreen({
     if (currentSession?.endedAt) return currentSession.id;
     return storedReviews[0]?.storedSession.id ?? null;
   });
+  const [retryingReviewId, setRetryingReviewId] = useState<string | null>(null);
+  const [historyNotice, setHistoryNotice] = useState<string | null>(null);
 
   const resolvedReviewId = currentSession?.endedAt
     ? currentSession.id
@@ -2800,10 +2892,10 @@ function HistoryScreen({
           {storedSessions.map((storedSession) => (
             <article className="raised-card" key={storedSession.id}>
               <div className="question-meta">
-                <span className="pill">{storedSession.status}</span>
+                <span className="pill">{formatSessionStatus(storedSession.status)}</span>
                 <span className="pill">{storedSession.mode}</span>
                 <span className="pill">
-                  {storedSession.reviewJson ? "review saved" : "review incomplete"}
+                  {storedSession.reviewJson ? "review ready" : "review incomplete"}
                 </span>
                 {normalizeStoredCertificateType(storedSession.transcriptJson?.certificateType) && (
                   <span className="pill">
@@ -2821,6 +2913,7 @@ function HistoryScreen({
               <p>
                 {summarizeStoredSession(storedSession)}
               </p>
+              <p className="muted">{buildStoredSessionCta(storedSession)}</p>
               <div className="inline-actions mt-4">
                 <button
                   className="button"
@@ -2841,12 +2934,34 @@ function HistoryScreen({
                 >
                   Reopen in practice
                 </button>
+                {storedSession.status === "completed" && !storedSession.reviewJson && (
+                  <button
+                    className="button primary"
+                    disabled={retryingReviewId === storedSession.id}
+                    onClick={async () => {
+                      setRetryingReviewId(storedSession.id);
+                      const result = await onGenerateReview(storedSession.id);
+                      setRetryingReviewId(null);
+                      setHistoryNotice(result.message);
+                      if (result.ok) {
+                        setSelectedReviewId(storedSession.id);
+                      }
+                    }}
+                  >
+                    {retryingReviewId === storedSession.id ? "Generating..." : "Generate review"}
+                  </button>
+                )}
               </div>
             </article>
           ))}
           {storedSessions.length === 0 && <ReviewPreview />}
         </div>
       </div>
+      {historyNotice && (
+        <div className="panel">
+          <p>{historyNotice}</p>
+        </div>
+      )}
       {selectedReview && (
         <ReviewScreen
           key={selectedReview.id}
@@ -2893,6 +3008,23 @@ function summarizeStoredSession(storedSession: StoredPracticeSession) {
   return `${answered} answered, ${skipped} skipped. ${
     review ? review.nextPracticeAction : "Open a completed session review to generate the next practice action."
   }`;
+}
+
+function formatSessionStatus(status: string | null | undefined) {
+  const value = status?.trim().toLowerCase();
+  if (value === "in_progress") return "in progress";
+  if (value === "completed") return "completed";
+  return value || "unknown";
+}
+
+function buildStoredSessionCta(storedSession: StoredPracticeSession) {
+  if (storedSession.status === "in_progress") {
+    return "Session is still in progress. Complete a session in Practice to unlock a saved review.";
+  }
+  if (storedSession.status === "completed" && !storedSession.reviewJson) {
+    return "Session is complete but review is missing. Generate a saved review or open the fallback preview now.";
+  }
+  return "Saved review is ready to reopen for follow-up practice planning.";
 }
 
 function MeScreen({
