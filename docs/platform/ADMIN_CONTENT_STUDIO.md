@@ -284,14 +284,20 @@ Supported preview packet types:
 - Study generation packet: `POST /api/study/content-studio/flashcard-draft`
   with `mode: "source_pack_generation_packet_preview"` and
   `generationPacketJson`.
+- Study deck draft: `POST /api/study/content-studio/flashcard-draft` with
+  `mode: "source_pack_preview"` and then
+  `mode: "source_pack_verification_queue_preview"` using the same
+  `sourcePackDraftJson`.
 - DPE reference packet: `POST /api/dpe/content/draft` with
   `mode: "source_pack_reference_packet_preview"` and `referencePacket`.
 
 The Study preview shows the normalized source pack id/title, chunk count, deck
 request details, and review sections returned by the Study-owned preview
-parser. The DPE preview shows item count, source chunk count, visual asset
-count, track applicability, verification-status counts, source pack details,
-and warnings returned by the DPE-owned reference parser.
+parser. The Study deck-draft preview shows draft metadata, card counts,
+verification status, source citation coverage, warning/status counts, and a
+preview-only verifier queue. The DPE preview shows item count, source chunk
+count, visual asset count, track applicability, verification-status counts,
+source pack details, and warnings returned by the DPE-owned reference parser.
 
 This bridge is intentionally downstream of Admin review and upstream of any
 product import. It exists so reviewers can inspect the backend-normalized packet

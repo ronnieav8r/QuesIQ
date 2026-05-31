@@ -287,7 +287,7 @@ type SourcePackPreviewResponse = {
   visualCandidates?: SourcePackVisualReviewCandidate[];
 };
 
-type ProductPacketPreviewKind = "dpe_reference" | "study_generation";
+type ProductPacketPreviewKind = "dpe_reference" | "study_deck_draft" | "study_generation";
 type ProductPacketPreviewStatus = "idle" | "previewing" | "ready";
 
 type ProductPacketReviewSection = {
@@ -318,6 +318,64 @@ type StudyGenerationPacketPreviewResponse = {
   validationErrors?: string[];
 };
 
+type StudyDeckDraftPreviewResponse = {
+  draftContract?: {
+    draft?: {
+      cards?: unknown[];
+      draftId?: string;
+      sourcePackId?: string;
+      title?: string;
+      verificationStatus?: string;
+    };
+  };
+  error?: string;
+  reviewSections?: ProductPacketReviewSection[];
+  sourcePackPreviewOnly?: boolean;
+  validationErrors?: string[];
+};
+
+type StudyVerificationQueuePreviewResponse = {
+  error?: string;
+  queuePreview?: {
+    draftId: string;
+    queueItems: Array<{
+      cardIndex: number;
+      question: string;
+      recommendedVerifierAction: string;
+      recommendedVerifierStatus: string;
+      sourceCitation?: {
+        chunkIds?: string[];
+        pageAnchors?: unknown[];
+        sourcePackId?: string;
+        visualAssetIds?: string[];
+      };
+    }>;
+    sourcePackId: string;
+    summary: {
+      cardCount: number;
+      pageAnchorsCount: number;
+      title: string;
+      uniqueChunkIds: number;
+      uniqueVisualAssetIds: number;
+      verificationStatusCounts: Record<string, number>;
+      warningCounts: {
+        blocker: number;
+        info: number;
+        warning: number;
+      };
+    };
+  };
+  reviewSections?: ProductPacketReviewSection[];
+  sourcePackVerificationQueuePreviewOnly?: boolean;
+  validationErrors?: string[];
+};
+
+type StudyDeckDraftProductPacketPreviewResponse = {
+  deckDraftPreview: StudyDeckDraftPreviewResponse;
+  error?: string;
+  verificationQueuePreview: StudyVerificationQueuePreviewResponse;
+};
+
 type DpeReferencePacketPreviewResponse = {
   draftReferenceContract?: {
     items?: unknown[];
@@ -340,6 +398,7 @@ type DpeReferencePacketPreviewResponse = {
 
 type ProductPacketPreviewResponse =
   | DpeReferencePacketPreviewResponse
+  | StudyDeckDraftProductPacketPreviewResponse
   | StudyGenerationPacketPreviewResponse;
 
 const MIN_SOURCE_CHARS = 40;
@@ -569,6 +628,61 @@ const dpeReferencePacketPreviewSample = JSON.stringify(
       title: "Sample Source Pack",
     },
     targetContract: "dpe.draftReference.v1",
+  },
+  null,
+  2,
+);
+
+const studyDeckDraftPreviewSample = JSON.stringify(
+  {
+    contractVersion: "study.sourcePackDeckDraft.v1",
+    draft: {
+      cards: [
+        {
+          answer: "Use small, deliberate control pressures while scanning outside for references.",
+          hint: "Start with pitch trim before making larger control inputs.",
+          level: "beginner",
+          question: "What is a stable way to maintain control during visual maneuver practice?",
+          sourceCitation: {
+            chunkIds: ["chunk-001", "chunk-002"],
+            pageAnchors: [{ page: 12, x1: 0.12, x2: 0.75, y1: 0.18, y2: 0.42 }],
+            sourcePackId: "sample-source-pack",
+            visualAssetIds: ["figure-12-a"],
+          },
+          tags: ["fundamentals", "visual-maneuvers"],
+          verificationStatus: "unverified",
+          warnings: [
+            {
+              code: "needs_verifier_pass",
+              message: "Requires verifier pass before Study import.",
+              severity: "warning",
+            },
+          ],
+        },
+      ],
+      deckWarnings: [
+        {
+          code: "sample_only",
+          message: "Sample contract fixture for preview and validation only.",
+          severity: "info",
+        },
+      ],
+      description: "Sample source-pack-generated Study draft contract payload.",
+      draftId: "sample-draft-001",
+      generatedAt: "2026-01-01T00:00:00.000Z",
+      sourcePackId: "sample-source-pack",
+      subject: "Flight Fundamentals",
+      tags: ["content-studio", "draft-only"],
+      title: "Sample Source-Pack Draft Deck",
+      verificationStatus: "needs_review",
+    },
+    mode: "draft_preview_only",
+    restrictions: {
+      canMarkOfficial: false,
+      canMarkVerified: false,
+      canPublish: false,
+      writesStudyDecks: false,
+    },
   },
   null,
   2,
@@ -956,6 +1070,55 @@ export function ContentStudio() {
 
     try {
       const parsedPayload = JSON.parse(productPacketInput) as unknown;
+      if (productPacketKind === "study_deck_draft") {
+        const draftResponse = await fetch("/api/study/content-studio/flashcard-draft", {
+          body: JSON.stringify({
+            mode: "source_pack_preview",
+            sourcePackDraftJson: parsedPayload,
+          }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+        const draftBody = (await draftResponse.json()) as StudyDeckDraftPreviewResponse;
+        const draftValidationErrors = Array.isArray(draftBody.validationErrors)
+          ? draftBody.validationErrors
+          : [];
+
+        if (!draftResponse.ok) {
+          setProductPacketValidationErrors(draftValidationErrors);
+          throw new Error(draftBody.error || "Study deck draft preview failed.");
+        }
+
+        const queueResponse = await fetch("/api/study/content-studio/flashcard-draft", {
+          body: JSON.stringify({
+            mode: "source_pack_verification_queue_preview",
+            sourcePackDraftJson: parsedPayload,
+          }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+        const queueBody = (await queueResponse.json()) as StudyVerificationQueuePreviewResponse;
+        const queueValidationErrors = Array.isArray(queueBody.validationErrors)
+          ? queueBody.validationErrors
+          : [];
+
+        if (!queueResponse.ok) {
+          setProductPacketValidationErrors(queueValidationErrors);
+          throw new Error(queueBody.error || "Study verification queue preview failed.");
+        }
+
+        setProductPacketPreview({
+          deckDraftPreview: draftBody,
+          verificationQueuePreview: queueBody,
+        });
+        setProductPacketValidationErrors([
+          ...draftValidationErrors,
+          ...queueValidationErrors,
+        ]);
+        setProductPacketPreviewStatus("ready");
+        return;
+      }
+
       const endpoint =
         productPacketKind === "study_generation"
           ? "/api/study/content-studio/flashcard-draft"
@@ -1389,6 +1552,7 @@ export function ContentStudio() {
               value={productPacketKind}
             >
               <option value="study_generation">Study generation packet</option>
+              <option value="study_deck_draft">Study deck draft</option>
               <option value="dpe_reference">DPE reference packet</option>
             </select>
           </label>
@@ -1399,6 +1563,8 @@ export function ContentStudio() {
               placeholder={
                 productPacketKind === "study_generation"
                   ? "Paste a Study generation packet JSON payload."
+                  : productPacketKind === "study_deck_draft"
+                    ? "Paste a Study source-pack deck draft JSON payload."
                   : "Paste a DPE reference packet JSON payload."
               }
               value={productPacketInput}
@@ -1444,7 +1610,9 @@ export function ContentStudio() {
               setProductPacketInput(
                 productPacketKind === "study_generation"
                   ? studyGenerationPacketPreviewSample
-                  : dpeReferencePacketPreviewSample,
+                  : productPacketKind === "study_deck_draft"
+                    ? studyDeckDraftPreviewSample
+                    : dpeReferencePacketPreviewSample,
               );
               setProductPacketPreviewError(undefined);
               setProductPacketValidationErrors([]);
@@ -2047,6 +2215,12 @@ function isDpeReferencePacketPreview(
   return "reviewSummary" in preview || "draftReferenceContract" in preview;
 }
 
+function isStudyDeckDraftPreview(
+  preview: ProductPacketPreviewResponse,
+): preview is StudyDeckDraftProductPacketPreviewResponse {
+  return "deckDraftPreview" in preview || "verificationQueuePreview" in preview;
+}
+
 function ProductPacketPreviewPanel({
   kind,
   preview,
@@ -2058,6 +2232,10 @@ function ProductPacketPreviewPanel({
     return <StudyGenerationPacketPreviewPanel preview={preview} />;
   }
 
+  if (kind === "study_deck_draft" && isStudyDeckDraftPreview(preview)) {
+    return <StudyDeckDraftPacketPreviewPanel preview={preview} />;
+  }
+
   if (kind === "dpe_reference" && isDpeReferencePacketPreview(preview)) {
     return <DpeReferencePacketPreviewPanel preview={preview} />;
   }
@@ -2065,6 +2243,138 @@ function ProductPacketPreviewPanel({
   return (
     <div className="runtime-context-panel">
       <p>Product packet preview returned an unexpected shape.</p>
+    </div>
+  );
+}
+
+function countQueueItemsByStatus(
+  items: NonNullable<StudyVerificationQueuePreviewResponse["queuePreview"]>["queueItems"] | undefined,
+) {
+  const counts = {
+    blocked: 0,
+    queued: 0,
+  };
+
+  for (const item of items ?? []) {
+    if (item.recommendedVerifierStatus === "queued_for_verifier") {
+      counts.queued += 1;
+    } else {
+      counts.blocked += 1;
+    }
+  }
+
+  return counts;
+}
+
+function StudyDeckDraftPacketPreviewPanel({
+  preview,
+}: {
+  preview: StudyDeckDraftProductPacketPreviewResponse;
+}) {
+  const draft = preview.deckDraftPreview.draftContract?.draft;
+  const draftReviewSections = preview.deckDraftPreview.reviewSections ?? [];
+  const queue = preview.verificationQueuePreview.queuePreview;
+  const queueReviewSections = preview.verificationQueuePreview.reviewSections ?? [];
+  const queueCounts = countQueueItemsByStatus(queue?.queueItems);
+
+  return (
+    <div className="runtime-context-panel">
+      <div className="section-head">
+        <div>
+          <strong>Study deck draft preview</strong>
+          <p>
+            Backend accepted the draft and verifier queue for preview only. No
+            Study deck was imported and no verifier AI call was made.
+          </p>
+        </div>
+        <span className="pill">preview only</span>
+      </div>
+
+      <div className="study-stat-strip" aria-label="Study deck draft summary">
+        <div className="study-stat-chip">
+          <strong>{draft?.sourcePackId ?? queue?.sourcePackId ?? "pending"}</strong>
+          <span>Source pack</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{draft?.cards?.length ?? queue?.summary.cardCount ?? 0}</strong>
+          <span>Cards</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{queueCounts.queued}</strong>
+          <span>Queued</span>
+        </div>
+        <div className="study-stat-chip highlight">
+          <strong>{queueCounts.blocked}</strong>
+          <span>Blocked</span>
+        </div>
+      </div>
+
+      <div className="runtime-context-panel">
+        <strong>{draft?.title ?? queue?.summary.title ?? "Untitled draft"}</strong>
+        <div className="question-meta">
+          <span className="pill">Draft: {draft?.draftId ?? queue?.draftId ?? "pending"}</span>
+          <span className="pill">Status: {draft?.verificationStatus ?? "pending"}</span>
+          <span className="pill">Chunks: {queue?.summary.uniqueChunkIds ?? 0}</span>
+          <span className="pill">Page anchors: {queue?.summary.pageAnchorsCount ?? 0}</span>
+          <span className="pill">Visual assets: {queue?.summary.uniqueVisualAssetIds ?? 0}</span>
+        </div>
+      </div>
+
+      <div className="runtime-context-panel">
+        <strong>Warnings and card statuses</strong>
+        <div className="question-meta">
+          <span className="pill">Blockers: {queue?.summary.warningCounts.blocker ?? 0}</span>
+          <span className="pill">Warnings: {queue?.summary.warningCounts.warning ?? 0}</span>
+          <span className="pill">Info: {queue?.summary.warningCounts.info ?? 0}</span>
+          {Object.entries(queue?.summary.verificationStatusCounts ?? {}).map(([status, count]) => (
+            <span className="pill" key={status}>
+              {status}: {count}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="question-list">
+        {[...draftReviewSections, ...queueReviewSections].map((section) => (
+          <div className="runtime-context-panel" key={section.title}>
+            <strong>{section.title}</strong>
+            <ul>
+              {section.items.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      {queue?.queueItems.length ? (
+        <div className="question-list">
+          {queue.queueItems.slice(0, 3).map((item) => (
+            <div className="runtime-context-panel" key={`${item.cardIndex}-${item.question}`}>
+              <div className="section-head">
+                <div>
+                  <strong>
+                    Card {item.cardIndex}: {item.recommendedVerifierAction.replaceAll("_", " ")}
+                  </strong>
+                  <p>{item.question}</p>
+                </div>
+                <span className="pill">{item.recommendedVerifierStatus.replaceAll("_", " ")}</span>
+              </div>
+              <div className="question-meta">
+                <span className="pill">
+                  Chunks: {item.sourceCitation?.chunkIds?.join(", ") || "none"}
+                </span>
+                <span className="pill">
+                  Visuals: {item.sourceCitation?.visualAssetIds?.join(", ") || "none"}
+                </span>
+                <span className="pill">
+                  Page anchors: {item.sourceCitation?.pageAnchors?.length ?? 0}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : undefined}
     </div>
   );
 }
