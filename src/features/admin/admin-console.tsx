@@ -1,6 +1,10 @@
 import Link from "next/link";
 
 import { ContentStudio } from "@/features/admin/content-studio";
+import {
+  dpeTargetTracks,
+  inferDpeTargetTrackKeyFromCertificate,
+} from "@/features/admin/dpe-target-tracks";
 import { AdminView } from "@/components/interview/admin-view";
 import { getStudyLibraryDecks } from "@/features/study/study-data";
 import { listDpeContentSummary } from "@/server/dpe/dpe-data";
@@ -186,6 +190,15 @@ async function DpeAdminPanel() {
     0,
   );
   const readiness = calculateDpeReadiness(totalQuestions, missingAnswerKeys, missingRubrics);
+  const trackCoverage = buildDpeTrackCoverage(summary);
+  const configuredTracks = trackCoverage.filter((track) => track.status !== "not_configured").length;
+  const tracksWithoutContent = trackCoverage.filter(
+    (track) => track.status === "configured_no_content",
+  ).length;
+  const tracksNeedingWork = trackCoverage.filter(
+    (track) => track.status === "needs_content_work",
+  ).length;
+  const tracksReady = trackCoverage.filter((track) => track.status === "review_ready").length;
 
   return (
     <section className="ai-runs-panel" aria-labelledby="dpe-admin-title">
@@ -224,6 +237,56 @@ async function DpeAdminPanel() {
       </div>
 
       <div className="prompt-version-list">
+        <article className="raised-card">
+          <div className="section-head">
+            <div>
+              <strong>MVP target track coverage</strong>
+              <p>
+                Instrument, Commercial, CFI, CFII, Multi, and MEI are tracked here so
+                coverage gaps are visible before content curation is finalized.
+              </p>
+            </div>
+          </div>
+          <div className="study-stat-strip" aria-label="DPE track coverage summary">
+            <div className="study-stat-chip">
+              <strong>{configuredTracks}/{dpeTargetTracks.length}</strong>
+              <span>Configured tracks</span>
+            </div>
+            <div className="study-stat-chip">
+              <strong>{tracksWithoutContent}</strong>
+              <span>No content yet</span>
+            </div>
+            <div className="study-stat-chip">
+              <strong>{tracksNeedingWork}</strong>
+              <span>Needs key/rubric work</span>
+            </div>
+            <div className="study-stat-chip">
+              <strong>{tracksReady}</strong>
+              <span>Review-ready tracks</span>
+            </div>
+          </div>
+          <div className="question-list mt-4">
+            {trackCoverage.map((track) => (
+              <article className="raised-card" key={track.key}>
+                <div className="section-head">
+                  <div>
+                    <strong>{track.label}</strong>
+                    <p>{track.message}</p>
+                  </div>
+                  <span className="pill">{track.statusLabel}</span>
+                </div>
+                <div className="question-meta">
+                  <span className="pill">{track.certificateCount} certificates</span>
+                  <span className="pill">{track.questionCount} questions</span>
+                  <span className="pill">{track.missingAnswerKeys} key gaps</span>
+                  <span className="pill">{track.missingRubrics} rubric gaps</span>
+                  <span className="pill">{track.readiness}% ready</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </article>
+
         {summary.certificateTypes.length > 0 ? (
           summary.certificateTypes.map((certificateType) => {
             const certificateGaps = getDpeCertificateGapSummary(certificateType);
@@ -519,4 +582,115 @@ function groupDpeContentByTask(certificateType: DpeCertificateSummary) {
         left.acsArea.localeCompare(right.acsArea, undefined, { numeric: true }) ||
         left.acsTask.localeCompare(right.acsTask, undefined, { numeric: true }),
     );
+}
+
+type DpeTrackCoverageStatus =
+  | "configured_no_content"
+  | "needs_content_work"
+  | "not_configured"
+  | "review_ready";
+
+type DpeTrackCoverage = {
+  certificateCount: number;
+  key: string;
+  label: string;
+  message: string;
+  missingAnswerKeys: number;
+  missingRubrics: number;
+  questionCount: number;
+  readiness: number;
+  status: DpeTrackCoverageStatus;
+  statusLabel: string;
+};
+
+function buildDpeTrackCoverage(summary: DpeContentSummary): DpeTrackCoverage[] {
+  return dpeTargetTracks.map((track) => {
+    const certificates = summary.certificateTypes.filter((certificateType) => {
+      const trackKey = inferDpeTargetTrackKeyFromCertificate({
+        code: certificateType.code,
+        id: certificateType.id,
+        title: certificateType.title,
+      });
+      return trackKey === track.key;
+    });
+    const questionCount = certificates.reduce(
+      (total, certificateType) => total + certificateType.questions.length,
+      0,
+    );
+    const missingAnswerKeys = certificates.reduce(
+      (total, certificateType) =>
+        total +
+        certificateType.questions.filter((question) => question.answerKeyStatus === "missing")
+          .length,
+      0,
+    );
+    const missingRubrics = certificates.reduce(
+      (total, certificateType) =>
+        total +
+        certificateType.questions.filter((question) => question.rubricStatus === "missing").length,
+      0,
+    );
+    const readiness = calculateDpeReadiness(questionCount, missingAnswerKeys, missingRubrics);
+
+    if (certificates.length === 0) {
+      return {
+        certificateCount: 0,
+        key: track.key,
+        label: track.label,
+        message:
+          "No certificate is configured yet for this track. Add the certificate record when ready.",
+        missingAnswerKeys: 0,
+        missingRubrics: 0,
+        questionCount: 0,
+        readiness: 0,
+        status: "not_configured",
+        statusLabel: "Not configured yet",
+      };
+    }
+
+    if (questionCount === 0) {
+      return {
+        certificateCount: certificates.length,
+        key: track.key,
+        label: track.label,
+        message:
+          "Certificate is configured. Content drafting and curation are still pending for this track.",
+        missingAnswerKeys: 0,
+        missingRubrics: 0,
+        questionCount: 0,
+        readiness: 0,
+        status: "configured_no_content",
+        statusLabel: "Configured, no content yet",
+      };
+    }
+
+    if (missingAnswerKeys + missingRubrics > 0) {
+      return {
+        certificateCount: certificates.length,
+        key: track.key,
+        label: track.label,
+        message:
+          "Questions exist, but answer key or rubric gaps remain before review-ready status.",
+        missingAnswerKeys,
+        missingRubrics,
+        questionCount,
+        readiness,
+        status: "needs_content_work",
+        statusLabel: "Needs key/rubric work",
+      };
+    }
+
+    return {
+      certificateCount: certificates.length,
+      key: track.key,
+      label: track.label,
+      message: "Track has question, answer key, and rubric coverage ready for admin review.",
+      missingAnswerKeys: 0,
+      missingRubrics: 0,
+      questionCount,
+      readiness,
+      status: "review_ready",
+      statusLabel: "Review ready",
+    };
+  });
 }

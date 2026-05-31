@@ -52,6 +52,10 @@ linked from a Content Studio run when a provider call exists.
   ACS, oral-question, answer-key, rubric, confidence, warnings, readiness, and
   missing-field indicators for review without writing to DPE content tables,
   then creates the same durable run record.
+- DPE run intake can include an Admin track context preset for MVP target tracks
+  (Instrument, Commercial, CFI, CFII, Multi, MEI). This context preloads
+  certificate metadata for generation/review only and is saved with run
+  metadata for reopenable review state.
 - `GET/PATCH /api/admin/content-studio/runs/[runId]` reopens a saved run and
   persists reviewer notes plus review status changes such as `draft_ready`,
   `needs_revision`, `approved_for_publish`, and `archived`.

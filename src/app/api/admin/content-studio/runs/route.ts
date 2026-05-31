@@ -5,6 +5,10 @@ import {
   findContentStudioPipeline,
   findContentStudioTemplate,
 } from "@/features/admin/content-studio-config";
+import {
+  findDpeTargetTrack,
+  parseDpeTargetTrackKey,
+} from "@/features/admin/dpe-target-tracks";
 import { requireAdminSession } from "@/server/admin";
 import {
   createContentStudioRun,
@@ -31,6 +35,7 @@ type GenerateDraftBody = {
       id?: string;
       title?: string;
     };
+    targetTrackKey?: string;
   };
   pipelineKey?: string;
   sourceText?: string;
@@ -44,6 +49,7 @@ function trimOptional(value: unknown) {
 }
 
 function trimDraftContext(context: GenerateDraftBody["dpeContext"]) {
+  const targetTrackKey = parseDpeTargetTrackKey(context?.targetTrackKey);
   return {
     acs: {
       area: trimOptional(context?.acs?.area),
@@ -57,6 +63,7 @@ function trimDraftContext(context: GenerateDraftBody["dpeContext"]) {
       id: trimOptional(context?.certificate?.id),
       title: trimOptional(context?.certificate?.title),
     },
+    targetTrackKey,
   };
 }
 
@@ -150,6 +157,8 @@ export async function POST(request: Request) {
 
   try {
     const customInstructions = trimOptional(body.customInstructions);
+    const dpeDraftContext =
+      pipeline.key === "dpe_content" ? trimDraftContext(body.dpeContext) : undefined;
     const promptInstructions = buildPromptInstructions({
       customInstructions,
       pipelineKey: pipeline.key,
@@ -183,8 +192,9 @@ export async function POST(request: Request) {
       pipelineKey: pipeline.key,
       sourceMetadata: {
         aiProviderRequestId: aiRun?.providerRequestId,
-        dpeContext:
-          pipeline.key === "dpe_content" ? trimDraftContext(body.dpeContext) : undefined,
+        dpeContext: dpeDraftContext,
+        dpeTrackKey: dpeDraftContext?.targetTrackKey,
+        dpeTrackLabel: findDpeTargetTrack(dpeDraftContext?.targetTrackKey)?.label,
       },
       sourceText,
       templateKey,

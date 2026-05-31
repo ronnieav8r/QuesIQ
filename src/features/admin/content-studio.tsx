@@ -17,6 +17,12 @@ import {
   contentStudioStages,
   contentStudioTemplatesByPipeline,
 } from "@/features/admin/content-studio-config";
+import {
+  type DpeTargetTrackKey,
+  dpeTargetTracks,
+  findDpeTargetTrack,
+  parseDpeTargetTrackKey,
+} from "@/features/admin/dpe-target-tracks";
 
 type StudyGeneratedFlashcardDraft = {
   answer: string;
@@ -117,6 +123,7 @@ type DpeDraftContext = {
     id: string;
     title: string;
   };
+  targetTrackKey: DpeTargetTrackKey | "";
 };
 
 type ContentStudioRunStatus =
@@ -188,6 +195,7 @@ const emptyDpeContext: DpeDraftContext = {
     id: "",
     title: "",
   },
+  targetTrackKey: "",
 };
 
 function formatDate(value?: string) {
@@ -229,6 +237,80 @@ function cardCount(run: ContentStudioDraftRun) {
 
 function runWarningText(run: ContentStudioDraftRun) {
   return run.warnings.length > 0 ? run.warnings.join(" ") : undefined;
+}
+
+function runTrackKey(run: ContentStudioDraftRun) {
+  if (run.pipelineKey !== "dpe_content") {
+    return undefined;
+  }
+
+  return parseDpeTargetTrackKey(run.sourceMetadata?.dpeTrackKey);
+}
+
+function runTrackLabel(run: ContentStudioDraftRun) {
+  if (run.pipelineKey !== "dpe_content") {
+    return undefined;
+  }
+
+  const explicitLabel =
+    typeof run.sourceMetadata?.dpeTrackLabel === "string"
+      ? run.sourceMetadata.dpeTrackLabel
+      : undefined;
+  if (explicitLabel) {
+    return explicitLabel;
+  }
+
+  const track = findDpeTargetTrack(runTrackKey(run));
+  return track?.label;
+}
+
+function stringOrEmpty(value: unknown) {
+  return typeof value === "string" ? value : "";
+}
+
+function dpeContextFromRun(run: ContentStudioDraftRun): DpeDraftContext {
+  if (run.pipelineKey !== "dpe_content") {
+    return emptyDpeContext;
+  }
+
+  const metadataContext =
+    run.sourceMetadata?.dpeContext &&
+    typeof run.sourceMetadata.dpeContext === "object" &&
+    !Array.isArray(run.sourceMetadata.dpeContext)
+      ? (run.sourceMetadata.dpeContext as {
+          acs?: Record<string, unknown>;
+          certificate?: Record<string, unknown>;
+          targetTrackKey?: unknown;
+        })
+      : undefined;
+  const trackKey =
+    parseDpeTargetTrackKey(metadataContext?.targetTrackKey) ??
+    parseDpeTargetTrackKey(run.sourceMetadata?.dpeTrackKey) ??
+    "";
+
+  return {
+    acs: {
+      area: stringOrEmpty(metadataContext?.acs?.area ?? run.draft.acs.area),
+      elementType: stringOrEmpty(
+        metadataContext?.acs?.elementType ?? run.draft.acs.elementType,
+      ),
+      reference: stringOrEmpty(
+        metadataContext?.acs?.reference ?? run.draft.acs.reference,
+      ),
+      task: stringOrEmpty(metadataContext?.acs?.task ?? run.draft.acs.task),
+      title: stringOrEmpty(metadataContext?.acs?.title ?? run.draft.acs.title),
+    },
+    certificate: {
+      code: stringOrEmpty(
+        metadataContext?.certificate?.code ?? run.draft.certificate.code,
+      ),
+      id: stringOrEmpty(metadataContext?.certificate?.id ?? run.draft.certificate.id),
+      title: stringOrEmpty(
+        metadataContext?.certificate?.title ?? run.draft.certificate.title,
+      ),
+    },
+    targetTrackKey: trackKey,
+  };
 }
 
 function hasDpeCertificateContext(context: DpeDraftContext) {
@@ -307,14 +389,13 @@ export function ContentStudio() {
   function handlePipelineChange(nextPipeline: ContentStudioPipelineKey) {
     setPipelineKey(nextPipeline);
     setSelectedTemplate(contentStudioTemplatesByPipeline[nextPipeline][0].value);
+    if (nextPipeline !== "dpe_content") {
+      setDpeContext(emptyDpeContext);
+    }
     setError(undefined);
   }
 
-  function updateDpeContext(
-    group: keyof DpeDraftContext,
-    key: string,
-    value: string,
-  ) {
+  function updateDpeContext(group: "acs" | "certificate", key: string, value: string) {
     setDpeContext((current) => ({
       ...current,
       [group]: {
@@ -326,9 +407,35 @@ export function ContentStudio() {
 
   function selectDraftRun(run: ContentStudioDraftRun) {
     setDraftRun(run);
+    setDpeContext(dpeContextFromRun(run));
     setReviewerNotes(run.reviewerNotes ?? "");
     setReviewStatus(run.status);
     setReviewSaveStatus("idle");
+  }
+
+  function handleDpeTrackChange(trackKey: DpeTargetTrackKey | "") {
+    if (!trackKey) {
+      setDpeContext((current) => ({
+        ...current,
+        targetTrackKey: "",
+      }));
+      return;
+    }
+
+    const track = findDpeTargetTrack(trackKey);
+    if (!track) {
+      return;
+    }
+
+    setDpeContext((current) => ({
+      ...current,
+      certificate: {
+        code: track.defaultCertificate.code,
+        id: track.defaultCertificate.id,
+        title: track.defaultCertificate.title,
+      },
+      targetTrackKey: track.key,
+    }));
   }
 
   function upsertRunHistory(run: ContentStudioDraftRun) {
@@ -539,7 +646,11 @@ export function ContentStudio() {
             </div>
 
             {pipelineKey === "dpe_content" && (
-              <DpeContextFields context={dpeContext} onChange={updateDpeContext} />
+              <DpeContextFields
+                context={dpeContext}
+                onChange={updateDpeContext}
+                onTrackChange={handleDpeTrackChange}
+              />
             )}
 
             <label>
@@ -655,6 +766,7 @@ export function ContentStudio() {
                   )}
                   {run.pipelineKey === "dpe_content" && (
                     <>
+                      {runTrackLabel(run) && <span className="pill">{runTrackLabel(run)}</span>}
                       <span className="pill">
                         {run.draft.readiness.readyToReview ? "ready to review" : "needs review"}
                       </span>
@@ -796,15 +908,33 @@ function ReviewStatePanel({
 function DpeContextFields({
   context,
   onChange,
+  onTrackChange,
 }: {
   context: DpeDraftContext;
-  onChange: (group: keyof DpeDraftContext, key: string, value: string) => void;
+  onChange: (group: "acs" | "certificate", key: string, value: string) => void;
+  onTrackChange: (trackKey: DpeTargetTrackKey | "") => void;
 }) {
+  const track = context.targetTrackKey ? findDpeTargetTrack(context.targetTrackKey) : undefined;
+
   return (
     <div className="runtime-context-panel">
       <strong>DPE context</strong>
-      <p>Certificate context is required. ACS fields improve draft grounding but do not save content.</p>
+      <p>Track and certificate context are review-only inputs. They improve draft grounding and do not publish content.</p>
       <div className="field-grid">
+        <label>
+          <span>Target track</span>
+          <select
+            onChange={(event) => onTrackChange(parseDpeTargetTrackKey(event.target.value) ?? "")}
+            value={context.targetTrackKey}
+          >
+            <option value="">Custom / not selected</option>
+            {dpeTargetTracks.map((trackOption) => (
+              <option key={trackOption.key} value={trackOption.key}>
+                {trackOption.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <label>
           <span>Certificate title</span>
           <input
@@ -821,6 +951,14 @@ function DpeContextFields({
             value={context.certificate.code}
           />
         </label>
+        <div className="runtime-context-panel">
+          <strong>Track note</strong>
+          <p>
+            {track
+              ? `${track.label}: ${track.description}`
+              : "Pick a target track to preload the certificate context for MVP coverage review."}
+          </p>
+        </div>
         <label>
           <span>ACS area</span>
           <input
@@ -925,6 +1063,7 @@ function StudyDraftReviewPanel({ run }: { run: StudyDraftRun }) {
 
 function DpeDraftReviewPanel({ run }: { run: DpeDraftRun }) {
   const draft = run.draft;
+  const trackLabel = runTrackLabel(run);
 
   return (
     <section className="prompt-version-list" aria-labelledby="dpe-draft-review-title">
@@ -955,6 +1094,7 @@ function DpeDraftReviewPanel({ run }: { run: DpeDraftRun }) {
       <div className="runtime-context-panel">
         <strong>Certificate</strong>
         <div className="question-meta">
+          {trackLabel && <span className="pill">{trackLabel}</span>}
           <span className="pill">{draft.certificate.title || "Title missing"}</span>
           <span className="pill">{draft.certificate.code || "Code missing"}</span>
           <span className="pill">{draft.certificate.id || "ID missing"}</span>
