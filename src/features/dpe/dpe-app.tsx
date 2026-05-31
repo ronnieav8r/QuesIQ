@@ -265,6 +265,17 @@ type DpeProfileResponse = {
   } | null;
 };
 
+type DpeDiagnosticEvent = {
+  code: string | null;
+  createdAt: string;
+  id: string;
+  message: string;
+  metadata: Record<string, unknown> | null;
+  sessionId: string | null;
+  severity: string;
+  surface: string;
+};
+
 type DpeProgressionSummary = {
   answeredPrompts: number;
   completedSessions: number;
@@ -359,6 +370,7 @@ export default function App() {
     certificateTypes: []
   });
   const [publicStatus, setPublicStatus] = useState<DpePublicStatus | null>(null);
+  const [dpeDiagnostics, setDpeDiagnostics] = useState<DpeDiagnosticEvent[]>([]);
   const [dpeProfile, setDpeProfile] = useState<DpeProfileState>(emptyDpeProfile);
   const [profileSaveStatus, setProfileSaveStatus] = useState<"idle" | "saved" | "saving" | "error">("idle");
   const [databaseAvailable, setDatabaseAvailable] = useState<boolean | null>(null);
@@ -439,6 +451,7 @@ export default function App() {
     void loadQuestions();
     void loadDpeProfile();
     void loadDpeProgression();
+    void loadDpeDiagnostics();
     if (authState.isAdmin) {
       void loadContentSummary();
     }
@@ -500,6 +513,21 @@ export default function App() {
       setPublicStatus(data);
     } catch {
       setPublicStatus(null);
+    }
+  }
+
+  async function loadDpeDiagnostics() {
+    try {
+      const response = await fetch("/api/dpe/diagnostics");
+      const data = (await response.json()) as {
+        available: boolean;
+        events?: DpeDiagnosticEvent[];
+      };
+      if (data.available) {
+        setDpeDiagnostics(data.events ?? []);
+      }
+    } catch {
+      setDpeDiagnostics([]);
     }
   }
 
@@ -1000,6 +1028,7 @@ export default function App() {
               <HistoryScreen
                 currentSession={session}
                 databaseAvailable={databaseAvailable}
+                diagnostics={dpeDiagnostics}
                 onGenerateReview={async (sessionId) => {
                   try {
                     const response = await fetch(`/api/dpe/practice-sessions/${sessionId}/review`, {
@@ -1016,6 +1045,7 @@ export default function App() {
                     }
                     await loadStoredSessions();
                     await loadDpeProgression();
+                    await loadDpeDiagnostics();
                     if (data.review) {
                       return {
                         attemptedAt: new Date().toISOString(),
@@ -3261,6 +3291,7 @@ function HistoryScreen({
   currentSession,
   storedSessions,
   databaseAvailable,
+  diagnostics,
   onGenerateReview,
   onResumeInProgress,
   onOpenReview
@@ -3268,6 +3299,7 @@ function HistoryScreen({
   currentSession: LocalSession | null;
   storedSessions: StoredPracticeSession[];
   databaseAvailable: boolean | null;
+  diagnostics: DpeDiagnosticEvent[];
   onGenerateReview: (sessionId: string) => Promise<ReviewGenerationOutcome>;
   onResumeInProgress: (storedSession: StoredPracticeSession) => void;
   onOpenReview: (reviewSession: LocalSession) => void;
@@ -3317,6 +3349,7 @@ function HistoryScreen({
     ...(currentSession?.endedAt ? [currentSession] : []),
     ...storedReviews.map((item) => item.reviewSession),
   ]);
+  const reviewDiagnostics = diagnostics.filter((event) => event.surface === "post_session_review");
 
   return (
     <section className="screen">
@@ -3342,6 +3375,7 @@ function HistoryScreen({
         <div className="stat-strip mt-4">
           <Stat label="Stored sessions" value={`${storedSessions.length}`} />
           <Stat label="Saved reviews" value={`${storedReviews.length}`} />
+          <Stat label="Review diagnostics" value={`${reviewDiagnostics.length}`} />
         </div>
         <div className="grid two-col mt-4">
           <div className="raised-card">
@@ -3401,6 +3435,10 @@ function HistoryScreen({
           )}
           {storedSessions.map((storedSession) => {
             const reviewAttempt = reviewAttempts[storedSession.id];
+            const reviewDiagnostic = diagnostics.find(
+              (event) =>
+                event.sessionId === storedSession.id && event.surface === "post_session_review",
+            );
             const resumePlan =
               storedSession.status === "in_progress"
                 ? buildStoredSessionResumePlan(storedSession)
@@ -3437,6 +3475,13 @@ function HistoryScreen({
                   {reviewAttempt.lastOk ? "succeeded" : "failed"} via{" "}
                   {formatReviewAttemptSource(reviewAttempt.source)} at{" "}
                   {formatStoredDate(reviewAttempt.lastAttemptAt)}. {reviewAttempt.lastMessage}
+                </p>
+              )}
+              {reviewDiagnostic && (
+                <p className="muted">
+                  Durable review diagnostic: {reviewDiagnostic.severity}{" "}
+                  {reviewDiagnostic.code ?? "event"} at{" "}
+                  {formatStoredDate(reviewDiagnostic.createdAt)}. {reviewDiagnostic.message}
                 </p>
               )}
               <div className="inline-actions mt-4">

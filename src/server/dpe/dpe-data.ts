@@ -12,6 +12,7 @@ import {
   dpeCertificateTypes,
   dpeCheckrideTargets,
   dpeContentVersions,
+  dpeDiagnosticEvents,
   dpeOralQuestions,
   dpePracticeSessions,
   dpeProfiles,
@@ -276,6 +277,25 @@ export async function listDpePracticeSessions(userId: string) {
     .where(eq(dpePracticeSessions.userId, userId))
     .orderBy(desc(dpePracticeSessions.createdAt))
     .limit(20);
+}
+
+export async function listDpeDiagnosticEvents(userId: string, limit = 20) {
+  return getDb()
+    .select({
+      code: dpeDiagnosticEvents.code,
+      createdAt: dpeDiagnosticEvents.createdAt,
+      id: dpeDiagnosticEvents.id,
+      message: dpeDiagnosticEvents.message,
+      metadata: dpeDiagnosticEvents.metadata,
+      sessionId: dpeDiagnosticEvents.sessionId,
+      severity: dpeDiagnosticEvents.severity,
+      surface: dpeDiagnosticEvents.surface,
+    })
+    .from(dpeDiagnosticEvents)
+    .leftJoin(dpePracticeSessions, eq(dpePracticeSessions.id, dpeDiagnosticEvents.sessionId))
+    .where(eq(dpePracticeSessions.userId, userId))
+    .orderBy(desc(dpeDiagnosticEvents.createdAt))
+    .limit(limit);
 }
 
 export async function createDpePracticeSession(input: {
