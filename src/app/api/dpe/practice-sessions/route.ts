@@ -15,6 +15,7 @@ type CreateSessionBody = {
   mode?: string;
   questions?: unknown[];
   startedAt?: string;
+  targetTrack?: unknown;
 };
 
 function dbUnavailable(error: unknown) {
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest) {
       mode: body.mode,
       questions: Array.isArray(body.questions) ? body.questions : [],
       startedAt: body.startedAt,
+      targetTrack: body.targetTrack,
       userId: session.user.id,
     });
 

@@ -485,3 +485,15 @@ changing content:
    runtime check contract is present in the current deploy artifact.
 3. This remains source-contract/deployment visibility only; actual signed-in
    browser QA and microphone QA still require manual production verification.
+
+## MVP Learner Polish Slice 26 (Voice Session Target Metadata)
+
+This slice preserves DPE target-track context through voice evidence saves
+without changing content:
+
+1. New practice sessions now store a safe target-track snapshot inside the
+   transcript JSON alongside the prompt certificate and selected questions.
+2. Voice artifact saves merge with the existing transcript instead of replacing
+   it, preserving certificate and target-track context for History and review.
+3. Review prompt context now prefers the stored target-track snapshot when
+   available, then falls back to the existing session `acsTitle` value.

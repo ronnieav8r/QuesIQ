@@ -29,8 +29,17 @@ function getSessionPromptContext(
     typeof practiceSession?.transcriptJson === "object" &&
     practiceSession.transcriptJson !== null &&
     !Array.isArray(practiceSession.transcriptJson)
-      ? (practiceSession.transcriptJson as { certificateType?: { title?: unknown } | null })
+      ? (practiceSession.transcriptJson as {
+          certificateType?: { title?: unknown } | null;
+          targetTrack?: { title?: unknown } | null;
+        })
       : {};
+  const transcriptTargetTitle =
+    transcript.targetTrack &&
+    typeof transcript.targetTrack === "object" &&
+    typeof transcript.targetTrack.title === "string"
+      ? transcript.targetTrack.title.trim()
+      : "";
   const promptCertificateTitle =
     transcript.certificateType &&
     typeof transcript.certificateType === "object" &&
@@ -38,9 +47,10 @@ function getSessionPromptContext(
       ? transcript.certificateType.title.trim()
       : "";
   const targetTrackTitle =
-    typeof practiceSession?.acsTitle === "string" && practiceSession.acsTitle.trim()
+    transcriptTargetTitle ||
+    (typeof practiceSession?.acsTitle === "string" && practiceSession.acsTitle.trim()
       ? practiceSession.acsTitle.trim()
-      : promptCertificateTitle || "Selected DPE target track";
+      : promptCertificateTitle || "Selected DPE target track");
   const privateLike = /private pilot|ppl/i.test(targetTrackTitle);
   const scaffoldedTrack = !privateLike;
 

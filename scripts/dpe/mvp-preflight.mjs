@@ -84,6 +84,7 @@ const codeContracts = [
       "Retry AI Review",
       "onRetryReview",
       "formatDpeProfileDate",
+      "targetTrack: {",
     ],
   },
   {
@@ -106,6 +107,8 @@ const codeContracts = [
     file: "src/server/dpe/dpe-data.ts",
     checks: [
       "parseDpeCheckrideDate",
+      "targetTrack: input.targetTrack",
+      "...previousTranscript",
     ],
   },
   {

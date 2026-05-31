@@ -310,6 +310,7 @@ export async function createDpePracticeSession(input: {
   mode: string;
   questions: unknown[];
   startedAt?: string;
+  targetTrack?: unknown;
   userId: string;
 }) {
   const [session] = await getDb()
@@ -325,6 +326,7 @@ export async function createDpePracticeSession(input: {
         answers: [],
         certificateType: input.certificateType ?? null,
         questions: input.questions,
+        targetTrack: input.targetTrack ?? null,
       },
       userId: input.userId,
     })
@@ -408,6 +410,29 @@ export async function saveDpeVoiceArtifact(input: {
   transcriptJson: unknown;
   userId: string;
 }) {
+  const [existing] = await getDb()
+    .select({
+      transcriptJson: dpePracticeSessions.transcriptJson,
+    })
+    .from(dpePracticeSessions)
+    .where(and(eq(dpePracticeSessions.id, input.id), eq(dpePracticeSessions.userId, input.userId)))
+    .limit(1);
+  const previousTranscript =
+    typeof existing?.transcriptJson === "object" &&
+    existing.transcriptJson !== null &&
+    !Array.isArray(existing.transcriptJson)
+      ? existing.transcriptJson
+      : {};
+  const nextTranscript =
+    typeof input.transcriptJson === "object" &&
+    input.transcriptJson !== null &&
+    !Array.isArray(input.transcriptJson)
+      ? {
+          ...previousTranscript,
+          ...input.transcriptJson,
+        }
+      : previousTranscript;
+
   const [session] = await getDb()
     .update(dpePracticeSessions)
     .set({
@@ -420,7 +445,7 @@ export async function saveDpeVoiceArtifact(input: {
           : new Date(),
       reviewJson: undefined,
       status: "completed",
-      transcriptJson: input.transcriptJson,
+      transcriptJson: nextTranscript,
       updatedAt: new Date(),
     })
     .where(and(eq(dpePracticeSessions.id, input.id), eq(dpePracticeSessions.userId, input.userId)))

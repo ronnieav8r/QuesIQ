@@ -148,6 +148,14 @@ type StoredPracticeSession = {
   createdAt: string;
   transcriptJson: {
     certificateType?: CertificateOption | null;
+    targetTrack?: {
+      aircraftCategory?: string;
+      aircraftClass?: string;
+      code?: string;
+      contentReady?: boolean;
+      id?: string;
+      title?: string;
+    } | null;
     questions?: DpeQuestion[];
     answers?: SessionAnswer[];
   } | null;
@@ -717,6 +725,14 @@ export default function App() {
           acsTask: selectedTask,
           certificateType: selectedCertificateType,
           questions,
+          targetTrack: {
+            aircraftCategory: selectedTargetTrack.aircraftCategory,
+            aircraftClass: selectedTargetTrack.aircraftClass,
+            code: selectedTargetTrack.code,
+            contentReady: selectedTargetTrack.contentReady,
+            id: selectedTargetTrack.id,
+            title: selectedTargetTrack.title,
+          },
           startedAt: draftSession.startedAt.toISOString()
         })
       });
@@ -888,7 +904,11 @@ export default function App() {
           artifact,
           transcriptJson: {
             answers: voiceAnswers,
+            certificateType: session.certificateType,
             questions: session.questions,
+            targetTrack: {
+              title: session.targetTrackTitle,
+            },
             voiceArtifact: artifact,
           },
         }),
@@ -2887,6 +2907,7 @@ function reviewFromStoredSession(storedSession: StoredPracticeSession): LocalSes
   const transcript = isRecord(storedSession.transcriptJson) ? storedSession.transcriptJson : {};
   const questions = normalizeStoredQuestions(transcript.questions);
   const answers = normalizeStoredAnswers(transcript.answers);
+  const targetTrackTitle = getStoredTargetTrackTitle(storedSession);
 
   if (!storedSession.endedAt || questions.length === 0) {
     return null;
@@ -2897,7 +2918,7 @@ function reviewFromStoredSession(storedSession: StoredPracticeSession): LocalSes
     mode: storedSession.mode,
     area: storedSession.acsArea ?? "-",
     certificateType: normalizeStoredCertificateType(transcript.certificateType),
-    targetTrackTitle: storedSession.acsTitle?.trim() || undefined,
+    targetTrackTitle,
     task: storedSession.acsTask ?? "-",
     questions,
     answers,
@@ -2910,6 +2931,7 @@ function reviewFromStoredSession(storedSession: StoredPracticeSession): LocalSes
         mode: storedSession.mode,
         area: storedSession.acsArea ?? "-",
         certificateType: normalizeStoredCertificateType(transcript.certificateType),
+        targetTrackTitle,
         task: storedSession.acsTask ?? "-",
         questions,
         answers,
@@ -2932,6 +2954,13 @@ function normalizeStoredQuestions(value: unknown): DpeQuestion[] {
       typeof question.acsElementReference === "string"
     );
   });
+}
+
+function getStoredTargetTrackTitle(storedSession: StoredPracticeSession) {
+  const transcript = isRecord(storedSession.transcriptJson) ? storedSession.transcriptJson : {};
+  const targetTrack = isRecord(transcript.targetTrack) ? transcript.targetTrack : {};
+  const transcriptTitle = typeof targetTrack.title === "string" ? targetTrack.title.trim() : "";
+  return transcriptTitle || storedSession.acsTitle?.trim() || undefined;
 }
 
 function normalizeStoredCertificateType(value: unknown): CertificateOption | null {
@@ -3733,6 +3762,7 @@ function summarizeStoredSession(storedSession: StoredPracticeSession) {
         persisted: true,
         questions: normalizeStoredQuestions(storedSession.transcriptJson?.questions),
         startedAt: new Date(storedSession.startedAt ?? storedSession.createdAt),
+        targetTrackTitle: getStoredTargetTrackTitle(storedSession),
         task: storedSession.acsTask ?? "-",
       }))
     : null;
@@ -3815,7 +3845,7 @@ function buildStoredSessionResumePlan(storedSession: StoredPracticeSession): Sto
     mode: storedSession.mode,
     area: storedSession.acsArea ?? "-",
     certificateType: normalizeStoredCertificateType(storedSession.transcriptJson?.certificateType),
-    targetTrackTitle: storedSession.acsTitle?.trim() || undefined,
+    targetTrackTitle: getStoredTargetTrackTitle(storedSession),
     task: storedSession.acsTask ?? "-",
     questions,
     answers,
