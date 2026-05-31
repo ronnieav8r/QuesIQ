@@ -379,6 +379,13 @@
       "when": 1780077600000,
       "tag": "0054_add_study_source_verification_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1780081200000,
+      "tag": "0055_retire_first_impression_practice_mode",
+      "breakpoints": true
     }
   ]
 }
