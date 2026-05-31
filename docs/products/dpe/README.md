@@ -766,3 +766,15 @@ This slice adds Admin visibility for local-only learner recovery safeguards:
    can detect if those degraded-path messages disappear.
 3. This is source-contract visibility only; it does not add schema, content,
    publish, Official, or Verified state.
+
+## MVP Learner Polish Slice 48 (DPE Content Studio Routing)
+
+This slice improves admin-only DPE content workflow routing without changing
+content:
+
+1. The DPE app's admin-only Content screen now links each visible prompt to
+   Content Studio with DPE pipeline context, certificate metadata, ACS area,
+   ACS task, ACS reference, and source question text.
+2. This mirrors the Admin DPE gap routing pattern and keeps publish, Official,
+   and Verified controls disabled.
+3. No aviation content, schema, publish, Official, or Verified state changed.

@@ -197,6 +197,9 @@ type ContentSummary = {
   }[];
 };
 
+type DpeContentCertificateSummary = ContentSummary["certificateTypes"][number];
+type DpeContentQuestionSummary = DpeContentCertificateSummary["questions"][number];
+
 type ContentReadiness = {
   answerKeysReady: number;
   blockedReasons: string[];
@@ -3672,6 +3675,14 @@ function ContentScreen({ summary }: { summary: ContentSummary }) {
                     )}
                   </div>
                   <strong>{question.questionText}</strong>
+                  <div className="inline-actions mt-4">
+                    <Link
+                      className="button"
+                      href={buildDpeContentStudioHref(certificateType, question)}
+                    >
+                      Open in Content Studio
+                    </Link>
+                  </div>
                 </article>
               ))}
             </div>
@@ -3692,6 +3703,25 @@ function ContentScreen({ summary }: { summary: ContentSummary }) {
       </div>
     </section>
   );
+}
+
+function buildDpeContentStudioHref(
+  certificateType: DpeContentCertificateSummary,
+  question: DpeContentQuestionSummary,
+) {
+  const params = new URLSearchParams({
+    acsArea: question.acsArea,
+    acsReference: question.acsElementReference,
+    acsTask: question.acsTask,
+    certificateCode: certificateType.code,
+    certificateId: certificateType.id,
+    certificateTitle: certificateType.title,
+    pipeline: "dpe_content",
+    product: "content",
+    sourceText: question.questionText,
+  });
+
+  return `/admin?${params.toString()}`;
 }
 
 function HistoryScreen({
