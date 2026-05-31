@@ -473,3 +473,15 @@ This slice adds account-scoped runtime QA visibility without changing content:
    error counts plus safe per-service status rows.
 3. The check exposes only reachability/count signals. It does not expose
    transcripts, profile details, aviation content, publish state, or secrets.
+
+## MVP Learner Polish Slice 25 (Admin Runtime Check Visibility)
+
+This slice connects the signed-in runtime check to Admin deployment QA without
+changing content:
+
+1. Admin DPE preflight now detects the `/api/dpe/runtime-check` route contract
+   and the learner `Signed-in runtime check` Home panel marker.
+2. The Admin runtime signal list and status rows show whether the signed-in
+   runtime check contract is present in the current deploy artifact.
+3. This remains source-contract/deployment visibility only; actual signed-in
+   browser QA and microphone QA still require manual production verification.

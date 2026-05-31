@@ -121,6 +121,7 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
     adminConsoleSource,
     contentStudioSource,
     publicStatusSource,
+    runtimeCheckSource,
     baselineMigrationPresent,
     progressionMigrationPresent,
   ] =
@@ -133,6 +134,7 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       readFile(path.join(process.cwd(), "src/features/admin/admin-console.tsx"), "utf8"),
       readFile(path.join(process.cwd(), "src/features/admin/content-studio.tsx"), "utf8"),
       readFile(path.join(process.cwd(), "src/app/api/dpe/status/route.ts"), "utf8"),
+      readFile(path.join(process.cwd(), "src/app/api/dpe/runtime-check/route.ts"), "utf8"),
       access(path.join(process.cwd(), "drizzle/0050_add_dpe_baseline_tables.sql"))
         .then(() => true)
         .catch(() => false),
@@ -169,6 +171,8 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
     contentStudioSource.status === "fulfilled" ? contentStudioSource.value : "";
   const publicStatusText =
     publicStatusSource.status === "fulfilled" ? publicStatusSource.value : "";
+  const runtimeCheckText =
+    runtimeCheckSource.status === "fulfilled" ? runtimeCheckSource.value : "";
   const runtimeSignals = {
     adminGapContentStudioRoutingVisible: hasAll(adminConsoleText, [
       "Open in Content Studio",
@@ -209,6 +213,15 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "contentTablesReachable",
       "dpeTargetTracks.map",
       "questionCount",
+    ]),
+    signedInRuntimeCheckVisible: hasAll(runtimeCheckText, [
+      "getDpeProfile",
+      "listDpePracticeSessions",
+      "getDpeProgressionSummary",
+      "listDpeDiagnosticEvents",
+    ]) && hasAll(dpeAppText, [
+      'fetch("/api/dpe/runtime-check")',
+      "Signed-in runtime check",
     ]),
   };
 
@@ -262,6 +275,9 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
   }
   if (!runtimeSignals.publicStatusProbeVisible) {
     warnings.push("DPE public status probe markers were not detected.");
+  }
+  if (!runtimeSignals.signedInRuntimeCheckVisible) {
+    warnings.push("DPE signed-in runtime check markers were not detected.");
   }
 
   const status: PreflightStatus =
@@ -376,6 +392,13 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
         status: warningStatusFrom(runtimeSignals.publicStatusProbeVisible),
         value: runtimeSignals.publicStatusProbeVisible ? "Visible" : "Not detected",
       },
+      {
+        detail: "Signed-in DPE runtime check verifies profile, practice history, progression, and diagnostics reachability.",
+        key: "signed_in_runtime_check",
+        label: "Signed-in runtime check",
+        status: warningStatusFrom(runtimeSignals.signedInRuntimeCheckVisible),
+        value: runtimeSignals.signedInRuntimeCheckVisible ? "Visible" : "Not detected",
+      },
     ],
     status,
     statusRows: [
@@ -416,6 +439,13 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
         label: "Realtime voice env",
         status: statusFrom(voiceConfig.realtimeKeyConfigured),
         value: voiceConfig.realtimeKeyConfigured ? "Configured" : "Missing",
+      },
+      {
+        detail: "Source-contract presence for the signed-in account runtime check endpoint and learner panel.",
+        key: "signed_in_runtime_contract",
+        label: "Signed-in runtime contract",
+        status: warningStatusFrom(runtimeSignals.signedInRuntimeCheckVisible),
+        value: runtimeSignals.signedInRuntimeCheckVisible ? "Detected" : "Not detected",
       },
     ],
     trackSummary,
