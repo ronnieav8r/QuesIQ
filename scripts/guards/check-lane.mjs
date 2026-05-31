@@ -15,6 +15,7 @@ const lanes = {
   ],
   dpe: [
     "docs/products/dpe/",
+    "scripts/dpe/",
     "src/app/api/dpe/",
     "src/app/dpe/",
     "src/features/dpe/",
@@ -22,6 +23,7 @@ const lanes = {
   ],
   interview: [
     "docs/products/interview/",
+    "scripts/interview/",
     "src/app/api/catalog/",
     "src/app/api/coaching-memory/",
     "src/app/api/debriefs/",
