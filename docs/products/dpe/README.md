@@ -1275,3 +1275,18 @@ without changing content:
    before saying only the saved session id was missing.
 4. Admin DPE preflight now checks for the session creation persistence marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 86 (Startup Loader Response Hardening)
+
+This slice makes signed-in DPE startup probes stricter without changing
+content:
+
+1. Question, stored-session, content-summary, diagnostics, and progression
+   loaders now require HTTP OK before trusting response bodies.
+2. Failed stored-session loads now clear stale History rows and mark storage
+   unavailable.
+3. Question-bank and progression availability now require explicit
+   `available: true`.
+4. Admin DPE preflight now checks for the stored-session loader hardening
+   marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.

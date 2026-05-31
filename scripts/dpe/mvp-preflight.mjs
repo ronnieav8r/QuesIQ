@@ -175,6 +175,7 @@ const codeContracts = [
       "sessionStarting",
       "Starting session",
       "sessionCreated",
+      "storedSessionsLoaded",
     ],
   },
   {

@@ -511,9 +511,10 @@ export default function App() {
   async function loadQuestions() {
     try {
       const response = await fetch("/api/dpe/questions");
+      if (!response.ok) throw new Error("DPE question bank unavailable.");
       const data = (await response.json()) as QuestionApiResponse;
       setQuestionState(data);
-      setQuestionBankAvailable(data.available);
+      setQuestionBankAvailable(data.available === true);
     } catch {
       setQuestionState(buildEmptyQuestionResponse());
       setQuestionBankAvailable(false);
@@ -533,20 +534,24 @@ export default function App() {
   async function loadStoredSessions() {
     try {
       const response = await fetch("/api/dpe/practice-sessions");
+      if (!response.ok) throw new Error("DPE stored sessions unavailable.");
       const data = (await response.json()) as {
         available: boolean;
         sessions?: StoredPracticeSession[];
       };
-      setDatabaseAvailable(data.available);
+      const storedSessionsLoaded = data.available === true;
+      setDatabaseAvailable(storedSessionsLoaded);
       setStoredSessions(data.sessions ?? []);
     } catch {
       setDatabaseAvailable(false);
+      setStoredSessions([]);
     }
   }
 
   async function loadContentSummary() {
     try {
       const response = await fetch("/api/dpe/content/summary");
+      if (!response.ok) throw new Error("DPE content summary unavailable.");
       const data = (await response.json()) as ContentSummary;
       setContentSummary(data);
     } catch {
@@ -572,6 +577,7 @@ export default function App() {
   async function loadDpeDiagnostics() {
     try {
       const response = await fetch("/api/dpe/diagnostics");
+      if (!response.ok) throw new Error("DPE diagnostics unavailable.");
       const data = (await response.json()) as {
         available: boolean;
         events?: DpeDiagnosticEvent[];
@@ -604,11 +610,12 @@ export default function App() {
   async function loadDpeProgression() {
     try {
       const response = await fetch("/api/dpe/progression");
+      if (!response.ok) throw new Error("DPE progression unavailable.");
       const data = (await response.json()) as {
         available: boolean;
         progression?: DpeProgressionSummary;
       };
-      setProgressionAvailable(data.available);
+      setProgressionAvailable(data.available === true);
       setProgressionSummary(data.progression ?? null);
     } catch {
       setProgressionAvailable(false);
