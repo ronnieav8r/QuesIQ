@@ -239,9 +239,19 @@ the visual/UI level during the conversation:
   `src/server/study/study-source-pack-draft-contract.ts`; it preserves source
   pack id, source chunk ids, page anchors, visual asset ids, tags, verification
   status, and warnings across deck/card draft payloads
+- Study-owned generation packet contract and parser at
+  `src/server/study/study-generation-packet-contract.ts`; it validates bounded
+  `quesiq.studyGenerationPacket.v1` packets targeting
+  `study.sourcePackDeckDraft.v1` and preserves source pack metadata, deck
+  request metadata, output restrictions, chunk anchors/snippets/tags, and
+  related visual ids
 - `/api/study/content-studio/flashcard-draft` now includes a side-effect-free
   admin-only `source_pack_preview` mode that validates source-pack-generated
   Study draft JSON and returns review sections without Study runtime writes
+- `/api/study/content-studio/flashcard-draft` now also includes side-effect-free
+  admin-only `source_pack_generation_packet_preview` mode that validates posted
+  generation packets and returns packet review sections without generating
+  cards, importing decks, publishing, or writing Official/Verified state
 - source-style import wizard polish for focus hints, URL failure display,
   CSV/Quizlet/Anki guidance, select/deselect review controls, column swapping,
   row/URL counts, and save/done copy
@@ -378,7 +388,8 @@ These are the remaining practical gaps after the broad Study import passes.
 
 8. Reviewed source-pack content now has a draft-JSON contract and preview path,
    but no direct runtime import. The intended flow is reviewed chunks/assets ->
-   draft JSON -> admin review/verifier -> later approved Study import.
+   generation packet -> draft JSON -> admin review/verifier -> later approved
+   Study import.
 
 ## Remaining Port Slices
 
