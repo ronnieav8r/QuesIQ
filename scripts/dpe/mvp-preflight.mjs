@@ -77,6 +77,8 @@ const codeContracts = [
       "runtimeCheckUnavailable",
       "Configured airplane-land target tracks",
       "Voice unavailable; typed practice ready",
+      "Typed practice running locally",
+      "save-backed History, progression, diagnostics, and review retry",
       "Use typed practice",
       "onVoiceUnavailable",
       "dpeSignedOutAuthState",

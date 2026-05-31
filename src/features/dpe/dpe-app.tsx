@@ -783,6 +783,11 @@ export default function App() {
         setStage("live");
         return;
       }
+      setPracticeNotice({
+        title: "Typed practice running locally",
+        detail:
+          "DPE session storage is unavailable, so this typed session will not appear in History, progression, diagnostics, or saved review retry until storage is reachable.",
+      });
     } catch {
       setDatabaseAvailable(false);
       if (voiceMode) {
@@ -797,6 +802,11 @@ export default function App() {
         setStage("live");
         return;
       }
+      setPracticeNotice({
+        title: "Typed practice running locally",
+        detail:
+          "The session service did not accept a save request. Continue typing answers now, but save-backed History, progression, diagnostics, and review retry require DPE storage.",
+      });
     }
 
     setSession(draftSession);

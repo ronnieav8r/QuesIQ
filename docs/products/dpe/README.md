@@ -730,3 +730,16 @@ is unreachable without changing content:
 3. The fallback account-services row now says `unavailable` and tells the
    learner to retry after the DPE runtime check endpoint is reachable.
 4. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 45 (Local Typed Session Notice)
+
+This slice improves learner clarity when typed practice starts without durable
+session storage:
+
+1. If typed session creation falls back to a local-only session, Practice now
+   shows a `Typed practice running locally` notice.
+2. The notice explains that History, progression, diagnostics, and saved review
+   retry require DPE storage before they can persist.
+3. Voice fallback behavior remains unchanged and still switches to typed
+   practice with target context intact.
+4. No aviation content, schema, publish, Official, or Verified state changed.
