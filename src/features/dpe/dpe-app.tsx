@@ -1140,6 +1140,12 @@ export default function App() {
   }
 
   const visibleNavItems = navItems.filter((item) => item.key !== "content" || authState.isAdmin);
+  const primaryMobileNavItems = visibleNavItems
+    .filter((item) => item.key !== "content")
+    .slice(0, 4);
+  const overflowMobileNavItems = visibleNavItems
+    .filter((item) => item.key !== "content")
+    .slice(4);
   const brandSubtitle = buildDpeBrandSubtitle(selectedTargetTrack.title);
 
   return (
@@ -1174,6 +1180,21 @@ export default function App() {
                   <Home aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
                   <span>QuesIQ Home</span>
                 </Link>
+                {overflowMobileNavItems.map((item) => (
+                  <button
+                    className={screen === item.key ? "active" : undefined}
+                    key={item.key}
+                    onClick={() => {
+                      setScreen(item.key);
+                      setAppMenuOpen(false);
+                    }}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <item.icon aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                    <span>{item.label}</span>
+                  </button>
+                ))}
                 {authState.user?.email && (
                   <button role="menuitem" type="button">
                     <User aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
@@ -1402,7 +1423,7 @@ export default function App() {
         </div>
 
         <nav className="tab-bar" aria-label="Primary">
-          {visibleNavItems.filter((item) => item.key !== "content").map((item) => (
+          {primaryMobileNavItems.map((item) => (
             <NavButton
               key={item.key}
               item={item}
