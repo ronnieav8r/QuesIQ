@@ -909,3 +909,17 @@ content:
 3. Typed practice remains available whenever prompts exist.
 4. Admin DPE preflight now checks for the voice disabled-reason markers.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 59 (Local-Only Persistence Downgrade)
+
+This slice makes DPE storage failure behavior honest without changing content:
+
+1. If a persisted DPE session stops accepting updates, the active learner
+   session is downgraded to local-only.
+2. Completed sessions with failed persistence now use the existing local review
+   path instead of showing saved-review retry affordances that cannot work.
+3. In-progress typed sessions show a recovery notice when storage stops
+   accepting updates, while allowing the learner to continue locally.
+4. Admin DPE preflight now checks that the local-only persistence downgrade
+   markers remain present.
+5. No aviation content, schema, publish, Official, or Verified state changed.

@@ -846,11 +846,21 @@ export default function App() {
     setDraftAnswer("");
 
     if (isLastQuestion) {
-      await persistSession(nextSession, "completed");
+      const persisted = await persistSession(nextSession, "completed");
+      const reviewSession = persisted ? nextSession : markSessionLocalOnly(nextSession);
+      setSession(reviewSession);
       setStage("review");
-      await generateReview(nextSession);
+      await generateReview(reviewSession);
     } else {
-      await persistSession(nextSession, "in_progress");
+      const persisted = await persistSession(nextSession, "in_progress");
+      if (!persisted) {
+        setSession(markSessionLocalOnly(nextSession));
+        setPracticeNotice({
+          title: "Typed practice running locally",
+          detail:
+            "DPE session storage stopped accepting updates. Continue locally, but History, progression, diagnostics, and saved review retry require storage to recover.",
+        });
+      }
       setCurrentIndex((value) => value + 1);
     }
   }
@@ -859,13 +869,15 @@ export default function App() {
     if (!session) return;
     const nextSession = { ...session, endedAt: new Date() };
     setSession(nextSession);
-    await persistSession(nextSession, "completed");
+    const persisted = await persistSession(nextSession, "completed");
+    const reviewSession = persisted ? nextSession : markSessionLocalOnly(nextSession);
+    setSession(reviewSession);
     setStage("review");
-    await generateReview(nextSession);
+    await generateReview(reviewSession);
   }
 
   async function persistSession(nextSession: LocalSession, status: "in_progress" | "completed") {
-    if (!nextSession.persisted) return;
+    if (!nextSession.persisted) return false;
 
     try {
       const response = await fetch(`/api/dpe/practice-sessions/${nextSession.id}`, {
@@ -882,8 +894,10 @@ export default function App() {
       await loadStoredSessions();
       await loadDpeProgression();
       await loadDpeRuntimeCheck();
+      return data.available;
     } catch {
       setDatabaseAvailable(false);
+      return false;
     }
   }
 
@@ -2767,6 +2781,10 @@ function buildVoiceFirstTurnInstructions(session: LocalSession) {
       : "";
 
   return `Speak in English only. Start this DPE oral practice for ${targetTrack}.${fallbackHint} Ask the first selected ACS question, then continue one question at a time.`;
+}
+
+function markSessionLocalOnly(session: LocalSession): LocalSession {
+  return { ...session, persisted: false };
 }
 
 function buildSessionTrackLabel(session: LocalSession) {

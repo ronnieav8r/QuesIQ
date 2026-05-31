@@ -113,6 +113,8 @@ const codeContracts = [
       "Retry AI Review",
       "Review is local only",
       "will not appear in History",
+      "markSessionLocalOnly",
+      "DPE session storage stopped accepting updates",
       "History storage unavailable",
       "Stored transcripts, retry AI",
       "No DPE sessions yet",

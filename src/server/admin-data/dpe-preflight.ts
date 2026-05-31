@@ -225,6 +225,8 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "Typed practice running locally",
       "Review is local only",
       "will not appear in History",
+      "markSessionLocalOnly",
+      "DPE session storage stopped accepting updates",
       "No DPE sessions yet",
       "Start first DPE session",
     ]),
