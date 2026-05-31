@@ -800,3 +800,17 @@ This slice makes DPE app Content Studio links more target-aware:
 2. Admin DPE preflight now checks that the DPE app content-routing contract
    includes target-track inference and `dpeTrackKey` propagation.
 3. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 51 (DPE Content ACS Context Routing)
+
+This slice completes DPE app Content Studio routing context without changing
+content:
+
+1. DPE app Content Studio links now include ACS title and inferred ACS element
+   type alongside ACS area, task, reference, certificate metadata, and
+   `dpeTrackKey`.
+2. The element type is inferred only from the visible ACS reference suffix
+   (`K`, `R`, or `S`) and remains blank when it cannot be inferred.
+3. Admin DPE preflight now checks that the DPE app content-routing contract
+   includes ACS title and element-type propagation.
+4. No aviation content, schema, publish, Official, or Verified state changed.

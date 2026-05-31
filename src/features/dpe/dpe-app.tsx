@@ -3712,8 +3712,10 @@ function buildDpeContentStudioHref(
 ) {
   const params = new URLSearchParams({
     acsArea: question.acsArea,
+    acsElementType: inferDpeAcsElementType(question.acsElementReference),
     acsReference: question.acsElementReference,
     acsTask: question.acsTask,
+    acsTitle: areaLabels[question.acsArea] ?? "",
     certificateCode: certificateType.code,
     certificateId: certificateType.id,
     certificateTitle: certificateType.title,
@@ -3732,6 +3734,14 @@ function buildDpeContentStudioHref(
   }
 
   return `/admin?${params.toString()}`;
+}
+
+function inferDpeAcsElementType(reference: string) {
+  const normalized = reference.toUpperCase();
+  if (/(^|[.\s-])K\d*/.test(normalized)) return "Knowledge";
+  if (/(^|[.\s-])R\d*/.test(normalized)) return "Risk Management";
+  if (/(^|[.\s-])S\d*/.test(normalized)) return "Skill";
+  return "";
 }
 
 function HistoryScreen({
