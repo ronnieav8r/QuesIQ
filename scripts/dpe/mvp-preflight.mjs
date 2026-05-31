@@ -194,9 +194,18 @@ const codeContracts = [
   {
     file: "src/server/admin-data/dpe-preflight.ts",
     checks: [
+      "manualQaRows",
       "signedInDependencyReadinessVisible",
       "Signed-in dependency readiness",
       "Signed-in dependency contract",
+      "qa_voice_artifact",
+    ],
+  },
+  {
+    file: "src/features/admin/admin-console.tsx",
+    checks: [
+      "Manual MVP QA checklist",
+      "manualQaRows.map",
     ],
   },
 ];

@@ -23,6 +23,7 @@ export type AdminDpePreflightSnapshot = {
   checks: string[];
   contentSummaryAvailable: boolean;
   deploymentRows: PreflightRow[];
+  manualQaRows: PreflightRow[];
   progressionAvailable: boolean;
   runtimeRows: PreflightRow[];
   status: PreflightStatus;
@@ -301,6 +302,50 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
 
   const status: PreflightStatus =
     blockers.length > 0 ? "blocked" : warnings.length > 0 ? "warning" : "ok";
+  const manualQaRows: PreflightRow[] = [
+    {
+      detail: "Confirm migrations 0050 and 0053 are applied in the deployment database before signed-in testing.",
+      key: "qa_migrations_applied",
+      label: "Migration applied",
+      status: "warning",
+      value: "Manual check required",
+    },
+    {
+      detail: "Sign in through the deployed browser flow and confirm /dpe renders authenticated Home, Practice, History, Content, and Me views.",
+      key: "qa_signed_in_dpe",
+      label: "Signed-in DPE",
+      status: "warning",
+      value: "Manual check required",
+    },
+    {
+      detail: "Save DPE Me target details for one airplane-land track and confirm the saved target reloads.",
+      key: "qa_profile_save",
+      label: "Profile save",
+      status: "warning",
+      value: "Manual check required",
+    },
+    {
+      detail: "Complete one typed DPE session, generate a review, and confirm XP/quest progression appears in learner and Admin views.",
+      key: "qa_typed_review_progression",
+      label: "Typed review + progression",
+      status: "warning",
+      value: "Manual check required",
+    },
+    {
+      detail: "Start and end one realtime DPE voice session with microphone permission, then confirm transcript evidence and artifact save.",
+      key: "qa_voice_artifact",
+      label: "Voice artifact",
+      status: "warning",
+      value: "Manual check required",
+    },
+    {
+      detail: "Confirm non-Private tracks remain scaffolded/content-pending until real aviation content is curated.",
+      key: "qa_content_boundary",
+      label: "Content boundary",
+      status: "warning",
+      value: "Manual check required",
+    },
+  ];
 
   return {
     blockers,
@@ -360,6 +405,7 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
         value: "Manual check required",
       },
     ],
+    manualQaRows,
     progressionAvailable,
     runtimeRows: [
       {

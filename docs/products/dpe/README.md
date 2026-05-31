@@ -640,3 +640,17 @@ content:
 3. Admin preflight now checks for the public target summary marker so deploy QA
    can detect drift in the status contract.
 4. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 38 (Admin Manual QA Checklist)
+
+This slice makes the remaining DPE MVP verification work easier to execute
+without changing content:
+
+1. Admin DPE preflight now returns structured `manualQaRows` for the remaining
+   deployment checks.
+2. The Admin console shows a dedicated `Manual MVP QA checklist` with status,
+   value, and detail for migration, signed-in DPE, profile save, typed review
+   progression, voice artifact, and content-boundary checks.
+3. This keeps manual signed-in browser and microphone verification visible
+   without treating it as complete automatically.
+4. No aviation content, schema, publish, Official, or Verified state changed.
