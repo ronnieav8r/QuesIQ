@@ -216,6 +216,11 @@ type DpePublicStatus = {
   realtimeVoiceConfigured?: boolean;
   reviewAiConfigured?: boolean;
   status: "ok" | "degraded";
+  targetTrackSummary?: {
+    contentReady: number;
+    scaffolded: number;
+    total: number;
+  };
   targetTracks: {
     aircraftCategory: string;
     aircraftClass: string;
@@ -1778,9 +1783,13 @@ function DpeProductionStatusPanel({
     publicStatus?.targetTracks.find((track) => track.code === selectedTargetTrack.code) ??
     null;
   const readyTracks =
+    publicStatus?.targetTrackSummary?.contentReady ??
     publicStatus?.targetTracks.filter((track) => track.contentReady).length ??
     dpeTargetTracks.filter((track) => track.contentReady).length;
-  const totalTracks = publicStatus?.targetTracks.length ?? dpeTargetTracks.length;
+  const totalTracks =
+    publicStatus?.targetTrackSummary?.total ?? publicStatus?.targetTracks.length ?? dpeTargetTracks.length;
+  const scaffoldedTracks =
+    publicStatus?.targetTrackSummary?.scaffolded ?? Math.max(0, totalTracks - readyTracks);
   const trackRows = publicStatus?.targetTracks ?? dpeTargetTracks;
 
   return (
@@ -1802,6 +1811,7 @@ function DpeProductionStatusPanel({
         <Stat label="Review AI" value={publicStatus?.reviewAiConfigured ? "ready" : "not ready"} />
         <Stat label="Voice AI" value={publicStatus?.realtimeVoiceConfigured ? "ready" : "not ready"} />
         <Stat label="Ready tracks" value={`${readyTracks}/${totalTracks}`} />
+        <Stat label="Scaffolded" value={`${scaffoldedTracks}`} />
       </div>
       <div className="question-list mt-4">
         <div className="raised-card">

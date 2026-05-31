@@ -218,6 +218,7 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "contentTablesReachable",
       "dpeTargetTracks.map",
       "questionCount",
+      "targetTrackSummary",
     ]),
     signedInRuntimeCheckVisible: hasAll(runtimeCheckText, [
       "getDpeProfile",

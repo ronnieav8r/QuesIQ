@@ -53,6 +53,8 @@ const codeContracts = [
       "questionCount",
       "reviewAiConfigured",
       "realtimeVoiceConfigured",
+      "targetTrackSummary",
+      "scaffolded",
     ],
   },
   {
@@ -81,6 +83,7 @@ const codeContracts = [
       "DPE target tracks",
       "Review AI",
       "Voice AI",
+      "Scaffolded",
       "Review AI ready",
       "Voice AI ready",
       "Signed-in services",

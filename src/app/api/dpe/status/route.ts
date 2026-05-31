@@ -23,8 +23,18 @@ function buildTargetTrackStatus() {
   }));
 }
 
+function buildTargetTrackSummary() {
+  const ready = dpeTargetTracks.filter((track) => track.contentReady).length;
+  return {
+    contentReady: ready,
+    scaffolded: dpeTargetTracks.length - ready,
+    total: dpeTargetTracks.length,
+  };
+}
+
 export async function GET() {
   const runtimeReadiness = buildDpeRuntimeReadiness();
+  const targetTrackSummary = buildTargetTrackSummary();
 
   try {
     const summary = await listDpeContentSummary();
@@ -39,6 +49,7 @@ export async function GET() {
       reviewAiConfigured: runtimeReadiness.reviewAiConfigured,
       realtimeVoiceConfigured: runtimeReadiness.realtimeVoiceConfigured,
       status: summary.available ? "ok" : "degraded",
+      targetTrackSummary,
       targetTracks: buildTargetTrackStatus(),
     });
   } catch {
@@ -48,6 +59,7 @@ export async function GET() {
       reviewAiConfigured: runtimeReadiness.reviewAiConfigured,
       realtimeVoiceConfigured: runtimeReadiness.realtimeVoiceConfigured,
       status: "degraded",
+      targetTrackSummary,
       targetTracks: buildTargetTrackStatus(),
     });
   }

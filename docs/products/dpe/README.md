@@ -627,3 +627,16 @@ without changing content:
 3. Admin status rows also show a `Signed-in dependency contract` source marker,
    keeping deployment review aligned with the learner runtime check.
 4. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 37 (Public Target Summary)
+
+This slice makes public DPE readiness easier to inspect without changing
+content:
+
+1. `/api/dpe/status` now returns a safe `targetTrackSummary` with total,
+   content-ready, and scaffolded target-track counts.
+2. The DPE production status panel uses that summary when available and shows a
+   dedicated scaffolded-track count next to ready-track count.
+3. Admin preflight now checks for the public target summary marker so deploy QA
+   can detect drift in the status contract.
+4. No aviation content, schema, publish, Official, or Verified state changed.
