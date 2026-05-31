@@ -131,6 +131,8 @@ const codeContracts = [
     checks: [
       "getOpenAiRealtimeApiKey(\"dpe\")",
       "OPENAI_DPE_REALTIME_API_KEY",
+      "transcriptTargetTitle",
+      "Stored target track",
     ],
   },
   {

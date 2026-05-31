@@ -497,3 +497,15 @@ without changing content:
    it, preserving certificate and target-track context for History and review.
 3. Review prompt context now prefers the stored target-track snapshot when
    available, then falls back to the existing session `acsTitle` value.
+
+## MVP Learner Polish Slice 27 (Realtime Target Snapshot Alignment)
+
+This slice keeps live DPE voice setup aligned with saved session metadata
+without changing content:
+
+1. `/api/dpe/realtime/session` now reads the stored transcript target-track
+   snapshot when building Que's realtime oral-practice instructions.
+2. Realtime instructions explicitly include the stored target track before the
+   existing ACS title and prompt certificate context.
+3. The same fallback order is now used by saved review generation and live
+   voice setup: stored target snapshot, session title, then prompt certificate.

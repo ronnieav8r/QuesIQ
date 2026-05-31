@@ -42,8 +42,15 @@ function buildDpeInstructions(practiceSession: Awaited<ReturnType<typeof getOwne
       ? (practiceSession.transcriptJson as {
           certificateType?: { title?: unknown } | null;
           questions?: unknown[];
+          targetTrack?: { title?: unknown } | null;
         })
       : {};
+  const transcriptTargetTitle =
+    transcript.targetTrack &&
+    typeof transcript.targetTrack === "object" &&
+    typeof transcript.targetTrack.title === "string"
+      ? transcript.targetTrack.title.trim()
+      : "";
   const promptCertificateTitle =
     transcript.certificateType &&
     typeof transcript.certificateType === "object" &&
@@ -51,9 +58,10 @@ function buildDpeInstructions(practiceSession: Awaited<ReturnType<typeof getOwne
       ? transcript.certificateType.title.trim()
       : "";
   const targetTrackTitle =
-    typeof practiceSession?.acsTitle === "string" && practiceSession.acsTitle.trim()
+    transcriptTargetTitle ||
+    (typeof practiceSession?.acsTitle === "string" && practiceSession.acsTitle.trim()
       ? practiceSession.acsTitle.trim()
-      : promptCertificateTitle || "Selected DPE target track";
+      : promptCertificateTitle || "Selected DPE target track");
   const scaffoldedTrack = !/private pilot|ppl/i.test(targetTrackTitle);
 
   return [
@@ -65,6 +73,7 @@ function buildDpeInstructions(practiceSession: Awaited<ReturnType<typeof getOwne
     scaffoldedTrack
       ? "Selected target may be scaffolded/content-pending. Prompts can reuse available demo content, so avoid pretending missing target-specific content exists."
       : "Target prompts may still include draft/placeholder coverage. Stay conservative when content support is incomplete.",
+    `Stored target track: ${targetTrackTitle}.`,
     `ACS title: ${practiceSession?.acsTitle ?? "Selected DPE target track"}.`,
     `Prompt certificate context: ${promptCertificateTitle || "not specified"}.`,
     `ACS area: ${practiceSession?.acsArea ?? "I"}. ACS task: ${practiceSession?.acsTask ?? "A"}.`,
