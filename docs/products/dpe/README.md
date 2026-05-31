@@ -678,3 +678,15 @@ changing content:
    session while stored transcripts, retry AI review, durable diagnostics, and
    progression updates wait for storage to recover.
 3. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 41 (Signed-Out Readiness Labels)
+
+This slice tightens public readiness copy before sign-in without changing
+content:
+
+1. The signed-out DPE target-track panel now distinguishes explicit `not ready`
+   Review AI and Voice AI states from the still-loading `checking` state.
+2. The same panel now shows content-table `fallback` when the public status
+   probe loads but storage is not reachable, instead of implying the check is
+   still pending.
+3. No aviation content, schema, publish, Official, or Verified state changed.

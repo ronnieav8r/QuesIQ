@@ -1320,6 +1320,21 @@ function SignedOutDpeStatusPanel({ publicStatus }: { publicStatus: DpePublicStat
       : publicStatus
         ? "degraded"
         : "checking";
+  const contentTableLabel = publicStatus
+    ? publicStatus.contentTablesReachable
+      ? "reachable"
+      : "fallback"
+    : "checking";
+  const reviewAiLabel = publicStatus
+    ? publicStatus.reviewAiConfigured
+      ? "ready"
+      : "not ready"
+    : "checking";
+  const voiceAiLabel = publicStatus
+    ? publicStatus.realtimeVoiceConfigured
+      ? "ready"
+      : "not ready"
+    : "checking";
 
   return (
     <div className="panel">
@@ -1335,13 +1350,10 @@ function SignedOutDpeStatusPanel({ publicStatus }: { publicStatus: DpePublicStat
       </div>
       <div className="stat-strip mt-4">
         <Stat label="Status" value={statusLabel} />
-        <Stat
-          label="Content tables"
-          value={publicStatus?.contentTablesReachable ? "reachable" : "checking"}
-        />
+        <Stat label="Content tables" value={contentTableLabel} />
         <Stat label="Loaded prompts" value={`${publicStatus?.questionCount ?? 0}`} />
-        <Stat label="Review AI" value={publicStatus?.reviewAiConfigured ? "ready" : "checking"} />
-        <Stat label="Voice AI" value={publicStatus?.realtimeVoiceConfigured ? "ready" : "checking"} />
+        <Stat label="Review AI" value={reviewAiLabel} />
+        <Stat label="Voice AI" value={voiceAiLabel} />
         <Stat label="Ready tracks" value={`${readyTracks}/${trackRows.length}`} />
       </div>
       <div className="question-list mt-4">
