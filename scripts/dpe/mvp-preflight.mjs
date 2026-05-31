@@ -58,6 +58,14 @@ const codeContracts = [
     ],
   },
   {
+    file: "src/app/api/dpe/me/route.ts",
+    checks: [
+      "googleEnabled",
+      "githubEnabled",
+      "AUTH_GITHUB_ID",
+    ],
+  },
+  {
     file: "src/features/dpe/dpe-app.tsx",
     checks: [
       "fetch(\"/api/dpe/progression\"",
@@ -82,6 +90,7 @@ const codeContracts = [
       "Use typed practice",
       "onVoiceUnavailable",
       "dpeSignedOutAuthState",
+      "githubEnabled",
       "Loading access",
       "Open profile settings",
       "SignedOutDpeStatusPanel",
@@ -228,6 +237,8 @@ const codeContracts = [
     file: "src/server/admin-data/dpe-preflight.ts",
     checks: [
       "manualQaRows",
+      "authProviderVisibilityVisible",
+      "Auth provider visibility",
       "dpeAppContentStudioRoutingVisible",
       "DPE app content routing",
       "localPersistenceRecoveryVisible",

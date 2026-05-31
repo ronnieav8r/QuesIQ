@@ -237,6 +237,7 @@ type DpePublicStatus = {
 type AuthState = {
   loading: boolean;
   authenticated: boolean;
+  githubEnabled: boolean;
   isAdmin: boolean;
   googleEnabled: boolean;
   user: {
@@ -382,6 +383,7 @@ const emptyDpeProfile: DpeProfileState = {
 
 const dpeSignedOutAuthState: AuthState = {
   authenticated: false,
+  githubEnabled: false,
   googleEnabled: false,
   isAdmin: false,
   loading: false,
@@ -392,6 +394,7 @@ export default function App() {
   const [authState, setAuthState] = useState<AuthState>({
     loading: true,
     authenticated: false,
+    githubEnabled: false,
     isAdmin: false,
     googleEnabled: false,
     user: null
@@ -1003,6 +1006,7 @@ export default function App() {
     return (
       <SignInScreen
         googleEnabled={authState.googleEnabled}
+        githubEnabled={authState.githubEnabled}
         onSignedIn={loadAuthState}
         publicStatusAvailable={publicStatusAvailable}
         publicStatus={publicStatus}
@@ -1248,11 +1252,13 @@ function NavButton({
 }
 
 function SignInScreen({
+  githubEnabled,
   googleEnabled,
   onSignedIn,
   publicStatusAvailable,
   publicStatus,
 }: {
+  githubEnabled: boolean;
   googleEnabled: boolean;
   onSignedIn: () => Promise<void>;
   publicStatusAvailable: boolean | null;
@@ -1332,13 +1338,15 @@ function SignInScreen({
                         Google
                       </button>
                     )}
-                    <button
-                      className="button"
-                      type="button"
-                      onClick={() => signIn("github", { redirectTo: "/dpe" })}
-                    >
-                      GitHub
-                    </button>
+                    {githubEnabled && (
+                      <button
+                        className="button"
+                        type="button"
+                        onClick={() => signIn("github", { redirectTo: "/dpe" })}
+                      >
+                        GitHub
+                      </button>
+                    )}
                   </div>
                 </form>
             </div>

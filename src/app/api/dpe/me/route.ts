@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { isAdminEmail } from "@/server/admin";
 
 const googleEnabled = Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
+const githubEnabled = Boolean(process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET);
 
 export async function GET() {
   const session = await auth();
@@ -11,6 +12,7 @@ export async function GET() {
   if (!session?.user?.email) {
     return NextResponse.json({
       authenticated: false,
+      githubEnabled,
       googleEnabled,
       isAdmin: false,
       user: null,
@@ -19,6 +21,7 @@ export async function GET() {
 
   return NextResponse.json({
     authenticated: true,
+    githubEnabled,
     googleEnabled,
     isAdmin: isAdminEmail(session.user.email),
     user: {

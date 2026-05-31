@@ -123,6 +123,7 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
     contentStudioSource,
     publicStatusSource,
     runtimeCheckSource,
+    dpeMeSource,
     baselineMigrationPresent,
     progressionMigrationPresent,
   ] =
@@ -136,6 +137,7 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       readFile(path.join(process.cwd(), "src/features/admin/content-studio.tsx"), "utf8"),
       readFile(path.join(process.cwd(), "src/app/api/dpe/status/route.ts"), "utf8"),
       readFile(path.join(process.cwd(), "src/app/api/dpe/runtime-check/route.ts"), "utf8"),
+      readFile(path.join(process.cwd(), "src/app/api/dpe/me/route.ts"), "utf8"),
       access(path.join(process.cwd(), "drizzle/0050_add_dpe_baseline_tables.sql"))
         .then(() => true)
         .catch(() => false),
@@ -174,7 +176,16 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
     publicStatusSource.status === "fulfilled" ? publicStatusSource.value : "";
   const runtimeCheckText =
     runtimeCheckSource.status === "fulfilled" ? runtimeCheckSource.value : "";
+  const dpeMeText = dpeMeSource.status === "fulfilled" ? dpeMeSource.value : "";
   const runtimeSignals = {
+    authProviderVisibilityVisible: hasAll(dpeMeText, [
+      "googleEnabled",
+      "githubEnabled",
+      "AUTH_GITHUB_ID",
+    ]) && hasAll(dpeAppText, [
+      "githubEnabled",
+      "signIn(\"github\"",
+    ]),
     adminGapContentStudioRoutingVisible: hasAll(adminConsoleText, [
       "Open in Content Studio",
       "buildDpeContentStudioHref",
@@ -335,6 +346,9 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
   if (!runtimeSignals.signedInTargetReadinessVisible) {
     warnings.push("DPE signed-in target readiness markers were not detected.");
   }
+  if (!runtimeSignals.authProviderVisibilityVisible) {
+    warnings.push("DPE auth provider visibility markers were not detected.");
+  }
 
   const status: PreflightStatus =
     blockers.length > 0 ? "blocked" : warnings.length > 0 ? "warning" : "ok";
@@ -450,6 +464,13 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
         label: "Learner target-aware chrome",
         status: warningStatusFrom(runtimeSignals.learnerTargetAwareChromeVisible),
         value: runtimeSignals.learnerTargetAwareChromeVisible ? "Visible" : "Not detected",
+      },
+      {
+        detail: "Signed-out DPE login only shows configured social providers.",
+        key: "auth_provider_visibility",
+        label: "Auth provider visibility",
+        status: warningStatusFrom(runtimeSignals.authProviderVisibilityVisible),
+        value: runtimeSignals.authProviderVisibilityVisible ? "Visible" : "Not detected",
       },
       {
         detail: "Learner recovery copy distinguishes local-only typed practice and local-only reviews when storage is unavailable.",
@@ -582,6 +603,13 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
         label: "Signed-in runtime contract",
         status: warningStatusFrom(runtimeSignals.signedInRuntimeCheckVisible),
         value: runtimeSignals.signedInRuntimeCheckVisible ? "Detected" : "Not detected",
+      },
+      {
+        detail: "Source-contract presence for DPE social provider visibility in /api/dpe/me and signed-out UI.",
+        key: "auth_provider_visibility_contract",
+        label: "Auth provider visibility contract",
+        status: warningStatusFrom(runtimeSignals.authProviderVisibilityVisible),
+        value: runtimeSignals.authProviderVisibilityVisible ? "Detected" : "Not detected",
       },
       {
         detail: "Source-contract presence for signed-in content table, Review AI, and Voice AI dependency readiness rows.",

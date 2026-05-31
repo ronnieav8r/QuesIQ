@@ -871,3 +871,16 @@ This slice removes a dead learner control without changing content:
 3. Admin DPE preflight now checks that learner target-aware chrome includes the
    settings route marker.
 4. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 56 (Auth Provider Visibility)
+
+This slice keeps signed-out DPE login options aligned with configured
+providers:
+
+1. `/api/dpe/me` now reports whether GitHub auth is configured, matching the
+   existing Google visibility signal.
+2. The signed-out DPE screen only shows the GitHub button when GitHub auth is
+   configured for the deployment.
+3. Admin DPE preflight now checks that DPE auth provider visibility is present
+   in both the auth status route and signed-out learner UI.
+4. No aviation content, schema, publish, Official, or Verified state changed.
