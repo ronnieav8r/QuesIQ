@@ -1247,3 +1247,17 @@ without changing content:
    typed sessions and voice artifacts.
 4. Admin DPE preflight now checks for the History review persistence marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 84 (History Review Retry Cleanup Hardening)
+
+This slice makes History review retry cleanup more resilient without changing
+content:
+
+1. History review generation now runs through one shared retry action for card
+   buttons and embedded review retries.
+2. Retry busy state now clears in a `finally` block so future retry failures
+   cannot leave History stuck in a generating state.
+3. Successful stored-session generation still selects the saved review, while
+   embedded retries keep the learner on the open review.
+4. Admin DPE preflight now checks for the shared History retry action marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.

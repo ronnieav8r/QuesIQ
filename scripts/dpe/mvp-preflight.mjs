@@ -158,6 +158,7 @@ const codeContracts = [
       "Prompt cert:",
       "response.ok && data.available === true",
       "reviewPersisted",
+      "runStoredReviewGeneration",
       "targetTrack: {",
       "buildDpeContentStudioHref",
       "inferDpeTargetTrackKeyFromCertificate",
