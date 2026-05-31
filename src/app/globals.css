@@ -539,6 +539,11 @@ p {
   position: relative;
 }
 
+.study-shell .app-menu,
+.dpe-shell .app-menu {
+  display: none;
+}
+
 .app-menu-button {
   align-items: center;
   background: transparent;
@@ -572,6 +577,12 @@ p {
   position: absolute;
   top: calc(100% + var(--space-2));
   z-index: 25;
+}
+
+.app-menu-panel span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .app-menu-panel button,
@@ -3826,7 +3837,7 @@ textarea::placeholder {
     grid-template-areas:
       "tabs header"
       "tabs body";
-    grid-template-columns: 10rem minmax(0, 1fr);
+    grid-template-columns: 11.5rem minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
     height: calc(100dvh - 3rem);
     min-height: calc(100vh - 3rem);
@@ -3879,7 +3890,7 @@ textarea::placeholder {
   }
 
   .study-shell .study-app-frame.nav-collapsed {
-    grid-template-columns: 4.25rem minmax(0, 1fr);
+    grid-template-columns: 4.75rem minmax(0, 1fr);
   }
 
   .study-shell .study-tab-bar.collapsed {
@@ -3904,6 +3915,10 @@ textarea::placeholder {
     margin-bottom: var(--space-2);
     min-width: 0;
     position: static;
+  }
+
+  .study-shell .study-tab-bar .nav-collapse-toggle span {
+    display: none;
   }
 
   .study-mobile-show-icon,
@@ -4015,6 +4030,48 @@ textarea::placeholder {
 }
 
 @media (max-width: 47.9375rem) {
+  .app-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    min-height: 4.25rem;
+  }
+
+  .app-header .brand-lockup {
+    justify-self: center;
+  }
+
+  .app-header .brand-logo {
+    max-width: min(11rem, 46vw);
+  }
+
+  .app-header .header-actions,
+  .dpe-shell .app-header > .inline-actions {
+    display: none;
+  }
+
+  .study-shell .app-menu,
+  .dpe-shell .app-menu {
+    display: block;
+  }
+
+  .app-menu-panel {
+    max-width: calc(100vw - 2rem);
+  }
+
+  .app-menu-panel button,
+  .app-menu-panel a {
+    max-width: 100%;
+  }
+
+  .dpe-shell .app-header {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .dpe-shell .brand-lockup {
+    justify-self: center;
+    text-align: center;
+  }
+
   .platform-home-header {
     align-items: start;
     flex-direction: column;
