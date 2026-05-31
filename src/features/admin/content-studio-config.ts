@@ -58,6 +58,11 @@ export const contentStudioTemplatesByPipeline: Record<
       label: "Deck cleanup and taxonomy",
       value: "deck_cleanup_taxonomy",
     },
+    {
+      description: "Save reviewed source-pack decisions as an Admin artifact before Study draft generation.",
+      label: "Source-pack review export",
+      value: "source_pack_review_export",
+    },
   ],
 };
 
