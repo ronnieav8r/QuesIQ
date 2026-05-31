@@ -7,6 +7,7 @@ import {
 } from "@/features/admin/dpe-target-tracks";
 import { AdminView } from "@/components/interview/admin-view";
 import { getStudyLibraryDecks } from "@/features/study/study-data";
+import { listAdminDpeProgressionSnapshot } from "@/server/admin-data/dpe-progression";
 import { listDpeContentSummary } from "@/server/dpe/dpe-data";
 
 type AdminProduct = "content" | "dpe" | "interview" | "overview" | "study";
@@ -165,11 +166,18 @@ async function DpeAdminPanel() {
     available: false,
     certificateTypes: [],
   };
+  let progression: Awaited<ReturnType<typeof listAdminDpeProgressionSnapshot>> | undefined;
 
   try {
     summary = await listDpeContentSummary();
   } catch (error) {
     console.error("DPE admin content summary unavailable.", error);
+  }
+
+  try {
+    progression = await listAdminDpeProgressionSnapshot();
+  } catch (error) {
+    console.error("DPE admin progression summary unavailable.", error);
   }
 
   const totalQuestions = summary.certificateTypes.reduce(
@@ -237,6 +245,146 @@ async function DpeAdminPanel() {
       </div>
 
       <div className="prompt-version-list">
+        <article className="raised-card">
+          <div className="section-head">
+            <div>
+              <strong>DPE progression visibility</strong>
+              <p>
+                Read-only Admin view of DPE progression users, XP/quest events, and rule
+                definitions for MVP operational tracking.
+              </p>
+            </div>
+          </div>
+          {progression ? (
+            <>
+              <div className="study-stat-strip" aria-label="DPE progression totals">
+                <div className="study-stat-chip">
+                  <strong>{progression.totals.progressionUsers}</strong>
+                  <span>Progression users</span>
+                </div>
+                <div className="study-stat-chip">
+                  <strong>{progression.totals.totalEvents}</strong>
+                  <span>XP/quest events</span>
+                </div>
+                <div className="study-stat-chip">
+                  <strong>
+                    {progression.totals.enabledQuests}/{progression.totals.totalQuests}
+                  </strong>
+                  <span>Enabled quests</span>
+                </div>
+                <div className="study-stat-chip">
+                  <strong>
+                    {progression.totals.activeXpRules}/{progression.totals.totalXpRules}
+                  </strong>
+                  <span>Active XP rules</span>
+                </div>
+                <div className="study-stat-chip">
+                  <strong>{progression.totals.completedQuestEntries}</strong>
+                  <span>Completed quest entries</span>
+                </div>
+              </div>
+
+              <div className="question-list mt-4">
+                <article className="raised-card">
+                  <strong>Recent progression users</strong>
+                  {progression.users.length > 0 ? (
+                    <div className="question-list mt-4">
+                      {progression.users.slice(0, 8).map((user) => (
+                        <div className="raised-card" key={user.userId}>
+                          <div className="question-meta">
+                            <span className="pill">{user.userEmail ?? user.userId}</span>
+                            <span className="pill">L{user.level}</span>
+                            <span className="pill">{user.totalXp} XP</span>
+                            <span className="pill">{user.reviewedSessions} reviewed</span>
+                            <span className="pill">{user.completedSessions} completed</span>
+                            <span className="pill">{user.streakDays} day streak</span>
+                          </div>
+                          <p>Updated: {formatDate(user.updatedAt)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p>No DPE progression users yet.</p>
+                  )}
+                </article>
+
+                <article className="raised-card">
+                  <strong>Recent XP and quest events</strong>
+                  {progression.events.length > 0 ? (
+                    <div className="question-list mt-4">
+                      {progression.events.slice(0, 12).map((event) => (
+                        <div className="raised-card" key={event.id}>
+                          <div className="question-meta">
+                            <span className="pill">{event.eventType}</span>
+                            <span className="pill">{event.xp} XP</span>
+                            <span className="pill">{event.userEmail ?? event.userId}</span>
+                            {event.sourceEventType && (
+                              <span className="pill">source {event.sourceEventType}</span>
+                            )}
+                            {event.ruleKey && <span className="pill">rule {event.ruleKey}</span>}
+                            {event.questKey && <span className="pill">quest {event.questKey}</span>}
+                          </div>
+                          <p>{event.label ?? "Progression event"}</p>
+                          <p>Occurred: {formatDate(event.occurredAt)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p>No DPE progression events yet.</p>
+                  )}
+                </article>
+
+                <article className="raised-card">
+                  <strong>DPE quest definitions</strong>
+                  {progression.quests.length > 0 ? (
+                    <div className="question-list mt-4">
+                      {progression.quests.map((quest) => (
+                        <div className="raised-card" key={quest.key}>
+                          <div className="question-meta">
+                            <span className="pill">{quest.key}</span>
+                            <span className="pill">{quest.enabled ? "enabled" : "disabled"}</span>
+                            <span className="pill">{quest.checkType}</span>
+                            <span className="pill">threshold {quest.checkThreshold}</span>
+                            <span className="pill">{quest.xpReward} XP</span>
+                          </div>
+                          <p>{quest.title}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p>No DPE quests configured yet.</p>
+                  )}
+                </article>
+
+                <article className="raised-card">
+                  <strong>DPE XP rule definitions</strong>
+                  {progression.xpRules.length > 0 ? (
+                    <div className="question-list mt-4">
+                      {progression.xpRules.map((rule) => (
+                        <div className="raised-card" key={rule.key}>
+                          <div className="question-meta">
+                            <span className="pill">{rule.key}</span>
+                            <span className="pill">{rule.active ? "active" : "disabled"}</span>
+                            <span className="pill">{rule.eventType}</span>
+                            <span className="pill">{rule.conditionType}</span>
+                            <span className="pill">{rule.awardMode}</span>
+                            <span className="pill">{rule.xp} XP</span>
+                          </div>
+                          <p>{rule.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p>No DPE XP rules configured yet.</p>
+                  )}
+                </article>
+              </div>
+            </>
+          ) : (
+            <p>DPE progression storage is unreachable for Admin right now.</p>
+          )}
+        </article>
+
         <article className="raised-card">
           <div className="section-head">
             <div>
@@ -582,6 +730,17 @@ function groupDpeContentByTask(certificateType: DpeCertificateSummary) {
         left.acsArea.localeCompare(right.acsArea, undefined, { numeric: true }) ||
         left.acsTask.localeCompare(right.acsTask, undefined, { numeric: true }),
     );
+}
+
+function formatDate(value?: string) {
+  if (!value) {
+    return "Pending";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
 }
 
 type DpeTrackCoverageStatus =
