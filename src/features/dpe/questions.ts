@@ -30,7 +30,7 @@ export type DpeQuestion = {
   promptType: "recall" | "explain" | "scenario" | "oral";
   practiceLane: "oral" | "visual";
   supportsHandsFree: boolean;
-  answerKeyStatus: "provisional" | "pending" | "placeholder";
+  answerKeyStatus: "draft" | "missing" | "placeholder" | "provisional" | "ready" | "review" | "published" | "verified" | "pending";
   provisionalAnswerKey: string;
   answerKey: {
     status: string;

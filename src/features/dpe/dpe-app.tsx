@@ -146,6 +146,19 @@ type ContentSummary = {
   }[];
 };
 
+type ContentReadiness = {
+  answerKeysReady: number;
+  blockedReasons: string[];
+  draftLike: number;
+  missingAnswerKeys: number;
+  missingRubrics: number;
+  publishedLike: number;
+  questions: number;
+  readyForReview: number;
+  rubricsReady: number;
+  score: number;
+};
+
 type AuthState = {
   loading: boolean;
   authenticated: boolean;
@@ -386,9 +399,24 @@ export default function App() {
   }
 
   function changeArea(nextArea: string) {
-    const nextTasks = questionState.tasksByArea[nextArea] ?? ["A"];
+    const nextTasks = practiceScope.tasksByArea[nextArea] ?? ["A"];
     setArea(nextArea);
     setTask(nextTasks[0] ?? "A");
+  }
+
+  function changeCertificate(nextCertificateTypeId: string) {
+    const nextCertificateQuestions = nextCertificateTypeId
+      ? questionState.questions.filter(
+          (question) => question.certificateType?.id === nextCertificateTypeId,
+        )
+      : questionState.questions;
+    const nextScope = buildQuestionScope(nextCertificateQuestions, questionState);
+    const nextArea = nextScope.areas[0] ?? "I";
+    const nextTask = nextScope.tasksByArea[nextArea]?.[0] ?? "A";
+
+    setCertificateTypeId(nextCertificateTypeId);
+    setArea(nextArea);
+    setTask(nextTask);
   }
 
   async function startSession(voiceMode = false) {
@@ -684,7 +712,7 @@ export default function App() {
                 reviewGenerating={reviewGenerating}
                 onFinishEarly={finishEarly}
                 onModeChange={setMode}
-                onCertificateChange={setCertificateTypeId}
+                onCertificateChange={changeCertificate}
                 onRecordAnswer={recordAnswer}
                 onReset={resetPractice}
                 onStartSession={() => startSession(false)}
@@ -1045,6 +1073,13 @@ function PracticeSetupScreen({
   }) {
   const visualCount = questions.filter((question) => question.practiceLane === "visual").length;
   const handsFreeCount = questions.filter((question) => question.supportsHandsFree).length;
+  const readyQuestions = questions.filter((question) => isQuestionReviewReady(question)).length;
+  const missingAnswerKeys = questions.filter((question) => !isContentStatusReady(question.answerKey?.status ?? question.answerKeyStatus)).length;
+  const missingRubrics = questions.filter((question) => !isContentStatusReady(question.rubric?.status)).length;
+  const readinessPercent = questions.length
+    ? Math.round(((readyQuestions / questions.length) * 100))
+    : 0;
+  const practiceBlocked = questions.length === 0;
 
   return (
     <section className="screen">
@@ -1124,11 +1159,31 @@ function PracticeSetupScreen({
             <Stat label="Certificate" value={selectedCertificateType?.code ?? "Pending"} />
             <Stat label="Hands-free" value={`${handsFreeCount}`} />
             <Stat label="Visual hints" value={`${visualCount}`} />
+            <Stat label="Review-ready" value={`${readinessPercent}%`} />
             <Stat
               label="Content"
               value={questionBankAvailable ? `${questionCount} DB` : `${questionCount} fallback`}
             />
           </div>
+          {practiceBlocked && (
+            <div className="raised-card mt-4">
+              <strong>No oral questions match this selection</strong>
+              <p>
+                Try another certificate, ACS area, or ACS task. If every selection is empty, Admin
+                still needs to add active oral questions before this certificate can be practiced.
+              </p>
+            </div>
+          )}
+          {!practiceBlocked && (missingAnswerKeys > 0 || missingRubrics > 0) && (
+            <div className="raised-card mt-4">
+              <strong>Content is usable, but not fully review-ready</strong>
+              <p>
+                {missingAnswerKeys} prompt{missingAnswerKeys === 1 ? "" : "s"} need answer-key
+                authoring and {missingRubrics} prompt{missingRubrics === 1 ? "" : "s"} need rubric
+                authoring. Practice can continue, but reviews stay conservative until both are ready.
+              </p>
+            </div>
+          )}
           {questionBankAvailable === false && (
             <div className="raised-card mt-4">
               <strong>Baseline content fallback active</strong>
@@ -1151,12 +1206,12 @@ function PracticeSetupScreen({
               <button
                 className="button primary"
                 onClick={onStartVoiceSession}
-                disabled={questions.length === 0 || databaseAvailable === false}
+                disabled={practiceBlocked || databaseAvailable === false}
               >
                 <Mic />
                 Start Voice Practice
               </button>
-              <button className="button" onClick={onStartSession} disabled={questions.length === 0}>
+              <button className="button" onClick={onStartSession} disabled={practiceBlocked}>
                 <ListChecks />
                 Type Answers
               </button>
@@ -1167,9 +1222,26 @@ function PracticeSetupScreen({
           <div className="section-head">
             <div>
                 <h3>Session shape</h3>
-                <p>Voice practice saves a transcript for review; typed answers remain available as a fallback.</p>
+                <p>
+                  Voice practice saves transcript evidence for review. Typed practice captures the
+                  same examiner-question and applicant-answer shape for early content QA.
+                </p>
             </div>
             <Plane />
+          </div>
+          <div className="question-list mt-4">
+            <div className="raised-card">
+              <strong>Draft</strong>
+              <p>Question exists, but answer-key or rubric work is still incomplete.</p>
+            </div>
+            <div className="raised-card">
+              <strong>Ready for review</strong>
+              <p>Question, answer key, and rubric are present for an admin or DPE reviewer.</p>
+            </div>
+            <div className="raised-card">
+              <strong>Not published</strong>
+              <p>Current practice uses active product content or fallback prompts; no publish flow is enabled here.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -1251,6 +1323,7 @@ function PracticeSetupScreen({
           <span className="pill">{question.acsElementReference}</span>
           <span className="pill">{question.promptType}</span>
           <span className="pill">{question.supportsHandsFree ? "hands-free" : "visual"}</span>
+          <span className="pill">{formatQuestionReadiness(question)}</span>
         </div>
 
         <p className="session-question">{question.questionText}</p>
@@ -1260,14 +1333,14 @@ function PracticeSetupScreen({
           <textarea
             value={draftAnswer}
             onChange={(event) => onAnswerChange(event.target.value)}
-            placeholder="Type the answer for now. This becomes the transcript shape that voice will fill later."
+            placeholder="Type the applicant answer as you would say it to an examiner. Short or skipped answers will be flagged in the review."
           />
         </label>
 
         <div className="inline-actions">
           <button className="button primary" onClick={() => onRecordAnswer(false)}>
             <CheckCircle2 />
-            Save Answer
+            Save Typed Answer
           </button>
           <button className="button" onClick={() => onRecordAnswer(true)}>
             <SkipForward />
@@ -1395,6 +1468,14 @@ function ReviewScreen({
             <Stat label="Readiness" value={formatScore(review.scores.checkrideReadiness)} />
             <Stat label="Review" value={review.status === "generated" ? "AI" : "Pending"} />
           </div>
+          <div className="raised-card mt-4">
+            <strong>{review.status === "generated" ? "Ready for review" : "Review incomplete"}</strong>
+            <p>
+              {review.status === "generated"
+                ? "This saved review was generated from transcript evidence and the available DPE content records."
+                : "This is a deterministic fallback. It highlights completion, skipped prompts, and short answers until AI review or complete content is available."}
+            </p>
+          </div>
           <div className="inline-actions mt-4">
             <button className="button primary" onClick={onReset}>
               <RotateCcw />
@@ -1506,6 +1587,132 @@ function ReviewList({ items, fallback }: { items: string[]; fallback?: string })
 
 function formatScore(score: number | null) {
   return score ? `${score}/5` : "-";
+}
+
+function normalizeContentStatus(status: string | null | undefined) {
+  const value = status?.trim().toLowerCase();
+  return value || "missing";
+}
+
+function isContentStatusReady(status: string | null | undefined) {
+  const value = normalizeContentStatus(status);
+  return value === "ready" || value === "review" || value === "verified" || value === "published";
+}
+
+function isContentStatusPublished(status: string | null | undefined) {
+  const value = normalizeContentStatus(status);
+  return value === "published" || value === "verified";
+}
+
+function isQuestionReviewReady(question: DpeQuestion) {
+  return (
+    Boolean(question.questionText.trim()) &&
+    isContentStatusReady(question.answerKey?.status ?? question.answerKeyStatus) &&
+    isContentStatusReady(question.rubric?.status)
+  );
+}
+
+function formatContentStatus(status: string | null | undefined) {
+  const value = normalizeContentStatus(status);
+  const labels: Record<string, string> = {
+    draft: "draft",
+    missing: "missing",
+    pending: "incomplete",
+    placeholder: "placeholder",
+    provisional: "draft",
+    published: "published",
+    ready: "ready for review",
+    review: "ready for review",
+    verified: "verified",
+  };
+
+  return labels[value] ?? value;
+}
+
+function formatQuestionReadiness(question: DpeQuestion) {
+  if (!question.questionText.trim()) return "missing question";
+  if (!isContentStatusReady(question.answerKey?.status ?? question.answerKeyStatus)) {
+    return "answer key incomplete";
+  }
+  if (!isContentStatusReady(question.rubric?.status)) return "rubric incomplete";
+  return "ready for review";
+}
+
+function formatQuestionContentReadiness(question: ContentSummary["certificateTypes"][number]["questions"][number]) {
+  if (!question.questionText.trim()) return "missing question";
+  if (!isContentStatusReady(question.answerKeyStatus)) return "answer key incomplete";
+  if (!isContentStatusReady(question.rubricStatus)) return "rubric incomplete";
+  if (!isContentStatusPublished(question.contentVersion?.status)) return "not published";
+  return "published";
+}
+
+function buildContentReadiness(
+  questions: ContentSummary["certificateTypes"][number]["questions"],
+): ContentReadiness {
+  const answerKeysReady = questions.filter((question) => isContentStatusReady(question.answerKeyStatus)).length;
+  const rubricsReady = questions.filter((question) => isContentStatusReady(question.rubricStatus)).length;
+  const readyForReview = questions.filter(
+    (question) =>
+      Boolean(question.questionText.trim()) &&
+      isContentStatusReady(question.answerKeyStatus) &&
+      isContentStatusReady(question.rubricStatus),
+  ).length;
+  const publishedLike = questions.filter((question) => isContentStatusPublished(question.contentVersion?.status)).length;
+  const missingAnswerKeys = questions.length - answerKeysReady;
+  const missingRubrics = questions.length - rubricsReady;
+  const draftLike = questions.length - readyForReview;
+  const blockedReasons = [
+    questions.length === 0 ? "No active oral questions match this certificate/ACS filter." : "",
+    missingAnswerKeys > 0
+      ? `${missingAnswerKeys} prompt${missingAnswerKeys === 1 ? "" : "s"} need answer keys.`
+      : "",
+    missingRubrics > 0 ? `${missingRubrics} prompt${missingRubrics === 1 ? "" : "s"} need rubrics.` : "",
+    publishedLike < questions.length
+      ? `${questions.length - publishedLike} prompt${questions.length - publishedLike === 1 ? "" : "s"} are not published.`
+      : "",
+  ].filter(Boolean);
+
+  return {
+    answerKeysReady,
+    blockedReasons,
+    draftLike,
+    missingAnswerKeys,
+    missingRubrics,
+    publishedLike,
+    questions: questions.length,
+    readyForReview,
+    rubricsReady,
+    score: questions.length ? Math.round((readyForReview / questions.length) * 100) : 0,
+  };
+}
+
+function groupContentQuestionsByTask(
+  questions: ContentSummary["certificateTypes"][number]["questions"],
+) {
+  const groups = questions.reduce<
+    Record<
+      string,
+      {
+        key: string;
+        label: string;
+        questions: ContentSummary["certificateTypes"][number]["questions"];
+        status: string;
+      }
+    >
+  >((accumulator, question) => {
+    const key = `${question.acsArea}.${question.acsTask}`;
+    accumulator[key] ??= {
+      key,
+      label: `Area ${question.acsArea}, Task ${question.acsTask}`,
+      questions: [],
+      status: "ready",
+    };
+    accumulator[key].questions.push(question);
+    accumulator[key].status = buildContentReadiness(accumulator[key].questions).score === 100 ? "ready" : "draft";
+    return accumulator;
+  }, {});
+
+  return Object.values(groups).sort((left, right) => left.key.localeCompare(right.key));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -1831,13 +2038,26 @@ function QuestionPreview({
         <ListChecks />
       </div>
       <div className="question-list mt-4">
+        {questions.length === 0 && (
+          <div className="raised-card">
+            <strong>No active oral questions</strong>
+            <p>
+              This ACS slice has no active prompts yet. Admin should add oral questions, then attach
+              answer keys and rubrics before treating it as review-ready.
+            </p>
+          </div>
+        )}
         {questions.map((question) => (
           <article className="raised-card" key={question.id}>
             <div className="question-meta">
               <span className="pill">{question.id}</span>
               <span className="pill">{question.acsElementReference}</span>
               <span className="pill">{question.practiceLane}</span>
-              <span className="pill">answer key: {question.answerKeyStatus}</span>
+              <span className="pill">{formatQuestionReadiness(question)}</span>
+              <span className="pill">
+                answer key: {formatContentStatus(question.answerKey?.status ?? question.answerKeyStatus)}
+              </span>
+              <span className="pill">rubric: {formatContentStatus(question.rubric?.status)}</span>
               {question.difficulty && <span className="pill">{question.difficulty}</span>}
               {question.primarySubject && <span className="pill">{question.primarySubject}</span>}
             </div>
@@ -1890,6 +2110,9 @@ function ScenariosScreen() {
 }
 
 function ContentScreen({ summary }: { summary: ContentSummary }) {
+  const [certificateFilter, setCertificateFilter] = useState("all");
+  const [areaFilter, setAreaFilter] = useState("all");
+  const [taskFilter, setTaskFilter] = useState("all");
   const totalQuestions = summary.certificateTypes.reduce(
     (total, certificateType) => total + certificateType.questions.length,
     0
@@ -1904,6 +2127,39 @@ function ContentScreen({ summary }: { summary: ContentSummary }) {
     (total, certificateType) =>
       total + certificateType.questions.filter((question) => question.rubricStatus === "missing").length,
     0
+  );
+  const allQuestions = summary.certificateTypes.flatMap((certificateType) =>
+    certificateType.questions.map((question) => ({
+      ...question,
+      certificateCode: certificateType.code,
+      certificateId: certificateType.id,
+      certificateTitle: certificateType.title,
+    })),
+  );
+  const areaOptions = [...new Set(allQuestions.map((question) => question.acsArea))].sort();
+  const taskOptions = [
+    ...new Set(
+      allQuestions
+        .filter((question) => areaFilter === "all" || question.acsArea === areaFilter)
+        .map((question) => question.acsTask),
+    ),
+  ].sort();
+  const filteredCertificates = summary.certificateTypes
+    .filter((certificateType) => certificateFilter === "all" || certificateType.id === certificateFilter)
+    .map((certificateType) => ({
+      ...certificateType,
+      questions: certificateType.questions.filter(
+        (question) =>
+          (areaFilter === "all" || question.acsArea === areaFilter) &&
+          (taskFilter === "all" || question.acsTask === taskFilter),
+      ),
+    }));
+  const filteredQuestionCount = filteredCertificates.reduce(
+    (total, certificateType) => total + certificateType.questions.length,
+    0,
+  );
+  const filteredReadiness = buildContentReadiness(
+    filteredCertificates.flatMap((certificateType) => certificateType.questions),
   );
 
   return (
@@ -1921,10 +2177,89 @@ function ContentScreen({ summary }: { summary: ContentSummary }) {
         <Stat label="Certificates" value={`${summary.certificateTypes.length}`} />
         <Stat label="Questions" value={`${totalQuestions}`} />
         <Stat label="Gaps" value={`${missingAnswerKeys + missingRubrics}`} />
+        <Stat label="Filtered ready" value={`${filteredReadiness.score}%`} />
+      </div>
+
+      <div className="panel">
+        <div className="section-head">
+          <div>
+            <h3>Content gaps</h3>
+            <p>
+              Filter by certificate and ACS coverage to see what is draft, incomplete, ready for
+              review, or not published.
+            </p>
+          </div>
+          <ListChecks />
+        </div>
+        <div className="grid three-col mt-4">
+          <label className="field">
+            <span>Certificate</span>
+            <select value={certificateFilter} onChange={(event) => setCertificateFilter(event.target.value)}>
+              <option value="all">All certificates</option>
+              {summary.certificateTypes.map((certificateType) => (
+                <option key={certificateType.id} value={certificateType.id}>
+                  {certificateType.code} - {certificateType.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>ACS Area</span>
+            <select
+              value={areaFilter}
+              onChange={(event) => {
+                setAreaFilter(event.target.value);
+                setTaskFilter("all");
+              }}
+            >
+              <option value="all">All areas</option>
+              {areaOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option} - {areaLabels[option] ?? `Area ${option}`}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>ACS Task</span>
+            <select value={taskFilter} onChange={(event) => setTaskFilter(event.target.value)}>
+              <option value="all">All tasks</option>
+              {taskOptions.map((option) => (
+                <option key={option} value={option}>
+                  Task {option}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="stat-strip mt-4">
+          <Stat label="Filtered prompts" value={`${filteredQuestionCount}`} />
+          <Stat label="Ready for review" value={`${filteredReadiness.readyForReview}`} />
+          <Stat label="Draft/incomplete" value={`${filteredReadiness.draftLike}`} />
+          <Stat label="Not published" value={`${filteredReadiness.questions - filteredReadiness.publishedLike}`} />
+        </div>
+        {filteredReadiness.blockedReasons.length > 0 && (
+          <div className="raised-card mt-4">
+            <strong>Highest-priority gaps</strong>
+            <ReviewList items={filteredReadiness.blockedReasons} />
+          </div>
+        )}
+        {filteredQuestionCount === 0 && (
+          <div className="raised-card mt-4">
+            <strong>No prompts in this ACS slice</strong>
+            <p>
+              This is an ACS coverage gap, not a learner error. Add active oral questions for this
+              certificate/area/task before authoring keys and rubrics.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="grid">
-        {summary.certificateTypes.map((certificateType) => (
+        {filteredCertificates.map((certificateType) => {
+          const readiness = buildContentReadiness(certificateType.questions);
+
+          return (
           <div className="panel" key={certificateType.id}>
             <div className="section-head">
               <div>
@@ -1948,14 +2283,21 @@ function ContentScreen({ summary }: { summary: ContentSummary }) {
                 label="Rubrics"
                 value={`${certificateType.questions.filter((question) => question.rubricStatus !== "missing").length}`}
               />
+              <Stat label="Readiness" value={`${readiness.score}%`} />
             </div>
 
             <div className="question-list mt-4">
+              {certificateType.contentVersions.length === 0 && (
+                <article className="raised-card">
+                  <strong>No content version</strong>
+                  <p>Content exists outside a versioned release record. Treat it as draft/incomplete.</p>
+                </article>
+              )}
               {certificateType.contentVersions.map((version) => (
                 <article className="raised-card" key={version.id}>
                   <div className="question-meta">
                     <span className="pill">v{version.version}</span>
-                    <span className="pill">{version.status}</span>
+                    <span className="pill">{formatContentStatus(version.status)}</span>
                   </div>
                   <strong>{version.title}</strong>
                   {version.notes && <p>{version.notes}</p>}
@@ -1964,6 +2306,26 @@ function ContentScreen({ summary }: { summary: ContentSummary }) {
             </div>
 
             <div className="question-list mt-4">
+              {groupContentQuestionsByTask(certificateType.questions).map((group) => (
+                <div className="raised-card" key={group.key}>
+                  <div className="section-head">
+                    <div>
+                      <strong>{group.label}</strong>
+                      <p>
+                        {group.questions.length} prompt{group.questions.length === 1 ? "" : "s"} -
+                        readiness {buildContentReadiness(group.questions).score}%
+                      </p>
+                    </div>
+                    <span className="pill">{formatContentStatus(group.status)}</span>
+                  </div>
+                </div>
+              ))}
+              {certificateType.questions.length === 0 && (
+                <article className="raised-card">
+                  <strong>No matching prompts</strong>
+                  <p>This certificate has no active prompts for the current ACS filters.</p>
+                </article>
+              )}
               {certificateType.questions.map((question) => (
                 <article className="raised-card" key={question.id}>
                   <div className="question-meta">
@@ -1972,10 +2334,13 @@ function ContentScreen({ summary }: { summary: ContentSummary }) {
                       Area {question.acsArea}, Task {question.acsTask}
                     </span>
                     <span className="pill">{question.acsElementReference}</span>
-                    <span className="pill">key: {question.answerKeyStatus}</span>
-                    <span className="pill">rubric: {question.rubricStatus}</span>
+                    <span className="pill">{formatQuestionContentReadiness(question)}</span>
+                    <span className="pill">key: {formatContentStatus(question.answerKeyStatus)}</span>
+                    <span className="pill">rubric: {formatContentStatus(question.rubricStatus)}</span>
                     {question.contentVersion && (
-                      <span className="pill">content: {question.contentVersion.status}</span>
+                      <span className="pill">
+                        content: {formatContentStatus(question.contentVersion.status)}
+                      </span>
                     )}
                   </div>
                   <strong>{question.questionText}</strong>
@@ -1983,7 +2348,8 @@ function ContentScreen({ summary }: { summary: ContentSummary }) {
               ))}
             </div>
           </div>
-        ))}
+          );
+        })}
 
         {summary.certificateTypes.length === 0 && (
           <div className="panel">
@@ -2040,6 +2406,9 @@ function HistoryScreen({
               <div className="question-meta">
                 <span className="pill">{storedSession.status}</span>
                 <span className="pill">{storedSession.mode}</span>
+                <span className="pill">
+                  {storedSession.reviewJson ? "review saved" : "review incomplete"}
+                </span>
                 {normalizeStoredCertificateType(storedSession.transcriptJson?.certificateType) && (
                   <span className="pill">
                     {
@@ -2053,6 +2422,9 @@ function HistoryScreen({
                 </span>
               </div>
               <strong>{formatStoredDate(storedSession.startedAt ?? storedSession.createdAt)}</strong>
+              <p>
+                {summarizeStoredSession(storedSession)}
+              </p>
             </article>
           ))}
           {storedSessions.length === 0 && <ReviewPreview />}
@@ -2078,6 +2450,29 @@ function formatStoredDate(value: string) {
     hour: "numeric",
     minute: "2-digit"
   }).format(new Date(value));
+}
+
+function summarizeStoredSession(storedSession: StoredPracticeSession) {
+  const answers = normalizeStoredAnswers(storedSession.transcriptJson?.answers);
+  const answered = answers.filter((answer) => !answer.skipped && answer.response.trim()).length;
+  const skipped = answers.filter((answer) => answer.skipped || !answer.response.trim()).length;
+  const review = storedSession.reviewJson
+    ? normalizeReview(storedSession.reviewJson, buildLocalReview({
+        answers,
+        area: storedSession.acsArea ?? "-",
+        certificateType: normalizeStoredCertificateType(storedSession.transcriptJson?.certificateType),
+        id: storedSession.id,
+        mode: storedSession.mode,
+        persisted: true,
+        questions: normalizeStoredQuestions(storedSession.transcriptJson?.questions),
+        startedAt: new Date(storedSession.startedAt ?? storedSession.createdAt),
+        task: storedSession.acsTask ?? "-",
+      }))
+    : null;
+
+  return `${answered} answered, ${skipped} skipped. ${
+    review ? review.nextPracticeAction : "Open a completed session review to generate the next practice action."
+  }`;
 }
 
 function MeScreen({
