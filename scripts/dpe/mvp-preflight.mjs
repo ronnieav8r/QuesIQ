@@ -132,8 +132,13 @@ const codeContracts = [
       "listDpePracticeSessions",
       "getDpeProgressionSummary",
       "listDpeDiagnosticEvents",
+      "listDpeContentSummary",
       "Practice history",
       "Quest progression",
+      "Content tables",
+      "Review AI",
+      "Voice AI",
+      "getOpenAiRealtimeApiKey(\"dpe\")",
     ],
   },
   {

@@ -600,3 +600,17 @@ This slice protects the DPE quest loop without changing content:
 3. This keeps the progression brand behavior covered by the release preflight;
    it does not add aviation content, schema, publish, Official, or Verified
    state.
+
+## MVP Learner Polish Slice 35 (Signed-In Dependency Readiness)
+
+This slice makes signed-in DPE readiness more complete without changing
+content:
+
+1. `/api/dpe/runtime-check` now includes safe dependency rows for DPE content
+   table reachability, Review AI configuration, and Voice AI configuration.
+2. Missing Review AI reports a warning because deterministic fallback reviews
+   and retry recovery remain available.
+3. Missing Voice AI reports a warning because typed practice remains available.
+4. The runtime check still exposes only readiness/count signals; it does not
+   expose secrets, transcripts, aviation content, publish, Official, or
+   Verified state.
