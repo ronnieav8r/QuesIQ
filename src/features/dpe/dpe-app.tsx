@@ -1028,7 +1028,12 @@ export default function App() {
                 Admin
               </Link>
             )}
-            <button className="button icon-only" aria-label="Settings">
+            <button
+              className="button icon-only"
+              aria-label="Open profile settings"
+              onClick={() => setScreen("me")}
+              title="Open profile settings"
+            >
               <Settings />
             </button>
             <button className="button" onClick={() => signOut()}>

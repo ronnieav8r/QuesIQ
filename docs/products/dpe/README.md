@@ -860,3 +860,14 @@ practice:
 4. Admin DPE preflight now checks that learner target-aware chrome includes the
    practice target-setup recovery markers.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 55 (Header Settings Route)
+
+This slice removes a dead learner control without changing content:
+
+1. The DPE header settings button now opens the Me/profile setup screen.
+2. The button has an explicit `Open profile settings` label and tooltip so the
+   settings affordance has a real destination for target setup.
+3. Admin DPE preflight now checks that learner target-aware chrome includes the
+   settings route marker.
+4. No aviation content, schema, publish, Official, or Verified state changed.

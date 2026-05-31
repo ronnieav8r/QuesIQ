@@ -204,6 +204,7 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "Target-track oral prep",
       "MVP readiness checklist",
       "Readiness quest track (preview)",
+      "Open profile settings",
       "Target readiness",
       "scaffolded/content-pending",
       "Checkride target setup incomplete",
