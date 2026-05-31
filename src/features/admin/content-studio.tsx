@@ -428,6 +428,69 @@ type ProductPacketPreviewResponse =
   | StudyDeckDraftProductPacketPreviewResponse
   | StudyGenerationPacketPreviewResponse;
 
+type StudyRichCsvImportIssue = {
+  message: string;
+  row: number;
+  severity: "error" | "warning";
+};
+
+type StudyRichCsvImportPreviewRow = {
+  answer: string;
+  draftId?: string;
+  externalId?: string;
+  hint?: string;
+  level?: string;
+  question: string;
+  source: {
+    sourceChunkIds?: string[];
+    sourceLabel?: string;
+    sourcePackId?: string;
+    sourcePages?: number[];
+    sourceUrl?: string;
+    sourceVisualAssetIds?: string[];
+  };
+  tags?: string[];
+  verification: {
+    confidence?: number;
+    evidence?: string[];
+    notes?: string;
+    status?: string;
+    verifier?: string;
+  };
+};
+
+type StudyRichCsvImportPreviewResponse = {
+  csvHeaders?: string[];
+  delimiter?: "," | "\t";
+  error?: string;
+  richCsvImportPreviewOnly?: boolean;
+  richCsvImportSaved?: boolean;
+  rowCount?: number;
+  rows?: StudyRichCsvImportPreviewRow[];
+  saveResult?: {
+    createdCardCount: number;
+    createdSourceCount: number;
+    createdVerificationCount: number;
+    deckId: string;
+    deckImportId: string;
+    rowsProcessed: number;
+    verifiedCardCount: number;
+  };
+  sourceCoverage?: {
+    sourcePackIds: string[];
+    uniqueChunkIds: number;
+    uniquePages: number;
+    uniqueVisualAssetIds: number;
+  };
+  storage?: {
+    detail: string;
+    durableReviewState: boolean;
+  };
+  validationErrors?: StudyRichCsvImportIssue[];
+  validationWarnings?: StudyRichCsvImportIssue[];
+  verificationStatusCounts?: Record<string, number>;
+};
+
 type ContentStudioWorkspaceSection =
   | "draft_review"
   | "overview"
@@ -964,6 +1027,12 @@ export function ContentStudio() {
   const [workspaceSection, setWorkspaceSection] =
     useState<ContentStudioWorkspaceSection>("overview");
   const [studyImportPrepInput, setStudyImportPrepInput] = useState("");
+  const [studyImportDeckId, setStudyImportDeckId] = useState("");
+  const [studyImportPreview, setStudyImportPreview] =
+    useState<StudyRichCsvImportPreviewResponse>();
+  const [studyImportStatus, setStudyImportStatus] =
+    useState<"idle" | "previewing" | "ready" | "saving" | "saved">("idle");
+  const [studyImportError, setStudyImportError] = useState<string>();
 
   const pipeline = useMemo(
     () => contentStudioPipelines.find((option) => option.key === pipelineKey) ?? contentStudioPipelines[0],
@@ -1212,6 +1281,84 @@ export function ContentStudio() {
           : previewError instanceof Error
             ? previewError.message
             : "Product packet preview failed.",
+      );
+    }
+  }
+
+  async function handlePreviewStudyRichCsvImport() {
+    if (!studyImportPrepInput.trim()) {
+      setStudyImportError("Paste a rich flashcard CSV payload first.");
+      return;
+    }
+
+    setStudyImportStatus("previewing");
+    setStudyImportError(undefined);
+    setStudyImportPreview(undefined);
+
+    try {
+      const response = await fetch("/api/study/content-studio/flashcard-draft", {
+        body: JSON.stringify({
+          csvText: studyImportPrepInput,
+          mode: "rich_csv_import_preview",
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const body = (await response.json()) as StudyRichCsvImportPreviewResponse;
+
+      if (!response.ok) {
+        throw new Error(body.error || "Rich CSV preview failed.");
+      }
+
+      setStudyImportPreview(body);
+      setStudyImportStatus("ready");
+    } catch (previewError) {
+      setStudyImportStatus("idle");
+      setStudyImportError(
+        previewError instanceof Error
+          ? previewError.message
+          : "Rich CSV preview failed.",
+      );
+    }
+  }
+
+  async function handleSaveStudyRichCsvImport() {
+    if (!studyImportDeckId.trim()) {
+      setStudyImportError("Enter the target Study deck id before importing.");
+      return;
+    }
+    if (!studyImportPrepInput.trim()) {
+      setStudyImportError("Paste a rich flashcard CSV payload first.");
+      return;
+    }
+
+    setStudyImportStatus("saving");
+    setStudyImportError(undefined);
+
+    try {
+      const response = await fetch("/api/study/content-studio/flashcard-draft", {
+        body: JSON.stringify({
+          csvText: studyImportPrepInput,
+          deckId: studyImportDeckId,
+          mode: "rich_csv_import_save",
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const body = (await response.json()) as StudyRichCsvImportPreviewResponse;
+
+      if (!response.ok) {
+        throw new Error(body.error || "Rich CSV import failed.");
+      }
+
+      setStudyImportPreview(body);
+      setStudyImportStatus("saved");
+    } catch (saveError) {
+      setStudyImportStatus("ready");
+      setStudyImportError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Rich CSV import failed.",
       );
     }
   }
@@ -1761,11 +1908,11 @@ export function ContentStudio() {
         <section className="prompt-version-list" aria-labelledby="study-import-prep-title">
           <div className="section-head">
             <div>
-              <p className="eyebrow">Preview-only planning surface</p>
+              <p className="eyebrow">Admin import workflow</p>
               <h3 id="study-import-prep-title">Rich flashcard CSV import</h3>
               <p>
                 Prepare rich Study import payloads with source and verification metadata.
-                Backend preview/import endpoints are pending in the Study lane.
+                Preview validates the CSV before any cards are written to a target deck.
               </p>
             </div>
             <UploadCloud size={20} aria-hidden="true" />
@@ -1774,15 +1921,15 @@ export function ContentStudio() {
           <div className="study-stat-strip" aria-label="Rich CSV import prep status">
             <div className="study-stat-chip">
               <strong>Preview</strong>
-              <span>UI-only staging</span>
+              <span>{studyImportStatus === "previewing" ? "Checking CSV" : "Backend validation"}</span>
             </div>
             <div className="study-stat-chip">
-              <strong>Pending</strong>
-              <span>`rich_csv_import_preview` route</span>
+              <strong>{studyImportPreview?.rowCount ?? 0}</strong>
+              <span>Validated rows</span>
             </div>
             <div className="study-stat-chip highlight">
-              <strong>Disabled</strong>
-              <span>Study writes / publish</span>
+              <strong>{studyImportStatus === "saved" ? "Saved" : "Guarded"}</strong>
+              <span>Deck import only</span>
             </div>
           </div>
 
@@ -1794,9 +1941,11 @@ export function ContentStudio() {
               <span className="pill">answer</span>
               <span className="pill">hint</span>
               <span className="pill">tags</span>
+              <span className="pill">source_pack_id</span>
               <span className="pill">source_chunk_ids</span>
               <span className="pill">source_page_anchors</span>
               <span className="pill">source_visual_ids</span>
+              <span className="pill">verification_confidence</span>
               <span className="pill">verification_status</span>
               <span className="pill">verification_notes</span>
             </div>
@@ -1807,41 +1956,84 @@ export function ContentStudio() {
               <span>Rich flashcard CSV</span>
               <textarea
                 onChange={(event) => setStudyImportPrepInput(event.target.value)}
-                placeholder="Paste rich flashcard CSV rows for future preview validation."
+                placeholder="Paste rich flashcard CSV rows for preview validation."
                 value={studyImportPrepInput}
+              />
+            </label>
+            <label>
+              <span>Target Study deck id</span>
+              <input
+                onChange={(event) => setStudyImportDeckId(event.target.value)}
+                placeholder="Paste the Study deck UUID for approved import"
+                value={studyImportDeckId}
               />
             </label>
           </div>
 
+          {studyImportError && (
+            <div className="form-error" role="alert">
+              {studyImportError}
+            </div>
+          )}
+
           <div className="component-tabs" aria-label="Rich CSV import prep actions">
-            <button disabled type="button">
+            <button
+              disabled={studyImportStatus === "previewing" || studyImportStatus === "saving"}
+              onClick={() => void handlePreviewStudyRichCsvImport()}
+              type="button"
+            >
               <Eye size={18} />
-              Preview rich CSV disabled
+              {studyImportStatus === "previewing"
+                ? "Previewing CSV"
+                : studyImportStatus === "ready" || studyImportStatus === "saved"
+                  ? "Preview refreshed"
+                  : "Preview rich CSV"}
             </button>
             <button
-              onClick={() => setStudyImportPrepInput(studyRichCsvPreviewSample)}
+              onClick={() => {
+                setStudyImportPrepInput(studyRichCsvPreviewSample);
+                setStudyImportError(undefined);
+              }}
               type="button"
             >
               <FileText size={18} />
               Load sample CSV
             </button>
-            <button disabled type="button">
+            <button
+              disabled={
+                studyImportStatus === "previewing" ||
+                studyImportStatus === "saving" ||
+                !studyImportPreview ||
+                (studyImportPreview.validationErrors?.length ?? 0) > 0
+              }
+              onClick={() => void handleSaveStudyRichCsvImport()}
+              type="button"
+            >
               <CheckCircle2 size={18} />
-              Study import disabled
+              {studyImportStatus === "saving"
+                ? "Importing"
+                : studyImportStatus === "saved"
+                  ? "Import saved"
+                  : "Import to deck"}
             </button>
           </div>
 
+          {studyImportPreview && (
+            <StudyRichCsvImportPreviewPanel preview={studyImportPreview} />
+          )}
+
           <div className="runtime-context-panel">
-            <strong>Planned flow</strong>
+            <strong>Guardrails</strong>
             <p>
               Reviewed source-pack decisions {"->"} Codex generation tools {"->"} rich CSV preview
-              (`rich_csv_import_preview`) {"->"} approved Study import.
+              (`rich_csv_import_preview`) {"->"} approved Study deck import.
             </p>
             <div className="question-meta">
               <span className="pill">No Drive loading</span>
               <span className="pill">No runtime source-pack reads</span>
-              <span className="pill">No Study/DPE import in this panel</span>
-              <span className="pill">No Publish / Official / Verified writes</span>
+              <span className="pill">No DPE runtime writes</span>
+              <span className="pill">No Publish / Official writes</span>
+              <span className="pill">Conservative Verified policy</span>
             </div>
           </div>
         </section>
@@ -2509,6 +2701,135 @@ function isStudyDeckDraftPreview(
   preview: ProductPacketPreviewResponse,
 ): preview is StudyDeckDraftProductPacketPreviewResponse {
   return "deckDraftPreview" in preview || "verificationQueuePreview" in preview;
+}
+
+function StudyRichCsvImportPreviewPanel({
+  preview,
+}: {
+  preview: StudyRichCsvImportPreviewResponse;
+}) {
+  const errors = preview.validationErrors ?? [];
+  const warnings = preview.validationWarnings ?? [];
+  const rows = preview.rows ?? [];
+  const coverage = preview.sourceCoverage;
+
+  return (
+    <div className="runtime-context-panel">
+      <div className="section-head">
+        <div>
+          <strong>
+            {preview.richCsvImportSaved ? "Study import saved" : "Rich CSV preview"}
+          </strong>
+          <p>
+            Source and verification metadata stays attached to the imported
+            cards for reviewer traceability.
+          </p>
+        </div>
+        <span className="pill">
+          {preview.richCsvImportSaved ? "saved" : "preview only"}
+        </span>
+      </div>
+
+      <div className="study-stat-strip" aria-label="Rich CSV import preview summary">
+        <div className="study-stat-chip">
+          <strong>{preview.rowCount ?? rows.length}</strong>
+          <span>Rows</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{coverage?.uniqueChunkIds ?? 0}</strong>
+          <span>Source chunks</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{coverage?.uniquePages ?? 0}</strong>
+          <span>Pages</span>
+        </div>
+        <div className="study-stat-chip highlight">
+          <strong>{coverage?.uniqueVisualAssetIds ?? 0}</strong>
+          <span>Visuals</span>
+        </div>
+      </div>
+
+      {preview.saveResult && (
+        <div className="runtime-context-panel">
+          <strong>Saved import</strong>
+          <div className="question-meta">
+            <span className="pill">Deck: {preview.saveResult.deckId}</span>
+            <span className="pill">Import: {preview.saveResult.deckImportId}</span>
+            <span className="pill">Cards: {preview.saveResult.createdCardCount}</span>
+            <span className="pill">Sources: {preview.saveResult.createdSourceCount}</span>
+            <span className="pill">
+              Verifications: {preview.saveResult.createdVerificationCount}
+            </span>
+            <span className="pill">Verified: {preview.saveResult.verifiedCardCount}</span>
+          </div>
+        </div>
+      )}
+
+      {(errors.length > 0 || warnings.length > 0) && (
+        <div className="runtime-context-panel">
+          <strong>Validation notes</strong>
+          <ul>
+            {[...errors, ...warnings].map((issue, index) => (
+              <li key={`${issue.row}-${issue.message}-${index}`}>
+                Row {issue.row}: {issue.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="runtime-context-panel">
+        <strong>Verification status counts</strong>
+        <div className="question-meta">
+          {Object.entries(preview.verificationStatusCounts ?? {}).length > 0 ? (
+            Object.entries(preview.verificationStatusCounts ?? {}).map(([status, count]) => (
+              <span className="pill" key={status}>
+                {status}: {count}
+              </span>
+            ))
+          ) : (
+            <span className="pill">No verification statuses supplied</span>
+          )}
+          {(coverage?.sourcePackIds ?? []).map((sourcePackId) => (
+            <span className="pill" key={sourcePackId}>
+              Source pack: {sourcePackId}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {rows.length > 0 && (
+        <div className="question-list">
+          {rows.slice(0, 5).map((row, index) => (
+            <div
+              className="runtime-context-panel"
+              key={row.externalId ?? `${row.question}-${index}`}
+            >
+              <div className="section-head">
+                <div>
+                  <strong>{row.question}</strong>
+                  <p>{row.answer}</p>
+                </div>
+                <span className="pill">{row.verification.status ?? "unverified"}</span>
+              </div>
+              <div className="question-meta">
+                <span className="pill">
+                  Chunks: {row.source.sourceChunkIds?.join(", ") || "none"}
+                </span>
+                <span className="pill">
+                  Pages: {row.source.sourcePages?.join(", ") || "none"}
+                </span>
+                <span className="pill">
+                  Visuals: {row.source.sourceVisualAssetIds?.join(", ") || "none"}
+                </span>
+                <span className="pill">Tags: {row.tags?.join(", ") || "none"}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function ProductPacketPreviewPanel({
