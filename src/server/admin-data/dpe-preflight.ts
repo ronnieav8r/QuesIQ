@@ -317,6 +317,8 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
     ]) && hasAll(dpeAppText, [
       'fetch("/api/dpe/runtime-check")',
       "Signed-in runtime check",
+      "Retry runtime check",
+      "runtimeCheckRefreshRequested",
     ]),
     signedInDependencyReadinessVisible: hasAll(runtimeCheckText, [
       "listDpeContentSummary",

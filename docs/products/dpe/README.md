@@ -1398,3 +1398,15 @@ content:
 3. DPE preflight now checks for the sign-out hardening markers alongside the
    signed-in auth-state markers.
 4. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 95 (Runtime Check Retry)
+
+This slice tightens signed-in DPE deployment readiness without changing
+content:
+
+1. The signed-in runtime check panel now has a `Retry runtime check` action.
+2. Runtime check retry is single-flight and shows a `Checking runtime...`
+   pending state while the account readiness probe runs.
+3. Admin and CLI DPE preflight now check for the runtime retry markers as part
+   of the signed-in runtime contract.
+4. No aviation content, schema, publish, Official, or Verified state changed.

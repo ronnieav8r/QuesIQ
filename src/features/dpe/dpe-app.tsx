@@ -420,6 +420,7 @@ export default function App() {
   const [progressionAvailable, setProgressionAvailable] = useState<boolean | null>(null);
   const [progressionSummary, setProgressionSummary] = useState<DpeProgressionSummary | null>(null);
   const [runtimeCheck, setRuntimeCheck] = useState<DpeRuntimeCheck | null>(null);
+  const [runtimeCheckRefreshing, setRuntimeCheckRefreshing] = useState(false);
   const [questionState, setQuestionState] = useState<QuestionApiResponse>(
     buildEmptyQuestionResponse()
   );
@@ -652,6 +653,18 @@ export default function App() {
         status: "error",
         summary: { errors: 1, ok: 0, warnings: 0 },
       });
+    }
+  }
+
+  async function refreshDpeRuntimeCheck() {
+    if (runtimeCheckRefreshing) return;
+    setRuntimeCheckRefreshing(true);
+    const runtimeCheckRefreshRequested = true;
+    try {
+      await loadDpeRuntimeCheck();
+    } finally {
+      void runtimeCheckRefreshRequested;
+      setRuntimeCheckRefreshing(false);
     }
   }
 
@@ -1180,6 +1193,8 @@ export default function App() {
                 publicStatusAvailable={publicStatusAvailable}
                 publicStatus={publicStatus}
                 runtimeCheck={runtimeCheck}
+                runtimeCheckRefreshing={runtimeCheckRefreshing}
+                onRefreshRuntimeCheck={refreshDpeRuntimeCheck}
                 selectedTargetTrack={selectedTargetTrack}
                 storedSessions={storedSessions}
               />
@@ -1595,6 +1610,8 @@ function HomeScreen({
   publicStatusAvailable,
   publicStatus,
   runtimeCheck,
+  runtimeCheckRefreshing,
+  onRefreshRuntimeCheck,
   selectedTargetTrack,
   storedSessions,
 }: {
@@ -1608,6 +1625,8 @@ function HomeScreen({
   publicStatusAvailable: boolean | null;
   publicStatus: DpePublicStatus | null;
   runtimeCheck: DpeRuntimeCheck | null;
+  runtimeCheckRefreshing: boolean;
+  onRefreshRuntimeCheck: () => void;
   selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
   storedSessions: StoredPracticeSession[];
 }) {
@@ -1815,7 +1834,11 @@ function HomeScreen({
         selectedTargetTrack={selectedTargetTrack}
       />
 
-      <DpeRuntimeCheckPanel runtimeCheck={runtimeCheck} />
+      <DpeRuntimeCheckPanel
+        onRefresh={onRefreshRuntimeCheck}
+        refreshing={runtimeCheckRefreshing}
+        runtimeCheck={runtimeCheck}
+      />
 
       <div className="stat-strip">
           <Stat label="Question bank" value={`${questionCount}`} />
@@ -1956,7 +1979,15 @@ function HomeScreen({
   );
 }
 
-function DpeRuntimeCheckPanel({ runtimeCheck }: { runtimeCheck: DpeRuntimeCheck | null }) {
+function DpeRuntimeCheckPanel({
+  onRefresh,
+  refreshing,
+  runtimeCheck,
+}: {
+  onRefresh: () => void;
+  refreshing: boolean;
+  runtimeCheck: DpeRuntimeCheck | null;
+}) {
   const rows = runtimeCheck?.rows ?? [];
   const runtimeCheckUnavailable = runtimeCheck?.available === false;
   const statusLabel =
@@ -1982,7 +2013,12 @@ function DpeRuntimeCheckPanel({ runtimeCheck }: { runtimeCheck: DpeRuntimeCheck 
           <h3>Signed-in runtime check</h3>
           <p>{checkedAt}</p>
         </div>
-        <ClipboardCheck />
+        <div className="inline-actions">
+          <button className="button" disabled={refreshing} onClick={onRefresh}>
+            {refreshing ? "Checking runtime..." : "Retry runtime check"}
+          </button>
+          <ClipboardCheck />
+        </div>
       </div>
       <div className="stat-strip mt-4">
         <Stat label="Status" value={statusLabel} />

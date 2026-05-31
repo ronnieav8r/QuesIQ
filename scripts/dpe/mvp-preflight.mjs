@@ -81,6 +81,8 @@ const codeContracts = [
       "fetch(\"/api/dpe/runtime-check\"",
       "DPE production status",
       "Signed-in runtime check",
+      "Retry runtime check",
+      "runtimeCheckRefreshRequested",
       "Runtime check unavailable",
       "runtimeCheckUnavailable",
       "Configured airplane-land target tracks",
