@@ -2622,6 +2622,7 @@ function ReviewScreen({
   const sessionProgress = buildSessionProgress(session);
   const reviewSource = formatReviewSource(review);
   const retryLabel = review.status === "generated" ? "Regenerate AI Review" : "Retry AI Review";
+  const sessionTrackLabel = buildSessionTrackLabel(session);
 
   return (
     <section className="screen">
@@ -2631,7 +2632,7 @@ function ReviewScreen({
           <p>
             {reviewGenerating
               ? "Generating AI review..."
-              : `${modeLabel[session.mode]} - ${
+              : `${modeLabel[session.mode]} - ${sessionTrackLabel} - ${
                   session.certificateType?.title ?? "Certificate pending"
                 } - Area ${session.area}, Task ${session.task}`}
           </p>
@@ -2643,6 +2644,8 @@ function ReviewScreen({
         <Stat label="Completion" value={`${completion}%`} />
         <Stat label="Answered" value={`${answered}`} />
         <Stat label="Skipped" value={`${skipped}`} />
+        <Stat label="Target" value={sessionTrackLabel} />
+        <Stat label="Prompt cert" value={session.certificateType?.code ?? "pending"} />
         <Stat label="Visual prompts" value={`${visualPrompts}`} />
         <Stat label="Weak signals" value={`${sessionProgress.weakFocuses.length}`} />
       </div>

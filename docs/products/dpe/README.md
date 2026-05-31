@@ -1178,3 +1178,17 @@ without changing content:
    the next session.
 4. Admin DPE preflight now checks for the active prompt-pool marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 79 (Review Target Context Visibility)
+
+This slice keeps Session Review aligned with the learner's DPE target track
+without changing content:
+
+1. Session Review now includes the selected target track in the review header.
+2. Session Review now shows separate `Target` and `Prompt cert` stats so
+   scaffolded/content-pending tracks remain visible even when available prompt
+   content is used for practice.
+3. The review still uses the same transcript evidence, scoring, retry, and
+   fallback behavior.
+4. Admin DPE preflight now checks for the review target-context marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.

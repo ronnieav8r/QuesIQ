@@ -153,6 +153,7 @@ const codeContracts = [
       "Certificate follows target track",
       "Prompt cert",
       "Prompt pool",
+      "sessionTrackLabel",
       "targetTrack: {",
       "buildDpeContentStudioHref",
       "inferDpeTargetTrackKeyFromCertificate",

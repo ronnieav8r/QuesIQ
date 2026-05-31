@@ -233,6 +233,7 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "Certificate follows target track",
       "Prompt cert",
       "Prompt pool",
+      "sessionTrackLabel",
     ]),
     localPersistenceRecoveryVisible: hasAll(dpeAppText, [
       "Typed practice running locally",
