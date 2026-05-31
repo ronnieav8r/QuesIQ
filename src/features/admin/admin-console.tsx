@@ -38,6 +38,20 @@ export async function AdminConsole({ product }: { product?: string }) {
           <p className="eyebrow">QuesIQ Admin</p>
           <h1 id="admin-console-title">Admin Console</h1>
         </div>
+        <nav className="inline-actions" aria-label="App homes">
+          <Link className="button-link secondary" href="/">
+            QuesIQ Home
+          </Link>
+          <Link className="button-link secondary" href="/interview">
+            Interview
+          </Link>
+          <Link className="button-link secondary" href="/study">
+            Study
+          </Link>
+          <Link className="button-link secondary" href="/dpe">
+            DPE
+          </Link>
+        </nav>
       </div>
 
       <nav className="admin-tabs" aria-label="Admin products">
