@@ -131,6 +131,10 @@ function numberValue(value: unknown, fallback = 0) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
+function recordValue(value: unknown): Record<string, unknown> {
+  return isRecord(value) ? value : {};
+}
+
 function stringArray(value: unknown) {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string")
@@ -250,6 +254,7 @@ export function buildSourcePackReviewRun(args: {
 function normalizeChunk(
   value: unknown,
   index: number,
+  defaultSourceTitle: string,
   validationErrors: string[],
 ): NormalizedSourcePackChunkCandidate | undefined {
   if (!isRecord(value)) {
@@ -259,7 +264,8 @@ function normalizeChunk(
 
   const chunkId = stringValue(value.chunkId ?? value.id, `chunk-${index + 1}`);
   const sourceId = stringValue(value.sourceId, "unknown-source");
-  const page = numberValue(value.page, 0);
+  const anchors = recordValue(value.anchors);
+  const page = numberValue(value.page ?? anchors.pageStart, 0);
   const excerpt = stringValue(value.excerpt ?? value.text ?? value.content);
 
   if (!excerpt) {
@@ -277,8 +283,8 @@ function normalizeChunk(
     reviewDecision: normalizeDecision(value.reviewDecision),
     reviewNotes: stringValue(value.reviewNotes, undefined),
     sourceId,
-    sourceTitle: stringValue(value.sourceTitle ?? value.title, sourceId),
-    subjects: stringArray(value.subjects ?? value.subject),
+    sourceTitle: stringValue(value.sourceTitle ?? value.title, defaultSourceTitle || sourceId),
+    subjects: stringArray(value.subjects).concat(stringArray(value.subject ? [value.subject] : [])),
     tags: stringArray(value.tags),
     useCases: stringArray(value.useCases),
   };
@@ -288,6 +294,7 @@ function normalizeVisual(
   value: unknown,
   index: number,
   type: "figure" | "table",
+  defaultSourceTitle: string,
   validationErrors: string[],
 ): NormalizedSourcePackVisualCandidate | undefined {
   if (!isRecord(value)) {
@@ -298,8 +305,15 @@ function normalizeVisual(
   const id = stringValue(value.id, `${type}-${index + 1}`);
   const sourceId = stringValue(value.sourceId, "unknown-source");
   const page = numberValue(value.page, 0);
+  const sourceExcerpt = stringValue(
+    value.sourceExcerpt ?? value.context ?? value.contextBefore,
+    undefined,
+  );
+  const reviewStatusInput = reviewStatuses.includes(value.reviewStatus as SourcePackVisualStatus)
+    ? value.reviewStatus
+    : value.cropStatus;
 
-  if (!value.caption && !value.sourceExcerpt) {
+  if (!value.caption && !sourceExcerpt) {
     validationErrors.push(`${id} is missing caption or sourceExcerpt.`);
   }
 
@@ -307,7 +321,7 @@ function normalizeVisual(
     assetPath: stringValue(value.assetPath, undefined),
     bbox: normalizeBbox(value.bbox),
     caption: stringValue(value.caption, undefined),
-    figureLabel: stringValue(value.figureLabel, undefined),
+    figureLabel: stringValue(value.figureLabel ?? value.label, undefined),
     id,
     instructionalValue: stringValue(value.instructionalValue, undefined),
     keepRecommendation: normalizeKeepRecommendation(value.keepRecommendation),
@@ -317,13 +331,13 @@ function normalizeVisual(
     reviewAssetPath: stringValue(value.reviewAssetPath, undefined),
     reviewDecision: normalizeDecision(value.reviewDecision),
     reviewNotes: stringValue(value.reviewNotes, undefined),
-    reviewStatus: normalizeVisualStatus(value.reviewStatus),
-    sourceExcerpt: stringValue(value.sourceExcerpt, undefined),
+    reviewStatus: normalizeVisualStatus(reviewStatusInput),
+    sourceExcerpt,
     sourceId,
-    sourceTitle: stringValue(value.sourceTitle ?? value.title, sourceId),
+    sourceTitle: stringValue(value.sourceTitle ?? value.title, defaultSourceTitle || sourceId),
     subject: stringValue(value.subject, undefined),
     subtopics: stringArray(value.subtopics),
-    tableLabel: stringValue(value.tableLabel, undefined),
+    tableLabel: stringValue(value.tableLabel ?? value.label, undefined),
     topic: stringValue(value.topic, undefined),
     type,
     useCases: stringArray(value.useCases),
@@ -339,6 +353,9 @@ export function normalizeSourcePackReviewBundle(payload: unknown): SourcePackPre
   }
 
   const rawManifest = isRecord(root.manifest) ? root.manifest : {};
+  const rawManifestSource = recordValue(rawManifest.source);
+  const rawManifestStats = recordValue(rawManifest.stats);
+  const defaultSourceTitle = stringValue(rawManifestSource.title);
   const rawChunks = Array.isArray(root.chunks) ? root.chunks : [];
   const rawFigures = Array.isArray(root.figures) ? root.figures : [];
   const rawTables = Array.isArray(root.tables) ? root.tables : [];
@@ -347,7 +364,9 @@ export function normalizeSourcePackReviewBundle(payload: unknown): SourcePackPre
     : [];
   const chunks = rawChunks
     .slice(0, 200)
-    .map((chunk, index) => normalizeChunk(chunk, index, validationErrors))
+    .map((chunk, index) =>
+      normalizeChunk(chunk, index, defaultSourceTitle, validationErrors),
+    )
     .filter(
       (chunk): chunk is NormalizedSourcePackChunkCandidate => Boolean(chunk),
     );
@@ -356,7 +375,7 @@ export function normalizeSourcePackReviewBundle(payload: unknown): SourcePackPre
   )]
     .slice(0, 100)
     .map((figure, index) =>
-      normalizeVisual(figure, index, "figure", validationErrors),
+      normalizeVisual(figure, index, "figure", defaultSourceTitle, validationErrors),
     )
     .filter(
       (candidate): candidate is NormalizedSourcePackVisualCandidate =>
@@ -366,17 +385,24 @@ export function normalizeSourcePackReviewBundle(payload: unknown): SourcePackPre
     isRecord(candidate) && candidate.type === "table"
   )]
     .slice(0, 100)
-    .map((table, index) => normalizeVisual(table, index, "table", validationErrors))
+    .map((table, index) =>
+      normalizeVisual(table, index, "table", defaultSourceTitle, validationErrors),
+    )
     .filter(
       (candidate): candidate is NormalizedSourcePackVisualCandidate =>
         Boolean(candidate),
     );
   const sourceIds = stringArray(rawManifest.sourceIds);
+  const inferredSourceId = stringValue(rawManifestSource.id ?? rawManifestSource.key);
+  const inferredSourceTitle = stringValue(rawManifestSource.title);
   const manifest: NormalizedSourcePackManifest = {
-    chunkCount: chunks.length,
-    createdAt: stringValue(rawManifest.createdAt, new Date(0).toISOString()),
-    figureCount: figures.length,
-    id: stringValue(rawManifest.id, "pasted-source-pack"),
+    chunkCount: numberValue(rawManifest.chunkCount ?? rawManifestStats.chunkCount, chunks.length),
+    createdAt: stringValue(
+      rawManifest.createdAt ?? rawManifestSource.retrievedAt,
+      new Date(0).toISOString(),
+    ),
+    figureCount: numberValue(rawManifest.figureCount ?? rawManifestStats.figureCandidateCount, figures.length),
+    id: stringValue(rawManifest.id ?? inferredSourceId, "pasted-source-pack"),
     sourceCount: sourceIds.length || new Set([
       ...chunks.map((chunk) => chunk.sourceId),
       ...figures.map((figure) => figure.sourceId),
@@ -385,6 +411,8 @@ export function normalizeSourcePackReviewBundle(payload: unknown): SourcePackPre
     sourceIds:
       sourceIds.length > 0
         ? sourceIds
+        : inferredSourceId
+          ? [inferredSourceId]
         : Array.from(
             new Set([
               ...chunks.map((chunk) => chunk.sourceId),
@@ -392,8 +420,8 @@ export function normalizeSourcePackReviewBundle(payload: unknown): SourcePackPre
               ...tables.map((table) => table.sourceId),
             ]),
           ),
-    tableCount: tables.length,
-    title: stringValue(rawManifest.title, "Pasted source-pack review bundle"),
+    tableCount: numberValue(rawManifest.tableCount ?? rawManifestStats.tableCandidateCount, tables.length),
+    title: stringValue(rawManifest.title ?? inferredSourceTitle, "Pasted source-pack review bundle"),
   };
   const visualCandidates = [...figures, ...tables];
   const reviewRun = buildSourcePackReviewRun({
@@ -404,6 +432,14 @@ export function normalizeSourcePackReviewBundle(payload: unknown): SourcePackPre
 
   if (chunks.length + visualCandidates.length === 0) {
     validationErrors.push("Bundle must include at least one chunk, figure, or table.");
+  }
+  if (rawChunks.length > chunks.length) {
+    validationErrors.push(`Preview shows first ${chunks.length} of ${rawChunks.length} chunks.`);
+  }
+  if (rawFigures.length + rawTables.length + rawVisualCandidates.length > visualCandidates.length) {
+    validationErrors.push(
+      `Preview shows first ${visualCandidates.length} of ${rawFigures.length + rawTables.length + rawVisualCandidates.length} visual candidates.`,
+    );
   }
 
   return {
