@@ -14,6 +14,8 @@ Start here for broad resume work and manager handoffs:
 - `docs/rebuild/DECISIONS.md`: durable product and architecture decisions.
 - `docs/rebuild/BRANCHING_AND_RELEASES.md`: manager/worker branch flow,
   release flow, and branch sync states.
+- `docs/rebuild/V1_BETA_READINESS.md`: automated readiness checks and manual
+  QA boundaries for V1 beta.
 - `docs/platform/PARALLEL_DEVELOPMENT.md`: product lane boundaries and
   parallel-development guardrails.
 - `docs/platform/ADMIN_CONTENT_STUDIO.md`: shared Admin Content Studio

@@ -12,6 +12,10 @@
     "guard:interview": "node scripts/guards/check-lane.mjs interview",
     "guard:study": "node scripts/guards/check-lane.mjs study",
     "preflight:dpe": "node scripts/dpe/mvp-preflight.mjs",
+    "readiness:dpe": "node scripts/dpe/mvp-preflight.mjs",
+    "readiness:interview": "node scripts/interview/readiness-check.mjs",
+    "readiness:mvp": "node scripts/mvp-readiness.mjs",
+    "readiness:study": "node scripts/study/readiness-check.mjs",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
