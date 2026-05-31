@@ -248,3 +248,21 @@ without changing content tables:
    stay conservative when answer-key/rubric coverage is incomplete.
 4. Existing deterministic fallback review persistence, AI-run tracking, and
    progression hooks are unchanged.
+
+## MVP Learner Polish Slice 7 (Target-Aware Learner Chrome)
+
+This slice aligns visible learner copy and voice-launch framing with selected
+target-track metadata:
+
+1. DPE app chrome subtitle now reflects selected target track metadata instead
+   of fixed Private Pilot wording.
+2. Sign-in subtitle is now neutral (`Target-track oral prep`) so it does not
+   imply every learner is Private Pilot before profile/target selection loads.
+3. Voice first-turn instructions in learner UI now use session target metadata
+   (`targetTrackTitle`, then prompt certificate title, then generic fallback).
+4. For non-Private targets using Private demo prompts, first-turn instructions
+   explicitly acknowledge scaffolded/content-pending track behavior while
+   preserving current fallback-content honesty.
+5. Stored/resumed session objects now carry `acsTitle` into local
+   `targetTrackTitle` where available so resumed voice context remains
+   target-aware.

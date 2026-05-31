@@ -99,6 +99,7 @@ type LocalSession = {
   mode: PracticeMode;
   area: string;
   certificateType: CertificateOption | null;
+  targetTrackTitle?: string;
   task: string;
   questions: DpeQuestion[];
   answers: SessionAnswer[];
@@ -114,6 +115,7 @@ type StoredPracticeSession = {
   id: string;
   mode: PracticeMode;
   status: string;
+  acsTitle?: string | null;
   acsArea: string | null;
   acsTask: string | null;
   startedAt: string | null;
@@ -563,6 +565,7 @@ export default function App() {
       mode,
       area: selectedArea,
       certificateType: selectedCertificateType,
+      targetTrackTitle: selectedTargetTrack.title,
       task: selectedTask,
       questions,
       answers: [],
@@ -801,6 +804,7 @@ export default function App() {
   }
 
   const visibleNavItems = navItems.filter((item) => item.key !== "content" || authState.isAdmin);
+  const brandSubtitle = buildDpeBrandSubtitle(selectedTargetTrack.title);
 
   return (
     <div className="product-shell dpe-shell">
@@ -808,7 +812,7 @@ export default function App() {
         <header className="app-header">
           <div className="brand-lockup">
             <h1 className="brand-title">QuesIQ DPE</h1>
-            <span className="brand-subtitle">Private Pilot ASEL oral prep</span>
+            <span className="brand-subtitle">{brandSubtitle}</span>
           </div>
           <div className="inline-actions">
             <span className="muted">{authState.user?.email}</span>
@@ -1024,7 +1028,7 @@ function SignInScreen({
         <header className="app-header">
           <div className="brand-lockup">
             <h1 className="brand-title">QuesIQ DPE</h1>
-            <span className="brand-subtitle">Private Pilot ASEL oral prep</span>
+            <span className="brand-subtitle">Target-track oral prep</span>
           </div>
         </header>
         <main className="app-body">
@@ -1722,7 +1726,7 @@ function PracticeSetupScreen({
 
           <RealtimeVoiceSession
             endpoint="/api/dpe/realtime/session"
-            firstTurnInstructions="Speak in English only. Start this DPE oral practice now. Ask the first selected ACS question, then continue one question at a time."
+            firstTurnInstructions={buildVoiceFirstTurnInstructions(session)}
             onArtifactFinalized={onVoiceArtifactFinalized}
             sessionId={session.id}
             startButtonLabel="Start Voice Practice"
@@ -2015,6 +2019,27 @@ function formatDateLabel(value: string) {
     month: "short",
     year: "numeric",
   }).format(date);
+}
+
+function buildDpeBrandSubtitle(targetTrackTitle: string) {
+  if (!targetTrackTitle.trim()) {
+    return "Checkride oral prep";
+  }
+  return `${targetTrackTitle} oral prep`;
+}
+
+function buildVoiceFirstTurnInstructions(session: LocalSession) {
+  const targetTrack =
+    session.targetTrackTitle?.trim() || session.certificateType?.title || "selected target track";
+  const promptCertificate = session.certificateType?.title?.trim() || "";
+  const targetLooksPrivate = /private pilot|ppl/i.test(targetTrack);
+  const promptLooksPrivate = /private pilot|ppl/i.test(promptCertificate);
+  const fallbackHint =
+    !targetLooksPrivate && promptLooksPrivate
+      ? " Selected track content may still be scaffolded, so prompts can use available Private Pilot demo content."
+      : "";
+
+  return `Speak in English only. Start this DPE oral practice for ${targetTrack}.${fallbackHint} Ask the first selected ACS question, then continue one question at a time.`;
 }
 
 function hasCheckrideTarget(profile: DpeProfileState) {
@@ -2423,6 +2448,7 @@ function reviewFromStoredSession(storedSession: StoredPracticeSession): LocalSes
     mode: storedSession.mode,
     area: storedSession.acsArea ?? "-",
     certificateType: normalizeStoredCertificateType(transcript.certificateType),
+    targetTrackTitle: storedSession.acsTitle?.trim() || undefined,
     task: storedSession.acsTask ?? "-",
     questions,
     answers,
@@ -3119,6 +3145,7 @@ function buildStoredSessionResumePlan(storedSession: StoredPracticeSession): Sto
     mode: storedSession.mode,
     area: storedSession.acsArea ?? "-",
     certificateType: normalizeStoredCertificateType(storedSession.transcriptJson?.certificateType),
+    targetTrackTitle: storedSession.acsTitle?.trim() || undefined,
     task: storedSession.acsTask ?? "-",
     questions,
     answers,
