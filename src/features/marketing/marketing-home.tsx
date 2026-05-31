@@ -14,6 +14,8 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 
+import { AccountActions } from "@/components/auth-control";
+
 const productCards = [
   {
     badge: "Best for job seekers",
@@ -88,9 +90,7 @@ export default function MarketingHome() {
           <a href="#trust">Why QuesIQ</a>
         </nav>
         <div className="marketing-actions">
-          <Link className="marketing-signin" href="/login">
-            Sign In
-          </Link>
+          <AccountActions />
           <Link className="marketing-cta" href="/login?next=/interview">
             Start Practicing
           </Link>

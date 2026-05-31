@@ -28,7 +28,7 @@ export default async function StudyLayout({
           </div>
           <div className="header-actions">
             <Link className="button-link secondary" href="/">
-              Products
+              QuesIQ Home
             </Link>
             <AuthControl authSession={authSession} />
           </div>

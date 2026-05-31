@@ -711,6 +711,10 @@ export default function Home() {
                     <UserRound aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
                     <span>Me</span>
                   </button>
+                  <Link href="/" role="menuitem">
+                    <HomeIcon aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                    <span>QuesIQ Home</span>
+                  </Link>
                   {adminAccess && (
                     <Link
                       href="/admin?product=interview"
@@ -740,6 +744,9 @@ export default function Home() {
           </div>
           {activeView !== "session" && (
             <div className="header-actions">
+              <Link className="button-link secondary" href="/">
+                QuesIQ Home
+              </Link>
               <AuthControl authSession={authSession} />
             </div>
           )}

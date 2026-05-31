@@ -1148,6 +1148,9 @@ export default function App() {
             <span className="brand-subtitle">{brandSubtitle}</span>
           </div>
           <div className="inline-actions">
+            <Link className="button-link secondary" href="/">
+              QuesIQ Home
+            </Link>
             <span className="muted">{authState.user?.email}</span>
             {authState.isAdmin && (
               <Link className="button-link secondary" href="/admin?product=dpe">
@@ -1453,6 +1456,9 @@ function SignInScreen({
             <h1 className="brand-title">QuesIQ DPE</h1>
             <span className="brand-subtitle">Target-track oral prep</span>
           </div>
+          <Link className="button-link secondary" href="/">
+            QuesIQ Home
+          </Link>
         </header>
         <main className="app-body">
           <section className="screen">

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { signIn, signOut } from "next-auth/react";
 import { FormEvent, useEffect, useState } from "react";
 
@@ -34,6 +35,28 @@ export function useAuthSession() {
 }
 
 export function AuthControl({ authSession }: { authSession: AppAuthSession }) {
+  const [adminAccess, setAdminAccess] = useState(false);
+
+  useEffect(() => {
+    if (!authSession?.user) {
+      return;
+    }
+
+    async function loadAdminAccess() {
+      try {
+        const response = await fetch("/api/admin/status");
+        const body = (await response.json()) as { admin?: boolean };
+        setAdminAccess(Boolean(body.admin));
+      } catch {
+        setAdminAccess(false);
+      }
+    }
+
+    void loadAdminAccess();
+  }, [authSession?.user]);
+
+  const hasAdminAccess = Boolean(authSession?.user && adminAccess);
+
   if (authSession === undefined) {
     return null;
   }
@@ -41,6 +64,14 @@ export function AuthControl({ authSession }: { authSession: AppAuthSession }) {
   if (authSession?.user) {
     return (
       <div className="auth-control">
+        <span className="account-indicator">
+          {authSession.user.name || authSession.user.email || "Signed in"}
+        </span>
+        {hasAdminAccess && (
+          <Link className="quiet-button account-link" href="/admin">
+            Admin
+          </Link>
+        )}
         <button
           className="quiet-button"
           onClick={() => signOut({ redirectTo: "/" })}
@@ -52,7 +83,19 @@ export function AuthControl({ authSession }: { authSession: AppAuthSession }) {
     );
   }
 
-  return null;
+  return (
+    <div className="auth-control">
+      <Link className="quiet-button account-link" href="/login">
+        Sign In
+      </Link>
+    </div>
+  );
+}
+
+export function AccountActions() {
+  const authSession = useAuthSession();
+
+  return <AuthControl authSession={authSession} />;
 }
 
 export function AuthView({

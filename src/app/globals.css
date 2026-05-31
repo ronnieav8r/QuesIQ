@@ -449,14 +449,16 @@ textarea:focus-visible {
 
 button.secondary,
 button.quiet-button,
-.button-link.secondary {
+.button-link.secondary,
+.account-link {
   background: rgba(109, 59, 255, 0.05);
   border-color: var(--border);
 }
 
 button.secondary:hover,
 button.quiet-button:hover,
-.button-link.secondary:hover {
+.button-link.secondary:hover,
+.account-link:hover {
   background: var(--focus-soft);
   border-color: var(--focus);
   box-shadow: var(--shadow-brand);
@@ -626,6 +628,30 @@ p {
 .auth-control {
   flex-wrap: wrap;
   justify-content: end;
+}
+
+.account-indicator {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  line-height: 1;
+  max-width: min(15rem, 42vw);
+  overflow: hidden;
+  padding: 0.58rem 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-link {
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  display: inline-flex;
+  font-weight: 700;
+  justify-content: center;
+  text-decoration: none;
 }
 
 .app-body {
@@ -4151,6 +4177,29 @@ textarea::placeholder {
 
 .marketing-actions {
   gap: 0.9rem;
+}
+
+.marketing-actions .auth-control {
+  gap: 0.65rem;
+}
+
+.marketing-actions .account-indicator {
+  border-color: rgba(185, 191, 216, 0.28);
+  color: var(--marketing-muted);
+}
+
+.marketing-actions .quiet-button,
+.marketing-actions .account-link {
+  background: transparent;
+  border-color: rgba(185, 191, 216, 0.32);
+  box-shadow: none;
+  color: #ffffff;
+}
+
+.marketing-actions .quiet-button:hover,
+.marketing-actions .account-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.48);
 }
 
 .marketing-signin,
