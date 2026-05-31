@@ -23,6 +23,29 @@ export const STUDY_RICH_IMPORT_HEADERS = [
   "draftId",
   "externalId",
 ] as const;
+export type StudyRichImportTargetField = (typeof STUDY_RICH_IMPORT_HEADERS)[number];
+export type StudyRichImportColumnMapping = Partial<Record<StudyRichImportTargetField, string>>;
+
+export const STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING: Record<StudyRichImportTargetField, string> = {
+  answer: "answer",
+  draftId: "draftId",
+  externalId: "externalId",
+  hint: "hint",
+  level: "level",
+  question: "question",
+  sourceChunkIds: "sourceChunkIds",
+  sourceLabel: "sourceLabel",
+  sourcePackId: "sourcePackId",
+  sourcePages: "sourcePages",
+  sourceUrl: "sourceUrl",
+  sourceVisualAssetIds: "sourceVisualAssetIds",
+  tags: "tags",
+  verificationConfidence: "verificationConfidence",
+  verificationEvidence: "verificationEvidence",
+  verificationNotes: "verificationNotes",
+  verificationStatus: "verificationStatus",
+  verifier: "verifier",
+};
 
 type StudyRichImportLevel = "advanced" | "beginner" | "intermediate";
 type StudyRichVerificationStatus = "blocked" | "needs_review" | "ready_for_verifier" | "unverified" | "verified";
@@ -59,7 +82,9 @@ export type StudyRichImportParseIssue = {
 };
 
 export type StudyRichImportParseResult = {
+  detectedHeaders: string[];
   delimiter: "," | "\t";
+  effectiveMapping: Record<StudyRichImportTargetField, string>;
   errors: StudyRichImportParseIssue[];
   rowCount: number;
   rows: StudyRichImportNormalizedRow[];
@@ -70,6 +95,7 @@ export type StudyRichImportParseResult = {
     uniqueVisualAssetIds: number;
   };
   verificationStatusCounts: Partial<Record<StudyRichVerificationStatus, number>>;
+  unmappedRequiredFields: StudyRichImportTargetField[];
   warnings: StudyRichImportParseIssue[];
 };
 
@@ -226,19 +252,96 @@ function shouldVerifyCard(row: StudyRichImportNormalizedRow) {
   );
 }
 
-export function parseStudyRichFlashcardImportText(text: string): StudyRichImportParseResult {
+function targetFieldAliases(target: StudyRichImportTargetField) {
+  const aliases: Record<StudyRichImportTargetField, string[]> = {
+    answer: ["answer"],
+    draftId: ["draftId", "draft_id"],
+    externalId: ["externalId", "external_id", "card_id"],
+    hint: ["hint"],
+    level: ["level"],
+    question: ["question"],
+    sourceChunkIds: ["sourceChunkIds", "source_chunk_ids"],
+    sourceLabel: ["sourceLabel", "source_label"],
+    sourcePackId: ["sourcePackId", "source_pack_id"],
+    sourcePages: ["sourcePages", "source_pages", "source_page_anchors"],
+    sourceUrl: ["sourceUrl", "source_url"],
+    sourceVisualAssetIds: ["sourceVisualAssetIds", "source_visual_asset_ids", "source_visual_ids"],
+    tags: ["tags"],
+    verificationConfidence: ["verificationConfidence", "verification_confidence"],
+    verificationEvidence: ["verificationEvidence", "verification_evidence"],
+    verificationNotes: ["verificationNotes", "verification_notes"],
+    verificationStatus: ["verificationStatus", "verification_status"],
+    verifier: ["verifier"],
+  };
+  return aliases[target];
+}
+
+function buildEffectiveMapping(args: {
+  columnMapping?: StudyRichImportColumnMapping;
+  normalizedHeaderLookup: Map<string, string>;
+}) {
+  const effective = { ...STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING };
+  const provided = args.columnMapping ?? {};
+
+  for (const key of STUDY_RICH_IMPORT_HEADERS) {
+    const providedValue = provided[key];
+    if (typeof providedValue === "string" && providedValue.trim()) {
+      effective[key] = providedValue.trim();
+    }
+  }
+
+  const requiredFields: StudyRichImportTargetField[] = ["question", "answer"];
+  const unmappedRequiredFields = requiredFields.filter((field) => {
+    const normalized = normalizeHeader(effective[field]);
+    return !args.normalizedHeaderLookup.has(normalized);
+  });
+
+  return {
+    effective,
+    unmappedRequiredFields,
+  };
+}
+
+function readMappedValue(args: {
+  effectiveMapping: Record<StudyRichImportTargetField, string>;
+  headerIndex: Map<string, number>;
+  row: string[];
+  target: StudyRichImportTargetField;
+}) {
+  const mappedHeader = args.effectiveMapping[args.target];
+  const mappedIndex = args.headerIndex.get(normalizeHeader(mappedHeader));
+  if (mappedIndex !== undefined) {
+    return (args.row[mappedIndex] ?? "").trim();
+  }
+
+  for (const alias of targetFieldAliases(args.target)) {
+    const aliasIndex = args.headerIndex.get(normalizeHeader(alias));
+    if (aliasIndex !== undefined) {
+      return (args.row[aliasIndex] ?? "").trim();
+    }
+  }
+  return "";
+}
+
+export function parseStudyRichFlashcardImportText(
+  text: string,
+  options?: { columnMapping?: StudyRichImportColumnMapping },
+): StudyRichImportParseResult {
   const trimmed = text.trim();
   const errors: StudyRichImportParseIssue[] = [];
   const warnings: StudyRichImportParseIssue[] = [];
 
   if (!trimmed) {
     return {
+      detectedHeaders: [],
       delimiter: ",",
+      effectiveMapping: { ...STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING },
       errors: [{ message: "CSV/TSV text is empty.", row: 0, severity: "error" }],
       rowCount: 0,
       rows: [],
       sourceCoverage: { sourcePackIds: [], uniqueChunkIds: 0, uniquePages: 0, uniqueVisualAssetIds: 0 },
       verificationStatusCounts: {},
+      unmappedRequiredFields: ["question", "answer"],
       warnings: [],
     };
   }
@@ -250,23 +353,36 @@ export function parseStudyRichFlashcardImportText(text: string): StudyRichImport
 
   if (!headerRow || headerRow.length === 0) {
     return {
+      detectedHeaders: [],
       delimiter,
+      effectiveMapping: { ...STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING },
       errors: [{ message: "Header row is required.", row: 0, severity: "error" }],
       rowCount: 0,
       rows: [],
       sourceCoverage: { sourcePackIds: [], uniqueChunkIds: 0, uniquePages: 0, uniqueVisualAssetIds: 0 },
       verificationStatusCounts: {},
+      unmappedRequiredFields: ["question", "answer"],
       warnings: [],
     };
   }
 
+  const detectedHeaders = headerRow.map((value) => value.trim());
   const headers = headerRow.map(normalizeHeader);
   const headerIndex = new Map<string, number>(headers.map((header, index) => [header, index]));
-  const requiredHeaders = ["question", "answer"];
-  for (const requiredHeader of requiredHeaders) {
-    if (!headerIndex.has(requiredHeader)) {
-      errors.push({ message: `Missing required header: ${requiredHeader}.`, row: 0, severity: "error" });
-    }
+  const normalizedHeaderLookup = new Map<string, string>();
+  for (const header of detectedHeaders) {
+    normalizedHeaderLookup.set(normalizeHeader(header), header);
+  }
+  const { effective, unmappedRequiredFields } = buildEffectiveMapping({
+    columnMapping: options?.columnMapping,
+    normalizedHeaderLookup,
+  });
+  for (const requiredField of unmappedRequiredFields) {
+    errors.push({
+      message: `Missing mapped required field '${requiredField}' (mapped to '${effective[requiredField]}').`,
+      row: 0,
+      severity: "error",
+    });
   }
 
   const rows: StudyRichImportNormalizedRow[] = [];
@@ -279,29 +395,29 @@ export function parseStudyRichFlashcardImportText(text: string): StudyRichImport
   for (let rowOffset = 0; rowOffset < dataRows.length; rowOffset += 1) {
     const rowNumber = rowOffset + 2;
     const row = dataRows[rowOffset];
-    const getValue = (...names: string[]) => {
-      for (const name of names) {
-        const index = headerIndex.get(normalizeHeader(name));
-        if (index !== undefined) return (row[index] ?? "").trim();
-      }
-      return "";
-    };
+    const getMappedValue = (target: StudyRichImportTargetField) =>
+      readMappedValue({
+        effectiveMapping: effective,
+        headerIndex,
+        row,
+        target,
+      });
 
     if (row.every((cell) => !cell || !cell.trim())) continue;
 
-    const question = getValue("question");
-    const answer = getValue("answer");
+    const question = getMappedValue("question");
+    const answer = getMappedValue("answer");
     if (!question) errors.push({ message: "Missing question.", row: rowNumber, severity: "error" });
     if (!answer) errors.push({ message: "Missing answer.", row: rowNumber, severity: "error" });
     if (!question || !answer) continue;
 
-    const levelRaw = getValue("level");
+    const levelRaw = getMappedValue("level");
     const level = normalizeLevel(levelRaw);
     if (levelRaw && !level) {
       warnings.push({ message: `Unknown level '${levelRaw}' (ignored).`, row: rowNumber, severity: "warning" });
     }
 
-    const verificationStatusRaw = getValue("verificationStatus", "verification_status");
+    const verificationStatusRaw = getMappedValue("verificationStatus");
     const verificationStatus = normalizeVerificationStatus(verificationStatusRaw);
     if (verificationStatusRaw && !verificationStatus) {
       warnings.push({
@@ -311,7 +427,7 @@ export function parseStudyRichFlashcardImportText(text: string): StudyRichImport
       });
     }
 
-    const verificationConfidenceRaw = getValue("verificationConfidence", "verification_confidence");
+    const verificationConfidenceRaw = getMappedValue("verificationConfidence");
     const verificationConfidence = parseConfidence(verificationConfidenceRaw);
     if (verificationConfidenceRaw && verificationConfidence === undefined) {
       warnings.push({
@@ -323,28 +439,26 @@ export function parseStudyRichFlashcardImportText(text: string): StudyRichImport
 
     const normalizedRow: StudyRichImportNormalizedRow = {
       answer,
-      draftId: getValue("draftId", "draft_id") || undefined,
-      externalId: getValue("externalId", "external_id", "card_id") || undefined,
-      hint: getValue("hint") || undefined,
+      draftId: getMappedValue("draftId") || undefined,
+      externalId: getMappedValue("externalId") || undefined,
+      hint: getMappedValue("hint") || undefined,
       level,
       question,
       source: {
-        sourceChunkIds: parseList(getValue("sourceChunkIds", "source_chunk_ids")),
-        sourceLabel: getValue("sourceLabel", "source_label") || undefined,
-        sourcePackId: getValue("sourcePackId", "source_pack_id") || undefined,
-        sourcePages: parsePages(getValue("sourcePages", "source_pages", "source_page_anchors")),
-        sourceUrl: getValue("sourceUrl", "source_url") || undefined,
-        sourceVisualAssetIds: parseList(
-          getValue("sourceVisualAssetIds", "source_visual_asset_ids", "source_visual_ids"),
-        ),
+        sourceChunkIds: parseList(getMappedValue("sourceChunkIds")),
+        sourceLabel: getMappedValue("sourceLabel") || undefined,
+        sourcePackId: getMappedValue("sourcePackId") || undefined,
+        sourcePages: parsePages(getMappedValue("sourcePages")),
+        sourceUrl: getMappedValue("sourceUrl") || undefined,
+        sourceVisualAssetIds: parseList(getMappedValue("sourceVisualAssetIds")),
       },
-      tags: parseList(getValue("tags")),
+      tags: parseList(getMappedValue("tags")),
       verification: {
         confidence: verificationConfidence,
-        evidence: parseList(getValue("verificationEvidence", "verification_evidence")),
-        notes: getValue("verificationNotes", "verification_notes") || undefined,
+        evidence: parseList(getMappedValue("verificationEvidence")),
+        notes: getMappedValue("verificationNotes") || undefined,
         status: verificationStatus,
-        verifier: getValue("verifier") || undefined,
+        verifier: getMappedValue("verifier") || undefined,
       },
     };
 
@@ -370,7 +484,9 @@ export function parseStudyRichFlashcardImportText(text: string): StudyRichImport
   }
 
   return {
+    detectedHeaders,
     delimiter,
+    effectiveMapping: effective,
     errors,
     rowCount: rows.length,
     rows,
@@ -381,6 +497,7 @@ export function parseStudyRichFlashcardImportText(text: string): StudyRichImport
       uniqueVisualAssetIds: visualIds.size,
     },
     verificationStatusCounts,
+    unmappedRequiredFields,
     warnings,
   };
 }

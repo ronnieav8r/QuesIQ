@@ -273,6 +273,10 @@ the visual/UI level during the conversation:
   source and verification metadata (question/answer/hint/level/tags, source
   pack/chunk/page/visual fields, verification status/confidence/notes/evidence,
   verifier, and draft/external ids)
+- Rich CSV import parser and route modes now support optional `columnMapping`
+  (`{ [targetField]: sourceHeader }`) for non-default CSV header shapes while
+  preserving the default Codex skill export contract via
+  `STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING`.
 - `/api/study/content-studio/flashcard-draft` now supports
   `rich_csv_import_preview` (no writes) and `rich_csv_import_save` (admin-only
   target-deck import). Save writes cards plus `study_card_sources`,

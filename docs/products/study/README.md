@@ -104,6 +104,10 @@ The first Study slice is imported:
   verification metadata. It exports required headers, parses CSV/TSV
   deterministically (including quoted CSV cells), normalizes list fields,
   and returns row-level validation warnings/errors.
+- Rich CSV parser now supports flexible `columnMapping` for arbitrary CSV
+  source headers while preserving the default Codex skill export contract.
+  `STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING` maps the expected target fields to
+  canonical rich import headers and keeps old behavior when no mapping is sent.
 - `/api/study/content-studio/flashcard-draft` now supports
   `rich_csv_import_preview` and `rich_csv_import_save` for admin/developer
   import workflows. Preview returns normalized rows and validation summaries
@@ -111,6 +115,10 @@ The first Study slice is imported:
   `study_verifications`, and `study_deck_imports` metadata for a target deck.
   This is still separate from Publish/Official controls and broad Verified
   promotion.
+- `rich_csv_import_preview` and `rich_csv_import_save` accept optional
+  `columnMapping` (`{ [targetField]: sourceHeader }`) and both use the same
+  parser normalization path. Preview returns detected CSV headers, supported
+  target fields, effective mapping, and unmapped required fields.
 - `drizzle/0054_add_study_source_verification_metadata.sql` adds structured
   source metadata and verification status/evidence/verifier fields so rich CSV
   imports do not have to preserve chunk/page/visual details only inside labels

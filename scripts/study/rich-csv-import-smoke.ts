@@ -6,10 +6,34 @@ import { studyCardSources, studyCards, studyDecks, studyVerifications, users } f
 import {
   parseStudyRichFlashcardImportText,
   saveStudyRichFlashcardImport,
+  STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING,
 } from "@/server/study/study-rich-flashcard-import";
 
 const sampleCsv = `card_id,question,answer,hint,tags,source_pack_id,source_chunk_ids,source_page_anchors,source_visual_ids,verification_status,verification_confidence,verification_notes,verification_evidence,verifier
 sample-001,What is trim?,Relieves control pressure in steady flight.,Set pitch first then trim.,fundamentals|controls,phak-25c,chunk-001|chunk-002,page=12;page=13,figure-12-a,verified,0.91,Checked against source chunks,chunk-001|chunk-002,admin_review`;
+
+const mappedCsv = `Prompt,Response,Memo,Difficulty,CategoryTags,PackIdentifier,ChunkRefs,PageRefs,VisualRefs,ReviewState,ReviewConfidence,ReviewNotes,EvidenceRows,Reviewer,DraftRef,ExternalRef
+"When do you re-trim?","After any sustained pitch or power change.","Trim removes control pressure.","beginner","fundamentals|trim","phak-25c","chunk-010|chunk-011","14|15","figure-14-a","needs_review","0.73","Needs follow-up","chunk-010|chunk-011","admin_qc","draft-abc","row-abc"`;
+
+const mappedColumnMapping = {
+  ...STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING,
+  answer: "Response",
+  draftId: "DraftRef",
+  externalId: "ExternalRef",
+  hint: "Memo",
+  level: "Difficulty",
+  question: "Prompt",
+  sourceChunkIds: "ChunkRefs",
+  sourcePackId: "PackIdentifier",
+  sourcePages: "PageRefs",
+  sourceVisualAssetIds: "VisualRefs",
+  tags: "CategoryTags",
+  verificationConfidence: "ReviewConfidence",
+  verificationEvidence: "EvidenceRows",
+  verificationNotes: "ReviewNotes",
+  verificationStatus: "ReviewState",
+  verifier: "Reviewer",
+} as const;
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
@@ -55,8 +79,20 @@ async function runParseOnly() {
   assert(parsed.sourceCoverage.uniquePages === 2, "Expected two unique source pages.");
   assert(parsed.sourceCoverage.uniqueVisualAssetIds === 1, "Expected one visual asset id.");
   assert(parsed.verificationStatusCounts.verified === 1, "Expected one verified row.");
+  assert(parsed.unmappedRequiredFields.length === 0, "Expected no unmapped required fields with default headers.");
 
-  console.log("rich CSV parser smoke passed");
+  const mappedParsed = parseStudyRichFlashcardImportText(mappedCsv, {
+    columnMapping: mappedColumnMapping,
+  });
+  assert(mappedParsed.errors.length === 0, `Expected no mapped parse errors, got ${JSON.stringify(mappedParsed.errors)}`);
+  assert(mappedParsed.rowCount === 1, `Expected one mapped row, got ${mappedParsed.rowCount}`);
+  assert(mappedParsed.rows[0].question === "When do you re-trim?", "Expected mapped question value.");
+  assert(mappedParsed.rows[0].answer.startsWith("After any sustained"), "Expected mapped answer value.");
+  assert(mappedParsed.rows[0].source.sourcePackId === "phak-25c", "Expected mapped source pack id.");
+  assert(mappedParsed.verificationStatusCounts.needs_review === 1, "Expected mapped needs_review count.");
+  assert(mappedParsed.unmappedRequiredFields.length === 0, "Expected mapped required fields to resolve.");
+
+  console.log("rich CSV parser smoke passed (default + mapped headers)");
 }
 
 async function runDbSmoke() {

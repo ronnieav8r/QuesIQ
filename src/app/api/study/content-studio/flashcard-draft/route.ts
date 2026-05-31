@@ -22,6 +22,8 @@ import {
   STUDY_GENERATION_PACKET_SAMPLE,
 } from "@/server/study/study-generation-packet-contract";
 import {
+  type StudyRichImportColumnMapping,
+  STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING,
   parseStudyRichFlashcardImportText,
   saveStudyRichFlashcardImport,
   STUDY_RICH_IMPORT_HEADERS,
@@ -39,6 +41,7 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json().catch(() => ({}))) as {
+    columnMapping?: StudyRichImportColumnMapping;
     createDeckDescription?: string;
     createDeckSubject?: string;
     createDeckTags?: string[];
@@ -53,14 +56,21 @@ export async function POST(request: Request) {
   };
   if (body.mode === "rich_csv_import_preview") {
     const csvText = (body.csvText ?? "").trim();
-    const parsed = parseStudyRichFlashcardImportText(csvText || STUDY_RICH_IMPORT_SAMPLE_CSV);
+    const parsed = parseStudyRichFlashcardImportText(csvText || STUDY_RICH_IMPORT_SAMPLE_CSV, {
+      columnMapping: body.columnMapping,
+    });
 
     return NextResponse.json({
       csvHeaders: STUDY_RICH_IMPORT_HEADERS,
+      defaultColumnMapping: STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING,
       delimiter: parsed.delimiter,
+      detectedHeaders: parsed.detectedHeaders,
+      effectiveMapping: parsed.effectiveMapping,
       rowCount: parsed.rowCount,
       rows: parsed.rows,
       sourceCoverage: parsed.sourceCoverage,
+      supportedTargetFields: STUDY_RICH_IMPORT_HEADERS,
+      unmappedRequiredFields: parsed.unmappedRequiredFields,
       verificationStatusCounts: parsed.verificationStatusCounts,
       validationErrors: parsed.errors,
       validationWarnings: parsed.warnings,
@@ -99,12 +109,19 @@ export async function POST(request: Request) {
       }
     }
 
-    const parsed = parseStudyRichFlashcardImportText(csvText);
+    const parsed = parseStudyRichFlashcardImportText(csvText, {
+      columnMapping: body.columnMapping,
+    });
     if (parsed.errors.length > 0) {
       return NextResponse.json(
         {
+          defaultColumnMapping: STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING,
+          detectedHeaders: parsed.detectedHeaders,
+          effectiveMapping: parsed.effectiveMapping,
           error: "CSV contains validation errors.",
           rowCount: parsed.rowCount,
+          supportedTargetFields: STUDY_RICH_IMPORT_HEADERS,
+          unmappedRequiredFields: parsed.unmappedRequiredFields,
           validationErrors: parsed.errors,
           validationWarnings: parsed.warnings,
         },
@@ -123,11 +140,16 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       csvHeaders: STUDY_RICH_IMPORT_HEADERS,
+      defaultColumnMapping: STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING,
       delimiter: parsed.delimiter,
+      detectedHeaders: parsed.detectedHeaders,
+      effectiveMapping: parsed.effectiveMapping,
       rowCount: parsed.rowCount,
       rows: parsed.rows,
       saveResult,
       sourceCoverage: parsed.sourceCoverage,
+      supportedTargetFields: STUDY_RICH_IMPORT_HEADERS,
+      unmappedRequiredFields: parsed.unmappedRequiredFields,
       verificationStatusCounts: parsed.verificationStatusCounts,
       validationErrors: parsed.errors,
       validationWarnings: parsed.warnings,
