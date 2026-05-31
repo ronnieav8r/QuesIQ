@@ -358,6 +358,13 @@
       "when": 1780066800000,
       "tag": "0051_add_content_studio_runs",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1780070400000,
+      "tag": "0052_add_study_progression",
+      "breakpoints": true
     }
   ]
 }

@@ -250,6 +250,13 @@ the visual/UI level during the conversation:
   logos now follow the same shared display rules used by QuesIQ Interview.
 - `0049_seed_study_library_taxonomy.sql` seeds the imported source subject and
   audience taxonomy content, including parent/child/grandchild subject order.
+- Study now has a product-owned XP/quest slice with `study_progression_events`,
+  `study_xp_rules`, `study_quests`, `study_user_progression`, and
+  `study_user_quests` tables seeded by `0052_add_study_progression.sql`
+- Study rate events now award idempotent XP by card-attempt id, sync Study
+  quest progress, and rebuild a Study-owned progression summary
+- `/study` now includes a Study momentum panel with level, XP progress,
+  accuracy, and quest progress preview
 
 Latest known full code verification before this handoff:
 
@@ -323,6 +330,11 @@ These are places where the target repo strayed from a strict copy of
     owner-only export, and V1 library visibility/trust filters. The prior
     `/study/decks/[deckId]/start` launcher was removed.
 
+13. Study progression is now product-owned in Study-prefixed tables and wired
+    only to Study rate attempts. It does not reuse Interview progression
+    tables, and it currently awards XP from card-rating events rather than a
+    broader Study event set.
+
 ## Current Functional Gaps To Fix
 
 These are the remaining practical gaps after the broad Study import passes.
@@ -351,6 +363,11 @@ These are the remaining practical gaps after the broad Study import passes.
 6. Real Study library content curation remains. The taxonomy labels are seeded,
    and QA seed decks exist, but production official decks/content are not
    curated as part of this port.
+
+7. Study progression v1 is intentionally narrow. It currently awards XP only on
+   Study card-rating attempts and ships a small starter quest/rule set.
+   Additional Study-only milestones (due-queue clears, verified-card goals,
+   subject depth) are future expansion work.
 
 ## Remaining Port Slices
 
@@ -381,6 +398,11 @@ Recommended order from least risky/confusing to largest:
 5. Library content curation.
    Add or import real official/public Study library decks after permission and
    taxonomy QA passes.
+
+6. Study progression v1 tuning.
+   Validate XP pace and quest thresholds with real usage, then expand
+   Study-only events and quests if needed (for example due-queue and
+   verified-card milestones).
 
 ## Recommended Next Slice
 
