@@ -228,6 +228,8 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "markSessionLocalOnly",
       "DPE session storage stopped accepting updates",
       "artifactSaved",
+      "setReviewGenerating(false)",
+      "Review generation in progress",
       "setPracticeNotice(null)",
       "No DPE sessions yet",
       "Start first DPE session",

@@ -116,6 +116,8 @@ const codeContracts = [
       "markSessionLocalOnly",
       "DPE session storage stopped accepting updates",
       "artifactSaved",
+      "setReviewGenerating(false)",
+      "Review generation in progress",
       "setPracticeNotice(null)",
       "History storage unavailable",
       "Stored transcripts, retry AI",

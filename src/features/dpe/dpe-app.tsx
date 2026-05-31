@@ -998,6 +998,7 @@ export default function App() {
   }
 
   function resetPractice() {
+    setReviewGenerating(false);
     setStage("setup");
     setSession(null);
     setCurrentIndex(0);
@@ -2645,11 +2646,22 @@ function ReviewScreen({
                 {reviewGenerating ? "Generating" : retryLabel}
               </button>
             )}
-            <button className="button primary" onClick={onReset}>
+            <button
+              className="button primary"
+              disabled={reviewGenerating}
+              title={reviewGenerating ? "Review generation in progress" : undefined}
+              onClick={onReset}
+            >
               <RotateCcw />
               New Session
             </button>
           </div>
+          {reviewGenerating && (
+            <p className="muted mt-2">
+              Review generation in progress. New Session will be available when the review is
+              ready.
+            </p>
+          )}
         </div>
       </div>
 

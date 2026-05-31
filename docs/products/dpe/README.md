@@ -948,3 +948,17 @@ content:
 4. Admin DPE preflight now checks for the voice artifact local-downgrade
    marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 62 (Review Generation Reset Guard)
+
+This slice prevents confusing review-screen transitions without changing
+content:
+
+1. The DPE review `New Session` action is disabled while AI review generation is
+   still in progress.
+2. The review screen now tells the learner that New Session becomes available
+   after review generation finishes.
+3. Practice reset also clears any active review-generation state before returning
+   to setup.
+4. Admin DPE preflight now checks for the review-generation reset guard markers.
+5. No aviation content, schema, publish, Official, or Verified state changed.
