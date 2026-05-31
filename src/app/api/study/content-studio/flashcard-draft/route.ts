@@ -5,6 +5,11 @@ import {
   generateStudyFlashcardDeckDraft,
   getStudyContentStudioReviewSections,
 } from "@/server/study/study-content-studio";
+import {
+  getStudySourcePackDraftReviewSections,
+  parseStudySourcePackGeneratedDeckDraftContract,
+  STUDY_SOURCE_PACK_DRAFT_SAMPLE,
+} from "@/server/study/study-source-pack-draft-contract";
 
 export async function POST(request: Request) {
   const session = await requireAdminSession();
@@ -14,9 +19,32 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json().catch(() => ({}))) as {
+    mode?: string;
     promptInstructions?: string;
+    sourcePackDraftJson?: unknown;
     sourceText?: string;
   };
+  if (body.mode === "source_pack_preview") {
+    const candidatePayload = body.sourcePackDraftJson ?? STUDY_SOURCE_PACK_DRAFT_SAMPLE;
+    const parsed = parseStudySourcePackGeneratedDeckDraftContract(candidatePayload);
+
+    if (!parsed.ok) {
+      return NextResponse.json(
+        {
+          error: "Invalid source-pack Study draft contract payload.",
+          validationErrors: parsed.errors,
+        },
+        { status: 400 },
+      );
+    }
+
+    return NextResponse.json({
+      draftContract: parsed.draft,
+      reviewSections: getStudySourcePackDraftReviewSections(parsed.draft),
+      sourcePackPreviewOnly: true,
+    });
+  }
+
   const sourceText = body.sourceText?.trim();
 
   if (!sourceText) {

@@ -235,6 +235,13 @@ the visual/UI level during the conversation:
   fingerprint, prompt metadata, card counts, low-confidence indexes,
   missing-field flags, review checklist flags, and review sections without
   publishing, marking Official, or marking cards Verified
+- Study-owned source-pack deck draft JSON contract and parser at
+  `src/server/study/study-source-pack-draft-contract.ts`; it preserves source
+  pack id, source chunk ids, page anchors, visual asset ids, tags, verification
+  status, and warnings across deck/card draft payloads
+- `/api/study/content-studio/flashcard-draft` now includes a side-effect-free
+  admin-only `source_pack_preview` mode that validates source-pack-generated
+  Study draft JSON and returns review sections without Study runtime writes
 - source-style import wizard polish for focus hints, URL failure display,
   CSV/Quizlet/Anki guidance, select/deselect review controls, column swapping,
   row/URL counts, and save/done copy
@@ -368,6 +375,10 @@ These are the remaining practical gaps after the broad Study import passes.
    Study card-rating attempts and ships a small starter quest/rule set.
    Additional Study-only milestones (due-queue clears, verified-card goals,
    subject depth) are future expansion work.
+
+8. Reviewed source-pack content now has a draft-JSON contract and preview path,
+   but no direct runtime import. The intended flow is reviewed chunks/assets ->
+   draft JSON -> admin review/verifier -> later approved Study import.
 
 ## Remaining Port Slices
 

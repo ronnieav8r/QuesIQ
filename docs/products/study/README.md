@@ -69,6 +69,15 @@ The first Study slice is imported:
   fingerprint, prompt metadata, card counts, missing-field flags, low-confidence
   indexes, review checklist flags, and review sections; it never publishes,
   marks Official, or marks cards Verified.
+- `src/server/study/study-source-pack-draft-contract.ts` now defines and
+  validates a Study-owned source-pack deck draft JSON contract for Content
+  Studio. The contract preserves source pack id, source chunk ids, page
+  anchors, visual asset ids, tags, verification status, and warnings for each
+  card/deck.
+- `/api/study/content-studio/flashcard-draft` now supports an admin-only
+  `source_pack_preview` mode that validates source-pack-generated draft JSON and
+  returns review sections. This preview mode is side-effect-free and does not
+  write Study runtime content.
 - `/api/study/tts` supports Study voice paths with Admin AI Usage
   instrumentation and source-style R2 audio caching when R2 environment
   variables are configured
@@ -118,3 +127,15 @@ Study owns its own:
 
 Shared platform owns auth, account, product selection, billing when added, and
 common shell behavior.
+
+## Future Source-Pack Import Path
+
+Study should not ingest raw source-pack files directly into learner runtime.
+The intended path is:
+
+1. reviewed source-pack chunks/assets produce Study deck draft JSON
+2. Admin Content Studio review plus verifier checks
+3. later approved Study import step (separate from generation/preview)
+
+The current contract/preview layer intentionally stops before publish, Official,
+Verified, or Study library/runtime writes.
