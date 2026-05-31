@@ -137,6 +137,9 @@ The first Study slice is imported:
 - Study uses the shared QuesIQ product shell, Interview-aligned tokens and
   controls, the shared QuesIQ icon, and its own `quesiq-study-logo.png` product
   logo. The platform selector uses `quesiq-main-logo.png`.
+- `/study` now uses an Interview-style Study navigation shell with Home, Decks,
+  New, Library, and History links. The menu appears as a left rail on desktop,
+  a bottom bar on mobile, and can be collapsed with local preference storage.
 - owned deck pages include an inline public/private toggle
 - signed-in users can create/edit decks, add/delete cards manually, and review
   cards with simple recall ratings; card lists now support inline edit/delete

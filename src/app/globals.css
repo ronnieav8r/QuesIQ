@@ -3787,6 +3787,32 @@ textarea::placeholder {
   position: static;
 }
 
+.study-shell .study-tab-bar {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.study-shell .study-tab-bar.collapsed {
+  grid-template-columns: 1fr;
+}
+
+.study-shell .study-tab-bar.collapsed .tab {
+  display: none;
+}
+
+.study-desktop-show-icon,
+.study-desktop-hide-icon,
+.study-mobile-show-icon {
+  display: none;
+}
+
+.study-shell .study-tab-bar.collapsed .study-mobile-show-icon {
+  display: block;
+}
+
+.study-shell .study-tab-bar.collapsed .study-mobile-hide-icon {
+  display: none;
+}
+
 @media (min-width: 48rem) {
   h1 {
     font-size: var(--font-size-2xl);
@@ -3850,6 +3876,52 @@ textarea::placeholder {
   .tab-icon {
     height: 1.15rem;
     width: 1.15rem;
+  }
+
+  .study-shell .study-app-frame.nav-collapsed {
+    grid-template-columns: 4.25rem minmax(0, 1fr);
+  }
+
+  .study-shell .study-tab-bar.collapsed {
+    grid-template-columns: 1fr;
+    padding-inline: 0.55rem;
+  }
+
+  .study-shell .study-tab-bar.collapsed .tab {
+    display: inline-flex;
+    justify-content: center;
+    padding-inline: 0.65rem;
+  }
+
+  .study-shell .study-tab-bar.collapsed .tab span {
+    display: none;
+  }
+
+  .study-shell .study-tab-bar .nav-collapse-toggle {
+    align-self: start;
+    display: inline-flex;
+    justify-self: stretch;
+    margin-bottom: var(--space-2);
+    min-width: 0;
+    position: static;
+  }
+
+  .study-mobile-show-icon,
+  .study-mobile-hide-icon,
+  .study-desktop-show-icon {
+    display: none;
+  }
+
+  .study-desktop-hide-icon {
+    display: block;
+  }
+
+  .study-shell .study-tab-bar.collapsed .study-desktop-show-icon {
+    display: block;
+  }
+
+  .study-shell .study-tab-bar.collapsed .study-desktop-hide-icon {
+    display: none;
   }
 
   .auth-layout {
