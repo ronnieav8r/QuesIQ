@@ -1007,7 +1007,7 @@ export default function App() {
         }),
       });
       const data = (await response.json().catch(() => ({}))) as { available?: boolean };
-      artifactSaved = response.ok && (data.available ?? true);
+      artifactSaved = response.ok && data.available === true;
       setDatabaseAvailable(artifactSaved);
       await loadStoredSessions();
       await loadDpeProgression();

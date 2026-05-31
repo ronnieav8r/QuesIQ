@@ -1218,3 +1218,18 @@ This slice makes saved-session recovery stricter without changing content:
    local-only/fallback review path instead of appearing save-backed.
 4. Admin DPE preflight now checks for the persistence response-hardening marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 82 (Voice Artifact Persistence Hardening)
+
+This slice applies the same save-backed response rule to voice evidence without
+changing content:
+
+1. Voice artifact saves now require both HTTP OK and `available: true` before
+   the session remains save-backed.
+2. Missing, malformed, non-OK, or unavailable artifact-save responses downgrade
+   the review session to the existing local-only path.
+3. The local-only review warning, fallback review, and typed continuation
+   behavior remain unchanged.
+4. Admin DPE preflight continues to check for the persistence
+   response-hardening marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.
