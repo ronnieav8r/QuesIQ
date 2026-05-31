@@ -7,6 +7,7 @@ import {
 } from "@/features/admin/dpe-target-tracks";
 import { AdminView } from "@/components/interview/admin-view";
 import { getStudyLibraryDecks } from "@/features/study/study-data";
+import { getAdminDpePreflightSnapshot } from "@/server/admin-data/dpe-preflight";
 import { listAdminDpeProgressionSnapshot } from "@/server/admin-data/dpe-progression";
 import { listDpeContentSummary } from "@/server/dpe/dpe-data";
 
@@ -167,6 +168,7 @@ async function DpeAdminPanel() {
     certificateTypes: [],
   };
   let progression: Awaited<ReturnType<typeof listAdminDpeProgressionSnapshot>> | undefined;
+  let preflight: Awaited<ReturnType<typeof getAdminDpePreflightSnapshot>> | undefined;
 
   try {
     summary = await listDpeContentSummary();
@@ -178,6 +180,12 @@ async function DpeAdminPanel() {
     progression = await listAdminDpeProgressionSnapshot();
   } catch (error) {
     console.error("DPE admin progression summary unavailable.", error);
+  }
+
+  try {
+    preflight = await getAdminDpePreflightSnapshot();
+  } catch (error) {
+    console.error("DPE admin preflight summary unavailable.", error);
   }
 
   const totalQuestions = summary.certificateTypes.reduce(
@@ -245,6 +253,84 @@ async function DpeAdminPanel() {
       </div>
 
       <div className="prompt-version-list">
+        <article className="raised-card">
+          <div className="section-head">
+            <div>
+              <strong>DPE MVP preflight</strong>
+              <p>Read-only readiness checks for operational testing and deploy prep.</p>
+            </div>
+            <span className="pill">{preflight ? statusPillLabel(preflight.status) : "unknown"}</span>
+          </div>
+          {preflight ? (
+            <>
+              <div className="study-stat-strip" aria-label="DPE preflight summary">
+                <div className="study-stat-chip">
+                  <strong>{preflight.trackSummary.configured}/{preflight.trackSummary.total}</strong>
+                  <span>Track scaffolds</span>
+                </div>
+                <div className="study-stat-chip">
+                  <strong>{preflight.trackSummary.pending}</strong>
+                  <span>Content pending</span>
+                </div>
+                <div className="study-stat-chip">
+                  <strong>{preflight.blockers.length}</strong>
+                  <span>Blockers</span>
+                </div>
+                <div className="study-stat-chip">
+                  <strong>{preflight.warnings.length}</strong>
+                  <span>Warnings</span>
+                </div>
+              </div>
+
+              <div className="question-list mt-4">
+                {preflight.statusRows.map((row) => (
+                  <div className="raised-card" key={row.key}>
+                    <div className="question-meta">
+                      <span className="pill">{row.label}</span>
+                      <span className="pill">{statusPillLabel(row.status)}</span>
+                      <span className="pill">{row.value}</span>
+                    </div>
+                    <p>{row.detail}</p>
+                  </div>
+                ))}
+              </div>
+
+              {preflight.blockers.length > 0 && (
+                <div className="raised-card">
+                  <strong>Current blockers</strong>
+                  <ul>
+                    {preflight.blockers.map((blocker) => (
+                      <li key={blocker}>{blocker}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {preflight.warnings.length > 0 && (
+                <div className="raised-card">
+                  <strong>Current warnings</strong>
+                  <ul>
+                    {preflight.warnings.map((warning) => (
+                      <li key={warning}>{warning}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="raised-card">
+                <strong>Next checks</strong>
+                <ul>
+                  {preflight.checks.map((check) => (
+                    <li key={check}>{check}</li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          ) : (
+            <p>Preflight checks are unavailable right now.</p>
+          )}
+        </article>
+
         <article className="raised-card">
           <div className="section-head">
             <div>
@@ -761,6 +847,18 @@ type DpeTrackCoverage = {
   status: DpeTrackCoverageStatus;
   statusLabel: string;
 };
+
+function statusPillLabel(status: "blocked" | "ok" | "warning") {
+  if (status === "ok") {
+    return "ok";
+  }
+
+  if (status === "warning") {
+    return "warning";
+  }
+
+  return "blocked";
+}
 
 function buildDpeTrackCoverage(summary: DpeContentSummary): DpeTrackCoverage[] {
   return dpeTargetTracks.map((track) => {
