@@ -189,6 +189,13 @@ bucket set for workflow decisions:
 }
 ```
 
+`POST /api/admin/content-studio/source-pack-preview` is the first safe API
+boundary for this contract. It accepts a pasted JSON review bundle only, then
+returns normalized manifest metadata, chunk candidates, figure/table candidates,
+review counts, decision records, and validation notes. It does not read server
+files, access Google Drive, persist review decisions, create Content Studio run
+rows, or call Study/DPE generation routes.
+
 The current UI shows disabled future actions for `Accept selected`, `Reject
 selected`, `Generate Study draft from accepted chunks`, and `Generate DPE draft
 later`. These buttons are deliberate affordances only. They must stay disabled

@@ -99,6 +99,12 @@ Last updated: 2026-05-30
     asset placeholders without reading local source-pack folders, calling
     Drive, saving review decisions, sending raw source-pack data to Study/DPE
     runtime paths, or writing publish state.
+  - Source-pack review now has an Admin-only preview API boundary at
+    `/api/admin/content-studio/source-pack-preview`. It accepts pasted JSON,
+    normalizes manifest/chunk/figure/table candidates in memory, returns review
+    counts and validation notes, and intentionally performs no filesystem
+    reads, Drive calls, durable review writes, product imports, or generation
+    calls.
   - `/api/admin/content-studio/runs` orchestrates Study draft generation and
     DPE content draft generation, then creates durable run records in
     `content_studio_runs`

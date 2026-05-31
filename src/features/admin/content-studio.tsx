@@ -274,6 +274,19 @@ type SourcePackVisualReviewCandidate = {
   useCases?: string[];
 };
 
+type SourcePackPreviewResponse = {
+  chunks?: SourcePackChunkCandidate[];
+  error?: string;
+  manifest?: SourcePackManifest;
+  reviewRun?: SourcePackReviewRun;
+  storage?: {
+    detail: string;
+    durableReviewState: boolean;
+  };
+  validationErrors?: string[];
+  visualCandidates?: SourcePackVisualReviewCandidate[];
+};
+
 const MIN_SOURCE_CHARS = 40;
 
 const sourcePackManifest: SourcePackManifest = {
@@ -416,6 +429,17 @@ const sourcePackVisualCandidates: SourcePackVisualReviewCandidate[] = [
     useCases: ["DPE source review"],
   },
 ];
+
+const sourcePackPreviewSample = JSON.stringify(
+  {
+    chunks: sourcePackChunkCandidates,
+    figures: sourcePackVisualCandidates.filter((candidate) => candidate.type === "figure"),
+    manifest: sourcePackManifest,
+    tables: sourcePackVisualCandidates.filter((candidate) => candidate.type === "table"),
+  },
+  null,
+  2,
+);
 
 const emptyDpeContext: DpeDraftContext = {
   acs: {
@@ -624,6 +648,12 @@ export function ContentStudio() {
   const [reviewSaveStatus, setReviewSaveStatus] =
     useState<SaveReviewStatus>("idle");
   const [storageDetail, setStorageDetail] = useState<string>();
+  const [sourcePackPreviewInput, setSourcePackPreviewInput] = useState("");
+  const [sourcePackPreview, setSourcePackPreview] =
+    useState<SourcePackPreviewResponse>();
+  const [sourcePackPreviewStatus, setSourcePackPreviewStatus] =
+    useState<"idle" | "previewing" | "ready">("idle");
+  const [sourcePackPreviewError, setSourcePackPreviewError] = useState<string>();
 
   const pipeline = useMemo(
     () => contentStudioPipelines.find((option) => option.key === pipelineKey) ?? contentStudioPipelines[0],
@@ -637,6 +667,10 @@ export function ContentStudio() {
     status !== "generating" &&
     sourceText.trim().length >= MIN_SOURCE_CHARS &&
     (pipelineKey === "study_flashcards" || hasDpeCertificateContext(dpeContext));
+  const previewManifest = sourcePackPreview?.manifest ?? sourcePackManifest;
+  const previewChunks = sourcePackPreview?.chunks ?? sourcePackChunkCandidates;
+  const previewVisualCandidates =
+    sourcePackPreview?.visualCandidates ?? sourcePackVisualCandidates;
 
   useEffect(() => {
     let cancelled = false;
@@ -727,6 +761,42 @@ export function ContentStudio() {
       run,
       ...current.filter((candidate) => candidate.id !== run.id),
     ]);
+  }
+
+  async function handlePreviewSourcePack() {
+    if (!sourcePackPreviewInput.trim()) {
+      setSourcePackPreviewError("Paste a source-pack review bundle JSON payload first.");
+      return;
+    }
+
+    setSourcePackPreviewStatus("previewing");
+    setSourcePackPreviewError(undefined);
+
+    try {
+      const parsedPayload = JSON.parse(sourcePackPreviewInput) as unknown;
+      const response = await fetch("/api/admin/content-studio/source-pack-preview", {
+        body: JSON.stringify(parsedPayload),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const body = (await response.json()) as SourcePackPreviewResponse;
+
+      if (!response.ok || !body.manifest || !body.chunks || !body.visualCandidates) {
+        throw new Error(body.error || "Source-pack preview failed.");
+      }
+
+      setSourcePackPreview(body);
+      setSourcePackPreviewStatus("ready");
+    } catch (previewError) {
+      setSourcePackPreviewStatus("idle");
+      setSourcePackPreviewError(
+        previewError instanceof SyntaxError
+          ? "Source-pack preview payload must be valid JSON."
+          : previewError instanceof Error
+            ? previewError.message
+            : "Source-pack preview failed.",
+      );
+    }
   }
 
   async function handleOpenRun(runId: string) {
@@ -1000,10 +1070,90 @@ export function ContentStudio() {
         </>
       )}
 
+      <section className="prompt-version-list" aria-labelledby="source-pack-preview-title">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">Preview API boundary</p>
+            <h3 id="source-pack-preview-title">Paste source-pack bundle JSON</h3>
+            <p>
+              Preview normalizes pasted JSON through an admin-only endpoint. It does
+              not read files, call Drive, save review state, import product content,
+              or publish anything.
+            </p>
+          </div>
+          <FileText size={20} aria-hidden="true" />
+        </div>
+
+        <div className="field-grid">
+          <label>
+            <span>Review bundle JSON</span>
+            <textarea
+              onChange={(event) => setSourcePackPreviewInput(event.target.value)}
+              placeholder="Paste a source-pack review bundle with manifest, chunks, figures, and tables."
+              value={sourcePackPreviewInput}
+            />
+          </label>
+        </div>
+
+        {sourcePackPreviewError && (
+          <div className="form-error" role="alert">
+            {sourcePackPreviewError}
+          </div>
+        )}
+
+        {sourcePackPreview?.validationErrors &&
+          sourcePackPreview.validationErrors.length > 0 && (
+            <div className="runtime-context-panel">
+              <AlertCircle size={18} aria-hidden="true" />
+              <div>
+                <strong>Validation notes</strong>
+                <ul>
+                  {sourcePackPreview.validationErrors.map((validationError) => (
+                    <li key={validationError}>{validationError}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
+        <div className="component-tabs" aria-label="Source-pack preview actions">
+          <button
+            disabled={sourcePackPreviewStatus === "previewing"}
+            onClick={() => void handlePreviewSourcePack()}
+            type="button"
+          >
+            <Eye size={18} />
+            {sourcePackPreviewStatus === "previewing"
+              ? "Previewing"
+              : sourcePackPreviewStatus === "ready"
+                ? "Preview refreshed"
+                : "Preview bundle"}
+          </button>
+          <button
+            onClick={() => {
+              setSourcePackPreviewInput(sourcePackPreviewSample);
+              setSourcePackPreviewError(undefined);
+            }}
+            type="button"
+          >
+            <FileText size={18} />
+            Load sample JSON
+          </button>
+          <button disabled type="button">
+            <ShieldCheck size={18} />
+            Save review disabled
+          </button>
+        </div>
+
+        {sourcePackPreview?.storage?.detail && (
+          <div className="form-note">{sourcePackPreview.storage.detail}</div>
+        )}
+      </section>
+
       <SourcePackReviewScaffold
-        chunks={sourcePackChunkCandidates}
-        manifest={sourcePackManifest}
-        visualCandidates={sourcePackVisualCandidates}
+        chunks={previewChunks}
+        manifest={previewManifest}
+        visualCandidates={previewVisualCandidates}
       />
 
       <section className="prompt-version-list" aria-labelledby="content-stages-title">
