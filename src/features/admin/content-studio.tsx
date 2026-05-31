@@ -491,6 +491,36 @@ type StudyRichCsvImportPreviewResponse = {
   verificationStatusCounts?: Record<string, number>;
 };
 
+type StudyRichCsvTargetField =
+  | "answer"
+  | "audience"
+  | "deckDescription"
+  | "deckTitle"
+  | "draftConfidence"
+  | "draftId"
+  | "draftWarnings"
+  | "externalId"
+  | "hint"
+  | "level"
+  | "question"
+  | "sourceChunkIds"
+  | "sourceLabel"
+  | "sourceNotes"
+  | "sourcePackId"
+  | "sourcePackTitle"
+  | "sourcePages"
+  | "sourceUrl"
+  | "sourceVisualAssetIds"
+  | "subject"
+  | "tags"
+  | "verificationConfidence"
+  | "verificationEvidence"
+  | "verificationNotes"
+  | "verificationStatus"
+  | "verifier";
+
+type StudyRichCsvColumnMapping = Record<StudyRichCsvTargetField, string>;
+
 type ContentStudioWorkspaceSection =
   | "draft_review"
   | "overview"
@@ -507,6 +537,40 @@ const contentStudioWorkspaceSections: ContentStudioWorkspaceSection[] = [
 ];
 
 const MIN_SOURCE_CHARS = 40;
+
+const studyRichCsvSkillHeaders: StudyRichCsvTargetField[] = [
+  "externalId",
+  "deckTitle",
+  "deckDescription",
+  "subject",
+  "audience",
+  "question",
+  "answer",
+  "hint",
+  "level",
+  "tags",
+  "sourcePackId",
+  "sourcePackTitle",
+  "sourceChunkIds",
+  "sourcePages",
+  "sourceVisualAssetIds",
+  "sourceLabel",
+  "sourceUrl",
+  "sourceNotes",
+  "draftId",
+  "draftConfidence",
+  "draftWarnings",
+  "verificationStatus",
+  "verificationConfidence",
+  "verificationNotes",
+  "verificationEvidence",
+  "verifier",
+];
+
+const studyRichCsvRequiredFields: StudyRichCsvTargetField[] = [
+  "question",
+  "answer",
+];
 
 const sourcePackManifest: SourcePackManifest = {
   chunkCount: 3,
@@ -793,8 +857,8 @@ const studyDeckDraftPreviewSample = JSON.stringify(
   2,
 );
 
-const studyRichCsvPreviewSample = `card_id,question,answer,hint,tags,source_chunk_ids,source_page_anchors,source_visual_ids,verification_status,verification_notes
-sample-001,What is the purpose of trim?,To relieve control pressure in steady flight.,Set pitch first then trim.,fundamentals|flight-controls,chunk-001|chunk-002,page=12;page=13,figure-12-a,needs_review,Verifier pass pending`;
+const studyRichCsvPreviewSample = `externalId,deckTitle,deckDescription,subject,audience,question,answer,hint,level,tags,sourcePackId,sourcePackTitle,sourceChunkIds,sourcePages,sourceVisualAssetIds,sourceLabel,sourceUrl,sourceNotes,draftId,draftConfidence,draftWarnings,verificationStatus,verificationConfidence,verificationNotes,verificationEvidence,verifier
+sample-001,Rich CSV Sample Import,Imported through Admin Content Studio rich CSV.,Flight Fundamentals,Private Pilot,What is the purpose of trim?,To relieve control pressure in steady flight.,Set pitch first then trim.,beginner,fundamentals|flight-controls,sample-source-pack,Sample Source Pack,chunk-001|chunk-002,12|13,figure-12-a,PHAK chapter 4,https://example.com/phak/ch4,Use with source-linked context,draft-001,0.86,needs_review_pass,needs_review,0.74,Verifier pass pending,evidence-001|evidence-002,admin-reviewer`;
 
 const emptyDpeContext: DpeDraftContext = {
   acs: {
@@ -892,6 +956,68 @@ function runTrackLabel(run: ContentStudioDraftRun) {
 
 function stringOrEmpty(value: unknown) {
   return typeof value === "string" ? value : "";
+}
+
+function splitCsvLine(line: string, delimiter: "," | "\t") {
+  const values: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const nextChar = line[index + 1];
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (!inQuotes && char === delimiter) {
+      values.push(current.trim());
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  values.push(current.trim());
+  return values.filter(Boolean);
+}
+
+function detectStudyRichCsvHeaders(csvText: string) {
+  const firstLine = csvText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find(Boolean);
+
+  if (!firstLine) {
+    return {
+      delimiter: "," as const,
+      headers: [] as string[],
+    };
+  }
+
+  const delimiter = firstLine.includes("\t") && !firstLine.includes(",") ? "\t" : ",";
+  return {
+    delimiter,
+    headers: splitCsvLine(firstLine, delimiter),
+  };
+}
+
+function buildStudyRichCsvDefaultColumnMapping(): StudyRichCsvColumnMapping {
+  return studyRichCsvSkillHeaders.reduce<StudyRichCsvColumnMapping>(
+    (mapping, field) => {
+      mapping[field] = field;
+      return mapping;
+    },
+    {} as StudyRichCsvColumnMapping,
+  );
 }
 
 function dpeContextFromRun(run: ContentStudioDraftRun): DpeDraftContext {
@@ -1060,6 +1186,8 @@ export function ContentStudio() {
   const [studyImportStatus, setStudyImportStatus] =
     useState<"idle" | "previewing" | "ready" | "saving" | "saved">("idle");
   const [studyImportError, setStudyImportError] = useState<string>();
+  const [studyImportColumnMapping, setStudyImportColumnMapping] =
+    useState<StudyRichCsvColumnMapping>(buildStudyRichCsvDefaultColumnMapping);
 
   const pipeline = useMemo(
     () => contentStudioPipelines.find((option) => option.key === pipelineKey) ?? contentStudioPipelines[0],
@@ -1077,6 +1205,27 @@ export function ContentStudio() {
   const previewChunks = sourcePackPreview?.chunks ?? sourcePackChunkCandidates;
   const previewVisualCandidates =
     sourcePackPreview?.visualCandidates ?? sourcePackVisualCandidates;
+  const detectedStudyImportHeaders = useMemo(() => {
+    const previewHeaders = studyImportPreview?.csvHeaders ?? [];
+    const pastedHeaders = detectStudyRichCsvHeaders(studyImportPrepInput).headers;
+    return previewHeaders.length > 0 ? previewHeaders : pastedHeaders;
+  }, [studyImportPrepInput, studyImportPreview?.csvHeaders]);
+  const mappedStudyImportFields = useMemo(
+    () =>
+      studyRichCsvSkillHeaders.filter((field) => {
+        const header = studyImportColumnMapping[field]?.trim();
+        return Boolean(header && detectedStudyImportHeaders.includes(header));
+      }),
+    [detectedStudyImportHeaders, studyImportColumnMapping],
+  );
+  const missingRequiredStudyImportFields = useMemo(
+    () =>
+      studyRichCsvRequiredFields.filter((field) => {
+        const header = studyImportColumnMapping[field]?.trim();
+        return !header || !detectedStudyImportHeaders.includes(header);
+      }),
+    [detectedStudyImportHeaders, studyImportColumnMapping],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -1341,6 +1490,7 @@ export function ContentStudio() {
     try {
       const response = await fetch("/api/study/content-studio/flashcard-draft", {
         body: JSON.stringify({
+          columnMapping: studyImportColumnMapping,
           csvText: studyImportPrepInput,
           mode: "rich_csv_import_preview",
         }),
@@ -1389,6 +1539,7 @@ export function ContentStudio() {
         .filter(Boolean);
       const response = await fetch("/api/study/content-studio/flashcard-draft", {
         body: JSON.stringify({
+          columnMapping: studyImportColumnMapping,
           createDeckDescription:
             studyImportTargetMode === "new" ? studyImportDeckDescription.trim() || undefined : undefined,
           createDeckTags: studyImportTargetMode === "new" ? createDeckTags : undefined,
@@ -1991,18 +2142,11 @@ export function ContentStudio() {
           <div className="runtime-context-panel">
             <strong>Expected rich CSV fields</strong>
             <div className="question-meta">
-              <span className="pill">card_id</span>
-              <span className="pill">question</span>
-              <span className="pill">answer</span>
-              <span className="pill">hint</span>
-              <span className="pill">tags</span>
-              <span className="pill">source_pack_id</span>
-              <span className="pill">source_chunk_ids</span>
-              <span className="pill">source_page_anchors</span>
-              <span className="pill">source_visual_ids</span>
-              <span className="pill">verification_confidence</span>
-              <span className="pill">verification_status</span>
-              <span className="pill">verification_notes</span>
+              {studyRichCsvSkillHeaders.map((field) => (
+                <span className="pill" key={field}>
+                  {field}
+                </span>
+              ))}
             </div>
           </div>
 
@@ -2015,6 +2159,90 @@ export function ContentStudio() {
                 value={studyImportPrepInput}
               />
             </label>
+          </div>
+
+          <div className="runtime-context-panel">
+            <div className="section-head">
+              <div>
+                <strong>Column mapping</strong>
+                <p>
+                  Map detected CSV headers to Study rich import fields. Defaults align
+                  with the Codex rich CSV exporter.
+                </p>
+              </div>
+              <span className="pill">{mappedStudyImportFields.length}/{studyRichCsvSkillHeaders.length} mapped</span>
+            </div>
+
+            <div className="question-meta">
+              {detectedStudyImportHeaders.length > 0 ? (
+                detectedStudyImportHeaders.map((header) => (
+                  <span className="pill" key={header}>
+                    {header}
+                  </span>
+                ))
+              ) : (
+                <span className="pill">No headers detected yet</span>
+              )}
+            </div>
+
+            <div className="field-grid">
+              {studyRichCsvSkillHeaders.map((field) => (
+                <label key={field}>
+                  <span>{field}</span>
+                  <select
+                    onChange={(event) =>
+                      setStudyImportColumnMapping((current) => ({
+                        ...current,
+                        [field]: event.target.value,
+                      }))
+                    }
+                    value={studyImportColumnMapping[field] ?? ""}
+                  >
+                    <option value="">Unmapped</option>
+                    {Array.from(
+                      new Set([...detectedStudyImportHeaders, ...studyRichCsvSkillHeaders]),
+                    ).map((header) => (
+                      <option key={`${field}-${header}`} value={header}>
+                        {header}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+            </div>
+
+            <div className="component-tabs" aria-label="Study rich CSV mapping actions">
+              <button
+                onClick={() =>
+                  setStudyImportColumnMapping(buildStudyRichCsvDefaultColumnMapping())
+                }
+                type="button"
+              >
+                <FileText size={18} />
+                Reset to skill defaults
+              </button>
+              <button
+                onClick={() =>
+                  setStudyImportColumnMapping((current) =>
+                    studyRichCsvSkillHeaders.reduce<StudyRichCsvColumnMapping>((mapping, field) => {
+                      const preferred = detectedStudyImportHeaders.find((header) => header === field) ?? "";
+                      mapping[field] = preferred || current[field] || field;
+                      return mapping;
+                    }, { ...current }),
+                  )
+                }
+                type="button"
+              >
+                <CheckCircle2 size={18} />
+                Match detected headers
+              </button>
+            </div>
+
+            {missingRequiredStudyImportFields.length > 0 && (
+              <div className="form-note">
+                Required fields missing from mapping: {missingRequiredStudyImportFields.join(", ")}
+              </div>
+            )}
           </div>
 
           <div className="runtime-context-panel">
@@ -2115,7 +2343,8 @@ export function ContentStudio() {
                 studyImportStatus === "previewing" ||
                 studyImportStatus === "saving" ||
                 !studyImportPreview ||
-                (studyImportPreview.validationErrors?.length ?? 0) > 0
+                (studyImportPreview.validationErrors?.length ?? 0) > 0 ||
+                missingRequiredStudyImportFields.length > 0
               }
               onClick={() => void handleSaveStudyRichCsvImport()}
               type="button"

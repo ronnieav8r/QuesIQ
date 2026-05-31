@@ -47,8 +47,8 @@ Top-level workspace sections:
   review scaffold and durable review-export save actions.
 - Product packet preview: preview-only Study generation packet, Study deck
   draft + verifier queue packet, and DPE reference packet bridge.
-- Study import prep: preview-only planning panel for future rich flashcard CSV
-  preview/import flow.
+- Study import prep: rich flashcard CSV preview/import surface with admin deck
+  targeting and column mapping.
 - Draft review: saved run review state and draft detail panels for the selected
   run.
 
@@ -354,15 +354,23 @@ Verified state.
 
 ## Study Import Prep
 
-The new Study import prep workspace is a planning surface only. It includes a
-textarea for rich flashcard CSV payloads, a static sample row, and expected
-fields such as card content, source chunk/page/visual references, and
-verification metadata.
+The Study import prep workspace supports admin-operated rich CSV ingestion for
+Study decks using Study-owned preview/save modes. It includes:
 
-The panel does not call product endpoints yet. `rich_csv_import_preview` should
-be wired only after the Study worker merges the backend preview route.
-Import/write controls remain disabled in Admin until product-owned import
-controls are available.
+- Rich CSV paste and preview (`mode: "rich_csv_import_preview"`).
+- Deck targeting (`create new deck` or `existing deck id`) for save mode.
+- Column mapping UI that maps detected CSV headers to rich import fields and
+  sends `columnMapping` in preview/save payloads.
+- Skill-aligned default mapping for these exporter headers:
+  `externalId`, `deckTitle`, `deckDescription`, `subject`, `audience`,
+  `question`, `answer`, `hint`, `level`, `tags`, `sourcePackId`,
+  `sourcePackTitle`, `sourceChunkIds`, `sourcePages`, `sourceVisualAssetIds`,
+  `sourceLabel`, `sourceUrl`, `sourceNotes`, `draftId`, `draftConfidence`,
+  `draftWarnings`, `verificationStatus`, `verificationConfidence`,
+  `verificationNotes`, `verificationEvidence`, `verifier`.
+
+Guardrails still apply: no Drive loading, no raw source-pack runtime reads, no
+DPE runtime writes, and no Publish/Official broad Verified behavior in Admin.
 
 ## Ownership
 
