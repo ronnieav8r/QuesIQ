@@ -1063,3 +1063,16 @@ changing content:
    ready for saved sessions, reviews, runtime checks, and quests.
 4. Admin DPE preflight now checks for the Me target setup summary markers.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 71 (Incomplete Target Start Label)
+
+This slice makes the Practice start action reflect target readiness without
+changing content:
+
+1. Practice setup now changes the typed launch label to `Start with incomplete
+   target` when required target setup fields are missing.
+2. Learners can still continue typed practice, but the launch action now matches
+   the warning shown on the same screen.
+3. Starting state still takes priority and shows `Starting session`.
+4. Admin DPE preflight now checks for the incomplete-target start label marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.

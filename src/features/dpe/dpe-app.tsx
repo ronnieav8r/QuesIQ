@@ -2206,6 +2206,11 @@ function PracticeSetupScreen({
         : "";
   const privatePilotTrack = getDpeTargetTrackById(defaultDpeTargetTrackId) ?? dpeTargetTracks[0];
   const targetMissing = buildTargetMissingFields(dpeProfile);
+  const typedStartLabel = sessionStarting
+    ? "Starting session"
+    : targetMissing.length > 0
+      ? "Start with incomplete target"
+      : "Type Answers";
 
   return (
     <section className="screen">
@@ -2391,7 +2396,7 @@ function PracticeSetupScreen({
               </button>
               <button className="button" onClick={onStartSession} disabled={practiceBlocked || sessionStarting}>
                 <ListChecks />
-                {sessionStarting ? "Starting session" : "Type Answers"}
+                {typedStartLabel}
               </button>
             </div>
             {voiceDisabledReason && <p className="muted mt-4">{voiceDisabledReason}</p>}
