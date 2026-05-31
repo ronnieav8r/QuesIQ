@@ -27,7 +27,7 @@ export default async function StudyDecksPage() {
         <div>
           <p className="eyebrow">QuesIQ Study</p>
           <h1>Decks</h1>
-          <p>Create, import, organize, and publish Study decks from one place.</p>
+          <p>Create, import, organize, and share your Study decks from one place.</p>
         </div>
         <div className="inline-actions">
           <Link className="button-link secondary" href="/study/library">
@@ -44,7 +44,8 @@ export default async function StudyDecksPage() {
       {!userId ? (
         <section className="panel study-empty-panel">
           <h2>Sign in to see your decks</h2>
-          <Link className="button-link" href="/">
+          <p>Your decks, folders, imports, and study history stay tied to your QuesIQ account.</p>
+          <Link className="button-link" href="/login?next=/study/decks">
             Sign In
           </Link>
         </section>
@@ -69,7 +70,7 @@ export default async function StudyDecksPage() {
             <div>
               <p className="eyebrow">Create</p>
               <h2>Start with a deck</h2>
-              <p>Choose how this deck should get its cards.</p>
+              <p>Pick the fastest path for the source material you already have.</p>
             </div>
             <Link className="button-link secondary" href="/study/history">
               <History size={14} aria-hidden="true" />
@@ -84,7 +85,7 @@ export default async function StudyDecksPage() {
                 <PencilLine size={18} aria-hidden="true" />
               </div>
               <h3>Manual deck</h3>
-              <p>Create the deck shell, then add cards by hand.</p>
+              <p>Create a deck shell, add cards by hand, and keep everything private until you choose Public.</p>
               <div className="study-deck-card__footer">
                 <span>Best for small or custom sets</span>
               </div>
@@ -98,8 +99,8 @@ export default async function StudyDecksPage() {
               <h3>Import cards</h3>
               <p>
                 {decks.length > 0
-                  ? "Add cards to an existing deck from text, CSV, TSV, PDF, images, or URLs."
-                  : "Create a deck first, then import cards from text, files, or URLs."}
+                  ? "Add cards to your newest deck from text, CSV, TSV, PDF, images, or URLs."
+                  : "Create a deck first, then bring in text, files, or URLs."}
               </p>
               <div className="study-deck-card__footer">
                 <span>{decks.length > 0 ? "Uses your most recent deck" : "Creates a deck first"}</span>
@@ -108,27 +109,27 @@ export default async function StudyDecksPage() {
 
             <div className="study-deck-card" aria-disabled="true">
               <div className="study-deck-card__header">
-                <span className="badge">AI Generate</span>
+                <span className="badge">AI Draft</span>
                 <Sparkles size={18} aria-hidden="true" />
               </div>
-              <h3>Generate from a prompt</h3>
-              <p>AI deck generation belongs here, but the safe generation endpoint is not enabled yet.</p>
+              <h3>Generate a review draft</h3>
+              <p>Student-facing AI generation is parked until review and publish controls are ready.</p>
               <div className="study-deck-card__footer">
-                <span>Coming soon</span>
+                <span>No Official or Verified status from generation</span>
               </div>
             </div>
 
             {isAdmin && (
-              <Link className="study-deck-card" href="/admin?product=study">
+              <Link className="study-deck-card" href="/admin?product=content">
                 <div className="study-deck-card__header">
                   <span className="badge">Official</span>
                   <ShieldCheck size={18} aria-hidden="true" />
                 </div>
-                <h3>Admin official generation</h3>
-                <p>Create and curate QuesIQ official decks from the protected Study admin lane.</p>
+                <h3>Admin content workflow</h3>
+                <p>Create review-ready Study drafts in Content Studio. Curation decides Official and Verified later.</p>
                 <div className="study-deck-card__footer">
                   <CheckCircle2 size={14} aria-hidden="true" />
-                  <span>Admin only</span>
+                  <span>Admin only - generation does not publish</span>
                 </div>
               </Link>
             )}
@@ -144,7 +145,7 @@ export default async function StudyDecksPage() {
           {decks.length === 0 ? (
             <section className="panel study-empty-panel">
               <h2>No decks yet.</h2>
-              <p>Create your first Study deck, then add cards manually or import content.</p>
+              <p>Create a manual deck first. Once it exists, you can add cards by hand or import from notes, files, and URLs.</p>
               <Link className="button-link" href="/study/decks/new">
                 Create Deck
               </Link>

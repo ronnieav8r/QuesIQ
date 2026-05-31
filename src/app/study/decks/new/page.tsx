@@ -17,7 +17,7 @@ export default async function NewStudyDeckPage() {
       <div>
         <p className="eyebrow">QuesIQ Study</p>
         <h1>New Deck</h1>
-        <p>Create a deck, then add cards manually.</p>
+        <p>Create the deck shell first. After saving, add cards manually or import a batch from your source material.</p>
       </div>
       <section className="panel study-empty-panel">
         <StudyDeckForm />

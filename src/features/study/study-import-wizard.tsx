@@ -405,7 +405,7 @@ export function StudyImportWizard({ deckId, deckTitle }: StudyImportWizardProps)
     return (
       <div className="study-import-wizard import-wizard--loading">
         <div className="spinner" />
-        <p>Que is analyzing your content...</p>
+        <p>Que is drafting cards for review. Nothing is saved, Official, or Verified yet.</p>
       </div>
     );
   }
@@ -446,9 +446,9 @@ export function StudyImportWizard({ deckId, deckTitle }: StudyImportWizardProps)
         <div className="import-wizard__review-header">
           <p>
             {sourceType === "csv" ? (
-              <><strong>{drafts.length}</strong> cards ready. Review and edit before saving.</>
+              <><strong>{drafts.length}</strong> cards ready. Review and edit before saving to this deck.</>
             ) : (
-              <>Que found <strong>{drafts.length}</strong> flashcard pairs. Review and edit before saving.</>
+              <>Que found <strong>{drafts.length}</strong> flashcard pairs. Review and edit before saving to this deck.</>
             )}
           </p>
           <div className="inline-actions">
@@ -529,7 +529,7 @@ export function StudyImportWizard({ deckId, deckTitle }: StudyImportWizardProps)
     return (
       <div className="study-import-wizard import-wizard--loading">
         <div className="spinner" />
-        <p>Saving cards...</p>
+        <p>Saving selected cards to your deck...</p>
       </div>
     );
   }

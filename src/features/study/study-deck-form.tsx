@@ -206,7 +206,7 @@ export function StudyDeckForm({ deckId, initialValues }: StudyDeckFormProps) {
           onChange={(event) => set("isPublic", event.target.checked)}
           type="checkbox"
         />
-        <span>Make this deck public</span>
+        <span>Make this deck Public so others can find and copy it. Official and Verified labels are separate QuesIQ review states.</span>
       </label>
       {error && <p className="form-error">{error}</p>}
       <div className="inline-actions">
