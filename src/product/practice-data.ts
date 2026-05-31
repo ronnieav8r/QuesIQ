@@ -15,15 +15,6 @@ export const initialInterviewContext: InterviewContext = {
 
 export const practiceModes: PracticeMode[] = [
   {
-    description: "Shape the opening answer that sets the tone.",
-    key: "first_impression",
-    name: "First Impression",
-    promptInstructions:
-      "Run this as a first-minute interview opening practice. Start like a real interviewer with one natural version of 'Tell me about yourself' or 'Walk me through your background as it relates to this role.' Let the candidate give the full opening answer before coaching. After the answer, focus feedback on first impression: clarity of opening, confidence, role relevance, specificity, length, and whether the answer gives the interviewer a useful next thread. Ask for one retry when helpful. Do not turn this into a broad mock interview or a rapid-fire drill.",
-    questionTypeRequired: false,
-    use: "Your intro and early presence",
-  },
-  {
     description: "Work through answers with Que coaching in the moment.",
     key: "coaching",
     name: "Coaching",
