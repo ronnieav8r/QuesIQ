@@ -1407,6 +1407,10 @@ function HomeScreen({
     : progress.nextPracticeAction;
   const completedSessions = progressionSummary?.completedSessions ?? progress.completedSessions;
   const reviewedSessions = progressionSummary?.reviewedSessions ?? progress.reviewedSessions;
+  const runtimeErrorCount = runtimeCheck?.summary?.errors ?? 0;
+  const runtimeWarningCount = runtimeCheck?.summary?.warnings ?? 0;
+  const runtimeReady =
+    runtimeCheck?.available === true && runtimeCheck.status === "ok" && runtimeErrorCount === 0;
   const checklistItems = [
     {
       id: "target",
@@ -1458,6 +1462,32 @@ function HomeScreen({
           : progressionSummary
             ? "ready"
             : "pending",
+    },
+    {
+      id: "review-ai",
+      title: "Review AI ready",
+      detail: publicStatus?.reviewAiConfigured
+        ? "Transcript-backed AI review generation is configured."
+        : "AI review is not configured here. Fallback reviews and retry recovery remain available.",
+      status: publicStatus?.reviewAiConfigured ? "ready" : "fallback",
+    },
+    {
+      id: "voice-ai",
+      title: "Voice AI ready",
+      detail: publicStatus?.realtimeVoiceConfigured
+        ? "Realtime voice setup is configured for live oral practice."
+        : "Voice AI is not configured here. Typed practice uses the same prompts, transcript shape, and review path.",
+      status: publicStatus?.realtimeVoiceConfigured ? "ready" : "typed fallback",
+    },
+    {
+      id: "runtime-check",
+      title: "Signed-in services",
+      detail: runtimeReady
+        ? "Profile, practice history, progression, and diagnostics are reachable for this account."
+        : runtimeCheck
+          ? `${runtimeErrorCount} error${runtimeErrorCount === 1 ? "" : "s"} and ${runtimeWarningCount} warning${runtimeWarningCount === 1 ? "" : "s"} from account runtime checks.`
+          : "Account runtime checks are still loading.",
+      status: runtimeReady ? "ready" : runtimeCheck ? "attention" : "checking",
     },
     {
       id: "next",

@@ -534,3 +534,16 @@ This slice improves DPE voice recovery before launch without changing content:
 3. Storage-unavailable and voice-unavailable states are now distinct, so
    learners and QA can tell whether the issue is session persistence or
    realtime configuration.
+
+## MVP Learner Polish Slice 30 (Home Operational Checklist)
+
+This slice makes the DPE Home readiness checklist more operational without
+changing content:
+
+1. The MVP readiness checklist now includes Review AI, Voice AI, and signed-in
+   account service readiness alongside target setup and practice milestones.
+2. Voice-unavailable and review-AI-unavailable states point learners toward
+   typed practice, fallback reviews, and retry recovery instead of presenting
+   them as silent failures.
+3. Signed-in runtime check warnings/errors are summarized in the top checklist
+   before the detailed runtime panel.
