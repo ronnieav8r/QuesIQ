@@ -90,7 +90,7 @@ export function buildStudySourcePackVerificationQueuePreview(
 
     return {
       answer: card.answer,
-      cardIndex: index,
+      cardIndex: index + 1,
       existingWarnings: card.warnings,
       question: card.question,
       recommendedVerifierAction: blocked ? "hold_for_human_review" : "queued_for_verifier",
