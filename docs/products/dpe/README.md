@@ -77,3 +77,37 @@ through a deliberate content-import slice.
 5. Add durable Content Studio run storage and publish/audit workflow only from
    the Admin/platform lane; DPE currently treats generated drafts as review
    inputs, not published content.
+
+## DPE Readiness Quest Track (Pre-Migration Shape)
+
+Current DPE lane now has a non-persistent readiness quest preview using existing
+session/review/profile data. This is not a certification state and does not
+award persisted XP yet.
+
+Planned DPE quest/rule set:
+
+1. `first oral session`: complete one DPE oral session.
+2. `review completed`: generate one transcript-backed review.
+3. `ACS area/task coverage`: practice 5 unique ACS area/task combinations.
+4. `question count`: answer 20 prompts total.
+5. `score threshold`: reach readiness score 4+ in 3 reviewed sessions.
+6. `weak ACS resolved`: resolve 2 weak ACS focus keys after re-practice.
+7. `checkride target set`: set aircraft and checkride date in DPE Me.
+
+Next wiring points for migration-backed XP awards:
+
+1. `PATCH /api/dpe/practice-sessions/[id]` when status transitions to
+   `completed` (`dpe_session_completed`).
+2. `POST /api/dpe/practice-sessions/[id]/review` when generated review saves
+   (`dpe_review_completed`).
+3. `PATCH /api/dpe/practice-sessions/[id]` and
+   `POST /api/dpe/practice-sessions/[id]/artifact` for unique
+   `acsArea.acsTask` practice keys (`dpe_acs_area_task_practiced`).
+4. `POST /api/dpe/practice-sessions/[id]/review` when
+   `review.scores.checkrideReadiness` crosses threshold
+   (`dpe_score_threshold_reached`).
+5. `POST /api/dpe/practice-sessions/[id]/review` for historical weak-focus
+   resolution (`dpe_weak_acs_resolved`).
+
+Until DPE has a migration slot, keep this slice read-only and derived from
+existing DPE session/review/profile records.

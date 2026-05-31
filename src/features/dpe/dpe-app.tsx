@@ -29,6 +29,11 @@ import {
   type QuestionApiResponse,
   type DpeQuestion
 } from "./questions";
+import {
+  buildAreaTaskCoverageCount,
+  buildDpeReadinessQuestProgress,
+  dpeQuestDefinitions,
+} from "./progression";
 
 type Screen = "home" | "practice" | "scenarios" | "history" | "content" | "me";
 type PracticeMode = "oral" | "visual" | "combined";
@@ -56,7 +61,11 @@ type ProgressSummary = {
   completedSessions: number;
   latestReview: LocalSession | null;
   nextPracticeAction: string;
+  reviewedSessions: number;
+  scoredSessionsAtOrAbove4: number;
   skippedPrompts: number;
+  uniqueAreaTasksPracticed: number;
+  weakFocusesResolved: number;
   weakFocuses: ProgressFocus[];
 };
 
@@ -892,10 +901,24 @@ function HomeScreen({
   onPractice: () => void;
   storedSessions: StoredPracticeSession[];
 }) {
-  const progress = buildProgressSummary([
+  const sessionHistory = [
     ...(currentSession?.endedAt ? [currentSession] : []),
     ...storedSessions.map((storedSession) => reviewFromStoredSession(storedSession)).filter(isSession),
-  ]);
+  ];
+  const progress = buildProgressSummary(sessionHistory);
+  const readinessQuestProgress = buildDpeReadinessQuestProgress({
+    answeredPrompts: progress.answeredPrompts,
+    completedSessions: progress.completedSessions,
+    hasCheckrideTarget: hasCheckrideTarget(dpeProfile),
+    reviewedSessions: progress.reviewedSessions,
+    scoredSessionsAtOrAbove4: progress.scoredSessionsAtOrAbove4,
+    uniqueAreaTasksPracticed: progress.uniqueAreaTasksPracticed,
+    weakFocusesResolved: progress.weakFocusesResolved,
+  });
+  const readinessCompleted = readinessQuestProgress.filter((quest) => quest.done).length;
+  const readinessPercent = readinessQuestProgress.length
+    ? Math.round((readinessCompleted / readinessQuestProgress.length) * 100)
+    : 0;
   const targetLine = [
     "Private Pilot ASEL",
     dpeProfile.aircraft,
@@ -974,13 +997,34 @@ function HomeScreen({
         <div className="panel">
           <div className="section-head">
             <div>
-              <h3>Progress scaffold</h3>
+              <h3>Readiness quest track (preview)</h3>
               <p>
-                Reviews are deterministic until AI review is available: completion, skipped prompts,
-                answer depth, and ACS references drive the next recommendation.
+                This is a DPE readiness preview only. It does not award persisted XP yet and is not
+                a certification or publish state.
               </p>
             </div>
             <Radio />
+          </div>
+          <div className="stat-strip mt-4">
+            <Stat label="Track progress" value={`${readinessPercent}%`} />
+            <Stat label="Completed" value={`${readinessCompleted}/${readinessQuestProgress.length}`} />
+            <Stat label="Reviewed sessions" value={`${progress.reviewedSessions}`} />
+            <Stat label="ACS coverage" value={`${progress.uniqueAreaTasksPracticed}`} />
+          </div>
+          <div className="question-list mt-4">
+            {readinessQuestProgress.map((quest) => (
+              <div className="raised-card" key={quest.id}>
+                <div className="section-head">
+                  <strong>{quest.title}</strong>
+                  <span className="pill">{quest.done ? "ready" : "in progress"}</span>
+                </div>
+                <p>{quest.current}/{quest.target}</p>
+                <p className="muted">
+                  {dpeQuestDefinitions.find((definition) => definition.id === quest.id)?.description ??
+                    "DPE readiness objective"}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -1573,6 +1617,10 @@ function formatDateLabel(value: string) {
   }).format(date);
 }
 
+function hasCheckrideTarget(profile: DpeProfileState) {
+  return Boolean(profile.aircraft.trim() && profile.checkrideDate);
+}
+
 function ReviewList({ items, fallback }: { items: string[]; fallback?: string }) {
   const displayItems = items.length > 0 ? items : fallback ? [fallback] : [];
 
@@ -1860,6 +1908,13 @@ function buildProgressSummary(sessions: LocalSession[]): ProgressSummary {
   const answeredPrompts = answers.filter((answer) => !answer.skipped && answer.response.trim()).length;
   const skippedPrompts = answers.filter((answer) => answer.skipped || !answer.response.trim()).length;
   const weakFocuses = buildWeakFocuses(answers).slice(0, 3);
+  const reviewedSessions = sessions.filter((session) => session.review?.status === "generated").length;
+  const scoredSessionsAtOrAbove4 = sessions.filter((session) => {
+    const score = session.review?.scores.checkrideReadiness;
+    return typeof score === "number" && score >= 4;
+  }).length;
+  const uniqueAreaTasksPracticed = buildAreaTaskCoverageCount(sessions);
+  const weakFocusesResolved = estimateResolvedWeakFocuses(sessions);
   const latestReview = sessions[0] ?? null;
 
   return {
@@ -1872,9 +1927,27 @@ function buildProgressSummary(sessions: LocalSession[]): ProgressSummary {
         : completedSessions
           ? "Next: repeat the last ACS task and add practical limits, examples, and risk-management detail."
           : "Begin with Area I, Task A: pilot qualifications and required documents.",
+    reviewedSessions,
+    scoredSessionsAtOrAbove4,
     skippedPrompts,
+    uniqueAreaTasksPracticed,
+    weakFocusesResolved,
     weakFocuses,
   };
+}
+
+function estimateResolvedWeakFocuses(sessions: LocalSession[]) {
+  if (sessions.length < 2) return 0;
+
+  const latestWeak = new Set(buildWeakFocuses(sessions[0]?.answers ?? []).map((focus) => focus.key));
+  const historicalWeak = new Set(
+    buildWeakFocuses(sessions.slice(1).flatMap((session) => session.answers)).map((focus) => focus.key),
+  );
+  let resolved = 0;
+  for (const key of historicalWeak) {
+    if (!latestWeak.has(key)) resolved += 1;
+  }
+  return resolved;
 }
 
 function average(values: number[]) {
