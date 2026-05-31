@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { getStudyDecksWithStats, getStudyFolders } from "@/features/study/study-data";
 import { StudyFolderManager } from "@/features/study/study-folder-manager";
 import { isAdminEmail } from "@/server/admin";
+import { STUDY_SOURCE_PACK_DRAFT_STATUS } from "@/server/study/study-source-pack-contract";
 
 export default async function StudyDecksPage() {
   const session = await auth();
@@ -130,6 +131,10 @@ export default async function StudyDecksPage() {
                 <div className="study-deck-card__footer">
                   <CheckCircle2 size={14} aria-hidden="true" />
                   <span>Admin only - generation does not publish</span>
+                </div>
+                <div className="study-deck-card__footer">
+                  <span>{STUDY_SOURCE_PACK_DRAFT_STATUS.label}</span>
+                  <strong>{STUDY_SOURCE_PACK_DRAFT_STATUS.status}</strong>
                 </div>
               </Link>
             )}

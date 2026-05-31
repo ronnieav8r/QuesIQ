@@ -235,6 +235,15 @@ the visual/UI level during the conversation:
   fingerprint, prompt metadata, card counts, low-confidence indexes,
   missing-field flags, review checklist flags, and review sections without
   publishing, marking Official, or marking cards Verified
+- Study source-pack draft contract scaffold at
+  `src/server/study/study-source-pack-contract.ts`; it models reviewed
+  source-pack chunks and reviewed figure/table/page-crop assets as draft-only
+  Study deck plans while preserving source citations, page/source metadata,
+  chunk ids, visual asset ids, subjects, and tags. The contract explicitly
+  disables Study deck writes, Publish, Official, and Verified state changes.
+- `/study/decks` shows admins a read-only source-pack-to-deck draft readiness
+  row in the existing Content Studio entry card. The row links to Admin Content
+  Studio but does not store content or enable publish controls.
 - source-style import wizard polish for focus hints, URL failure display,
   CSV/Quizlet/Anki guidance, select/deselect review controls, column swapping,
   row/URL counts, and save/done copy
@@ -369,6 +378,12 @@ These are the remaining practical gaps after the broad Study import passes.
    Additional Study-only milestones (due-queue clears, verified-card goals,
    subject depth) are future expansion work.
 
+8. Source-pack import is intentionally contract-only. Reviewed source-pack
+   chunks and reviewed visual assets can now be represented as draft deck
+   plans, but there is no publish flow, no Study deck/card write, no Official
+   status, no Verified status, and no real PHAK or Google Drive content in the
+   repo.
+
 ## Remaining Port Slices
 
 Recommended order from least risky/confusing to largest:
@@ -403,6 +418,13 @@ Recommended order from least risky/confusing to largest:
    Validate XP pace and quest thresholds with real usage, then expand
    Study-only events and quests if needed (for example due-queue and
    verified-card milestones).
+
+7. Source-pack-to-deck draft importer.
+   After Admin visual review and product publish controls exist, wire reviewed
+   source-pack chunks/assets into draft Study decks through the contract in
+   `src/server/study/study-source-pack-contract.ts`. Keep citations and tags
+   attached through review, and add explicit human publish/Official/Verified
+   controls before any live Study library write.
 
 ## Recommended Next Slice
 
