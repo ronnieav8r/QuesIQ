@@ -1038,3 +1038,16 @@ This slice prevents overlapping History review jobs without changing content:
 3. Other sessions explain that another review generation is in progress.
 4. Admin DPE preflight now checks for the History review single-flight markers.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 69 (Embedded Review Retry Guard)
+
+This slice extends the History review single-flight rule to the embedded review
+panel without changing content:
+
+1. The shared review screen now accepts a retry-disabled reason.
+2. The embedded History review disables its Retry AI Review action when another
+   stored-session review request is already running.
+3. The embedded panel shows the same `Another review generation is in progress`
+   explanation used by the stored-session buttons.
+4. Admin DPE preflight now checks for the embedded retry-disabled marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.

@@ -129,6 +129,7 @@ const codeContracts = [
       "storedReviewSelected",
       "historyReviewBusy",
       "Another review generation is in progress",
+      "retryDisabledReason",
       "onStartNewSession",
       "onRetryReview",
       "session.persisted && onRetryReview",

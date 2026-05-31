@@ -2560,11 +2560,13 @@ function ReviewScreen({
   session,
   reviewGenerating,
   onRetryReview,
+  retryDisabledReason,
   onReset
 }: {
   session: LocalSession;
   reviewGenerating?: boolean;
   onRetryReview?: () => Promise<void>;
+  retryDisabledReason?: string;
   onReset: () => void;
 }) {
   const answered = session.answers.filter((answer) => !answer.skipped && answer.response).length;
@@ -2682,7 +2684,12 @@ function ReviewScreen({
           )}
           <div className="inline-actions mt-4">
             {session.persisted && onRetryReview && (
-              <button className="button" disabled={reviewGenerating} onClick={onRetryReview}>
+              <button
+                className="button"
+                disabled={reviewGenerating || Boolean(retryDisabledReason)}
+                title={retryDisabledReason}
+                onClick={onRetryReview}
+              >
                 <BadgeCheck />
                 {reviewGenerating ? "Generating" : retryLabel}
               </button>
@@ -2702,6 +2709,9 @@ function ReviewScreen({
               Review generation in progress. New Session will be available when the review is
               ready.
             </p>
+          )}
+          {retryDisabledReason && !reviewGenerating && (
+            <p className="muted mt-2">{retryDisabledReason}</p>
           )}
         </div>
       </div>
@@ -4186,6 +4196,11 @@ function HistoryScreen({
                   setRetryingReviewId(null);
                   recordReviewAttempt(selectedReview.id, result);
                 }
+              : undefined
+          }
+          retryDisabledReason={
+            historyReviewBusy && retryingReviewId !== selectedReview.id
+              ? "Another review generation is in progress"
               : undefined
           }
           reviewGenerating={retryingReviewId === selectedReview.id}

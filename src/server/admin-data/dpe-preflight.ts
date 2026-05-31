@@ -239,6 +239,7 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "storedReviewSelected",
       "historyReviewBusy",
       "Another review generation is in progress",
+      "retryDisabledReason",
       "onStartNewSession",
       "session.persisted && onRetryReview",
     ]),
