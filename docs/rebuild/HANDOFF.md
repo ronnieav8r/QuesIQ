@@ -9,7 +9,8 @@ Last updated: 2026-05-30
   Use the manager/worker clone flow in `docs/rebuild/BRANCHING_AND_RELEASES.md`
   and `docs/platform/PARALLEL_DEVELOPMENT.md`. The older
   `C:\Users\weeks\Documents\github\QuesIQ` checkout is reference/archive.
-- Current repository head is `bb2ac92 Update handoff docs after content studio integration`.
+- Latest integration pass is `793a7d2 Merge DPE readiness UX polish`, followed
+  by a docs-only handoff/status update.
   `QuesIQ-manager/main` is clean and aligned with `origin/main` at that commit.
 - The current worker-thread set is Manager, Admin, Interview, Study, and DPE.
   Admin owns shared `/admin` and Content Studio work; product workers own their
