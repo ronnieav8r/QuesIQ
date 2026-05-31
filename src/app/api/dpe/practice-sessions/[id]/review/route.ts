@@ -43,6 +43,26 @@ function normalizeReview(value: Partial<DpeReviewJson>, model: string | null): D
   };
 }
 
+async function saveFallbackReview(input: {
+  id: string;
+  transcriptJson: unknown;
+  userId: string;
+}) {
+  const review = buildLocalDpeReviewFromTranscript(input.transcriptJson);
+  const updatedSession = await saveDpeReview({
+    id: input.id,
+    promptConfigKey: PROMPT_CONFIG_KEY,
+    promptConfigVersion: PROMPT_CONFIG_VERSION,
+    review,
+  });
+  await recordDpeReviewCompleted({
+    dpeSessionId: updatedSession.id,
+    userId: input.userId,
+  });
+
+  return { review, updatedSession };
+}
+
 export async function POST(_request: Request, context: RouteContext) {
   const { id } = await context.params;
   const session = await auth();
@@ -51,31 +71,33 @@ export async function POST(_request: Request, context: RouteContext) {
     return NextResponse.json({ available: false, error: "Sign-in required." }, { status: 401 });
   }
 
+  let practiceSession: Awaited<ReturnType<typeof getOwnedDpePracticeSession>> | null = null;
+  let aiRunId: string | null = null;
+  let aiRunFinalized = false;
+
   try {
-    const practiceSession = await getOwnedDpePracticeSession(id, session.user.id);
+    practiceSession = await getOwnedDpePracticeSession(id, session.user.id);
 
     if (!practiceSession) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    const model = process.env.OPENAI_REVIEW_MODEL ?? "gpt-4o-mini";
+    const model =
+      process.env.OPENAI_DPE_REVIEW_MODEL ??
+      process.env.OPENAI_REVIEW_MODEL ??
+      "gpt-4o-mini";
     const apiKey = getOpenAiApiKey("dpe");
 
     if (!apiKey) {
-      const review = buildLocalDpeReviewFromTranscript(practiceSession.transcriptJson);
-      const updatedSession = await saveDpeReview({
+      const { review, updatedSession } = await saveFallbackReview({
         id,
-        promptConfigKey: PROMPT_CONFIG_KEY,
-        promptConfigVersion: PROMPT_CONFIG_VERSION,
-        review,
-      });
-      await recordDpeReviewCompleted({
-        dpeSessionId: updatedSession.id,
+        transcriptJson: practiceSession.transcriptJson,
         userId: session.user.id,
       });
 
       return NextResponse.json({
         available: true,
+        fallback: true,
         generated: false,
         review,
         session: updatedSession,
@@ -95,6 +117,7 @@ export async function POST(_request: Request, context: RouteContext) {
       runType: "dpe_review",
       userId: session.user.id,
     });
+    aiRunId = aiRun.id;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       body: JSON.stringify({
@@ -161,10 +184,23 @@ export async function POST(_request: Request, context: RouteContext) {
         rawJson: { status: response.status },
         status: "failed",
       });
-      return NextResponse.json({ available: false, error: "Review generation failed." }, { status: 200 });
+      aiRunFinalized = true;
+      const { review, updatedSession } = await saveFallbackReview({
+        id,
+        transcriptJson: practiceSession.transcriptJson,
+        userId: session.user.id,
+      });
+      return NextResponse.json({
+        aiReviewFailed: true,
+        available: true,
+        fallback: true,
+        generated: false,
+        review,
+        session: updatedSession,
+      });
     }
 
-    const payload = (await response.json()) as {
+    let payload: {
       choices?: Array<{ message?: { content?: string } }>;
       id?: string;
       usage?: {
@@ -173,8 +209,56 @@ export async function POST(_request: Request, context: RouteContext) {
         total_tokens?: number;
       };
     };
+    try {
+      payload = (await response.json()) as typeof payload;
+    } catch {
+      await completeAiRun(aiRun.id, {
+        errorMessage: "DPE review response was not valid JSON.",
+        rawJson: { status: response.status },
+        status: "failed",
+      });
+      aiRunFinalized = true;
+      const { review, updatedSession } = await saveFallbackReview({
+        id,
+        transcriptJson: practiceSession.transcriptJson,
+        userId: session.user.id,
+      });
+      return NextResponse.json({
+        aiReviewFailed: true,
+        available: true,
+        fallback: true,
+        generated: false,
+        review,
+        session: updatedSession,
+      });
+    }
+
     const content = payload.choices?.[0]?.message?.content ?? "{}";
-    const review = normalizeReview(JSON.parse(content) as Partial<DpeReviewJson>, model);
+    let parsedReview: Partial<DpeReviewJson>;
+    try {
+      parsedReview = JSON.parse(content) as Partial<DpeReviewJson>;
+    } catch {
+      await completeAiRun(aiRun.id, {
+        errorMessage: "DPE review content was not valid JSON.",
+        rawJson: { content },
+        status: "failed",
+      });
+      aiRunFinalized = true;
+      const { review, updatedSession } = await saveFallbackReview({
+        id,
+        transcriptJson: practiceSession.transcriptJson,
+        userId: session.user.id,
+      });
+      return NextResponse.json({
+        aiReviewFailed: true,
+        available: true,
+        fallback: true,
+        generated: false,
+        review,
+        session: updatedSession,
+      });
+    }
+    const review = normalizeReview(parsedReview, model);
     const updatedSession = await saveDpeReview({
       id,
       promptConfigKey: PROMPT_CONFIG_KEY,
@@ -199,6 +283,7 @@ export async function POST(_request: Request, context: RouteContext) {
       status: "succeeded",
       totalTokens: payload.usage?.total_tokens,
     });
+    aiRunFinalized = true;
 
     return NextResponse.json({
       available: true,
@@ -208,6 +293,39 @@ export async function POST(_request: Request, context: RouteContext) {
     });
   } catch (error) {
     console.error("DPE review generation failed", error);
+
+    if (aiRunId && !aiRunFinalized) {
+      try {
+        await completeAiRun(aiRunId, {
+          errorMessage: error instanceof Error ? error.message : "DPE review generation failed.",
+          rawJson: { sessionId: id },
+          status: "failed",
+        });
+        aiRunFinalized = true;
+      } catch {
+        // Keep fallback path alive even if AI run finalization fails.
+      }
+    }
+
+    if (practiceSession) {
+      try {
+        const { review, updatedSession } = await saveFallbackReview({
+          id,
+          transcriptJson: practiceSession.transcriptJson,
+          userId: session.user.id,
+        });
+        return NextResponse.json({
+          aiReviewFailed: true,
+          available: true,
+          fallback: true,
+          generated: false,
+          review,
+          session: updatedSession,
+        });
+      } catch (fallbackError) {
+        console.error("DPE fallback review save failed", fallbackError);
+      }
+    }
 
     try {
       await getDb().insert(dpeDiagnosticEvents).values({

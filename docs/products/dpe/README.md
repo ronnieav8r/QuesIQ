@@ -213,3 +213,21 @@ Remaining MVP gaps after this slice:
    session payloads.
 2. Review retry diagnostics/history (attempt count, failure reason timeline).
 3. Track-specific real oral content for non-Private target tracks.
+
+## MVP Learner Polish Slice 5 (Review Generation Hardening)
+
+This slice hardens DPE review generation so learners do not hit dead-end
+errors when AI review calls fail:
+
+1. `POST /api/dpe/practice-sessions/[id]/review` now saves and returns a
+   deterministic fallback review when the OpenAI key is missing, provider
+   response is non-OK, JSON parsing fails, or request/runtime errors happen
+   after session load.
+2. Fallback review persistence still uses existing DPE session storage and
+   marks progression review completion the same way as existing deterministic
+   fallback behavior.
+3. AI run records are still finalized as failed when AI generation fails, while
+   learner response returns a usable saved fallback review where storage is
+   available.
+4. DPE review model selection now prefers `OPENAI_DPE_REVIEW_MODEL`, then
+   falls back to `OPENAI_REVIEW_MODEL`, then default model.
