@@ -90,6 +90,7 @@ const codeContracts = [
       "Use typed practice",
       "onVoiceUnavailable",
       "dpeSignedOutAuthState",
+      "authStateLoaded",
       "githubEnabled",
       "Loading access",
       "Open profile settings",

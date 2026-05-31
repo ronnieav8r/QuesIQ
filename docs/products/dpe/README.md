@@ -1335,3 +1335,16 @@ track matrix without changing content:
    gate, separate from content curation.
 4. DPE preflight now checks for the requested track matrix marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 90 (Auth State Startup Hardening)
+
+This slice tightens DPE auth startup recovery without changing content:
+
+1. DPE auth loading now requires `/api/dpe/me` to return HTTP OK before trusting
+   the response.
+2. The auth response must include a boolean `authenticated` field before it is
+   applied to learner state.
+3. Non-OK or malformed auth responses now use the existing signed-out recovery
+   state instead of leaving DPE with an undefined auth shape.
+4. DPE preflight now checks for the auth startup hardening marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.

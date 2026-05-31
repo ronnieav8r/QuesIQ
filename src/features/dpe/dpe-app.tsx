@@ -524,7 +524,10 @@ export default function App() {
   async function loadAuthState() {
     try {
       const response = await fetch("/api/dpe/me");
+      if (!response.ok) throw new Error("DPE auth state unavailable.");
       const data = (await response.json()) as Omit<AuthState, "loading">;
+      const authStateLoaded = typeof data.authenticated === "boolean";
+      if (!authStateLoaded) throw new Error("DPE auth state malformed.");
       setAuthState({ ...data, loading: false });
     } catch {
       setAuthState(dpeSignedOutAuthState);
