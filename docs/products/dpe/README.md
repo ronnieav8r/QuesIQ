@@ -162,7 +162,7 @@ workflow clarity:
 Remaining MVP gaps (outside this slice):
 
 1. Real DPE aviation content curation/import for non-Private tracks.
-2. Broader durable retry timelines, including successful retry attempt history.
+2. Admin-facing review retry timeline filters and aggregate retry health.
 3. Weak-focus resolution quest logic once richer durable review history is in
    place.
 
@@ -449,3 +449,15 @@ This slice exposes existing durable DPE diagnostics without changing schema:
    latest stored review diagnostic on matching session cards.
 3. This uses the existing `dpe_diagnostic_events` table and does not add
    schema, content, or publish-state changes.
+
+## MVP Learner Polish Slice 23 (Durable Review Attempt Timeline)
+
+This slice broadens durable DPE review diagnostics without changing schema:
+
+1. The DPE review endpoint now writes sanitized diagnostic rows when an AI
+   review is generated and when deterministic fallback reviews are saved.
+2. Fallback diagnostics include the high-level fallback reason, such as missing
+   review AI configuration, provider non-OK response, provider JSON parse
+   failure, review-content parse failure, or review-generation exception.
+3. Learner History can now show durable success and fallback review-attempt
+   events after reloads because it already reads `/api/dpe/diagnostics`.

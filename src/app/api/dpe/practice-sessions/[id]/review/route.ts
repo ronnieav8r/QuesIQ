@@ -92,6 +92,27 @@ async function saveFallbackReview(input: {
   return { review, updatedSession };
 }
 
+async function recordReviewDiagnostic(input: {
+  code: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+  sessionId: string;
+  severity: "error" | "info" | "warning";
+}) {
+  try {
+    await getDb().insert(dpeDiagnosticEvents).values({
+      code: input.code,
+      message: input.message,
+      metadata: input.metadata,
+      sessionId: input.sessionId,
+      severity: input.severity,
+      surface: "post_session_review",
+    });
+  } catch {
+    // Keep the review API response stable if diagnostic persistence is down.
+  }
+}
+
 export async function POST(_request: Request, context: RouteContext) {
   const { id } = await context.params;
   const session = await auth();
@@ -122,6 +143,13 @@ export async function POST(_request: Request, context: RouteContext) {
         id,
         transcriptJson: practiceSession.transcriptJson,
         userId: session.user.id,
+      });
+      await recordReviewDiagnostic({
+        code: "review_fallback_saved",
+        message: "Fallback review saved because DPE review AI was not configured.",
+        metadata: { reason: "missing_api_key" },
+        sessionId: updatedSession.id,
+        severity: "warning",
       });
 
       return NextResponse.json({
@@ -231,6 +259,13 @@ export async function POST(_request: Request, context: RouteContext) {
         transcriptJson: practiceSession.transcriptJson,
         userId: session.user.id,
       });
+      await recordReviewDiagnostic({
+        code: "review_fallback_saved",
+        message: "Fallback review saved after DPE review request failed.",
+        metadata: { reason: "provider_non_ok", status: response.status },
+        sessionId: updatedSession.id,
+        severity: "warning",
+      });
       return NextResponse.json({
         aiReviewFailed: true,
         available: true,
@@ -264,6 +299,13 @@ export async function POST(_request: Request, context: RouteContext) {
         transcriptJson: practiceSession.transcriptJson,
         userId: session.user.id,
       });
+      await recordReviewDiagnostic({
+        code: "review_fallback_saved",
+        message: "Fallback review saved after DPE review response JSON parsing failed.",
+        metadata: { reason: "provider_json_parse_failed", status: response.status },
+        sessionId: updatedSession.id,
+        severity: "warning",
+      });
       return NextResponse.json({
         aiReviewFailed: true,
         available: true,
@@ -289,6 +331,13 @@ export async function POST(_request: Request, context: RouteContext) {
         id,
         transcriptJson: practiceSession.transcriptJson,
         userId: session.user.id,
+      });
+      await recordReviewDiagnostic({
+        code: "review_fallback_saved",
+        message: "Fallback review saved after DPE review content JSON parsing failed.",
+        metadata: { reason: "review_content_parse_failed" },
+        sessionId: updatedSession.id,
+        severity: "warning",
       });
       return NextResponse.json({
         aiReviewFailed: true,
@@ -325,6 +374,13 @@ export async function POST(_request: Request, context: RouteContext) {
       totalTokens: payload.usage?.total_tokens,
     });
     aiRunFinalized = true;
+    await recordReviewDiagnostic({
+      code: "review_generated",
+      message: "AI review generated and saved for this DPE session.",
+      metadata: { model, providerRequestId: payload.id ?? null },
+      sessionId: updatedSession.id,
+      severity: "info",
+    });
 
     return NextResponse.json({
       available: true,
@@ -354,6 +410,15 @@ export async function POST(_request: Request, context: RouteContext) {
           id,
           transcriptJson: practiceSession.transcriptJson,
           userId: session.user.id,
+        });
+        await recordReviewDiagnostic({
+          code: "review_fallback_saved",
+          message: "Fallback review saved after DPE review generation failed.",
+          metadata: {
+            reason: "review_generation_exception",
+          },
+          sessionId: updatedSession.id,
+          severity: "warning",
         });
         return NextResponse.json({
           aiReviewFailed: true,
