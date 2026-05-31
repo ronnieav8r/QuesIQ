@@ -428,6 +428,13 @@ type ProductPacketPreviewResponse =
   | StudyDeckDraftProductPacketPreviewResponse
   | StudyGenerationPacketPreviewResponse;
 
+type ContentStudioWorkspaceSection =
+  | "draft_review"
+  | "overview"
+  | "product_packet"
+  | "source_review"
+  | "study_import_prep";
+
 const MIN_SOURCE_CHARS = 40;
 
 const sourcePackManifest: SourcePackManifest = {
@@ -715,6 +722,9 @@ const studyDeckDraftPreviewSample = JSON.stringify(
   2,
 );
 
+const studyRichCsvPreviewSample = `card_id,question,answer,hint,tags,source_chunk_ids,source_page_anchors,source_visual_ids,verification_status,verification_notes
+sample-001,What is the purpose of trim?,To relieve control pressure in steady flight.,Set pitch first then trim.,fundamentals|flight-controls,chunk-001|chunk-002,page=12;page=13,figure-12-a,needs_review,Verifier pass pending`;
+
 const emptyDpeContext: DpeDraftContext = {
   acs: {
     area: "",
@@ -951,6 +961,9 @@ export function ContentStudio() {
   const [productPacketPreviewError, setProductPacketPreviewError] = useState<string>();
   const [productPacketValidationErrors, setProductPacketValidationErrors] =
     useState<string[]>([]);
+  const [workspaceSection, setWorkspaceSection] =
+    useState<ContentStudioWorkspaceSection>("overview");
+  const [studyImportPrepInput, setStudyImportPrepInput] = useState("");
 
   const pipeline = useMemo(
     () => contentStudioPipelines.find((option) => option.key === pipelineKey) ?? contentStudioPipelines[0],
@@ -1342,6 +1355,50 @@ export function ContentStudio() {
         </div>
       </div>
 
+      <div className="component-tabs" aria-label="Content Studio workspace sections">
+        <button
+          className={workspaceSection === "overview" ? "active" : undefined}
+          onClick={() => setWorkspaceSection("overview")}
+          type="button"
+        >
+          <History size={18} />
+          Overview / Run history
+        </button>
+        <button
+          className={workspaceSection === "source_review" ? "active" : undefined}
+          onClick={() => setWorkspaceSection("source_review")}
+          type="button"
+        >
+          <Images size={18} />
+          Source review
+        </button>
+        <button
+          className={workspaceSection === "product_packet" ? "active" : undefined}
+          onClick={() => setWorkspaceSection("product_packet")}
+          type="button"
+        >
+          <ShieldCheck size={18} />
+          Product packet preview
+        </button>
+        <button
+          className={workspaceSection === "study_import_prep" ? "active" : undefined}
+          onClick={() => setWorkspaceSection("study_import_prep")}
+          type="button"
+        >
+          <UploadCloud size={18} />
+          Study import prep
+        </button>
+        <button
+          className={workspaceSection === "draft_review" ? "active" : undefined}
+          onClick={() => setWorkspaceSection("draft_review")}
+          type="button"
+        >
+          <FileText size={18} />
+          Draft review
+        </button>
+      </div>
+
+      {workspaceSection === "overview" && (
       <div className="admin-layout component-admin-layout">
         <aside className="prompt-version-list" aria-label="Content pipelines">
           <section>
@@ -1458,8 +1515,9 @@ export function ContentStudio() {
           )}
         </div>
       </div>
+      )}
 
-      {draftRun && (
+      {workspaceSection === "draft_review" && draftRun && (
         <>
           <ReviewStatePanel
             onNotesChange={setReviewerNotes}
@@ -1474,6 +1532,15 @@ export function ContentStudio() {
         </>
       )}
 
+      {workspaceSection === "draft_review" && !draftRun && (
+        <section className="prompt-version-list" aria-label="Draft review status">
+          <div className="runtime-context-panel">
+            <p>No draft is selected. Open a run from history to review draft details.</p>
+          </div>
+        </section>
+      )}
+
+      {workspaceSection === "source_review" && (
       <section className="prompt-version-list" aria-labelledby="source-pack-preview-title">
         <div className="section-head">
           <div>
@@ -1553,7 +1620,9 @@ export function ContentStudio() {
           <div className="form-note">{sourcePackPreview.storage.detail}</div>
         )}
       </section>
+      )}
 
+      {workspaceSection === "source_review" && (
       <SourcePackReviewScaffold
         chunks={previewChunks}
         key={`${previewManifest.id}-${sourcePackPreviewVersion}`}
@@ -1570,7 +1639,9 @@ export function ContentStudio() {
         }}
         visualCandidates={previewVisualCandidates}
       />
+      )}
 
+      {workspaceSection === "product_packet" && (
       <section className="prompt-version-list" aria-labelledby="product-packet-preview-title">
         <div className="section-head">
           <div>
@@ -1684,7 +1755,99 @@ export function ContentStudio() {
           />
         )}
       </section>
+      )}
 
+      {workspaceSection === "study_import_prep" && (
+        <section className="prompt-version-list" aria-labelledby="study-import-prep-title">
+          <div className="section-head">
+            <div>
+              <p className="eyebrow">Preview-only planning surface</p>
+              <h3 id="study-import-prep-title">Rich flashcard CSV import</h3>
+              <p>
+                Prepare rich Study import payloads with source and verification metadata.
+                Backend preview/import endpoints are pending in the Study lane.
+              </p>
+            </div>
+            <UploadCloud size={20} aria-hidden="true" />
+          </div>
+
+          <div className="study-stat-strip" aria-label="Rich CSV import prep status">
+            <div className="study-stat-chip">
+              <strong>Preview</strong>
+              <span>UI-only staging</span>
+            </div>
+            <div className="study-stat-chip">
+              <strong>Pending</strong>
+              <span>`rich_csv_import_preview` route</span>
+            </div>
+            <div className="study-stat-chip highlight">
+              <strong>Disabled</strong>
+              <span>Study writes / publish</span>
+            </div>
+          </div>
+
+          <div className="runtime-context-panel">
+            <strong>Expected rich CSV fields</strong>
+            <div className="question-meta">
+              <span className="pill">card_id</span>
+              <span className="pill">question</span>
+              <span className="pill">answer</span>
+              <span className="pill">hint</span>
+              <span className="pill">tags</span>
+              <span className="pill">source_chunk_ids</span>
+              <span className="pill">source_page_anchors</span>
+              <span className="pill">source_visual_ids</span>
+              <span className="pill">verification_status</span>
+              <span className="pill">verification_notes</span>
+            </div>
+          </div>
+
+          <div className="field-grid">
+            <label>
+              <span>Rich flashcard CSV</span>
+              <textarea
+                onChange={(event) => setStudyImportPrepInput(event.target.value)}
+                placeholder="Paste rich flashcard CSV rows for future preview validation."
+                value={studyImportPrepInput}
+              />
+            </label>
+          </div>
+
+          <div className="component-tabs" aria-label="Rich CSV import prep actions">
+            <button disabled type="button">
+              <Eye size={18} />
+              Preview rich CSV disabled
+            </button>
+            <button
+              onClick={() => setStudyImportPrepInput(studyRichCsvPreviewSample)}
+              type="button"
+            >
+              <FileText size={18} />
+              Load sample CSV
+            </button>
+            <button disabled type="button">
+              <CheckCircle2 size={18} />
+              Study import disabled
+            </button>
+          </div>
+
+          <div className="runtime-context-panel">
+            <strong>Planned flow</strong>
+            <p>
+              Reviewed source-pack decisions {"->"} Codex generation tools {"->"} rich CSV preview
+              (`rich_csv_import_preview`) {"->"} approved Study import.
+            </p>
+            <div className="question-meta">
+              <span className="pill">No Drive loading</span>
+              <span className="pill">No runtime source-pack reads</span>
+              <span className="pill">No Study/DPE import in this panel</span>
+              <span className="pill">No Publish / Official / Verified writes</span>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {workspaceSection === "overview" && (
       <section className="prompt-version-list" aria-labelledby="content-stages-title">
         <div className="section-head">
           <div>
@@ -1704,7 +1867,9 @@ export function ContentStudio() {
           ))}
         </div>
       </section>
+      )}
 
+      {workspaceSection === "overview" && (
       <section className="prompt-version-list" aria-labelledby="content-history-title">
         <div className="section-head">
           <div>
@@ -1768,6 +1933,7 @@ export function ContentStudio() {
           </div>
         )}
       </section>
+      )}
     </section>
   );
 }
