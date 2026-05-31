@@ -755,3 +755,14 @@ This slice improves review clarity for local-only practice sessions:
    until DPE session storage is reachable and the session can be saved.
 3. Saved sessions keep the existing AI/fallback review and retry behavior.
 4. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 47 (Admin Local Recovery Contract)
+
+This slice adds Admin visibility for local-only learner recovery safeguards:
+
+1. Admin DPE preflight now checks that learner code still includes local-only
+   typed practice and local-only review persistence notices.
+2. The runtime signal list includes `Local persistence recovery` so deploy QA
+   can detect if those degraded-path messages disappear.
+3. This is source-contract visibility only; it does not add schema, content,
+   publish, Official, or Verified state.

@@ -194,6 +194,11 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "MVP readiness checklist",
       "Readiness quest track (preview)",
     ]),
+    localPersistenceRecoveryVisible: hasAll(dpeAppText, [
+      "Typed practice running locally",
+      "Review is local only",
+      "will not appear in History",
+    ]),
     requestedTracksConfigured: hasAll(dpeTrackText, [
       'code: "IRA"',
       'code: "CAX-ASEL"',
@@ -271,6 +276,9 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
 
   if (!runtimeSignals.learnerTargetAwareChromeVisible) {
     warnings.push("DPE learner target-aware readiness chrome markers were not detected.");
+  }
+  if (!runtimeSignals.localPersistenceRecoveryVisible) {
+    warnings.push("DPE local-only practice/review recovery markers were not detected.");
   }
   if (!runtimeSignals.voiceLaunchTargetAwareFramingVisible) {
     warnings.push("Voice launch fallback framing did not confirm target-aware messaging.");
@@ -414,6 +422,13 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
         label: "Learner target-aware chrome",
         status: warningStatusFrom(runtimeSignals.learnerTargetAwareChromeVisible),
         value: runtimeSignals.learnerTargetAwareChromeVisible ? "Visible" : "Not detected",
+      },
+      {
+        detail: "Learner recovery copy distinguishes local-only typed practice and local-only reviews when storage is unavailable.",
+        key: "local_persistence_recovery",
+        label: "Local persistence recovery",
+        status: warningStatusFrom(runtimeSignals.localPersistenceRecoveryVisible),
+        value: runtimeSignals.localPersistenceRecoveryVisible ? "Visible" : "Not detected",
       },
       {
         detail: "Voice launch fallback copy keeps selected target context when voice is unavailable.",

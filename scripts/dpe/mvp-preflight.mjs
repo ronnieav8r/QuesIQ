@@ -212,6 +212,8 @@ const codeContracts = [
     file: "src/server/admin-data/dpe-preflight.ts",
     checks: [
       "manualQaRows",
+      "localPersistenceRecoveryVisible",
+      "Local persistence recovery",
       "signedInDependencyReadinessVisible",
       "Signed-in dependency readiness",
       "Signed-in dependency contract",
