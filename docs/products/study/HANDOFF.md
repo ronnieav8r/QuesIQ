@@ -224,6 +224,10 @@ the visual/UI level during the conversation:
 - test seed and cleanup SQL at `scripts/study/seed_test_decks.sql` and
   `scripts/study/cleanup_test_decks.sql`; generated test decks are marked with
   `[TEST_DELETE]` titles and `__test_delete__` tags
+- rich CSV import smoke script at `scripts/study/rich-csv-import-smoke.ts`;
+  run with `--parse-only` for parser/source-coverage checks or without
+  `--parse-only` after migrations through `0054` are applied for a disposable
+  DB save/readback check
 - source-style Study folder manager UI on `/study/decks`, including folder
   create, rename, delete, collapse/expand, and per-deck move controls
 - deck-first creation surface on `/study/decks` with Manual, Import, AI
