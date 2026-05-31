@@ -136,6 +136,8 @@ const codeContracts = [
       "pipeline: \"dpe_content\"",
       "Voice AI unavailable",
       "voiceAiUnavailable",
+      "voiceDisabledReason",
+      "Voice disabled:",
     ],
   },
   {

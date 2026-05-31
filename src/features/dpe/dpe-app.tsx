@@ -2138,6 +2138,13 @@ function PracticeSetupScreen({
   const reviewAiUnavailable = publicStatus?.reviewAiConfigured === false;
   const voiceAiUnavailable = publicStatus?.realtimeVoiceConfigured === false;
   const voiceDisabled = practiceBlocked || databaseAvailable === false || voiceAiUnavailable;
+  const voiceDisabledReason = practiceBlocked
+    ? "Voice disabled: no active prompts match this practice selection."
+    : databaseAvailable === false
+      ? "Voice disabled: DPE session storage is unavailable."
+      : voiceAiUnavailable
+        ? "Voice disabled: Voice AI is not configured here."
+        : "";
   const privatePilotTrack = getDpeTargetTrackById(defaultDpeTargetTrackId) ?? dpeTargetTracks[0];
   const targetMissing = buildTargetMissingFields(dpeProfile);
 
@@ -2318,6 +2325,7 @@ function PracticeSetupScreen({
                 className="button primary"
                 onClick={onStartVoiceSession}
                 disabled={voiceDisabled}
+                title={voiceDisabledReason || "Start realtime DPE voice practice"}
               >
                 <Mic />
                 Start Voice Practice
@@ -2327,6 +2335,7 @@ function PracticeSetupScreen({
                 Type Answers
               </button>
             </div>
+            {voiceDisabledReason && <p className="muted mt-4">{voiceDisabledReason}</p>}
         </div>
 
         <div className="panel">

@@ -896,3 +896,16 @@ This slice removes an early learner dead end without changing content:
 3. Admin DPE preflight now checks that the learner recovery contract includes
    the History empty-state recovery markers.
 4. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 58 (Voice Disabled Reason)
+
+This slice makes DPE voice launch gating easier to understand without changing
+content:
+
+1. Practice setup now derives a `voiceDisabledReason` when realtime voice cannot
+   launch.
+2. The disabled voice button now has a matching tooltip and visible reason for
+   no prompts, unavailable DPE storage, or missing Voice AI configuration.
+3. Typed practice remains available whenever prompts exist.
+4. Admin DPE preflight now checks for the voice disabled-reason markers.
+5. No aviation content, schema, publish, Official, or Verified state changed.

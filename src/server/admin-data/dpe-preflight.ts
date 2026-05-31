@@ -239,6 +239,8 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
     voiceLaunchTargetAwareFramingVisible: hasAll(dpeAppText, [
       "Voice launch switched to typed practice",
       "selected target remains unchanged",
+      "voiceDisabledReason",
+      "Voice disabled:",
     ]),
     voiceRuntimeConfigContractVisible: hasAll(realtimeRouteText, [
       'getOpenAiRealtimeApiKey("dpe")',
