@@ -11,6 +11,7 @@
     "guard:dpe": "node scripts/guards/check-lane.mjs dpe",
     "guard:interview": "node scripts/guards/check-lane.mjs interview",
     "guard:study": "node scripts/guards/check-lane.mjs study",
+    "preflight:dpe": "node scripts/dpe/mvp-preflight.mjs",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
