@@ -27,6 +27,7 @@ export type StudyGenerationPacketContract = {
     canMarkVerified: false;
     canPublish: false;
     canWriteStudyRuntime: false;
+    writesStudyDecks: false;
   };
   packetVersion: "quesiq.studyGenerationPacket.v1";
   sourcePack: {
@@ -50,6 +51,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function asString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function isNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
 }
 
 function parseStringArray(value: unknown, path: string, errors: string[]) {
@@ -94,11 +99,24 @@ function parseChunk(value: unknown, path: string, sourcePackRange: { endPage: nu
     return null;
   }
   const chunkId = asString(value.chunkId);
-  const snippet = asString(value.snippet);
-  const tags = parseStringArray(value.tags, `${path}.tags`, errors);
-  const relatedVisualIds = parseStringArray(value.relatedVisualIds, `${path}.relatedVisualIds`, errors);
-  const rawAnchors = Array.isArray(value.pageAnchors) ? value.pageAnchors : [];
-  if (!Array.isArray(value.pageAnchors)) {
+  const snippet = asString(value.snippet ?? value.text);
+  const tags = parseStringArray(value.tags ?? value.suggestedTags ?? [], `${path}.tags`, errors);
+  const relatedVisualIds = parseStringArray(
+    value.relatedVisualIds ??
+      (Array.isArray(value.relatedVisuals)
+        ? value.relatedVisuals.map((visual) => (isRecord(visual) ? visual.id : undefined))
+        : []),
+    `${path}.relatedVisualIds`,
+    errors,
+  );
+  const fallbackPage =
+    isNumber(value.pageStart) ? value.pageStart : isNumber(value.page) ? value.page : undefined;
+  const rawAnchors = Array.isArray(value.pageAnchors)
+    ? value.pageAnchors
+    : fallbackPage
+      ? [{ page: fallbackPage }]
+      : [];
+  if (!Array.isArray(value.pageAnchors) && !fallbackPage) {
     errors.push(`${path}.pageAnchors must be an array.`);
   }
   const pageAnchors = rawAnchors
@@ -145,15 +163,20 @@ export function parseStudyGenerationPacketContract(value: unknown): ParseResult 
     return { errors, ok: false };
   }
 
-  const sourcePackId = asString(value.sourcePack.sourcePackId);
+  const sourcePackId = asString(value.sourcePack.sourcePackId ?? value.sourcePack.id);
   const sourcePackTitle = asString(value.sourcePack.title);
-  const sourcePackRangeRaw = isRecord(value.sourcePack.pageRange) ? value.sourcePack.pageRange : null;
+  const sourcePackRangeRaw = isRecord(value.sourcePack.pageRange)
+    ? value.sourcePack.pageRange
+    : {
+        endPage: value.sourcePack.pageEnd,
+        startPage: value.sourcePack.pageStart,
+      };
   if (!sourcePackRangeRaw) {
     errors.push("sourcePack.pageRange must be an object.");
     return { errors, ok: false };
   }
-  const startPage = typeof sourcePackRangeRaw.startPage === "number" ? sourcePackRangeRaw.startPage : Number.NaN;
-  const endPage = typeof sourcePackRangeRaw.endPage === "number" ? sourcePackRangeRaw.endPage : Number.NaN;
+  const startPage = isNumber(sourcePackRangeRaw.startPage) ? sourcePackRangeRaw.startPage : Number.NaN;
+  const endPage = isNumber(sourcePackRangeRaw.endPage) ? sourcePackRangeRaw.endPage : Number.NaN;
   if (!Number.isInteger(startPage) || startPage < 1) errors.push("sourcePack.pageRange.startPage must be an integer >= 1.");
   if (!Number.isInteger(endPage) || endPage < 1) errors.push("sourcePack.pageRange.endPage must be an integer >= 1.");
   if (Number.isInteger(startPage) && Number.isInteger(endPage) && endPage < startPage) {
@@ -182,8 +205,9 @@ export function parseStudyGenerationPacketContract(value: unknown): ParseResult 
   if (outputRestrictions.canPublish !== false) errors.push("outputRestrictions.canPublish must be false.");
   if (outputRestrictions.canMarkOfficial !== false) errors.push("outputRestrictions.canMarkOfficial must be false.");
   if (outputRestrictions.canMarkVerified !== false) errors.push("outputRestrictions.canMarkVerified must be false.");
-  if (outputRestrictions.canWriteStudyRuntime !== false) {
-    errors.push("outputRestrictions.canWriteStudyRuntime must be false.");
+  const canWriteStudyRuntime = outputRestrictions.canWriteStudyRuntime ?? outputRestrictions.writesStudyDecks;
+  if (canWriteStudyRuntime !== false) {
+    errors.push("outputRestrictions.canWriteStudyRuntime or writesStudyDecks must be false.");
   }
 
   const rawChunks = Array.isArray(value.chunks) ? value.chunks : [];
@@ -225,6 +249,7 @@ export function parseStudyGenerationPacketContract(value: unknown): ParseResult 
         canMarkVerified: false,
         canPublish: false,
         canWriteStudyRuntime: false,
+        writesStudyDecks: false,
       },
       packetVersion: "quesiq.studyGenerationPacket.v1",
       sourcePack: {
@@ -295,6 +320,7 @@ export const STUDY_GENERATION_PACKET_SAMPLE: StudyGenerationPacketContract = {
     canMarkVerified: false,
     canPublish: false,
     canWriteStudyRuntime: false,
+    writesStudyDecks: false,
   },
   packetVersion: "quesiq.studyGenerationPacket.v1",
   sourcePack: {
