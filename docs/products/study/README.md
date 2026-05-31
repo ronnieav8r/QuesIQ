@@ -147,6 +147,9 @@ The first Study slice is imported:
   for parser/source-coverage verification, or without `--parse-only` after
   `DATABASE_URL` and migrations through `0054` are available for a disposable
   `[TEST_DELETE]` DB save/readback check
+- local Codex skill `quesiq-study-content-pipeline` coordinates the source
+  scrubber, Study deck drafter, Study verifier, rich CSV export, and optional
+  import smoke checks for raw source-to-Study import work
 - `0049_seed_study_library_taxonomy.sql` seeds the imported source taxonomy
   labels for subjects and audience tags
 - remaining work is mostly migration/seed QA, production permission QA, R2 env

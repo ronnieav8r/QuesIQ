@@ -228,6 +228,9 @@ the visual/UI level during the conversation:
   run with `--parse-only` for parser/source-coverage checks or without
   `--parse-only` after migrations through `0054` are applied for a disposable
   DB save/readback check
+- local Codex skill `quesiq-study-content-pipeline` coordinates the source
+  scrubber, Study deck drafter, Study verifier, rich CSV export, and optional
+  import smoke checks for raw source-to-Study import work
 - source-style Study folder manager UI on `/study/decks`, including folder
   create, rename, delete, collapse/expand, and per-deck move controls
 - deck-first creation surface on `/study/decks` with Manual, Import, AI
