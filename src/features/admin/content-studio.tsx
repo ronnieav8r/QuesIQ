@@ -654,6 +654,7 @@ export function ContentStudio() {
   const [sourcePackPreviewStatus, setSourcePackPreviewStatus] =
     useState<"idle" | "previewing" | "ready">("idle");
   const [sourcePackPreviewError, setSourcePackPreviewError] = useState<string>();
+  const [sourcePackPreviewVersion, setSourcePackPreviewVersion] = useState(0);
 
   const pipeline = useMemo(
     () => contentStudioPipelines.find((option) => option.key === pipelineKey) ?? contentStudioPipelines[0],
@@ -786,6 +787,7 @@ export function ContentStudio() {
       }
 
       setSourcePackPreview(body);
+      setSourcePackPreviewVersion((current) => current + 1);
       setSourcePackPreviewStatus("ready");
     } catch (previewError) {
       setSourcePackPreviewStatus("idle");
@@ -1152,6 +1154,7 @@ export function ContentStudio() {
 
       <SourcePackReviewScaffold
         chunks={previewChunks}
+        key={`${previewManifest.id}-${sourcePackPreviewVersion}`}
         manifest={previewManifest}
         visualCandidates={previewVisualCandidates}
       />
@@ -1273,6 +1276,14 @@ function reviewDecisionLabel(decision: SourcePackReviewDecision) {
   return labels[decision];
 }
 
+const sourcePackReviewDecisionOptions: SourcePackReviewDecision[] = [
+  "candidate",
+  "accepted",
+  "needs_edit",
+  "reject",
+  "keep",
+];
+
 function isPreviewableAssetPath(value?: string) {
   return Boolean(value && (value.startsWith("/") || value.startsWith("http")));
 }
@@ -1375,6 +1386,58 @@ function buildSourcePackReviewRun(args: {
   };
 }
 
+function buildSourcePackReviewExport(args: {
+  chunks: SourcePackChunkCandidate[];
+  manifest: SourcePackManifest;
+  reviewRun: SourcePackReviewRun;
+  visualCandidates: SourcePackVisualReviewCandidate[];
+}) {
+  const acceptedChunks = args.chunks.filter(
+    (chunk) => sourcePackReviewBucket(chunk.reviewDecision) === "accepted",
+  );
+  const reviewedVisuals = args.visualCandidates.filter(
+    (candidate) => candidate.reviewDecision !== "candidate",
+  );
+  const acceptedVisuals = args.visualCandidates.filter(
+    (candidate) => sourcePackReviewBucket(candidate.reviewDecision) === "accepted",
+  );
+
+  return {
+    acceptedChunkIds: acceptedChunks.map((chunk) => chunk.chunkId),
+    acceptedVisualIds: acceptedVisuals.map((candidate) => candidate.id),
+    manifest: {
+      id: args.manifest.id,
+      sourceIds: args.manifest.sourceIds,
+      title: args.manifest.title,
+    },
+    notes: args.reviewRun.decisions
+      .filter((decision) => decision.reviewerNotes)
+      .map((decision) => ({
+        candidateId: decision.candidateId,
+        candidateType: decision.candidateType,
+        note: decision.reviewerNotes,
+      })),
+    restrictions: [
+      "admin_review_export_preview_only",
+      "no_drive_loading",
+      "no_database_write",
+      "no_product_import",
+      "no_publish_official_or_verified_write",
+      "study_generation_first_dpe_later",
+    ],
+    reviewCounts: args.reviewRun.reviewCounts,
+    reviewRunId: args.reviewRun.id,
+    reviewedVisualIds: reviewedVisuals.map((candidate) => candidate.id),
+    sourceAnchors: args.reviewRun.decisions.map((decision) => ({
+      candidateId: decision.candidateId,
+      candidateType: decision.candidateType,
+      sourceAnchor: decision.sourceAnchor,
+      sourceId: decision.sourceId,
+    })),
+    stage: "source_pack_admin_review_export_preview",
+  };
+}
+
 function SourcePackReviewScaffold({
   chunks,
   manifest,
@@ -1388,13 +1451,36 @@ function SourcePackReviewScaffold({
   const [decisionFilter, setDecisionFilter] = useState<SourcePackReviewDecision | "all">(
     "all",
   );
+  const [localChunks, setLocalChunks] = useState(chunks);
+  const [localVisualCandidates, setLocalVisualCandidates] =
+    useState(visualCandidates);
+
   const reviewRun = useMemo(
-    () => buildSourcePackReviewRun({ chunks, manifest, visualCandidates }),
-    [chunks, manifest, visualCandidates],
+    () =>
+      buildSourcePackReviewRun({
+        chunks: localChunks,
+        manifest,
+        visualCandidates: localVisualCandidates,
+      }),
+    [localChunks, manifest, localVisualCandidates],
   );
-  const figures = visualCandidates.filter((candidate) => candidate.type === "figure");
-  const tables = visualCandidates.filter((candidate) => candidate.type === "table");
-  const filteredChunks = chunks.filter(
+  const reviewExport = useMemo(
+    () =>
+      buildSourcePackReviewExport({
+        chunks: localChunks,
+        manifest,
+        reviewRun,
+        visualCandidates: localVisualCandidates,
+      }),
+    [localChunks, manifest, reviewRun, localVisualCandidates],
+  );
+  const reviewExportJson = useMemo(
+    () => JSON.stringify(reviewExport, null, 2),
+    [reviewExport],
+  );
+  const figures = localVisualCandidates.filter((candidate) => candidate.type === "figure");
+  const tables = localVisualCandidates.filter((candidate) => candidate.type === "table");
+  const filteredChunks = localChunks.filter(
     (candidate) =>
       decisionFilter === "all" || candidate.reviewDecision === decisionFilter,
   );
@@ -1402,6 +1488,30 @@ function SourcePackReviewScaffold({
     (candidate) =>
       decisionFilter === "all" || candidate.reviewDecision === decisionFilter,
   );
+
+  function updateChunkReview(
+    chunkId: string,
+    changes: Partial<Pick<SourcePackChunkCandidate, "reviewDecision" | "reviewNotes">>,
+  ) {
+    setLocalChunks((current) =>
+      current.map((chunk) =>
+        chunk.chunkId === chunkId ? { ...chunk, ...changes } : chunk,
+      ),
+    );
+  }
+
+  function updateVisualReview(
+    candidateId: string,
+    changes: Partial<
+      Pick<SourcePackVisualReviewCandidate, "reviewDecision" | "reviewNotes">
+    >,
+  ) {
+    setLocalVisualCandidates((current) =>
+      current.map((candidate) =>
+        candidate.id === candidateId ? { ...candidate, ...changes } : candidate,
+      ),
+    );
+  }
 
   return (
     <section className="prompt-version-list" aria-labelledby="source-pack-visual-title">
@@ -1434,7 +1544,7 @@ function SourcePackReviewScaffold({
 
       <div className="study-stat-strip" aria-label="Source-pack visual review summary">
         <div className="study-stat-chip">
-          <strong>{chunks.length}</strong>
+          <strong>{localChunks.length}</strong>
           <span>Chunk candidates</span>
         </div>
         <div className="study-stat-chip">
@@ -1452,6 +1562,23 @@ function SourcePackReviewScaffold({
       </div>
 
       <SourcePackReviewSummaryPanel reviewRun={reviewRun} />
+
+      <div className="runtime-context-panel">
+        <div className="section-head">
+          <div>
+            <strong>Export preview</strong>
+            <p>
+              Copyable local JSON for Codex-side Study draft generation tools.
+              This is not saved and does not call generation endpoints.
+            </p>
+          </div>
+          <span className="pill">local only</span>
+        </div>
+        <label>
+          <span>Review run export JSON</span>
+          <textarea readOnly value={reviewExportJson} />
+        </label>
+      </div>
 
       <div className="component-tabs" aria-label="Source-pack review tabs">
         {(["chunks", "figures", "tables"] as SourcePackReviewTab[]).map((tab) => (
@@ -1526,11 +1653,19 @@ function SourcePackReviewScaffold({
       <div className="question-list">
         {activeTab === "chunks" &&
           filteredChunks.map((candidate) => (
-            <ChunkCandidateCard candidate={candidate} key={candidate.chunkId} />
+            <ChunkCandidateCard
+              candidate={candidate}
+              key={candidate.chunkId}
+              onReviewChange={updateChunkReview}
+            />
           ))}
         {activeTab !== "chunks" &&
           filteredVisuals.map((candidate) => (
-            <VisualCandidateCard candidate={candidate} key={candidate.id} />
+            <VisualCandidateCard
+              candidate={candidate}
+              key={candidate.id}
+              onReviewChange={updateVisualReview}
+            />
           ))}
         {((activeTab === "chunks" && filteredChunks.length === 0) ||
           (activeTab !== "chunks" && filteredVisuals.length === 0)) && (
@@ -1591,7 +1726,16 @@ function SourcePackReviewSummaryPanel({
   );
 }
 
-function ChunkCandidateCard({ candidate }: { candidate: SourcePackChunkCandidate }) {
+function ChunkCandidateCard({
+  candidate,
+  onReviewChange,
+}: {
+  candidate: SourcePackChunkCandidate;
+  onReviewChange: (
+    chunkId: string,
+    changes: Partial<Pick<SourcePackChunkCandidate, "reviewDecision" | "reviewNotes">>,
+  ) => void;
+}) {
   return (
     <article className="runtime-context-panel">
       <div className="section-head">
@@ -1643,7 +1787,37 @@ function ChunkCandidateCard({ candidate }: { candidate: SourcePackChunkCandidate
 
       <div className="runtime-context-panel">
         <strong>Reviewer notes</strong>
-        <p>{candidate.reviewNotes ?? "No notes yet."}</p>
+        <div className="field-grid">
+          <label>
+            <span>Decision</span>
+            <select
+              onChange={(event) =>
+                onReviewChange(candidate.chunkId, {
+                  reviewDecision: event.target.value as SourcePackReviewDecision,
+                })
+              }
+              value={candidate.reviewDecision}
+            >
+              {sourcePackReviewDecisionOptions.map((decision) => (
+                <option key={decision} value={decision}>
+                  {reviewDecisionLabel(decision)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Notes</span>
+            <textarea
+              onChange={(event) =>
+                onReviewChange(candidate.chunkId, {
+                  reviewNotes: event.target.value,
+                })
+              }
+              placeholder="Add reviewer notes for this chunk."
+              value={candidate.reviewNotes ?? ""}
+            />
+          </label>
+        </div>
       </div>
     </article>
   );
@@ -1651,8 +1825,15 @@ function ChunkCandidateCard({ candidate }: { candidate: SourcePackChunkCandidate
 
 function VisualCandidateCard({
   candidate,
+  onReviewChange,
 }: {
   candidate: SourcePackVisualReviewCandidate;
+  onReviewChange: (
+    candidateId: string,
+    changes: Partial<
+      Pick<SourcePackVisualReviewCandidate, "reviewDecision" | "reviewNotes">
+    >,
+  ) => void;
 }) {
   const previewPath = firstPreviewPath(candidate);
 
@@ -1750,7 +1931,37 @@ function VisualCandidateCard({
 
       <div className="runtime-context-panel">
         <strong>Reviewer notes</strong>
-        <p>{candidate.reviewNotes ?? "No notes yet."}</p>
+        <div className="field-grid">
+          <label>
+            <span>Decision</span>
+            <select
+              onChange={(event) =>
+                onReviewChange(candidate.id, {
+                  reviewDecision: event.target.value as SourcePackReviewDecision,
+                })
+              }
+              value={candidate.reviewDecision}
+            >
+              {sourcePackReviewDecisionOptions.map((decision) => (
+                <option key={decision} value={decision}>
+                  {reviewDecisionLabel(decision)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Notes</span>
+            <textarea
+              onChange={(event) =>
+                onReviewChange(candidate.id, {
+                  reviewNotes: event.target.value,
+                })
+              }
+              placeholder="Add reviewer notes for this visual candidate."
+              value={candidate.reviewNotes ?? ""}
+            />
+          </label>
+        </div>
         {candidate.instructionalValue && <p>Instructional value: {candidate.instructionalValue}</p>}
       </div>
     </article>

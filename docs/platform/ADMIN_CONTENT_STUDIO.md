@@ -201,6 +201,56 @@ selected`, `Generate Study draft from accepted chunks`, and `Generate DPE draft
 later`. These buttons are deliberate affordances only. They must stay disabled
 until review persistence and Codex-side generation/export endpoints exist.
 
+The UI can now edit review decisions and reviewer notes locally for previewed
+chunks, figures, and tables. These controls update the on-screen review summary
+and a copyable export preview only. They do not persist to the database.
+
+The export preview contract is intended for Codex-side generation tools:
+
+```json
+{
+  "stage": "source_pack_admin_review_export_preview",
+  "manifest": {
+    "id": "demo-source-pack-contract",
+    "title": "Source-pack review contract demo",
+    "sourceIds": ["source-pack-guide"]
+  },
+  "reviewRunId": "demo-source-pack-contract-admin-review",
+  "reviewCounts": {
+    "accepted": 2,
+    "rejected": 1,
+    "needs_edit": 2,
+    "candidate": 1
+  },
+  "acceptedChunkIds": ["chunk-source-pack-layout"],
+  "acceptedVisualIds": ["fig-source-pack-flow"],
+  "reviewedVisualIds": ["fig-source-pack-flow", "tbl-visual-schema"],
+  "notes": [
+    {
+      "candidateType": "chunk",
+      "candidateId": "chunk-source-pack-layout",
+      "note": "Keep as review context, not product content."
+    }
+  ],
+  "sourceAnchors": [
+    {
+      "candidateType": "chunk",
+      "candidateId": "chunk-source-pack-layout",
+      "sourceId": "source-pack-guide",
+      "sourceAnchor": "source-pack-guide#page=14&chunk=chunk-source-pack-layout"
+    }
+  ],
+  "restrictions": [
+    "admin_review_export_preview_only",
+    "no_drive_loading",
+    "no_database_write",
+    "no_product_import",
+    "no_publish_official_or_verified_write",
+    "study_generation_first_dpe_later"
+  ]
+}
+```
+
 Accepted initial `reviewStatus` values are:
 
 - `metadata_only`: record exists, but no browser-previewable asset is available.

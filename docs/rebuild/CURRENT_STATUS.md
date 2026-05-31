@@ -105,6 +105,11 @@ Last updated: 2026-05-30
     counts and validation notes, and intentionally performs no filesystem
     reads, Drive calls, durable review writes, product imports, or generation
     calls.
+  - Previewed source-pack chunks and visuals now have client-local reviewer
+    controls for candidate/accepted/needs-edit/reject/keep decisions and notes.
+    The review summary and copyable export-preview JSON update from local state
+    for future Codex-side Study deck generation tools, while persistence,
+    product imports, Publish, Official, and Verified remain disabled.
   - `/api/admin/content-studio/runs` orchestrates Study draft generation and
     DPE content draft generation, then creates durable run records in
     `content_studio_runs`
