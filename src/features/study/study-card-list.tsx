@@ -16,6 +16,18 @@ type StudyCard = {
   level?: string | null;
   position: number;
   question: string;
+  sources?: Array<{
+    id: string;
+    sourceLabel: string | null;
+    sourceType: string;
+    sourceUrl: string | null;
+  }>;
+  verifications?: Array<{
+    confidence: number | null;
+    id: string;
+    note: string | null;
+    verifiedByUserId: string | null;
+  }>;
 };
 
 type EditingCardState = {
@@ -158,6 +170,11 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
     return `Due ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(due)}`;
   }
 
+  function formatConfidence(confidence: number | null) {
+    if (typeof confidence !== "number") return "Confidence not set";
+    return `${Math.round(confidence * 100)}% confidence`;
+  }
+
   return (
     <section className="study-card-list">
       {cards.length === 0 && !addingCard && (
@@ -227,6 +244,42 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
                 {formatDue(card)}
                 {typeof card.easeFactor === "number" && ` - ease ${card.easeFactor.toFixed(2)}`}
               </p>
+              {((card.sources?.length ?? 0) > 0 || (card.verifications?.length ?? 0) > 0) && (
+                <details className="study-card-hint">
+                  <summary>Sources and verification</summary>
+                  {(card.sources?.length ?? 0) > 0 && (
+                    <div>
+                      <strong>Source material</strong>
+                      <ul>
+                        {card.sources?.map((source) => (
+                          <li key={source.id}>
+                            {source.sourceUrl ? (
+                              <a href={source.sourceUrl} rel="noreferrer" target="_blank">
+                                {source.sourceLabel || source.sourceType}
+                              </a>
+                            ) : (
+                              <span>{source.sourceLabel || source.sourceType}</span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {(card.verifications?.length ?? 0) > 0 && (
+                    <div>
+                      <strong>Verification</strong>
+                      <ul>
+                        {card.verifications?.slice(0, 3).map((verification) => (
+                          <li key={verification.id}>
+                            <span>{formatConfidence(verification.confidence)}</span>
+                            {verification.note && <p>{verification.note}</p>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </details>
+              )}
             </div>
           )}
           {isOwner && (

@@ -4,10 +4,12 @@ import { getDb } from "@/server/db/client";
 import {
   studyAudienceTags,
   studyCardAttempts,
+  studyCardSources,
   studyCards,
   studyDeckAudienceTags,
   studyDecks,
   studyFolders,
+  studyVerifications,
   studySessions,
   studySubjects,
 } from "@/server/db/schema";
@@ -445,11 +447,59 @@ export async function forkStudyDeck(data: {
 }
 
 export async function getStudyDeckCards(deckId: string) {
-  return getDb()
+  const cards = await getDb()
     .select()
     .from(studyCards)
     .where(eq(studyCards.deckId, deckId))
     .orderBy(asc(studyCards.position));
+
+  if (cards.length === 0) {
+    return [];
+  }
+
+  const cardIds = cards.map((card) => card.id);
+  const [sources, verifications] = await Promise.all([
+    getDb()
+      .select({
+        createdAt: studyCardSources.createdAt,
+        id: studyCardSources.id,
+        sourceLabel: studyCardSources.sourceLabel,
+        sourceType: studyCardSources.sourceType,
+        sourceUrl: studyCardSources.sourceUrl,
+        cardId: studyCardSources.cardId,
+      })
+      .from(studyCardSources)
+      .where(inArray(studyCardSources.cardId, cardIds))
+      .orderBy(asc(studyCardSources.createdAt)),
+    getDb()
+      .select({
+        cardId: studyVerifications.cardId,
+        confidence: studyVerifications.confidence,
+        createdAt: studyVerifications.createdAt,
+        id: studyVerifications.id,
+        note: studyVerifications.note,
+        verifiedByUserId: studyVerifications.verifiedByUserId,
+      })
+      .from(studyVerifications)
+      .where(inArray(studyVerifications.cardId, cardIds))
+      .orderBy(desc(studyVerifications.createdAt)),
+  ]);
+
+  const sourcesByCardId = sources.reduce((map, source) => {
+    map.set(source.cardId, [...(map.get(source.cardId) ?? []), source]);
+    return map;
+  }, new Map<string, typeof sources>());
+
+  const verificationsByCardId = verifications.reduce((map, verification) => {
+    map.set(verification.cardId, [...(map.get(verification.cardId) ?? []), verification]);
+    return map;
+  }, new Map<string, typeof verifications>());
+
+  return cards.map((card) => ({
+    ...card,
+    sources: sourcesByCardId.get(card.id) ?? [],
+    verifications: verificationsByCardId.get(card.id) ?? [],
+  }));
 }
 
 export async function getStudyDueCards(deckId: string) {
