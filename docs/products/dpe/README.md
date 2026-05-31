@@ -1305,3 +1305,18 @@ without changing content:
 4. Admin DPE preflight now checks for profile and runtime probe hardening
    markers.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 88 (Active Review Persistence Hardening)
+
+This slice aligns active Practice review generation with the stricter History
+retry behavior without changing content:
+
+1. Active saved-session review generation now trusts an endpoint review only
+   when the response is HTTP OK, `available: true`, and includes a review
+   payload.
+2. Non-OK, unavailable, malformed, or review-less responses now keep the
+   existing deterministic fallback review on screen.
+3. Storage health continues to reflect the same strict response check used by
+   session creation, typed saves, voice artifacts, and History retries.
+4. Admin DPE preflight now checks for the active review persistence marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.

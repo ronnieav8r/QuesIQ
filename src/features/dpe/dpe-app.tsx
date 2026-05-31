@@ -980,7 +980,8 @@ export default function App() {
         available?: boolean;
         review?: ReviewJson;
       };
-      const review = data.review ?? fallback;
+      const activeReviewPersisted = response.ok && data.available === true && Boolean(data.review);
+      const review = activeReviewPersisted && data.review ? data.review : fallback;
       setDatabaseAvailable(response.ok && data.available === true);
       setSession({ ...nextSession, review });
       await loadStoredSessions();
