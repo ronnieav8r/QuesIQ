@@ -393,3 +393,14 @@ This slice hardens DPE profile loading without changing content:
 2. Malformed historical date values become an empty checkride date instead of
    throwing during app render.
 3. Target-track, aircraft, session, review, and content behavior are unchanged.
+
+## MVP Learner Polish Slice 18 (Review Source Clarity)
+
+This slice clarifies DPE review state without changing content:
+
+1. Session review cards now show whether the review is AI-generated or a local
+   fallback, plus the saved prompt config version and model/source.
+2. Fallback reviews are labeled as active fallback reviews instead of appearing
+   as incomplete once a deterministic review exists.
+3. History shows AI versus fallback review state and offers `Retry AI review`
+   for completed sessions whose saved review is still fallback-only.

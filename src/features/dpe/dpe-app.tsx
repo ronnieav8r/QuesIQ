@@ -991,7 +991,13 @@ export default function App() {
                     await loadStoredSessions();
                     await loadDpeProgression();
                     if (data.review) {
-                      return { ok: true, message: "Saved review generated for this completed session." };
+                      return {
+                        ok: true,
+                        message:
+                          data.review.status === "generated"
+                            ? "AI review saved for this completed session."
+                            : "Fallback review saved. Retry AI review when the review service is ready.",
+                      };
                     }
                     return {
                       ok: false,
@@ -2058,6 +2064,8 @@ function ReviewScreen({
     : 0;
   const review = normalizeReview(session.review, buildLocalReview(session));
   const sessionProgress = buildSessionProgress(session);
+  const reviewSource = formatReviewSource(review);
+  const retryLabel = review.status === "generated" ? "Regenerate AI Review" : "Retry AI Review";
 
   return (
     <section className="screen">
@@ -2136,21 +2144,24 @@ function ReviewScreen({
           </div>
           <div className="stat-strip mt-4">
             <Stat label="Readiness" value={formatScore(review.scores.checkrideReadiness)} />
-            <Stat label="Review" value={review.status === "generated" ? "AI" : "Pending"} />
+            <Stat label="Review" value={reviewSource} />
+            <Stat label="Prompt" value={`v${review.promptConfigVersion}`} />
+            <Stat label="Model" value={review.model ?? "local"} />
           </div>
           <div className="raised-card mt-4">
-            <strong>{review.status === "generated" ? "Ready for review" : "Review incomplete"}</strong>
+            <strong>{review.status === "generated" ? "AI review ready" : "Fallback review active"}</strong>
             <p>
               {review.status === "generated"
                 ? "This saved review was generated from transcript evidence and the available DPE content records."
                 : "This is a deterministic fallback. It highlights completion, skipped prompts, and short answers until AI review or complete content is available."}
             </p>
+            <p className="muted">Prompt config: {review.promptConfigKey}</p>
           </div>
           <div className="inline-actions mt-4">
             {onRetryReview && (
               <button className="button" disabled={reviewGenerating} onClick={onRetryReview}>
                 <BadgeCheck />
-                {reviewGenerating ? "Retrying" : "Retry AI Review"}
+                {reviewGenerating ? "Generating" : retryLabel}
               </button>
             )}
             <button className="button primary" onClick={onReset}>
@@ -2314,6 +2325,10 @@ function ReviewList({ items, fallback }: { items: string[]; fallback?: string })
 
 function formatScore(score: number | null) {
   return score ? `${score}/5` : "-";
+}
+
+function formatReviewSource(review: ReviewJson | null | undefined) {
+  return review?.status === "generated" ? "AI" : "Fallback";
 }
 
 function normalizeContentStatus(status: string | null | undefined) {
@@ -3301,6 +3316,9 @@ function HistoryScreen({
                 <span className="pill">{formatSessionStatus(storedSession.status)}</span>
                 <span className="pill">{storedSession.mode}</span>
                 <span className="pill">{formatReviewLifecycleStatus(storedSession)}</span>
+                {storedSession.reviewJson && (
+                  <span className="pill">{formatReviewSource(storedSession.reviewJson)} review</span>
+                )}
                 {normalizeStoredCertificateType(storedSession.transcriptJson?.certificateType) && (
                   <span className="pill">
                     {
@@ -3363,6 +3381,23 @@ function HistoryScreen({
                     }}
                   >
                     {retryingReviewId === storedSession.id ? "Generating..." : "Generate review"}
+                  </button>
+                )}
+                {storedSession.status === "completed" && storedSession.reviewJson?.status === "fallback" && (
+                  <button
+                    className="button primary"
+                    disabled={retryingReviewId === storedSession.id}
+                    onClick={async () => {
+                      setRetryingReviewId(storedSession.id);
+                      const result = await onGenerateReview(storedSession.id);
+                      setRetryingReviewId(null);
+                      setHistoryNotice(result.message);
+                      if (result.ok) {
+                        setSelectedReviewId(storedSession.id);
+                      }
+                    }}
+                  >
+                    {retryingReviewId === storedSession.id ? "Generating..." : "Retry AI review"}
                   </button>
                 )}
                   </>
@@ -3507,7 +3542,8 @@ function formatReviewLifecycleStatus(storedSession: StoredPracticeSession) {
   if (storedSession.status === "completed" && !storedSession.reviewJson) {
     return "review incomplete";
   }
-  if (storedSession.reviewJson) return "review ready";
+  if (storedSession.reviewJson?.status === "generated") return "AI review ready";
+  if (storedSession.reviewJson?.status === "fallback") return "fallback review";
   return "review pending";
 }
 
@@ -3519,9 +3555,12 @@ function buildStoredSessionCta(storedSession: StoredPracticeSession) {
       : `${resumePlan.message} Use Start new with same target.`;
   }
   if (storedSession.status === "completed" && !storedSession.reviewJson) {
-    return "Session is complete but review is missing. Generate a saved review or open the fallback preview now.";
+    return "Session is complete but review is missing. Generate a saved review now.";
   }
-  return "Saved review is ready to reopen for follow-up practice planning.";
+  if (storedSession.reviewJson?.status === "fallback") {
+    return "Fallback review is saved. Retry AI review when the service is ready.";
+  }
+  return "AI review is ready to reopen for follow-up practice planning.";
 }
 
 function MeScreen({
