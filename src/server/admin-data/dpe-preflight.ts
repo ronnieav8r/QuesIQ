@@ -237,6 +237,7 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "Target:",
       "Prompt cert:",
       "response.ok && data.available === true",
+      "reviewPersisted",
     ]),
     localPersistenceRecoveryVisible: hasAll(dpeAppText, [
       "Typed practice running locally",

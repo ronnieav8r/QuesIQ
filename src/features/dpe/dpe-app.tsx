@@ -1213,14 +1213,13 @@ export default function App() {
                       generated?: boolean;
                       review?: ReviewJson;
                     };
-                    if (typeof data.available === "boolean") {
-                      setDatabaseAvailable(data.available);
-                    }
+                    const reviewPersisted = response.ok && data.available === true && Boolean(data.review);
+                    setDatabaseAvailable(response.ok && data.available === true);
                     await loadStoredSessions();
                     await loadDpeProgression();
                     await loadDpeDiagnostics();
                     await loadDpeRuntimeCheck();
-                    if (data.review) {
+                    if (reviewPersisted && data.review) {
                       return {
                         attemptedAt: new Date().toISOString(),
                         ok: true,
@@ -1234,7 +1233,9 @@ export default function App() {
                     return {
                       attemptedAt: new Date().toISOString(),
                       ok: false,
-                      message: data.error ?? "Review generation is not available for this session yet.",
+                      message:
+                        data.error ??
+                        "Review generation did not return a saved review for this session yet.",
                       source: "none",
                     };
                   } catch {

@@ -1233,3 +1233,17 @@ changing content:
 4. Admin DPE preflight continues to check for the persistence
    response-hardening marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 83 (History Review Retry Persistence Hardening)
+
+This slice makes History review retry reporting match durable save state
+without changing content:
+
+1. History review generation now treats a retry as successful only when the
+   endpoint returns HTTP OK, `available: true`, and a review payload.
+2. Non-OK, unavailable, malformed, or review-less responses now report that no
+   saved review was returned instead of marking the retry successful.
+3. DPE storage health is updated from the same strict response check used by
+   typed sessions and voice artifacts.
+4. Admin DPE preflight now checks for the History review persistence marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.
