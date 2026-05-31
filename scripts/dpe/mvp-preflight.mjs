@@ -99,6 +99,12 @@ const codeContracts = [
     ],
   },
   {
+    file: "src/server/dpe/dpe-data.ts",
+    checks: [
+      "parseDpeCheckrideDate",
+    ],
+  },
+  {
     file: "src/app/api/dpe/practice-sessions/[id]/artifact/route.ts",
     checks: ["recordDpeSessionCompleted", "DPE voice artifact save failed"],
   },

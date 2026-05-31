@@ -578,6 +578,14 @@ function clampDpeScore(value: number) {
   return Math.min(5, Math.max(1, value));
 }
 
+function parseDpeCheckrideDate(value?: string | null) {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
+  const date = new Date(`${trimmed}T12:00:00Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export async function getDpeProfile(userId: string) {
   const [profile] = await getDb()
     .select()
@@ -652,7 +660,7 @@ export async function saveDpeProfile(input: {
     aircraftCategory: selectedTrack.aircraftCategory,
     aircraftClass: selectedTrack.aircraftClass,
     certificate: selectedTrack.certificate,
-    checkrideDate: input.checkrideDate ? new Date(input.checkrideDate) : null,
+    checkrideDate: parseDpeCheckrideDate(input.checkrideDate),
     knownDpeName: input.knownDpeName?.trim() || null,
     schoolContext: input.schoolContext?.trim() || null,
     updatedAt: now,

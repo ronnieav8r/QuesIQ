@@ -371,3 +371,15 @@ This slice improves DPE review recovery without changing content or schema:
 3. The retry action is available from the active Practice review screen and
    reopened History reviews.
 4. No aviation content is created, approved, published, or modified.
+
+## MVP Learner Polish Slice 16 (Profile Date Hardening)
+
+This slice hardens DPE profile persistence without changing content:
+
+1. DPE profile saves now parse checkride dates through a strict `YYYY-MM-DD`
+   helper before writing the active target.
+2. Empty or malformed dates are stored as `null` instead of risking an invalid
+   date write.
+3. Target-track normalization remains unchanged, so Instrument, Commercial,
+   CFI, CFII, Multi, and MEI airplane-land tracks keep their configured
+   metadata.
