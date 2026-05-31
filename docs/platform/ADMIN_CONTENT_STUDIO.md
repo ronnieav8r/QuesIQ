@@ -34,6 +34,24 @@ Generation and verification are separate stages:
 The initial UI intentionally keeps scrub, generate, verify, and publish actions
 disabled until backend endpoints and audit storage are ready.
 
+## Workspace Organization
+
+Content Studio now uses internal workspace navigation so admins can move quickly
+between operational surfaces without scrolling through one long page.
+
+Top-level workspace sections:
+
+- Overview / Run history: pipeline intake and draft generation controls, stage
+  framing, and durable run history.
+- Source review: source-pack paste preview plus source-pack chunk/figure/table
+  review scaffold and durable review-export save actions.
+- Product packet preview: preview-only Study generation packet, Study deck
+  draft + verifier queue packet, and DPE reference packet bridge.
+- Study import prep: preview-only planning panel for future rich flashcard CSV
+  preview/import flow.
+- Draft review: saved run review state and draft detail panels for the selected
+  run.
+
 ## Runs
 
 The Admin run ledger now has dedicated durable storage in
@@ -333,6 +351,18 @@ The durable Study source-pack draft save mode is still review-only scaffolding.
 It does not read local source-pack folders, load Drive content, call verifier
 AI, import Study runtime decks/cards, publish content, or mark Official or
 Verified state.
+
+## Study Import Prep
+
+The new Study import prep workspace is a planning surface only. It includes a
+textarea for rich flashcard CSV payloads, a static sample row, and expected
+fields such as card content, source chunk/page/visual references, and
+verification metadata.
+
+The panel does not call product endpoints yet. `rich_csv_import_preview` should
+be wired only after the Study worker merges the backend preview route.
+Import/write controls remain disabled in Admin until product-owned import
+controls are available.
 
 ## Ownership
 
