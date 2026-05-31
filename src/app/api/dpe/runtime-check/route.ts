@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { resolveDpeTargetTrack } from "@/features/dpe/target-tracks";
 import {
   getDpeProfile,
   listDpeContentSummary,
@@ -55,6 +56,14 @@ export async function GET() {
           0,
         )
       : 0;
+  const selectedTargetTrack =
+    profileResult.status === "fulfilled" && profileResult.value.target
+      ? resolveDpeTargetTrack({
+          aircraftCategory: profileResult.value.target.aircraftCategory,
+          aircraftClass: profileResult.value.target.aircraftClass,
+          certificate: profileResult.value.target.certificate,
+        })
+      : null;
 
   const rows: RuntimeCheckRow[] = [
     profileResult.status === "fulfilled"
@@ -71,6 +80,31 @@ export async function GET() {
           detail: "Profile storage did not respond for this signed-in account.",
           key: "profile",
           label: "Profile",
+          status: "error",
+          value: "unavailable",
+        }),
+    profileResult.status === "fulfilled"
+      ? selectedTargetTrack
+        ? row({
+            detail: selectedTargetTrack.contentReady
+              ? `${selectedTargetTrack.title} is mapped to ready DPE content for this account target.`
+              : `${selectedTargetTrack.title} is configured as an airplane-land MVP target, but remains scaffolded/content-pending until curated content is added.`,
+            key: "target_track_readiness",
+            label: "Target track readiness",
+            status: selectedTargetTrack.contentReady ? "ok" : "warning",
+            value: `${selectedTargetTrack.code} ${selectedTargetTrack.contentReady ? "ready" : "scaffolded"}`,
+          })
+        : row({
+            detail: "No active DPE target is saved for this account yet. Save target details from Me before production QA.",
+            key: "target_track_readiness",
+            label: "Target track readiness",
+            status: "warning",
+            value: "not set",
+          })
+      : row({
+          detail: "Target readiness cannot be checked until profile storage responds.",
+          key: "target_track_readiness",
+          label: "Target track readiness",
           status: "error",
           value: "unavailable",
         }),

@@ -253,6 +253,12 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "Voice AI",
       'getOpenAiRealtimeApiKey("dpe")',
     ]),
+    signedInTargetReadinessVisible: hasAll(runtimeCheckText, [
+      "resolveDpeTargetTrack",
+      "Target track readiness",
+      "target_track_readiness",
+      "scaffolded/content-pending",
+    ]),
   };
 
   const blockers: string[] = [];
@@ -320,6 +326,9 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
   }
   if (!runtimeSignals.signedInDependencyReadinessVisible) {
     warnings.push("DPE signed-in dependency readiness markers were not detected.");
+  }
+  if (!runtimeSignals.signedInTargetReadinessVisible) {
+    warnings.push("DPE signed-in target readiness markers were not detected.");
   }
 
   const status: PreflightStatus =
@@ -514,6 +523,13 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
         status: warningStatusFrom(runtimeSignals.signedInDependencyReadinessVisible),
         value: runtimeSignals.signedInDependencyReadinessVisible ? "Visible" : "Not detected",
       },
+      {
+        detail: "Signed-in runtime check reports the saved DPE target as content-ready or scaffolded/content-pending.",
+        key: "signed_in_target_readiness",
+        label: "Signed-in target readiness",
+        status: warningStatusFrom(runtimeSignals.signedInTargetReadinessVisible),
+        value: runtimeSignals.signedInTargetReadinessVisible ? "Visible" : "Not detected",
+      },
     ],
     status,
     statusRows: [
@@ -568,6 +584,13 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
         label: "Signed-in dependency contract",
         status: warningStatusFrom(runtimeSignals.signedInDependencyReadinessVisible),
         value: runtimeSignals.signedInDependencyReadinessVisible ? "Detected" : "Not detected",
+      },
+      {
+        detail: "Source-contract presence for saved target track readiness in the signed-in runtime check.",
+        key: "signed_in_target_readiness_contract",
+        label: "Signed-in target readiness contract",
+        status: warningStatusFrom(runtimeSignals.signedInTargetReadinessVisible),
+        value: runtimeSignals.signedInTargetReadinessVisible ? "Detected" : "Not detected",
       },
       {
         detail: "Source-contract presence for target-track snapshot alignment in realtime voice instructions.",

@@ -814,3 +814,18 @@ content:
 3. Admin DPE preflight now checks that the DPE app content-routing contract
    includes ACS title and element-type propagation.
 4. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 52 (Signed-In Target Readiness)
+
+This slice makes signed-in DPE runtime QA target-aware without changing
+content:
+
+1. `/api/dpe/runtime-check` now reports a `Target track readiness` row for the
+   saved DPE checkride target.
+2. The row resolves the saved certificate/category/class into the configured
+   airplane-land MVP track and reports either `ready` or `scaffolded`.
+3. Non-Private tracks remain explicitly scaffolded/content-pending until
+   curated aviation content is added.
+4. Admin DPE preflight now checks that the signed-in runtime contract includes
+   the target-readiness row.
+5. No aviation content, schema, publish, Official, or Verified state changed.
