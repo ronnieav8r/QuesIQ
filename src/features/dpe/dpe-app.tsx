@@ -930,12 +930,13 @@ export default function App() {
           endedAt: status === "completed" ? nextSession.endedAt?.toISOString() : undefined
         })
       });
-      const data = (await response.json()) as { available: boolean };
-      setDatabaseAvailable(data.available);
+      const data = (await response.json().catch(() => ({}))) as { available?: boolean };
+      const persisted = response.ok && data.available === true;
+      setDatabaseAvailable(persisted);
       await loadStoredSessions();
       await loadDpeProgression();
       await loadDpeRuntimeCheck();
-      return data.available;
+      return persisted;
     } catch {
       setDatabaseAvailable(false);
       return false;
@@ -955,12 +956,12 @@ export default function App() {
       const response = await fetch(`/api/dpe/practice-sessions/${nextSession.id}/review`, {
         method: "POST"
       });
-      const data = (await response.json()) as {
-        available: boolean;
+      const data = (await response.json().catch(() => ({}))) as {
+        available?: boolean;
         review?: ReviewJson;
       };
       const review = data.review ?? fallback;
-      setDatabaseAvailable(data.available);
+      setDatabaseAvailable(response.ok && data.available === true);
       setSession({ ...nextSession, review });
       await loadStoredSessions();
       await loadDpeProgression();

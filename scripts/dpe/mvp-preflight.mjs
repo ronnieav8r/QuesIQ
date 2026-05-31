@@ -156,6 +156,7 @@ const codeContracts = [
       "sessionTrackLabel",
       "Target:",
       "Prompt cert:",
+      "response.ok && data.available === true",
       "targetTrack: {",
       "buildDpeContentStudioHref",
       "inferDpeTargetTrackKeyFromCertificate",

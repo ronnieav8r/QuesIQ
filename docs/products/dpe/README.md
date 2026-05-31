@@ -1205,3 +1205,16 @@ without changing content:
    differ during scaffolded/content-pending track practice.
 4. Admin DPE preflight now checks for the History target-context labels.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 81 (Persistence Response Hardening)
+
+This slice makes saved-session recovery stricter without changing content:
+
+1. Typed session update persistence now requires both a successful HTTP
+   response and `available: true` before treating the session as still saved.
+2. Review generation now uses the same HTTP status plus availability check
+   before marking DPE storage as healthy.
+3. Non-OK or malformed persistence responses now downgrade to the existing
+   local-only/fallback review path instead of appearing save-backed.
+4. Admin DPE preflight now checks for the persistence response-hardening marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.
