@@ -223,6 +223,32 @@ type DpeProfileResponse = {
   } | null;
 };
 
+type DpeProgressionSummary = {
+  answeredPrompts: number;
+  completedSessions: number;
+  currentLevelXp: number;
+  level: number;
+  levelName?: string;
+  nextLevelXp: number;
+  quests: {
+    checkThreshold: number;
+    checkType: string;
+    completedAt?: string;
+    description: string;
+    progress: number;
+    questKey: string;
+    status: "completed" | "open";
+    title: string;
+    xpReward: number;
+  }[];
+  questsCompleted: number;
+  questsTotal: number;
+  readinessScore: number;
+  reviewedSessions: number;
+  totalXp: number;
+  uniqueAreaTasks: number;
+};
+
 const navItems = [
   { key: "home", label: "Home", icon: Home },
   { key: "practice", label: "Practice", icon: Mic },
@@ -267,6 +293,8 @@ export default function App() {
   const [dpeProfile, setDpeProfile] = useState<DpeProfileState>(emptyDpeProfile);
   const [profileSaveStatus, setProfileSaveStatus] = useState<"idle" | "saved" | "saving" | "error">("idle");
   const [databaseAvailable, setDatabaseAvailable] = useState<boolean | null>(null);
+  const [progressionAvailable, setProgressionAvailable] = useState<boolean | null>(null);
+  const [progressionSummary, setProgressionSummary] = useState<DpeProgressionSummary | null>(null);
   const [questionState, setQuestionState] = useState<QuestionApiResponse>(
     buildEmptyQuestionResponse()
   );
@@ -333,6 +361,7 @@ export default function App() {
     void loadStoredSessions();
     void loadQuestions();
     void loadDpeProfile();
+    void loadDpeProgression();
     if (authState.isAdmin) {
       void loadContentSummary();
     }
@@ -407,6 +436,21 @@ export default function App() {
     }
   }
 
+  async function loadDpeProgression() {
+    try {
+      const response = await fetch("/api/dpe/progression");
+      const data = (await response.json()) as {
+        available: boolean;
+        progression?: DpeProgressionSummary;
+      };
+      setProgressionAvailable(data.available);
+      setProgressionSummary(data.progression ?? null);
+    } catch {
+      setProgressionAvailable(false);
+      setProgressionSummary(null);
+    }
+  }
+
   async function saveProfile(nextProfile = dpeProfile) {
     setProfileSaveStatus("saving");
     try {
@@ -425,6 +469,7 @@ export default function App() {
       }
       setDatabaseAvailable(true);
       setDpeProfile(profileResponseToState(data));
+      await loadDpeProgression();
       setProfileSaveStatus("saved");
     } catch {
       setProfileSaveStatus("error");
@@ -475,7 +520,7 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode,
-          acsTitle: "Private Pilot Airplane",
+          acsTitle: selectedTargetTrack.title,
           acsArea: selectedArea,
           acsTask: selectedTask,
           certificateType: selectedCertificateType,
@@ -576,6 +621,7 @@ export default function App() {
       const data = (await response.json()) as { available: boolean };
       setDatabaseAvailable(data.available);
       await loadStoredSessions();
+      await loadDpeProgression();
     } catch {
       setDatabaseAvailable(false);
     }
@@ -602,6 +648,7 @@ export default function App() {
       setDatabaseAvailable(data.available);
       setSession({ ...nextSession, review });
       await loadStoredSessions();
+      await loadDpeProgression();
     } catch {
       setDatabaseAvailable(false);
       setSession({ ...nextSession, review: fallback });
@@ -639,6 +686,7 @@ export default function App() {
       const data = (await response.json().catch(() => ({}))) as { available?: boolean };
       setDatabaseAvailable(data.available ?? response.ok);
       await loadStoredSessions();
+      await loadDpeProgression();
     } catch {
       setDatabaseAvailable(false);
     }
@@ -721,6 +769,8 @@ export default function App() {
                 dpeProfile={dpeProfile}
                 currentSession={session}
                 onPractice={() => setScreen("practice")}
+                progressionAvailable={progressionAvailable}
+                progressionSummary={progressionSummary}
                 selectedTargetTrack={selectedTargetTrack}
                 storedSessions={storedSessions}
               />
@@ -919,6 +969,8 @@ function HomeScreen({
   questionCount,
   questionBankAvailable,
   onPractice,
+  progressionAvailable,
+  progressionSummary,
   selectedTargetTrack,
   storedSessions,
 }: {
@@ -927,6 +979,8 @@ function HomeScreen({
   questionCount: number;
   questionBankAvailable: boolean | null;
   onPractice: () => void;
+  progressionAvailable: boolean | null;
+  progressionSummary: DpeProgressionSummary | null;
   selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
   storedSessions: StoredPracticeSession[];
 }) {
@@ -948,6 +1002,12 @@ function HomeScreen({
   const readinessPercent = readinessQuestProgress.length
     ? Math.round((readinessCompleted / readinessQuestProgress.length) * 100)
     : 0;
+  const progressionQuests = progressionSummary?.quests ?? [];
+  const progressionPercent =
+    progressionSummary && progressionSummary.questsTotal > 0
+      ? Math.round((progressionSummary.questsCompleted / progressionSummary.questsTotal) * 100)
+      : readinessPercent;
+  const readinessSignal = progressionSummary?.readinessScore ?? 0;
   const targetMissing = buildTargetMissingFields(dpeProfile);
   const nextAction = targetMissing.length > 0
     ? `Complete target setup: ${targetMissing.join(", ")}.`
@@ -991,6 +1051,7 @@ function HomeScreen({
           <Stat label="Skipped" value={`${progress.skippedPrompts}`} />
           <Stat label="Track" value={selectedTargetTrack.code} />
           <Stat label="Aircraft" value={dpeProfile.aircraft || "-"} />
+          <Stat label="Readiness" value={readinessSignal > 0 ? readinessSignal.toFixed(1) : "-"} />
           <Stat label="Content" value={questionBankAvailable ? "DB" : "Fallback"} />
         </div>
 
@@ -1043,18 +1104,39 @@ function HomeScreen({
             <div>
               <h3>Readiness quest track (preview)</h3>
               <p>
-                This is a DPE readiness preview only. It does not award persisted XP yet and is not
-                a certification or publish state.
+                This is checkride-readiness progress, not a certification or content-publish state.
               </p>
             </div>
             <Radio />
           </div>
           <div className="stat-strip mt-4">
-            <Stat label="Track progress" value={`${readinessPercent}%`} />
-            <Stat label="Completed" value={`${readinessCompleted}/${readinessQuestProgress.length}`} />
-            <Stat label="Reviewed sessions" value={`${progress.reviewedSessions}`} />
-            <Stat label="ACS coverage" value={`${progress.uniqueAreaTasksPracticed}`} />
+            <Stat label="Track progress" value={`${progressionPercent}%`} />
+            <Stat
+              label="Completed"
+              value={
+                progressionSummary
+                  ? `${progressionSummary.questsCompleted}/${progressionSummary.questsTotal}`
+                  : `${readinessCompleted}/${readinessQuestProgress.length}`
+              }
+            />
+            <Stat
+              label="Reviewed sessions"
+              value={`${progressionSummary?.reviewedSessions ?? progress.reviewedSessions}`}
+            />
+            <Stat
+              label="ACS coverage"
+              value={`${progressionSummary?.uniqueAreaTasks ?? progress.uniqueAreaTasksPracticed}`}
+            />
           </div>
+          {progressionAvailable === false && (
+            <div className="raised-card mt-4">
+              <strong>Progression service unavailable</strong>
+              <p>
+                Showing local readiness preview from session data only. Persisted XP and quests will
+                appear when DPE progression storage is reachable.
+              </p>
+            </div>
+          )}
           {targetMissing.length > 0 && (
             <div className="raised-card mt-4">
               <strong>Checkride target completeness</strong>
@@ -1062,17 +1144,32 @@ function HomeScreen({
             </div>
           )}
           <div className="question-list mt-4">
-            {readinessQuestProgress.map((quest) => (
+            {(progressionQuests.length > 0
+              ? progressionQuests.map((quest) => ({
+                  current: quest.progress,
+                  description: quest.description,
+                  done: quest.status === "completed",
+                  id: quest.questKey,
+                  target: quest.checkThreshold,
+                  title: quest.title,
+                }))
+              : readinessQuestProgress.map((quest) => ({
+                  current: quest.current,
+                  description:
+                    dpeQuestDefinitions.find((definition) => definition.id === quest.id)?.description ??
+                    "DPE readiness objective",
+                  done: quest.done,
+                  id: quest.id,
+                  target: quest.target,
+                  title: quest.title,
+                }))).map((quest) => (
               <div className="raised-card" key={quest.id}>
                 <div className="section-head">
                   <strong>{quest.title}</strong>
                   <span className="pill">{quest.done ? "ready" : "in progress"}</span>
                 </div>
                 <p>{quest.current}/{quest.target}</p>
-                <p className="muted">
-                  {dpeQuestDefinitions.find((definition) => definition.id === quest.id)?.description ??
-                    "DPE readiness objective"}
-                </p>
+                <p className="muted">{quest.description}</p>
               </div>
             ))}
           </div>
