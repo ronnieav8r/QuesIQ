@@ -92,6 +92,8 @@ const codeContracts = [
       "voice evidence",
       "Typed transcript evidence",
       "Retry AI Review",
+      "History storage unavailable",
+      "Stored transcripts, retry AI",
       "onRetryReview",
       "formatDpeProfileDate",
       "targetTrack: {",

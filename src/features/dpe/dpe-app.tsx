@@ -3630,6 +3630,16 @@ function HistoryScreen({
           <Stat label="Saved reviews" value={`${storedReviews.length}`} />
           <Stat label="Review diagnostics" value={`${reviewDiagnostics.length}`} />
         </div>
+        {databaseAvailable === false && (
+          <div className="raised-card mt-4">
+            <strong>History storage unavailable</strong>
+            <p>
+              Local review remains available for the active session. Stored transcripts, retry AI
+              review, durable diagnostics, and progression updates will resume when DPE storage is
+              reachable.
+            </p>
+          </div>
+        )}
         <div className="grid two-col mt-4">
           <div className="raised-card">
             <strong>Review trend</strong>

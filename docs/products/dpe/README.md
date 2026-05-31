@@ -666,3 +666,15 @@ This slice improves learner recovery clarity without changing content:
 3. This aligns Practice setup with the Home readiness checklist and History
    retry behavior.
 4. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 40 (History Storage Recovery Notice)
+
+This slice improves learner clarity when DPE storage is degraded without
+changing content:
+
+1. History now shows a `History storage unavailable` notice when DPE storage is
+   unreachable.
+2. The notice explains that local review remains available for the active
+   session while stored transcripts, retry AI review, durable diagnostics, and
+   progression updates wait for storage to recover.
+3. No aviation content, schema, publish, Official, or Verified state changed.
