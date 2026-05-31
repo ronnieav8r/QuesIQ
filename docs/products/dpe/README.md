@@ -559,3 +559,15 @@ content:
    voice transcript turn counts when a voice artifact exists.
 3. This helps learners and QA confirm that saved sessions carried the intended
    target-track context and evidence source into review generation.
+
+## MVP Learner Polish Slice 32 (Admin Evidence Diagnostics)
+
+This slice brings DPE review evidence-source visibility into Admin without
+changing content:
+
+1. Admin review diagnostics now summarize voice-evidence, typed-evidence, and
+   missing-target counts for recent DPE review events.
+2. Recent review diagnostic cards now show evidence source, voice transcript
+   turn count when present, and stored target-track label.
+3. This lets Admin compare review retry health against the session evidence and
+   target-track metadata captured by the learner History view.

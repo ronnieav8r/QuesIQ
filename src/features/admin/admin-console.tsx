@@ -546,6 +546,18 @@ async function DpeAdminPanel() {
                   <strong>{reviewDiagnostics.totals.warnings + reviewDiagnostics.totals.errors}</strong>
                   <span>Warnings/errors</span>
                 </div>
+                <div className="study-stat-chip">
+                  <strong>{reviewDiagnostics.totals.voiceEvidence}</strong>
+                  <span>Voice evidence</span>
+                </div>
+                <div className="study-stat-chip">
+                  <strong>{reviewDiagnostics.totals.typedEvidence}</strong>
+                  <span>Typed evidence</span>
+                </div>
+                <div className="study-stat-chip">
+                  <strong>{reviewDiagnostics.totals.missingTargetTracks}</strong>
+                  <span>Missing target</span>
+                </div>
               </div>
 
               <div className="question-list mt-4">
@@ -554,6 +566,11 @@ async function DpeAdminPanel() {
                     <div className="question-meta">
                       <span className="pill">{event.code ?? "review_event"}</span>
                       <span className="pill">{event.severity}</span>
+                      <span className="pill">{event.evidenceSource} evidence</span>
+                      {event.evidenceSource === "voice" && (
+                        <span className="pill">{event.evidenceTurns} turns</span>
+                      )}
+                      <span className="pill">{event.targetTrackTitle ?? "target missing"}</span>
                       <span className="pill">{event.userEmail ?? event.userId ?? "unknown user"}</span>
                       <span className="pill">{formatDate(event.createdAt.toISOString())}</span>
                     </div>
