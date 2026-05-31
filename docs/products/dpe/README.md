@@ -359,3 +359,15 @@ This slice adds safe DPE runtime-readiness visibility without exposing secrets:
 3. These flags only confirm whether server-side prerequisites are configured;
    they do not reveal key names, values, model details, or user data.
 4. No aviation content is created, approved, published, or modified.
+
+## MVP Learner Polish Slice 15 (Review Retry Recovery)
+
+This slice improves DPE review recovery without changing content or schema:
+
+1. Persisted DPE review screens now expose `Retry AI Review`.
+2. The action reuses the existing saved-session review endpoint, so it can
+   replace a deterministic fallback with an AI-generated review when runtime
+   dependencies are available.
+3. The retry action is available from the active Practice review screen and
+   reopened History reviews.
+4. No aviation content is created, approved, published, or modified.

@@ -78,6 +78,8 @@ const codeContracts = [
       "DPE target tracks",
       "Review AI",
       "Voice AI",
+      "Retry AI Review",
+      "onRetryReview",
     ],
   },
   {

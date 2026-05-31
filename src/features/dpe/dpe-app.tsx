@@ -946,6 +946,7 @@ export default function App() {
                 onCertificateChange={changeCertificate}
                 onRecordAnswer={recordAnswer}
                 onReset={resetPractice}
+                onRetryReview={() => (session ? generateReview(session) : Promise.resolve())}
                 onStartSession={() => startSession(false)}
                 onStartVoiceSession={() => startSession(true)}
                 onVoiceUnavailable={continueVoiceSessionAsTyped}
@@ -1632,6 +1633,7 @@ function PracticeScreen(props: {
   onRecordAnswer: (skipped: boolean) => void;
   onFinishEarly: () => void;
   onReset: () => void;
+  onRetryReview: () => Promise<void>;
   onAnswerChange: (value: string) => void;
   onVoiceUnavailable: (session: LocalSession) => void;
   onVoiceArtifactFinalized: (artifact: VoiceSessionArtifactDraft) => void;
@@ -1665,6 +1667,7 @@ function PracticeScreen(props: {
         reviewGenerating={props.reviewGenerating}
         session={props.session}
         onReset={props.onReset}
+        onRetryReview={props.session.persisted ? props.onRetryReview : undefined}
       />
     );
   }
@@ -2037,10 +2040,12 @@ function PracticeSetupScreen({
 function ReviewScreen({
   session,
   reviewGenerating,
+  onRetryReview,
   onReset
 }: {
   session: LocalSession;
   reviewGenerating?: boolean;
+  onRetryReview?: () => Promise<void>;
   onReset: () => void;
 }) {
   const answered = session.answers.filter((answer) => !answer.skipped && answer.response).length;
@@ -2142,6 +2147,12 @@ function ReviewScreen({
             </p>
           </div>
           <div className="inline-actions mt-4">
+            {onRetryReview && (
+              <button className="button" disabled={reviewGenerating} onClick={onRetryReview}>
+                <BadgeCheck />
+                {reviewGenerating ? "Retrying" : "Retry AI Review"}
+              </button>
+            )}
             <button className="button primary" onClick={onReset}>
               <RotateCcw />
               New Session
@@ -3369,6 +3380,17 @@ function HistoryScreen({
           key={selectedReview.id}
           session={selectedReview}
           onReset={() => undefined}
+          onRetryReview={
+            selectedReview.persisted
+              ? async () => {
+                  setRetryingReviewId(selectedReview.id);
+                  const result = await onGenerateReview(selectedReview.id);
+                  setRetryingReviewId(null);
+                  setHistoryNotice(result.message);
+                }
+              : undefined
+          }
+          reviewGenerating={retryingReviewId === selectedReview.id}
         />
       )}
     </section>
