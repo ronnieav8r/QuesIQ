@@ -102,15 +102,18 @@ export function PracticeSetup({
             </div>
             <div className="target-chip-list">
               <button
+                aria-pressed={!selectedJobTarget}
                 className={!selectedJobTarget ? "target-chip active" : "target-chip"}
                 onClick={() => onJobTarget(undefined)}
                 type="button"
               >
+                <small>Profile context</small>
                 <strong>{interviewContext.targetRole || "Profile target"}</strong>
                 <span>{interviewContext.targetCompany || "No company selected"}</span>
               </button>
               {jobTargets.map((target) => (
                 <button
+                  aria-pressed={selectedJobTarget?.id === target.id}
                   className={
                     selectedJobTarget?.id === target.id ? "target-chip active" : "target-chip"
                   }
@@ -118,6 +121,7 @@ export function PracticeSetup({
                   onClick={() => onJobTarget(target)}
                   type="button"
                 >
+                  <small>Saved target</small>
                   <strong>{target.label}</strong>
                   <span>{target.jobDescription ? "Job description saved" : "No JD"}</span>
                 </button>

@@ -60,6 +60,7 @@ export default function Home() {
   const [interviewContext, setInterviewContext] = useState(initialInterviewContext);
   const [jobTargets, setJobTargets] = useState<JobTargetRecord[]>([]);
   const [selectedJobTarget, setSelectedJobTarget] = useState<JobTargetRecord>();
+  const [practiceUsesProfileContext, setPracticeUsesProfileContext] = useState(false);
   const [sessionLaunchError, setSessionLaunchError] = useState<string>();
   const [sessionLaunchPending, setSessionLaunchPending] = useState(false);
   const [sessionLaunchRecord, setSessionLaunchRecord] = useState<SessionLaunchRecord>();
@@ -475,7 +476,13 @@ export default function Home() {
     setSelectedModeKey(undefined);
     setSelectedQuestionKey(undefined);
     setSelectedStyleKey(undefined);
+    setPracticeUsesProfileContext(false);
     setSelectedJobTarget((current) => current ?? activeJobTarget ?? jobTargets[0]);
+  }
+
+  function selectPracticeJobTarget(target?: JobTargetRecord) {
+    setPracticeUsesProfileContext(!target);
+    setSelectedJobTarget(target);
   }
 
   function chooseMode(mode: PracticeMode) {
@@ -788,13 +795,13 @@ export default function Home() {
               interviewContext={interviewContext}
               jobTargets={jobTargets}
               onBack={goBackInPractice}
-              onJobTarget={setSelectedJobTarget}
+              onJobTarget={selectPracticeJobTarget}
               onLaunch={launchSession}
               onMode={chooseMode}
               onQuestion={chooseQuestion}
               onStyle={chooseStyle}
               selectedMode={selectedMode}
-              selectedJobTarget={activeJobTarget}
+              selectedJobTarget={practiceUsesProfileContext ? undefined : activeJobTarget}
               selectedQuestion={selectedQuestion}
               selectedStyle={selectedStyle}
               sessionLaunchError={sessionLaunchError}
