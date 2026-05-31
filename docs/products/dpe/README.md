@@ -299,3 +299,15 @@ the DPE learner Home surface:
    admin cookies.
 4. This is deployment/readiness visibility only. It does not approve, publish,
    seed, or modify aviation content.
+
+## MVP Learner Polish Slice 10 (Realtime Turn Continuation)
+
+This slice fixes DPE voice-practice continuation without changing content:
+
+1. The shared realtime voice client now treats `/api/dpe/realtime/session` as
+   an endpoint that should request the next Que response after each completed
+   applicant voice turn.
+2. DPE voice sessions keep the existing first-turn setup, transcript artifact
+   save path, and review generation flow.
+3. DPE preflight now checks the shared realtime client contract so this
+   endpoint does not regress back to a one-turn voice interaction.

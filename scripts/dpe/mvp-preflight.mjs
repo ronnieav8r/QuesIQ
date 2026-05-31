@@ -97,6 +97,14 @@ const codeContracts = [
     ],
   },
   {
+    file: "src/components/interview/realtime-voice-session.tsx",
+    checks: [
+      "shouldAutoCreateResponseAfterUserTurn",
+      "\"/api/dpe/realtime/session\"",
+      "client.response.create.after_user_turn",
+    ],
+  },
+  {
     file: "docs/products/dpe/README.md",
     checks: [
       "Instrument Airplane Land",

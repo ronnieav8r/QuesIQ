@@ -34,6 +34,10 @@ const emptyArtifactDraft: VoiceSessionArtifactDraft = {
 const defaultFirstTurnInstruction =
   "Speak in English only. Start the live voice session now using the active Admin prompt, mode instructions, question-focus instructions, style instructions, and session context already provided. Ask exactly one opening question.";
 
+function shouldAutoCreateResponseAfterUserTurn(endpoint: string) {
+  return endpoint === "/api/realtime/session" || endpoint === "/api/dpe/realtime/session";
+}
+
 function toErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Voice session failed.";
 }
@@ -385,7 +389,7 @@ export function RealtimeVoiceSession({
           );
           pendingUserTranscriptRef.current = "";
           if (
-            endpoint === "/api/realtime/session" &&
+            shouldAutoCreateResponseAfterUserTurn(endpoint) &&
             dataChannel.readyState === "open" &&
             !endingRef.current
           ) {
