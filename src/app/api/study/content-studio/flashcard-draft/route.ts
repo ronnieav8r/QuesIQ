@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { createContentStudioRun, listContentStudioRuns } from "@/server/admin-content-studio/content-studio-runs";
 import { requireAdminSession } from "@/server/admin";
 import {
   generateStudyFlashcardDeckDraft,
@@ -14,11 +15,14 @@ import {
   buildStudySourcePackVerificationQueuePreview,
   getStudySourcePackVerificationQueueReviewSections,
 } from "@/server/study/study-source-pack-verification-queue";
+import { buildStudySourcePackDraftRunPayload } from "@/server/study/study-source-pack-draft-run-save";
 import {
   getStudyGenerationPacketReviewSections,
   parseStudyGenerationPacketContract,
   STUDY_GENERATION_PACKET_SAMPLE,
 } from "@/server/study/study-generation-packet-contract";
+
+export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const session = await requireAdminSession();
@@ -97,6 +101,62 @@ export async function POST(request: Request) {
       reviewSections: getStudySourcePackVerificationQueueReviewSections(queuePreview),
       sourcePackVerificationQueuePreviewOnly: true,
     });
+  }
+
+  if (body.mode === "source_pack_draft_run_save") {
+    const candidatePayload = body.sourcePackDraftJson ?? STUDY_SOURCE_PACK_DRAFT_SAMPLE;
+    const parsed = parseStudySourcePackGeneratedDeckDraftContract(candidatePayload);
+
+    if (!parsed.ok) {
+      return NextResponse.json(
+        {
+          error: "Invalid source-pack Study draft contract payload.",
+          validationErrors: parsed.errors,
+        },
+        { status: 400 },
+      );
+    }
+
+    const queuePreview = buildStudySourcePackVerificationQueuePreview(parsed.draft);
+    const runPayload = buildStudySourcePackDraftRunPayload({
+      contract: parsed.draft,
+      queuePreview,
+    });
+
+    try {
+      const run = await createContentStudioRun({
+        adminUserId: session.user.id,
+        draft: runPayload.draftPayload,
+        pipelineKey: "study_flashcards",
+        sourceMetadata: {
+          ...runPayload.sourceMetadata,
+          sourcePackContractVersion: parsed.draft.contractVersion,
+        },
+        sourceText: runPayload.sourceText,
+        stage: "source_pack_study_deck_draft_review",
+        status: "draft_ready",
+        templateKey: "source_pack_deck_draft",
+      });
+
+      return NextResponse.json({
+        draftContract: parsed.draft,
+        queuePreview,
+        run,
+        runs: await listContentStudioRuns(),
+        storage: {
+          detail:
+            "Source-pack Study deck draft review artifact saved to content_studio_runs. This mode does not call AI verifier, import Study decks, publish, or mark Official/Verified.",
+          durableReviewState: true,
+        },
+      });
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error: error instanceof Error ? error.message : "Saving source-pack draft run failed.",
+        },
+        { status: 502 },
+      );
+    }
   }
 
   const sourceText = body.sourceText?.trim();
