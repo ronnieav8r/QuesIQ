@@ -1164,3 +1164,17 @@ are not the same thing, without changing content:
    remains active but available demo prompt content is used.
 4. Admin DPE preflight now checks for the prompt-certificate visibility marker.
 5. No aviation content, schema, publish, Official, or Verified state changed.
+
+## MVP Learner Polish Slice 78 (Active Prompt Pool Visibility)
+
+This slice makes Practice setup count the prompts the learner can actually use
+without changing content:
+
+1. Practice setup now shows `Prompt pool` for the active certificate/area/task
+   prompt count.
+2. The value distinguishes database-backed prompts from fallback prompts while
+   using the active pool count, not the whole question bank count.
+3. `Session prompts` still shows the capped number that will be selected for
+   the next session.
+4. Admin DPE preflight now checks for the active prompt-pool marker.
+5. No aviation content, schema, publish, Official, or Verified state changed.

@@ -2161,7 +2161,6 @@ function PracticeSetupScreen({
   mode,
   questions,
   questionBankAvailable,
-  questionCount,
   selectedTargetTrack,
   practiceNotice,
   publicStatus,
@@ -2335,8 +2334,8 @@ function PracticeSetupScreen({
             <Stat label="Visual hints" value={`${visualCount}`} />
             <Stat label="Review-ready" value={`${readinessPercent}%`} />
             <Stat
-              label="Content"
-              value={questionBankAvailable ? `${questionCount} DB` : `${questionCount} fallback`}
+              label="Prompt pool"
+              value={questionBankAvailable ? `${questions.length} DB` : `${questions.length} fallback`}
             />
           </div>
           {!selectedTargetTrack.contentReady && (
