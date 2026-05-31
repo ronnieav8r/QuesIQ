@@ -129,7 +129,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
         <div>
           <p className="eyebrow">QuesIQ Study</p>
           <h1>Library</h1>
-          <p>Browse public Study decks and your saved Study library.</p>
+          <p>Browse Public decks, your Mine collection, and QuesIQ-reviewed Study material.</p>
         </div>
         <Link className="button-link secondary" href="/study">
           Study Home
@@ -140,7 +140,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
         <BookOpen size={20} aria-hidden="true" />
         <div>
           <h2>{filteredDecks.length} deck{filteredDecks.length === 1 ? "" : "s"}</h2>
-          <p>Filter by ownership, visibility, and trust/source status.</p>
+          <p>V1 labels are Mine, Public, Official, and Verified. Verified means source/card review, not a credential.</p>
         </div>
       </section>
 
@@ -172,7 +172,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
             <span>Ownership & Visibility</span>
             <div className="study-filter-pills">
               <Link className={scopeFilter === "all" ? "active" : ""} href={libraryHref({ scope: "all" })}>
-                Public
+                {userId ? "Public + Mine" : "Public"}
               </Link>
               {userId && (
                 <Link className={scopeFilter === "mine" ? "active" : ""} href={libraryHref({ scope: "mine" })}>
@@ -191,13 +191,14 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
               >
                 Any
               </Link>
-              <Link className={officialOnly ? "active" : ""} href={libraryHref({ official: "1" })}>
+              <Link className={officialOnly ? "active" : ""} href={libraryHref({ official: "1", verified: null })}>
                 Official
               </Link>
-              <Link className={verifiedOnly ? "active" : ""} href={libraryHref({ verified: "1" })}>
+              <Link className={verifiedOnly ? "active" : ""} href={libraryHref({ official: null, verified: "1" })}>
                 Verified
               </Link>
             </div>
+            <p className="field-note">Official is QuesIQ-curated. Verified is card/source checked.</p>
           </div>
 
           <div className="study-library-filter-group">
@@ -243,7 +244,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
           {filteredDecks.length === 0 && !hasFilters ? (
             <>
               <h2>No public decks yet.</h2>
-              <p>Make one of your decks public from its edit screen to test the library.</p>
+              <p>Public and Official Study decks will appear here after deck curation or when you share one of your own.</p>
               <Link className="button-link" href="/study/decks">
                 My Decks
               </Link>
@@ -251,9 +252,9 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
           ) : (
             <>
               <h2>No decks match these filters.</h2>
-              <p>Try broadening search or clearing one or more filters.</p>
+              <p>Try clearing a trust label, removing the subject or tag, or searching a broader term.</p>
               <Link className="button-link" href="/study/library">
-                View Public Decks
+                Clear Filters
               </Link>
             </>
           )}

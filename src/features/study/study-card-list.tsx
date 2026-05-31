@@ -161,7 +161,11 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
   return (
     <section className="study-card-list">
       {cards.length === 0 && !addingCard && (
-        <p className="card-list__empty">No cards yet. Add your first card.</p>
+        <p className="card-list__empty">
+          {isOwner
+            ? "No cards yet. Add your first card below or use Import Cards for a batch."
+            : "No cards are available in this deck yet."}
+        </p>
       )}
 
       {cards.map((card) => (

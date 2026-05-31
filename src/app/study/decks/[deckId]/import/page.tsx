@@ -41,7 +41,10 @@ export default async function StudyImportPage({ params }: Props) {
       <div>
         <p className="eyebrow">QuesIQ Study</p>
         <h1>Import Cards</h1>
-        <p>Paste cards, upload a file, or download a template to start quickly.</p>
+        <p>
+          Bring cards into &quot;{deck.title}&quot; from text, CSV/TSV, PDFs, images, or URLs.
+          You can review every card before saving.
+        </p>
       </div>
       <section className="panel study-empty-panel">
         <StudyImportWizard deckId={deckId} deckTitle={deck.title} />

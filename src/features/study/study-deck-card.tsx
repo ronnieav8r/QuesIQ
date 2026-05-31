@@ -63,7 +63,7 @@ export function StudyDeckCard({ currentUserId, deck }: StudyDeckCardProps) {
       </div>
 
       <h3>{deck.title}</h3>
-      {deck.description && <p>{deck.description}</p>}
+      <p>{deck.description || "No description yet."}</p>
 
       {hasStats && deck.cardCount > 0 && (
         <div className="study-deck-card__progress">
@@ -83,7 +83,7 @@ export function StudyDeckCard({ currentUserId, deck }: StudyDeckCardProps) {
         )}
         <span>
           {deck.cardCount} cards
-          {hasStats && deck.lastStudiedAt && <> · {timeAgo(new Date(deck.lastStudiedAt))}</>}
+          {hasStats && deck.lastStudiedAt && <> - studied {timeAgo(new Date(deck.lastStudiedAt))}</>}
         </span>
       </div>
     </Link>

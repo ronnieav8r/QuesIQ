@@ -111,7 +111,7 @@ export default async function StudyDeckPage({ params }: Props) {
         </div>
         {verifiedCardCount > 0 && (
           <p className="field-note">
-            Verified means AI/source checked with high confidence; it is not certification.
+            Official means QuesIQ-curated. Verified means source/card checked with high confidence; it is not a credential.
           </p>
         )}
         {isAdmin && (
@@ -158,6 +158,30 @@ export default async function StudyDeckPage({ params }: Props) {
             totalCount={cards.length}
             weakCount={weakCards.length}
           />
+        </section>
+      )}
+
+      {cards.length === 0 && (
+        <section className="panel study-empty-panel">
+          {isOwner ? (
+            <>
+              <h2>This deck is ready for cards</h2>
+              <p>Add a card manually below, or import a batch from notes, files, CSV/TSV, images, PDFs, or URLs.</p>
+              <div className="inline-actions">
+                <Link className="button-link" href={`/study/decks/${deckId}/import`}>
+                  Import Cards
+                </Link>
+                <Link className="button-link secondary" href={`/study/decks/${deckId}/edit`}>
+                  Edit Details
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2>No cards are available yet</h2>
+              <p>This deck is visible, but it does not have studyable cards yet.</p>
+            </>
+          )}
         </section>
       )}
 
