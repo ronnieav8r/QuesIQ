@@ -3619,40 +3619,41 @@ textarea::placeholder {
 
 .quira-launcher {
   align-items: center;
-  background: var(--surface-raised);
+  background: linear-gradient(135deg, var(--brand-strong), var(--action));
   border-color: var(--focus);
   border-radius: var(--radius-full);
   bottom: 1.1rem;
   box-shadow: var(--shadow-soft);
-  color: var(--text);
+  color: var(--background);
   display: inline-flex;
   gap: var(--space-2);
   min-height: 3rem;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-4) var(--space-2) var(--space-2);
   position: fixed;
   right: 1.1rem;
   z-index: 20;
 }
 
 .quira-launcher:hover {
-  background: var(--focus-soft);
+  background: linear-gradient(135deg, var(--focus), var(--action));
   box-shadow: var(--shadow-brand);
 }
 
 .quira-launcher span {
   align-items: center;
-  background: var(--brand-strong);
+  background: rgba(255, 255, 255, 0.18);
   border-radius: var(--radius-full);
   color: var(--background);
   display: inline-flex;
   font-size: var(--font-size-sm);
+  font-weight: 900;
   height: 1.8rem;
   justify-content: center;
   width: 1.8rem;
 }
 
 .quira-launcher small {
-  color: var(--text);
+  color: var(--background);
   font-size: var(--font-size-sm);
   font-weight: 800;
 }
@@ -4223,10 +4224,6 @@ textarea::placeholder {
   .quira-launcher {
     bottom: 5.1rem;
     right: var(--space-3);
-  }
-
-  .quira-launcher small {
-    display: none;
   }
 
   .quira-topics {

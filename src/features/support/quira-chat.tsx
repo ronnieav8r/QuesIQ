@@ -373,13 +373,13 @@ export function QuiraChatLauncher({
     <>
       <button
         aria-haspopup="dialog"
-        aria-label="Open Quira support"
+        aria-label="Open Quira support chat"
         className="quira-launcher"
         onClick={openChat}
         type="button"
       >
         <span aria-hidden="true">Q</span>
-        <small>Help</small>
+        <small>Quira</small>
       </button>
 
       {open && (
