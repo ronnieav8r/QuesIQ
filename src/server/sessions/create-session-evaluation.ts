@@ -251,6 +251,7 @@ function buildEvaluationInput(
       style: promptComponents.style?.label || snapshot.styleKey,
       styleInstructions: promptComponents.style?.promptInstructions || "Not provided",
       rapidFireQuestionCount: snapshot.rapidFireQuestionCount ?? null,
+      turnBasedQuestionCount: snapshot.turnBasedQuestionCount ?? null,
       targetCompany: snapshot.interviewContext.targetCompany || "Optional",
       targetRole: snapshot.interviewContext.targetRole || "General practice",
     },

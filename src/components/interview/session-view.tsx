@@ -76,14 +76,20 @@ export function SessionView({
     !canLoadTurnBasedRuntime,
   );
   const useTurnBasedSession = runtimeConfigLoaded && runtimeConfig.engine === "turn_based";
-  const rapidFireQuestionCount = snapshot.rapidFireQuestionCount ?? 4;
+  const turnBasedQuestionCount =
+    snapshot.turnBasedQuestionCount ?? snapshot.rapidFireQuestionCount ?? 4;
   const turnBasedRuntimeConfig: RuntimeConfig =
     useTurnBasedSession && snapshot.modeKey === "rapid_fire"
     ? {
         ...runtimeConfig,
         maxAnswerSeconds: 65,
-        maxDurationSeconds: rapidFireQuestionCount * 65,
-        maxTurns: rapidFireQuestionCount,
+        maxDurationSeconds: turnBasedQuestionCount * 65,
+        maxTurns: turnBasedQuestionCount,
+      }
+    : useTurnBasedSession && snapshot.modeKey === "coaching"
+      ? {
+        ...runtimeConfig,
+        maxTurns: turnBasedQuestionCount,
       }
     : runtimeConfig;
 
@@ -282,13 +288,19 @@ export function SessionView({
               <>
                 <div>
                   <dt>Questions</dt>
-                  <dd>{rapidFireQuestionCount}</dd>
+                  <dd>{turnBasedQuestionCount}</dd>
                 </div>
                 <div>
                   <dt>Session limit</dt>
-                  <dd>{rapidFireQuestionCount * 65}s</dd>
+                  <dd>{turnBasedQuestionCount * 65}s</dd>
                 </div>
               </>
+            )}
+            {snapshot.modeKey === "coaching" && (
+              <div>
+                <dt>Questions</dt>
+                <dd>{turnBasedQuestionCount}</dd>
+              </div>
             )}
             {questionType && (
               <div>

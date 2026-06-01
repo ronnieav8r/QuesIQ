@@ -9,6 +9,7 @@ import type {
 } from "@/product/interview-types";
 
 type ReviewDetailProps = {
+  adminAccess?: boolean;
   backLabel?: string;
   bottomBackLabel?: string;
   catalog: InterviewCatalog;
@@ -19,6 +20,7 @@ type ReviewDetailProps = {
 };
 
 export function ReviewDetail({
+  adminAccess = false,
   backLabel = "Back Home",
   bottomBackLabel = "Return Home",
   catalog,
@@ -50,6 +52,74 @@ export function ReviewDetail({
           : currentSession.evaluationStatus === "too_short"
             ? "Too short to score"
             : "Not ready";
+  const snapshot = currentSession.contextSnapshot;
+  const adminContextItems = snapshot
+    ? [
+        {
+          label: "Mode instructions",
+          value: mode?.promptInstructions || "Not loaded in catalog response.",
+        },
+        {
+          label: "Question focus instructions",
+          value: questionType?.promptInstructions || "Not provided.",
+        },
+        {
+          label: "Style instructions",
+          value: style?.promptInstructions || "Not provided.",
+        },
+        {
+          label: "Target role",
+          value: snapshot.interviewContext.targetRole || "General practice",
+        },
+        {
+          label: "Target company",
+          value: snapshot.interviewContext.targetCompany || "Optional",
+        },
+        {
+          label: "Selected question count",
+          value:
+            snapshot.turnBasedQuestionCount || snapshot.rapidFireQuestionCount
+              ? String(snapshot.turnBasedQuestionCount ?? snapshot.rapidFireQuestionCount)
+              : "Runtime default",
+        },
+        {
+          label: "Job description",
+          value: snapshot.interviewContext.jobDescription
+            ? `${snapshot.interviewContext.jobDescription.length} characters available`
+            : "Not provided",
+        },
+        {
+          label: "Resume context",
+          value: snapshot.interviewContext.resumeText
+            ? `${snapshot.interviewContext.resumeName || "Resume"}: ${snapshot.interviewContext.resumeText.length} characters available`
+            : "Not provided",
+        },
+        {
+          label: "Saved story context",
+          value: snapshot.storyContext
+            ? `${snapshot.storyContext.title}: ${snapshot.storyContext.summary || "story details available"}`
+            : "Not used",
+        },
+        {
+          label: "Introduction context",
+          value: snapshot.introductionContext
+            ? `${snapshot.introductionContext.title}: saved script and builder fields available`
+            : "Not used",
+        },
+        {
+          label: "Prior coaching memory",
+          value:
+            "Fetched server-side at question/review time when available; not stored in this session snapshot.",
+        },
+        {
+          label: "Prior turns",
+          value:
+            currentSession.transcript.length > 0
+              ? `${currentSession.transcript.length} saved transcript turns available to review/debrief flows`
+              : "No saved transcript turns",
+        },
+      ]
+    : [];
 
   async function retryReview() {
     try {
@@ -148,6 +218,25 @@ export function ReviewDetail({
           </div>
         </dl>
       </section>
+
+      {adminAccess && snapshot && (
+        <details className="panel transcript-panel">
+          <summary>
+            <span>Admin AI Context</span>
+            <small>Question and review inputs</small>
+          </summary>
+          <div className="session-config">
+            <dl>
+              {adminContextItems.map((item) => (
+                <div key={item.label}>
+                  <dt>{item.label}</dt>
+                  <dd>{item.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </details>
+      )}
 
       <section className="panel session-review" aria-labelledby="saved-review-title">
         <div className="section-head">

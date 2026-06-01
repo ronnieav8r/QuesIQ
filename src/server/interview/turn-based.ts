@@ -101,16 +101,11 @@ function cleanUuid(value: unknown) {
     : undefined;
 }
 
-function rapidFireQuestionLimit(snapshot: SessionSetupSnapshot, fallback: number) {
-  return Math.max(1, Math.min(10, snapshot.rapidFireQuestionCount ?? fallback));
-}
-
 function turnLimit(snapshot: SessionSetupSnapshot, fallback: number) {
-  if (snapshot.modeKey === "rapid_fire") {
-    return rapidFireQuestionLimit(snapshot, fallback);
-  }
-
-  return Math.max(1, Math.min(25, fallback));
+  return Math.max(
+    1,
+    Math.min(25, snapshot.turnBasedQuestionCount ?? snapshot.rapidFireQuestionCount ?? fallback),
+  );
 }
 
 function modeLabel(modeKey: SessionSetupSnapshot["modeKey"]) {
@@ -133,6 +128,15 @@ function fallbackRoutingReason(modeKey: SessionSetupSnapshot["modeKey"]) {
 
 function fallbackTargetSkill(modeKey: SessionSetupSnapshot["modeKey"]) {
   return modeKey === "coaching" ? "clearer interview answer structure" : "clear concise answers";
+}
+
+function latestAssistantPromptWasRetry(priorTurns: PriorTurn[]) {
+  const latestAssistantTurn = [...priorTurns]
+    .reverse()
+    .find((turn) => turn.role === "assistant" || turn.speaker === "Que");
+  const text = latestAssistantTurn?.text ?? latestAssistantTurn?.question ?? "";
+
+  return /\bretry\b|\btry again\b/i.test(text);
 }
 
 function parseDecision(
@@ -288,6 +292,7 @@ function turnTask(
   modeKey: SessionSetupSnapshot["modeKey"],
   mustEnd: boolean,
   hasLatestAnswer: boolean,
+  retryAlreadyOffered: boolean,
 ) {
   if (mustEnd) {
     return modeKey === "coaching"
@@ -296,8 +301,12 @@ function turnTask(
   }
 
   if (modeKey === "coaching") {
+    if (retryAlreadyOffered) {
+      return "Give one short coaching note about the latest answer, then move on to a new or tighter follow-up question. Do not ask the user to retry the same answer again.";
+    }
+
     return hasLatestAnswer
-      ? "Give one short, specific coaching note about the latest answer, then ask either a retry prompt for the same answer or one tighter follow-up question."
+      ? "Give one short, specific coaching note about the latest answer, then ask either one retry prompt for the same answer or one tighter follow-up question."
       : "Generate the opening Coaching question for this session.";
   }
 
@@ -311,7 +320,8 @@ function turnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) {
       "Return only compact JSON with keys: archetypeId, question, feedback, routingReason, targetSkill, done.",
       "Coaching is a question-answer-coach-retry/follow-up loop.",
       "After each user answer, write one brief, specific feedback sentence tied to what the user actually said.",
-      "Then ask one concise next prompt: either a retry prompt for the same answer or a tighter follow-up question.",
+      "Then ask one concise next prompt: either one retry prompt for the same answer or a tighter follow-up question.",
+      "Never ask the user to retry the same answer twice in a row. If the previous Que prompt was a retry, move on with a follow-up or a new question.",
       "For retry prompts, make the retry instruction clear inside the question field.",
       "Do not invent experience, credentials, metrics, or motivations.",
       "For the opening turn, leave feedback empty and ask one focused interview question.",
@@ -354,6 +364,8 @@ async function generateTurnDecision(input: {
         archetype.questionTypeKey === input.snapshot.questionTypeKey),
   );
   const maxTurns = turnLimit(input.snapshot, input.config.maxTurns);
+  const retryAlreadyOffered =
+    input.snapshot.modeKey === "coaching" && latestAssistantPromptWasRetry(input.priorTurns);
   const mustEnd =
     Boolean(input.latestTranscript) &&
     (input.endAfterAnswer === true || input.turnIndex >= maxTurns);
@@ -366,11 +378,18 @@ async function generateTurnDecision(input: {
   });
 
   const payload = {
-    task: turnTask(input.snapshot.modeKey, mustEnd, Boolean(input.latestTranscript)),
+    task: turnTask(
+      input.snapshot.modeKey,
+      mustEnd,
+      Boolean(input.latestTranscript),
+      retryAlreadyOffered,
+    ),
     config: {
       feedbackDepth: input.config.feedbackDepth,
       maxTurns,
-      selectedQuestionCount: input.snapshot.rapidFireQuestionCount ?? null,
+      retryAlreadyOffered,
+      selectedQuestionCount:
+        input.snapshot.turnBasedQuestionCount ?? input.snapshot.rapidFireQuestionCount ?? null,
       turnIndex: input.turnIndex,
     },
     session: {
@@ -493,7 +512,21 @@ async function generateTurnDecision(input: {
       totalTokens: body.usage?.total_tokens,
     });
 
-    return parseDecision(outputText, { modeKey: input.snapshot.modeKey, mustEnd });
+    const decision = parseDecision(outputText, { modeKey: input.snapshot.modeKey, mustEnd });
+    if (
+      retryAlreadyOffered &&
+      decision.question &&
+      /\bretry\b|\btry again\b/i.test(decision.question)
+    ) {
+      return {
+        ...decision,
+        question:
+          "Let's move forward. What is one thing you would do differently if this situation came up again?",
+        routingReason: `${decision.routingReason} Replaced repeated retry with a follow-up prompt.`,
+      };
+    }
+
+    return decision;
   } catch (error) {
     await completeAiRun(run.id, {
       errorMessage: error instanceof Error ? error.message : "Interview turn failed.",

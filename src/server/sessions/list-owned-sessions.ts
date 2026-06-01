@@ -30,6 +30,7 @@ export async function listOwnedSessions(
     .limit(limit);
 
   return rows.map((row) => ({
+    contextSnapshot: row.contextSnapshot,
     createdAt: row.createdAt.toISOString(),
     durationSeconds: row.voiceArtifact?.durationSeconds,
     endedAt: row.endedAt?.toISOString(),

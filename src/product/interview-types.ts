@@ -224,6 +224,7 @@ export type SessionSetupSnapshot = {
   modeKey: PracticeModeKey;
   questionTypeKey?: QuestionTypeKey;
   rapidFireQuestionCount?: number;
+  turnBasedQuestionCount?: number;
   storyContext?: StoryOutline & {
     storyId: string;
   };
@@ -236,6 +237,7 @@ export type SessionLaunchRecord = {
 };
 
 export type SessionHistoryItem = {
+  contextSnapshot?: SessionSetupSnapshot;
   createdAt: string;
   durationSeconds?: number;
   endedAt?: string;

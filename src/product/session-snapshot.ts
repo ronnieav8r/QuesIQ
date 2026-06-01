@@ -24,7 +24,7 @@ const styleKeys: InterviewStyleKey[] = ["friendly", "neutral", "tough"];
 const introAudiences: IntroAudience[] = ["hr_phone", "in_person", "virtual"];
 const introLengths: IntroLength[] = ["long", "medium", "short"];
 
-function parseRapidFireQuestionCount(value: unknown) {
+function parseTurnBasedQuestionCount(value: unknown) {
   const parsed = Number(value);
 
   if (!Number.isInteger(parsed)) {
@@ -150,7 +150,13 @@ export function parseSessionSetupSnapshot(value: unknown): SessionSetupSnapshot 
     questionTypeKey: candidate.questionTypeKey,
     rapidFireQuestionCount:
       candidate.modeKey === "rapid_fire"
-        ? parseRapidFireQuestionCount(candidate.rapidFireQuestionCount)
+        ? parseTurnBasedQuestionCount(candidate.rapidFireQuestionCount)
+        : undefined,
+    turnBasedQuestionCount:
+      candidate.modeKey === "rapid_fire" || candidate.modeKey === "coaching"
+        ? parseTurnBasedQuestionCount(
+            candidate.turnBasedQuestionCount ?? candidate.rapidFireQuestionCount,
+          )
         : undefined,
     storyContext: parseStoryContext(candidate.storyContext),
     styleKey: candidate.styleKey,

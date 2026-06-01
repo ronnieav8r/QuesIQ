@@ -19,9 +19,8 @@ type PracticeSetupProps = {
   onLaunch: () => void;
   onMode: (mode: PracticeMode) => void;
   onQuestion: (questionKey: QuestionTypeKey) => void;
-  onRapidFireQuestionCount: (count: number) => void;
+  onTurnBasedQuestionCount: (count: number) => void;
   onStyle: (styleKey: InterviewStyleKey) => void;
-  rapidFireQuestionCount: number;
   selectedMode?: PracticeMode;
   selectedJobTarget?: JobTargetRecord;
   selectedQuestion?: QuestionType;
@@ -29,6 +28,7 @@ type PracticeSetupProps = {
   sessionLaunchError?: string;
   sessionLaunchPending: boolean;
   step: PracticeStep;
+  turnBasedQuestionCount: number;
 };
 
 const minimumRapidFireQuestions = 1;
@@ -56,9 +56,8 @@ export function PracticeSetup({
   onLaunch,
   onMode,
   onQuestion,
-  onRapidFireQuestionCount,
+  onTurnBasedQuestionCount,
   onStyle,
-  rapidFireQuestionCount,
   selectedMode,
   selectedJobTarget,
   selectedQuestion,
@@ -66,6 +65,7 @@ export function PracticeSetup({
   sessionLaunchError,
   sessionLaunchPending,
   step,
+  turnBasedQuestionCount,
 }: PracticeSetupProps) {
   const { interviewStyles, practiceModes, questionTypes } = catalog;
   const visibleSteps: PracticeStep[] = selectedMode?.questionTypeRequired
@@ -200,16 +200,16 @@ export function PracticeSetup({
         <section aria-labelledby="ready-title" className="ready-view">
           <p className="eyebrow">Session Preview</p>
           <h2 id="ready-title">Ready for Que</h2>
-          {selectedMode.key === "rapid_fire" && (
+          {(selectedMode.key === "rapid_fire" || selectedMode.key === "coaching") && (
             <fieldset className="rapid-fire-question-picker">
               <legend>Questions</legend>
-              <div className="number-stepper" role="group" aria-label="Rapid Fire question count">
+              <div className="number-stepper" role="group" aria-label="Question count">
                 <button
-                  aria-label="Reduce Rapid Fire questions"
-                  disabled={rapidFireQuestionCount <= minimumRapidFireQuestions}
+                  aria-label="Reduce questions"
+                  disabled={turnBasedQuestionCount <= minimumRapidFireQuestions}
                   onClick={() =>
-                    onRapidFireQuestionCount(
-                      Math.max(minimumRapidFireQuestions, rapidFireQuestionCount - 1),
+                    onTurnBasedQuestionCount(
+                      Math.max(minimumRapidFireQuestions, turnBasedQuestionCount - 1),
                     )
                   }
                   type="button"
@@ -217,15 +217,15 @@ export function PracticeSetup({
                   -
                 </button>
                 <output aria-live="polite">
-                  <strong>{rapidFireQuestionCount}</strong>
-                  <span>{rapidFireQuestionCount === 1 ? "question" : "questions"}</span>
+                  <strong>{turnBasedQuestionCount}</strong>
+                  <span>{turnBasedQuestionCount === 1 ? "question" : "questions"}</span>
                 </output>
                 <button
-                  aria-label="Add Rapid Fire questions"
-                  disabled={rapidFireQuestionCount >= maximumRapidFireQuestions}
+                  aria-label="Add questions"
+                  disabled={turnBasedQuestionCount >= maximumRapidFireQuestions}
                   onClick={() =>
-                    onRapidFireQuestionCount(
-                      Math.min(maximumRapidFireQuestions, rapidFireQuestionCount + 1),
+                    onTurnBasedQuestionCount(
+                      Math.min(maximumRapidFireQuestions, turnBasedQuestionCount + 1),
                     )
                   }
                   type="button"
@@ -250,11 +250,11 @@ export function PracticeSetup({
               <dt>Interviewer style</dt>
               <dd>{selectedStyle.label}</dd>
             </div>
-            {selectedMode.key === "rapid_fire" && (
+            {(selectedMode.key === "rapid_fire" || selectedMode.key === "coaching") && (
               <>
                 <div>
                   <dt>Questions</dt>
-                  <dd>{rapidFireQuestionCount}</dd>
+                  <dd>{turnBasedQuestionCount}</dd>
                 </div>
               </>
             )}
