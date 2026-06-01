@@ -23,6 +23,7 @@ const lanes = {
   ],
   interview: [
     "drizzle/0059_set_coaching_turn_based_runtime.sql",
+    "drizzle/0060_tune_interview_practice_story_quests.sql",
     "drizzle/meta/_journal.json",
     "docs/products/interview/",
     "scripts/guards/check-lane.mjs",
