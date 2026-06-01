@@ -1914,21 +1914,20 @@ label span {
 .home-score-rings {
   display: grid;
   gap: var(--space-2);
-  grid-template-columns: repeat(auto-fit, minmax(8.2rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(7.8rem, 1fr));
 }
 
 .home-score-card {
-  --score-accent: var(--brand-strong);
   --score-percent: 0%;
-  align-items: center;
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   display: grid;
   gap: var(--space-2);
-  grid-template-columns: 3.2rem minmax(0, 1fr);
-  min-height: 5.2rem;
+  grid-template-rows: minmax(3rem, auto) 3.2rem;
+  min-height: 7.5rem;
   padding: var(--space-3);
+  text-align: center;
 }
 
 .home-score-ring {
@@ -1936,11 +1935,18 @@ label span {
   aspect-ratio: 1;
   background:
     radial-gradient(circle at center, var(--surface-raised) 58%, transparent 60%),
-    conic-gradient(var(--score-accent) 0 var(--score-percent), rgba(255, 255, 255, 0.1) var(--score-percent) 100%);
-  border: 1px solid color-mix(in srgb, var(--score-accent) 48%, transparent);
+    conic-gradient(
+      from -90deg,
+      #26d6a6 0 calc(var(--score-percent) * 0.38),
+      #8c52ff calc(var(--score-percent) * 0.38) calc(var(--score-percent) * 0.72),
+      #ef7c24 calc(var(--score-percent) * 0.72) var(--score-percent),
+      rgba(255, 255, 255, 0.1) var(--score-percent) 100%
+    );
+  border: 1px solid rgba(140, 82, 255, 0.34);
   border-radius: 999px;
   display: block;
   height: 3.2rem;
+  justify-self: center;
   width: 3.2rem;
 }
 
@@ -1949,14 +1955,11 @@ label span {
   display: block;
   font-size: 0.78rem;
   font-weight: 900;
-  overflow: hidden;
-  text-overflow: ellipsis;
   text-transform: uppercase;
-  white-space: nowrap;
 }
 
 .home-score-card b {
-  color: var(--score-accent);
+  color: var(--text);
   display: block;
   font-size: 1.25rem;
   line-height: 1.1;
@@ -1966,29 +1969,7 @@ label span {
   color: var(--muted);
   display: block;
   font-size: 0.72rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.home-score-card.score-empty {
-  --score-accent: var(--muted);
-}
-
-.home-score-card.score-strong {
-  --score-accent: #26d6a6;
-}
-
-.home-score-card.score-steady {
-  --score-accent: #8c52ff;
-}
-
-.home-score-card.score-watch {
-  --score-accent: #ef7c24;
-}
-
-.home-score-card.score-needs-work {
-  --score-accent: #ff5c7a;
+  line-height: 1.25;
 }
 
 .practice-screen,
