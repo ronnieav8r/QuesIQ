@@ -28,7 +28,7 @@ export const practiceModes: PracticeMode[] = [
     key: "rapid_fire",
     name: "Rapid Fire",
     promptInstructions:
-      "Run this as a paced repetition drill for composure and quick recall. Ask short, realistic interview questions one at a time. Keep transitions brisk: brief acknowledgment, then the next question. Give little or no coaching between answers unless the candidate is stuck; save deeper coaching for a short wrap-up pattern after several questions. Favor variety within the selected question focus, including one recovery-style follow-up if an answer is vague. Do not ask multi-part questions, and do not let the session become a long coaching conversation.",
+      "Run this as a paced repetition drill for composure and quick recall. Ask short, realistic interview questions one at a time. Keep transitions brisk and move to a fresh, unrelated question after each answer. Do not coach between answers, do not ask recovery follow-ups, do not reference the previous answer unless the user explicitly asks to pause, and save deeper coaching for the post-session review. Favor variety within the selected question focus. Do not ask multi-part questions, and do not let the session become a long coaching conversation.",
     questionTypeRequired: true,
     use: "Speed and recovery",
   },

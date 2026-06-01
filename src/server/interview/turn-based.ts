@@ -94,7 +94,7 @@ function parseDecision(raw: string, mustEnd: boolean): TurnDecision {
     return {
       archetypeId: cleanText(parsed.archetypeId) || undefined,
       done: mustEnd || parsed.done === true,
-      feedback: cleanText(parsed.feedback) || undefined,
+      feedback: mustEnd ? cleanText(parsed.feedback) || undefined : undefined,
       question: mustEnd ? undefined : cleanText(parsed.question) || undefined,
       routingReason: cleanText(parsed.routingReason, "Balanced Rapid Fire practice."),
       targetSkill: cleanText(parsed.targetSkill, "clear concise answers"),
@@ -249,6 +249,7 @@ async function generateTurnDecision(input: {
   const matchingArchetypes = archetypes.filter(
     (archetype) =>
       archetype.enabled &&
+      archetype.title !== "Vague answer recovery" &&
       (!archetype.questionTypeKey ||
         archetype.questionTypeKey === input.snapshot.questionTypeKey),
   );
@@ -264,7 +265,7 @@ async function generateTurnDecision(input: {
   const payload = {
     task: mustEnd
       ? "Give brief Rapid Fire wrap-up feedback and set done true. Do not return a next question."
-      : "Choose the next Rapid Fire archetype and write one concise interview question.",
+      : "Log the latest answer internally, choose a fresh Rapid Fire archetype, and write one concise interview question that does not follow up on the previous answer.",
     config: {
       feedbackDepth: input.config.feedbackDepth,
       maxTurns: input.config.maxTurns,
@@ -314,7 +315,7 @@ async function generateTurnDecision(input: {
         input: [
           {
             content:
-              "You route QuesIQ Interview Rapid Fire turns. Return only compact JSON with keys: archetypeId, question, feedback, routingReason, targetSkill, done. Questions must be one sentence. Feedback must be one short sentence when an answer transcript is provided.",
+              "You route QuesIQ Interview Rapid Fire turns. Return only compact JSON with keys: archetypeId, question, feedback, routingReason, targetSkill, done. Rapid Fire is not coaching: after each answer, do not ask a follow-up about that answer, do not reference the previous answer, and do not provide between-question feedback. Generate a fresh, unrelated one-sentence interview question within the selected focus. Set feedback to an empty string except on final wrap-up.",
             role: "system",
           },
           {

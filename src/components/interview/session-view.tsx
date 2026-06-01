@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
-import { FeedbackButton } from "@/components/interview/feedback-button";
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import { ReviewDetailSections } from "@/components/interview/review-detail-sections";
 import { TurnBasedVoiceSession } from "@/components/interview/turn-based-voice-session";
-import { getPostReviewFeedbackPrompt } from "@/product/beta-feedback-prompts";
 import { buildInterviewFirstTurnInstructions } from "@/product/interview-first-turn";
 import {
   getMinimumReviewDurationSeconds,
@@ -57,7 +55,6 @@ export function SessionView({
   >("idle");
   const evaluationRequestedRef = useRef(false);
   const [reviewAttempt, setReviewAttempt] = useState(0);
-  const reviewFeedbackPrompt = getPostReviewFeedbackPrompt(session.id);
   const savedArtifactRef = useRef<string | undefined>(undefined);
   const mode = catalog.practiceModes.find(
     (practiceMode) => practiceMode.key === snapshot.modeKey,
@@ -258,17 +255,6 @@ export function SessionView({
       )}
 
       <div className="session-grid">
-        {evaluationStatus === "ready" && (
-          <FeedbackButton
-            autoOpenKey={`review-ready:${session.id}`}
-            hideLauncher
-            ratingPrompt={reviewFeedbackPrompt}
-            screen="session"
-            sessionId={session.id}
-            title={reviewFeedbackPrompt}
-          />
-        )}
-
         <section className="panel session-config" aria-labelledby="session-config-title">
           <div className="section-head">
             <h2 id="session-config-title">Session Details</h2>

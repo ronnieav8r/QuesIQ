@@ -101,10 +101,15 @@ export function TurnBasedVoiceSession({
   title = "Direct browser voice session",
 }: TurnBasedVoiceSessionProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const audioContextRef = useRef<AudioContext | undefined>(undefined);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const recordingStartedAtMsRef = useRef<number | undefined>(undefined);
   const sessionStartedAtMsRef = useRef<number | undefined>(undefined);
+  const silenceStartedAtMsRef = useRef<number | undefined>(undefined);
+  const silenceTimerRef = useRef<number | undefined>(undefined);
+  const voiceDetectedRef = useRef(false);
+  const artifactDraftRef = useRef<VoiceSessionArtifactDraft>(emptyArtifactDraft);
   const [artifactDraft, setArtifactDraft] = useState<VoiceSessionArtifactDraft>(emptyArtifactDraft);
   const [answerElapsedSeconds, setAnswerElapsedSeconds] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -127,6 +132,7 @@ export function TurnBasedVoiceSession({
     canShowSessionCountdown(phase) && sessionSecondsRemaining <= 60 && sessionSecondsRemaining > 0;
 
   useEffect(() => {
+    artifactDraftRef.current = artifactDraft;
     onArtifactChange?.(artifactDraft);
   }, [artifactDraft, onArtifactChange]);
 
@@ -186,12 +192,75 @@ export function TurnBasedVoiceSession({
   }
 
   function closeMedia() {
+    window.clearInterval(silenceTimerRef.current);
+    silenceTimerRef.current = undefined;
+    void audioContextRef.current?.close();
+    audioContextRef.current = undefined;
     mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
     mediaRecorderRef.current = null;
     mediaStreamRef.current = null;
     recordingStartedAtMsRef.current = undefined;
+    silenceStartedAtMsRef.current = undefined;
+    voiceDetectedRef.current = false;
     setAnswerElapsedSeconds(0);
     setRecording(false);
+  }
+
+  function startSilenceMonitor(stream: MediaStream) {
+    window.clearInterval(silenceTimerRef.current);
+
+    const AudioContextCtor = (
+      window as unknown as {
+        AudioContext?: typeof AudioContext;
+        webkitAudioContext?: typeof AudioContext;
+      }
+    ).AudioContext ?? (
+      window as unknown as {
+        AudioContext?: typeof AudioContext;
+        webkitAudioContext?: typeof AudioContext;
+      }
+    ).webkitAudioContext;
+    if (!AudioContextCtor) {
+      return;
+    }
+
+    const context = new AudioContextCtor();
+    const source = context.createMediaStreamSource(stream);
+    const analyser = context.createAnalyser();
+
+    analyser.fftSize = 1024;
+    const samples = new Uint8Array(analyser.fftSize);
+    source.connect(analyser);
+    audioContextRef.current = context;
+    silenceTimerRef.current = window.setInterval(() => {
+      if (!recordingStartedAtMsRef.current || !mediaRecorderRef.current) {
+        return;
+      }
+
+      analyser.getByteTimeDomainData(samples);
+      const averageDeviation =
+        samples.reduce((sum, sample) => sum + Math.abs(sample - 128), 0) / samples.length;
+      const now = Date.now();
+      const elapsedMs = now - recordingStartedAtMsRef.current;
+      const voiceDetected = averageDeviation > 4.5;
+
+      if (voiceDetected) {
+        voiceDetectedRef.current = true;
+        silenceStartedAtMsRef.current = undefined;
+        return;
+      }
+
+      if (!voiceDetectedRef.current || elapsedMs < 1800) {
+        return;
+      }
+
+      silenceStartedAtMsRef.current ??= now;
+
+      if (now - silenceStartedAtMsRef.current > 1800) {
+        appendEvent("turn_based.answer.silence_detected");
+        stopRecording();
+      }
+    }, 250);
   }
 
   async function playQuestionAudio(response: NextTurnResponse) {
@@ -199,7 +268,37 @@ export function TurnBasedVoiceSession({
     const source = `data:${response.questionAudioMimeType};base64,${response.questionAudioBase64}`;
     audioRef.current.src = source;
     try {
-      await audioRef.current.play();
+      await new Promise<void>((resolve) => {
+        const audio = audioRef.current;
+        if (!audio) {
+          resolve();
+          return;
+        }
+
+        function cleanup() {
+          audio?.removeEventListener("ended", onEnded);
+          audio?.removeEventListener("error", onError);
+        }
+
+        function onEnded() {
+          cleanup();
+          resolve();
+        }
+
+        function onError() {
+          cleanup();
+          appendEvent("turn_based.question_audio.play_failed");
+          resolve();
+        }
+
+        audio.addEventListener("ended", onEnded, { once: true });
+        audio.addEventListener("error", onError, { once: true });
+        void audio.play().catch(() => {
+          cleanup();
+          appendEvent("turn_based.question_audio.play_failed");
+          resolve();
+        });
+      });
     } catch {
       appendEvent("turn_based.question_audio.play_failed");
     }
@@ -220,17 +319,21 @@ export function TurnBasedVoiceSession({
       }
 
       appendEvent("turn_based.next_turn.response");
-      if (body.question?.trim()) {
-        setCurrentQuestion(body.question.trim());
-        appendTranscript(transcriptTurn("Que", "assistant", body.question));
-      }
       if (body.transcript?.trim()) {
         appendTranscript(transcriptTurn("You", "user", body.transcript));
       }
       if (body.feedback?.trim()) {
         appendTranscript(transcriptTurn("Que", "assistant", body.feedback));
       }
+      if (body.question?.trim()) {
+        setCurrentQuestion(body.question.trim());
+        appendTranscript(transcriptTurn("Que", "assistant", body.question));
+      }
+      setRequesting(false);
       await playQuestionAudio(body);
+      if (body.question?.trim() && !body.done) {
+        startRecording();
+      }
       if (body.done) {
         setDone(true);
       }
@@ -279,14 +382,20 @@ export function TurnBasedVoiceSession({
       setTurnCount(0);
       setCurrentQuestion(undefined);
       sessionStartedAtMsRef.current = Date.now();
-      setArtifactDraft({ events: [artifactEvent("turn_based.session.start")], startedAt: new Date().toISOString(), transcript: [] });
+      const initialArtifact = {
+        events: [artifactEvent("turn_based.session.start")],
+        startedAt: new Date().toISOString(),
+        transcript: [],
+      };
+      artifactDraftRef.current = initialArtifact;
+      setArtifactDraft(initialArtifact);
+      setPhase("live");
       await requestTurn({
         priorTurns: [],
         sessionId,
         snapshot,
         turnIndex: 0,
       });
-      setPhase("live");
     } catch (error) {
       setErrorMessage(toErrorMessage(error));
       setPhase("error");
@@ -298,6 +407,7 @@ export function TurnBasedVoiceSession({
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
+      startSilenceMonitor(stream);
       const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
       const chunks: Blob[] = [];
@@ -313,7 +423,7 @@ export function TurnBasedVoiceSession({
         await requestTurn({
           answerAudioBase64,
           answerMimeType,
-          priorTurns: artifactDraft.transcript,
+          priorTurns: artifactDraftRef.current.transcript,
           sessionId,
           snapshot,
           turnIndex: turnCount + 1,
