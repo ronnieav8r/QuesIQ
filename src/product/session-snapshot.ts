@@ -56,6 +56,28 @@ function parseStoryContext(value: unknown): SessionSetupSnapshot["storyContext"]
   };
 }
 
+function parseStoryPracticeSpin(value: unknown): SessionSetupSnapshot["storyPracticeSpin"] {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const candidate = value as Record<string, unknown>;
+
+  if (
+    !isString(candidate.angle) ||
+    !isString(candidate.question) ||
+    !isString(candidate.whyItWorks)
+  ) {
+    return undefined;
+  }
+
+  return {
+    angle: candidate.angle,
+    question: candidate.question,
+    whyItWorks: candidate.whyItWorks,
+  };
+}
+
 function parseIntroductionContext(
   value: unknown,
 ): SessionSetupSnapshot["introductionContext"] {
@@ -153,12 +175,15 @@ export function parseSessionSetupSnapshot(value: unknown): SessionSetupSnapshot 
         ? parseTurnBasedQuestionCount(candidate.rapidFireQuestionCount)
         : undefined,
     turnBasedQuestionCount:
-      candidate.modeKey === "rapid_fire" || candidate.modeKey === "coaching"
+      candidate.modeKey === "rapid_fire" ||
+      candidate.modeKey === "coaching" ||
+      candidate.modeKey === "first_impression"
         ? parseTurnBasedQuestionCount(
             candidate.turnBasedQuestionCount ?? candidate.rapidFireQuestionCount,
           )
         : undefined,
     storyContext: parseStoryContext(candidate.storyContext),
+    storyPracticeSpin: parseStoryPracticeSpin(candidate.storyPracticeSpin),
     styleKey: candidate.styleKey,
   };
 }

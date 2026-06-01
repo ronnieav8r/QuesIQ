@@ -42,6 +42,7 @@ import type {
   SessionLaunchRecord,
   SessionSetupSnapshot,
   StoryRecord,
+  StorySpin,
 } from "@/product/interview-types";
 
 const appTabs: { Icon: LucideIcon; key: AppView; label: string }[] = [
@@ -570,7 +571,7 @@ export default function Home() {
     }
   }
 
-  async function launchStoryPractice(story: StoryRecord) {
+  async function launchStoryPractice(story: StoryRecord, spin?: StorySpin) {
     const snapshot: SessionSetupSnapshot = {
       interviewContext: { ...interviewContext },
       modeKey: "coaching",
@@ -588,7 +589,9 @@ export default function Home() {
         task: story.task,
         title: story.title,
       },
+      storyPracticeSpin: spin,
       styleKey: "friendly",
+      turnBasedQuestionCount: 1,
     };
 
     try {
@@ -635,6 +638,7 @@ export default function Home() {
       },
       modeKey: "first_impression",
       styleKey: "friendly",
+      turnBasedQuestionCount: 1,
     };
 
     try {

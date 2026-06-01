@@ -14,6 +14,7 @@ import type {
   StoryCategory,
   StoryOutline,
   StoryRecord,
+  StorySpin,
   VoiceSessionArtifactDraft,
 } from "@/product/interview-types";
 import { storyCategories, storyCategoryLabel } from "@/product/story-lab";
@@ -112,7 +113,7 @@ type StoriesViewProps = {
   interviewContext: InterviewContext;
   jobTargets: JobTargetRecord[];
   onPracticeIntroduction: (introduction: IntroductionRecord) => void;
-  onPracticeStory: (story: StoryRecord) => void;
+  onPracticeStory: (story: StoryRecord, spin?: StorySpin) => void;
   practiceLaunchError?: string;
   practiceLaunchPending?: boolean;
   selectedJobTarget?: JobTargetRecord;
@@ -1995,6 +1996,49 @@ export function StoriesView({
                             {practiceLaunchError && (
                               <p className="form-error">{practiceLaunchError}</p>
                             )}
+                            <section>
+                              <h3>Practice Checklist</h3>
+                              <div className="story-spin-list">
+                                <article>
+                                  <strong>Primary prompt</strong>
+                                  <p>{story.practicePrompt}</p>
+                                  <small>
+                                    {story.practiceCoaching.some((coaching) => !coaching.spinAngle)
+                                      ? "Practiced"
+                                      : "Not practiced yet"}
+                                  </small>
+                                  <button
+                                    className="secondary"
+                                    disabled={practiceLaunchPending}
+                                    onClick={() => onPracticeStory(story)}
+                                    type="button"
+                                  >
+                                    Practice Primary
+                                  </button>
+                                </article>
+                                {story.alternateSpins.map((spin) => {
+                                  const practiced = story.practiceCoaching.some(
+                                    (coaching) => coaching.spinAngle === spin.angle,
+                                  );
+
+                                  return (
+                                    <article key={`${story.id}-practice-${spin.angle}`}>
+                                      <strong>{spin.angle}</strong>
+                                      <p>{spin.question}</p>
+                                      <small>{practiced ? "Practiced" : "Not practiced yet"}</small>
+                                      <button
+                                        className="secondary"
+                                        disabled={practiceLaunchPending}
+                                        onClick={() => onPracticeStory(story, spin)}
+                                        type="button"
+                                      >
+                                        Practice Spin
+                                      </button>
+                                    </article>
+                                  );
+                                })}
+                              </div>
+                            </section>
                             <dl>
                               <div>
                                 <dt>Situation</dt>

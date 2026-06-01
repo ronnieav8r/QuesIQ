@@ -71,7 +71,9 @@ export function SessionView({
     engine: "realtime",
   });
   const canLoadTurnBasedRuntime =
-    snapshot.modeKey === "rapid_fire" || snapshot.modeKey === "coaching";
+    snapshot.modeKey === "rapid_fire" ||
+    snapshot.modeKey === "coaching" ||
+    snapshot.modeKey === "first_impression";
   const [runtimeConfigLoaded, setRuntimeConfigLoaded] = useState(
     !canLoadTurnBasedRuntime,
   );
@@ -79,23 +81,32 @@ export function SessionView({
   const turnBasedQuestionCount =
     snapshot.turnBasedQuestionCount ?? snapshot.rapidFireQuestionCount ?? 4;
   const turnBasedRuntimeConfig: RuntimeConfig =
-    useTurnBasedSession && snapshot.modeKey === "rapid_fire"
-    ? {
-        ...runtimeConfig,
-        maxAnswerSeconds: 65,
-        maxDurationSeconds: turnBasedQuestionCount * 65,
-        maxTurns: turnBasedQuestionCount,
-      }
-    : useTurnBasedSession && snapshot.modeKey === "coaching"
+    useTurnBasedSession && (snapshot.storyContext || snapshot.introductionContext)
       ? {
-        ...runtimeConfig,
-        maxTurns: turnBasedQuestionCount,
-      }
-    : runtimeConfig;
+          ...runtimeConfig,
+          maxTurns: snapshot.turnBasedQuestionCount ?? 1,
+        }
+      : useTurnBasedSession && snapshot.modeKey === "rapid_fire"
+        ? {
+            ...runtimeConfig,
+            maxAnswerSeconds: 65,
+            maxDurationSeconds: turnBasedQuestionCount * 65,
+            maxTurns: turnBasedQuestionCount,
+          }
+        : useTurnBasedSession && snapshot.modeKey === "coaching"
+          ? {
+              ...runtimeConfig,
+              maxTurns: turnBasedQuestionCount,
+            }
+          : runtimeConfig;
 
   useEffect(() => {
     let ignore = false;
-    if (snapshot.modeKey !== "rapid_fire" && snapshot.modeKey !== "coaching") {
+    if (
+      snapshot.modeKey !== "rapid_fire" &&
+      snapshot.modeKey !== "coaching" &&
+      snapshot.modeKey !== "first_impression"
+    ) {
       return;
     }
 
@@ -424,8 +435,8 @@ export function SessionView({
           ) : (
             <p>
               {evaluationError === tooShortReviewMessage
-                ? snapshot.modeKey === "rapid_fire"
-                  ? "This session is saved in your history, but Que needs at least one answered Rapid Fire question to create a review."
+                ? snapshot.turnBasedQuestionCount || snapshot.modeKey === "rapid_fire"
+                  ? "This session is saved in your history, but Que needs at least one answered question to create a review."
                   : `This session is saved in your history, but it was under ${minimumReviewDurationSeconds} seconds so it will not be scored.`
                 : "After the voice artifact is saved, Que will review the transcript and prepare your practice feedback here."}
             </p>

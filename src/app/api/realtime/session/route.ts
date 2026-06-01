@@ -81,7 +81,7 @@ function buildQueInstructions(
   const storyLibraryContext =
     storyLibrary.length > 0
       ? [
-          "Saved story library context: use this quietly when coaching after an answer. If another saved story seems like a stronger fit for the question than the answer they gave, briefly suggest it by title, such as: that answer was workable, but your story about X may fit this question even better. Do not force a story suggestion when none is clearly relevant.",
+          "Saved story library context: use this quietly when choosing behavioral questions and coaching after an answer. In Mock Interview, ask natural questions that give the candidate a chance to use one or two strong saved stories without saying you are selecting from their library. If another saved story seems like a stronger fit for the question than the answer they gave, briefly suggest it by title, such as: that answer was workable, but your story about X may fit this question even better. Do not force a story suggestion when none is clearly relevant.",
           ...storyLibrary
             .filter((story) => story.id !== snapshot?.storyContext?.storyId)
             .slice(0, 8)

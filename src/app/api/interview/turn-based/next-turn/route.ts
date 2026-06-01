@@ -43,7 +43,9 @@ export async function POST(request: Request) {
   if (
     !sessionId ||
     !snapshot ||
-    (snapshot.modeKey !== "rapid_fire" && snapshot.modeKey !== "coaching")
+    (snapshot.modeKey !== "rapid_fire" &&
+      snapshot.modeKey !== "coaching" &&
+      snapshot.modeKey !== "first_impression")
   ) {
     return NextResponse.json(
       { error: "Turn-based Interview payload is invalid." },

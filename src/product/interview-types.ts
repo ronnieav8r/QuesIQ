@@ -60,6 +60,8 @@ export type StoryPracticeCoachingEntry = {
   practicedAt: string;
   scores: EvaluationScore[];
   sessionId: string;
+  spinAngle?: string;
+  spinQuestion?: string;
   summary: string;
 };
 
@@ -228,6 +230,7 @@ export type SessionSetupSnapshot = {
   storyContext?: StoryOutline & {
     storyId: string;
   };
+  storyPracticeSpin?: StorySpin;
   styleKey: InterviewStyleKey;
 };
 

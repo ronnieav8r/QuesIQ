@@ -147,11 +147,15 @@ export async function deleteStory(userId: string, storyId: string): Promise<bool
 export async function recordStoryPracticeCoaching({
   result,
   sessionId,
+  spinAngle,
+  spinQuestion,
   storyId,
   userId,
 }: {
   result: SessionEvaluationResult;
   sessionId: string;
+  spinAngle?: string;
+  spinQuestion?: string;
   storyId: string;
   userId: string;
 }): Promise<StoryRecord | undefined> {
@@ -178,6 +182,8 @@ export async function recordStoryPracticeCoaching({
     practicedAt: now.toISOString(),
     scores: result.scores,
     sessionId,
+    spinAngle,
+    spinQuestion,
     summary: result.summary,
   };
   const practiceCoaching = [

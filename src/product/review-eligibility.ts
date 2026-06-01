@@ -3,6 +3,7 @@ import type { SessionSetupSnapshot, VoiceSessionArtifactDraft } from "@/product/
 export const minimumStandardReviewDurationSeconds = 120;
 export const minimumIntroReviewDurationSeconds = 30;
 export const minimumRapidFireAnsweredTurns = 1;
+export const minimumTurnBasedAnsweredTurns = 1;
 
 function countUserTranscriptTurns(artifact: Pick<VoiceSessionArtifactDraft, "transcript">) {
   return artifact.transcript.filter(
@@ -11,7 +12,7 @@ function countUserTranscriptTurns(artifact: Pick<VoiceSessionArtifactDraft, "tra
 }
 
 export function getMinimumReviewDurationSeconds(snapshot: SessionSetupSnapshot) {
-  if (snapshot.modeKey === "rapid_fire") {
+  if (isTurnBasedReview(snapshot)) {
     return 0;
   }
 
@@ -20,12 +21,21 @@ export function getMinimumReviewDurationSeconds(snapshot: SessionSetupSnapshot) 
     : minimumStandardReviewDurationSeconds;
 }
 
+function isTurnBasedReview(snapshot: SessionSetupSnapshot) {
+  return (
+    snapshot.modeKey === "rapid_fire" ||
+    Boolean(snapshot.turnBasedQuestionCount) ||
+    Boolean(snapshot.storyContext) ||
+    Boolean(snapshot.introductionContext)
+  );
+}
+
 export function isArtifactTooShortToReview(
   snapshot: SessionSetupSnapshot,
   artifact: Pick<VoiceSessionArtifactDraft, "durationSeconds" | "transcript">,
 ) {
-  if (snapshot.modeKey === "rapid_fire") {
-    return countUserTranscriptTurns(artifact) < minimumRapidFireAnsweredTurns;
+  if (isTurnBasedReview(snapshot)) {
+    return countUserTranscriptTurns(artifact) < minimumTurnBasedAnsweredTurns;
   }
 
   return (
@@ -35,8 +45,8 @@ export function isArtifactTooShortToReview(
 }
 
 export function getTooShortReviewMessage(snapshot: SessionSetupSnapshot) {
-  if (snapshot.modeKey === "rapid_fire") {
-    return "Answer at least one Rapid Fire question before ending the session so Que can create a review.";
+  if (isTurnBasedReview(snapshot)) {
+    return "Answer at least one question before ending the session so Que can create a review.";
   }
 
   const minimumDuration = getMinimumReviewDurationSeconds(snapshot);

@@ -447,6 +447,8 @@ export async function createSessionEvaluation(
       await recordStoryPracticeCoaching({
         result: existing.result,
         sessionId,
+        spinAngle: existingSession.contextSnapshot.storyPracticeSpin?.angle,
+        spinQuestion: existingSession.contextSnapshot.storyPracticeSpin?.question,
         storyId: existingSession.contextSnapshot.storyContext.storyId,
         userId,
       });
@@ -659,6 +661,8 @@ export async function createSessionEvaluation(
     await recordStoryPracticeCoaching({
       result,
       sessionId,
+      spinAngle: session.contextSnapshot.storyPracticeSpin?.angle,
+      spinQuestion: session.contextSnapshot.storyPracticeSpin?.question,
       storyId: session.contextSnapshot.storyContext.storyId,
       userId,
     });

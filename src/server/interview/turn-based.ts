@@ -16,6 +16,7 @@ import {
   getActiveAiPricing,
 } from "@/server/pricing/ai-pricing";
 import type { InterviewRuntimeConfigRecord } from "@/server/interview/runtime-configs";
+import { listStoryLibraryContext } from "@/server/stories/stories";
 
 type PriorTurn = {
   feedback?: string;
@@ -109,10 +110,22 @@ function turnLimit(snapshot: SessionSetupSnapshot, fallback: number) {
 }
 
 function modeLabel(modeKey: SessionSetupSnapshot["modeKey"]) {
-  return modeKey === "rapid_fire" ? "Rapid Fire" : "Coaching";
+  if (modeKey === "rapid_fire") {
+    return "Rapid Fire";
+  }
+
+  if (modeKey === "first_impression") {
+    return "Intro Practice";
+  }
+
+  return "Coaching";
 }
 
 function fallbackQuestion(modeKey: SessionSetupSnapshot["modeKey"]) {
+  if (modeKey === "first_impression") {
+    return "Tell me about yourself and what makes you a strong fit for this role.";
+  }
+
   if (modeKey === "coaching") {
     return "Tell me about a recent work challenge and what you did.";
   }
@@ -121,12 +134,20 @@ function fallbackQuestion(modeKey: SessionSetupSnapshot["modeKey"]) {
 }
 
 function fallbackRoutingReason(modeKey: SessionSetupSnapshot["modeKey"]) {
+  if (modeKey === "first_impression") {
+    return "Intro Practice prompt used to rehearse the saved introduction.";
+  }
+
   return modeKey === "coaching"
     ? "Coaching prompt used for focused answer improvement."
     : "Fallback question used after a malformed routing response.";
 }
 
 function fallbackTargetSkill(modeKey: SessionSetupSnapshot["modeKey"]) {
+  if (modeKey === "first_impression") {
+    return "concise introduction delivery";
+  }
+
   return modeKey === "coaching" ? "clearer interview answer structure" : "clear concise answers";
 }
 
@@ -289,18 +310,30 @@ async function generateSpeech(input: {
 }
 
 function turnTask(
-  modeKey: SessionSetupSnapshot["modeKey"],
+  snapshot: SessionSetupSnapshot,
   mustEnd: boolean,
   hasLatestAnswer: boolean,
   retryAlreadyOffered: boolean,
 ) {
+  if (snapshot.introductionContext) {
+    return mustEnd || hasLatestAnswer
+      ? "Give brief final coaching feedback on the saved introduction practice and set done true. Do not return a next question."
+      : "Ask one natural tell-me-about-yourself style question that fits the saved introduction context. Do not read the saved script back to the user.";
+  }
+
+  if (snapshot.storyContext) {
+    return mustEnd || hasLatestAnswer
+      ? "Give brief final coaching feedback on how well the answer used the saved story and set done true. Do not return a next question."
+      : "Ask one behavioral question that lets the candidate practice the saved story. If a selected story spin is provided, ask that spin question or a close natural variant of it.";
+  }
+
   if (mustEnd) {
-    return modeKey === "coaching"
+    return snapshot.modeKey === "coaching"
       ? "Give brief final coaching feedback and set done true. Do not return a next question."
       : "Give brief Rapid Fire wrap-up feedback and set done true. Do not return a next question.";
   }
 
-  if (modeKey === "coaching") {
+  if (snapshot.modeKey === "coaching") {
     if (retryAlreadyOffered) {
       return "Give one short coaching note about the latest answer, then move on to a completely new interview question. Do not ask about the same scenario again.";
     }
@@ -314,6 +347,18 @@ function turnTask(
 }
 
 function turnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) {
+  if (modeKey === "first_impression") {
+    return [
+      "You route QuesIQ Interview Intro Practice turns.",
+      "Return only compact JSON with keys: archetypeId, question, feedback, routingReason, targetSkill, done.",
+      "Intro Practice is a one-question saved-introduction rehearsal.",
+      "For the opening turn, ask one natural tell-me-about-yourself style question based on the saved introduction context.",
+      "Do not read or quote the saved script to the user.",
+      "After the user answers, give one concise coaching note and set done true.",
+      "Do not return another question after the answer.",
+    ].join(" ");
+  }
+
   if (modeKey === "coaching") {
     return [
       "You route QuesIQ Interview Coaching turns.",
@@ -324,6 +369,8 @@ function turnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) {
       "Only ask the user to retry when the latest answer is unusable, off-topic, or too fragmented to evaluate.",
       "If the previous Que prompt was a retry, move on to a completely new question no matter how incomplete the new answer was.",
       "The selected question count means distinct primary questions, not repeated retries on the same scenario.",
+      "When a saved story practice context is provided, treat the session as a one-question Story Lab rehearsal: ask a behavioral question that fits that story or selected spin, then after the answer give final feedback and set done true.",
+      "When saved story library context is provided without a specific story practice context, use it quietly to occasionally ask a behavioral question that gives the candidate an opportunity to use a strong saved story.",
       "For rare retry prompts, make the retry instruction clear inside the question field.",
       "Do not invent experience, credentials, metrics, or motivations.",
       "For the opening turn, leave feedback empty and ask one focused interview question.",
@@ -351,7 +398,12 @@ async function generateTurnDecision(input: {
   priorTurns: PriorTurn[];
 }) {
   const promptComponents = await getSessionPromptComponents(input.snapshot);
-  const memory = await getCoachingMemory(input.userId);
+  const [memory, storyLibrary] = await Promise.all([
+    getCoachingMemory(input.userId),
+    input.snapshot.modeKey === "coaching" && !input.snapshot.storyContext
+      ? listStoryLibraryContext(input.userId)
+      : Promise.resolve([]),
+  ]);
   const archetypes = await getDb()
     .select()
     .from(interviewQuestionArchetypes)
@@ -381,7 +433,7 @@ async function generateTurnDecision(input: {
 
   const payload = {
     task: turnTask(
-      input.snapshot.modeKey,
+      input.snapshot,
       mustEnd,
       Boolean(input.latestTranscript),
       retryAlreadyOffered,
@@ -410,6 +462,42 @@ async function generateTurnDecision(input: {
       targetCompany: input.snapshot.interviewContext.targetCompany || "Optional",
       targetRole: input.snapshot.interviewContext.targetRole || "General practice",
     },
+    introductionPractice: input.snapshot.introductionContext
+      ? {
+          audience: input.snapshot.introductionContext.audience,
+          intendedLength: input.snapshot.introductionContext.length,
+          proofPoint: input.snapshot.introductionContext.proofPoint,
+          roleInterest: input.snapshot.introductionContext.roleInterest,
+          savedScript: input.snapshot.introductionContext.script,
+          strength: input.snapshot.introductionContext.strength,
+          title: input.snapshot.introductionContext.title,
+          transition: input.snapshot.introductionContext.transition,
+        }
+      : undefined,
+    storyPractice: input.snapshot.storyContext
+      ? {
+          actions: input.snapshot.storyContext.actions,
+          categories: input.snapshot.storyContext.categories,
+          practicePrompt: input.snapshot.storyContext.practicePrompt,
+          result: input.snapshot.storyContext.result,
+          selectedSpin: input.snapshot.storyPracticeSpin,
+          situation: input.snapshot.storyContext.situation,
+          summary: input.snapshot.storyContext.summary,
+          task: input.snapshot.storyContext.task,
+          title: input.snapshot.storyContext.title,
+        }
+      : undefined,
+    savedStoryLibrary:
+      storyLibrary.length > 0
+        ? storyLibrary.map((story) => ({
+            categories: story.categories,
+            coachNotes: story.coachNotes,
+            practicePrompt: story.practicePrompt,
+            result: story.result,
+            summary: story.summary,
+            title: story.title,
+          }))
+        : "No saved story library context.",
     coachingMemory: memory
       ? {
           growthAreas: memory.growthAreas,
