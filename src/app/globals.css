@@ -3184,15 +3184,52 @@ textarea::placeholder {
   box-shadow: var(--shadow-brand);
 }
 
+.prompt-version-card {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+
 .prompt-version-list small {
   color: var(--muted);
   overflow-wrap: anywhere;
+}
+
+.prompt-preview {
+  background: var(--surface-band);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family:
+    "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+  max-height: 26rem;
+  overflow: auto;
+  padding: var(--space-3);
+  white-space: pre-wrap;
 }
 
 .prompt-editor textarea {
   font-family:
     "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   min-height: 24rem;
+}
+
+.status-callout {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+}
+
+.status-callout.warning {
+  border-color: var(--action);
 }
 
 .runtime-context-panel {

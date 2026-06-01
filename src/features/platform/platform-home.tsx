@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { AuthControl, AuthView, useAuthSession } from "@/components/auth-control";
 import { platformProducts } from "@/features/platform/products";
+import { QuiraChatLauncher } from "@/features/support/quira-chat";
 
 export default function PlatformHome() {
   const authSession = useAuthSession();
@@ -103,6 +104,12 @@ export default function PlatformHome() {
             </section>
           </div>
         </div>
+        <QuiraChatLauncher
+          authLoaded={authSession !== undefined}
+          product="shared"
+          screen="home"
+          signedIn={Boolean(authSession?.user)}
+        />
       </section>
     </main>
   );

@@ -887,11 +887,13 @@ export async function listQuiraAdminSupportData(limit = 100) {
     getDb()
       .select({
         category: quiraKnowledgeArticles.category,
+        content: quiraKnowledgeArticles.content,
         displayOrder: quiraKnowledgeArticles.displayOrder,
         id: quiraKnowledgeArticles.id,
         product: quiraKnowledgeArticles.product,
         published: quiraKnowledgeArticles.published,
         slug: quiraKnowledgeArticles.slug,
+        tags: quiraKnowledgeArticles.tags,
         title: quiraKnowledgeArticles.title,
         updatedAt: quiraKnowledgeArticles.updatedAt,
       })

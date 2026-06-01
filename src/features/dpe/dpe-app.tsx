@@ -25,6 +25,7 @@ import { signIn, signOut } from "next-auth/react";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import { inferDpeTargetTrackKeyFromCertificate } from "@/features/admin/dpe-target-tracks";
+import { QuiraChatLauncher } from "@/features/support/quira-chat";
 import type { VoiceSessionArtifactDraft } from "@/product/interview-types";
 import {
   areaLabels,
@@ -1432,6 +1433,12 @@ export default function App() {
             />
           ))}
         </nav>
+        <QuiraChatLauncher
+          authLoaded
+          product="dpe"
+          screen={screen}
+          signedIn={authState.authenticated}
+        />
       </div>
     </div>
   );

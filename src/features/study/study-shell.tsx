@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 
 import { AuthControl, type AppAuthSession } from "@/components/auth-control";
+import { QuiraChatLauncher } from "@/features/support/quira-chat";
 
 type StudyShellProps = {
   authSession: AppAuthSession;
@@ -222,6 +223,12 @@ export function StudyShell({ authSession, children }: StudyShellProps) {
             );
           })}
         </nav>
+        <QuiraChatLauncher
+          authLoaded={authSession !== undefined}
+          product="study"
+          screen={pathname}
+          signedIn={Boolean(authSession?.user)}
+        />
       </section>
     </main>
   );

@@ -11,12 +11,17 @@ import { getAdminDpePreflightSnapshot } from "@/server/admin-data/dpe-preflight"
 import { listAdminDpeReviewDiagnostics } from "@/server/admin-data/dpe-diagnostics";
 import { listAdminDpeProgressionSnapshot } from "@/server/admin-data/dpe-progression";
 import { listDpeContentSummary } from "@/server/dpe/dpe-data";
+import { promptConfigFallbacks } from "@/server/prompts/defaults";
+import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
+import { listQuiraAdminSupportData } from "@/server/support/quira-support";
+import type { PromptConfigRecord } from "@/product/interview-types";
 
-type AdminProduct = "content" | "dpe" | "interview" | "overview" | "study";
+type AdminProduct = "content" | "dpe" | "interview" | "overview" | "quira" | "study";
 
 const adminProducts: { key: AdminProduct; label: string }[] = [
   { key: "overview", label: "Overview" },
   { key: "content", label: "Content Studio" },
+  { key: "quira", label: "Quira" },
   { key: "interview", label: "Interview" },
   { key: "study", label: "Study" },
   { key: "dpe", label: "DPE" },
@@ -69,6 +74,7 @@ export async function AdminConsole({ product }: { product?: string }) {
 
       {activeProduct === "overview" && <AdminOverview />}
       {activeProduct === "content" && <ContentStudio />}
+      {activeProduct === "quira" && <QuiraAdminPanel />}
       {activeProduct === "interview" && (
         <AdminView eyebrow="Interview" title="Interview" />
       )}
@@ -98,6 +104,9 @@ function AdminOverview() {
         <Link className="button-link secondary" href="/admin?product=content">
           Content Studio
         </Link>
+        <Link className="button-link secondary" href="/admin?product=quira">
+          Quira admin
+        </Link>
         <Link className="button-link secondary" href="/admin?product=study">
           Study admin
         </Link>
@@ -105,6 +114,163 @@ function AdminOverview() {
           DPE admin
         </Link>
       </div>
+    </section>
+  );
+}
+
+async function QuiraAdminPanel() {
+  const quiraKeyConfigured = Boolean(
+    process.env.OPENAI_QUIRA_API_KEY ||
+      process.env.OPENAI_SUPPORT_API_KEY ||
+      process.env.OPENAI_API_KEY,
+  );
+  const quiraModel =
+    process.env.OPENAI_QUIRA_MODEL || process.env.OPENAI_SUPPORT_MODEL || "gpt-5.4-mini";
+  let support: Awaited<ReturnType<typeof listQuiraAdminSupportData>> = {
+    articles: [],
+    cases: [],
+    conversations: [],
+  };
+  let promptConfig: PromptConfigRecord = {
+    ...promptConfigFallbacks.quira_support_chat,
+    createdAt: new Date(0).toISOString(),
+    id: "quira_support_chat:fallback",
+    updatedAt: new Date(0).toISOString(),
+  };
+  let unavailable = false;
+
+  if (process.env.DATABASE_URL) {
+    try {
+      [support, promptConfig] = await Promise.all([
+        listQuiraAdminSupportData(),
+        getActivePromptConfig("quira_support_chat"),
+      ]);
+    } catch (error) {
+      unavailable = true;
+      console.error("Quira admin data unavailable.", error);
+    }
+  } else {
+    unavailable = true;
+  }
+
+  return (
+    <section className="ai-runs-panel" aria-labelledby="quira-admin-title">
+      <div className="section-head">
+        <div>
+          <p className="eyebrow">Quira</p>
+          <h2 id="quira-admin-title">Support Brain and Inbox</h2>
+          <p>
+            Review Quira&apos;s active prompt, support knowledge, conversations, and
+            created cases from one admin tab.
+          </p>
+        </div>
+      </div>
+
+      <div className="study-stat-strip" aria-label="Quira admin summary">
+        <div className={quiraKeyConfigured ? "study-stat-chip highlight" : "study-stat-chip"}>
+          <strong>{quiraKeyConfigured ? "Ready" : "Missing"}</strong>
+          <span>Quira API Key</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{support.articles.length}</strong>
+          <span>KB Articles</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{support.cases.length}</strong>
+          <span>Cases</span>
+        </div>
+      </div>
+
+      {!quiraKeyConfigured && (
+        <div className="status-callout warning">
+          <strong>Set `OPENAI_QUIRA_API_KEY` in Render for Quira.</strong>
+          <span>
+            The old shared key can still work as a fallback, but the Quira-specific
+            key is the clean V1 path for support cost tracking and isolation.
+          </span>
+        </div>
+      )}
+
+      {unavailable && (
+        <div className="status-callout warning">
+          <strong>Quira storage is unavailable in this environment.</strong>
+          <span>Apply the production database migration and reload this tab.</span>
+        </div>
+      )}
+
+      <section className="panel">
+        <p className="eyebrow">Active Prompt</p>
+        <h3>{promptConfig.name}</h3>
+        <p className="field-note">
+          Key `quira_support_chat` · model {promptConfig.model || quiraModel} · version{" "}
+          {promptConfig.version}
+        </p>
+        <pre className="prompt-preview">{promptConfig.instructions}</pre>
+      </section>
+
+      <section className="panel">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">Knowledge Database</p>
+            <h3>Published and draft articles</h3>
+          </div>
+          <span className="pill">{support.articles.length} articles</span>
+        </div>
+        {support.articles.length > 0 ? (
+          <div className="prompt-version-list">
+            {support.articles.map((article) => (
+              <article className="prompt-version-card" key={article.id}>
+                <div>
+                  <strong>{article.title}</strong>
+                  <p className="field-note">
+                    {article.product} · {article.category} ·{" "}
+                    {article.published ? "published" : "draft"} · {formatDate(article.updatedAt)}
+                  </p>
+                  <p>{article.content}</p>
+                  {article.tags.length > 0 && (
+                    <p className="field-note">Tags: {article.tags.join(", ")}</p>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p>No Quira knowledge articles are available yet.</p>
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">Support Inbox</p>
+            <h3>Cases and conversations</h3>
+          </div>
+          <span className="pill">
+            {support.cases.length} cases · {support.conversations.length} chats
+          </span>
+        </div>
+        {support.cases.length > 0 ? (
+          <div className="prompt-version-list">
+            {support.cases.map((supportCase) => (
+              <article className="prompt-version-card" key={supportCase.id}>
+                <div>
+                  <strong>{supportCase.title}</strong>
+                  <p className="field-note">
+                    {supportCase.product} · {supportCase.kind} · {supportCase.status} ·{" "}
+                    {supportCase.urgency} · {formatDate(supportCase.createdAt)}
+                  </p>
+                  <p>{supportCase.summary}</p>
+                  <p className="field-note">
+                    {supportCase.userEmail || supportCase.userId} · {supportCase.screen || "No screen"}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p>No Quira support cases have been created yet.</p>
+        )}
+      </section>
     </section>
   );
 }
