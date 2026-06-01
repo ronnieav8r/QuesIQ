@@ -123,6 +123,10 @@ The first Study slice is imported:
   `columnMapping` (`{ [targetField]: sourceHeader }`) and both use the same
   parser normalization path. Preview returns detected CSV headers, supported
   target fields, effective mapping, and unmapped required fields.
+- Rich CSV import also accepts the current Study test-bed CSV schema with
+  `shortAnswer`, `explanation`, `officialReference`, `officialReferenceUrl`,
+  `additionalReferences`, `additionalReferenceUrls`, and optional
+  `official`/`verified` booleans without requiring explicit column mapping.
 - `drizzle/0054_add_study_source_verification_metadata.sql` adds structured
   source metadata and verification status/evidence/verifier fields so rich CSV
   imports do not have to preserve chunk/page/visual details only inside labels
@@ -164,6 +168,10 @@ The first Study slice is imported:
   `[TEST_DELETE]` DB save/readback check. DB mode verifies the `0054` metadata
   columns before writing and accepts `--cleanup` to remove the disposable deck
   after readback.
+- `rich_csv_import_save` remains admin-only and can mark a deck Official only
+  through this import path (`markDeckOfficial` or row-level `official=true`);
+  card `isVerified` remains conservative and is only set true when verified
+  status plus confidence/verifier policy are satisfied.
 - local Codex skill `quesiq-study-content-pipeline` coordinates the source
   scrubber, Study deck drafter, Study verifier, rich CSV export, and optional
   import smoke checks for raw source-to-Study import work

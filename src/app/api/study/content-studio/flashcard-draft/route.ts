@@ -53,6 +53,7 @@ export async function POST(request: Request) {
     promptInstructions?: string;
     sourcePackDraftJson?: unknown;
     sourceText?: string;
+    markDeckOfficial?: boolean;
   };
   if (body.mode === "rich_csv_import_preview") {
     const csvText = (body.csvText ?? "").trim();
@@ -111,10 +112,8 @@ export async function POST(request: Request) {
     if (!deckId) {
       const createDeckTitle = body.createDeckTitle?.trim() || parsed.rows[0]?.deckTitle?.trim();
       if (!createDeckTitle) {
-        return NextResponse.json(
-          { error: "deckId, createDeckTitle, or a mapped deckTitle CSV field is required." },
-          { status: 400 },
-        );
+        const fallbackTitle = parsed.rows[0]?.subject?.trim() ? `${parsed.rows[0].subject} Study Deck` : "Imported Study Deck";
+        body.createDeckTitle = fallbackTitle;
       }
       const requestedDeckTags = Array.isArray(body.createDeckTags)
         ? body.createDeckTags.map((tag) => tag.trim()).filter(Boolean)
@@ -123,7 +122,7 @@ export async function POST(request: Request) {
         description: body.createDeckDescription?.trim() || parsed.rows[0]?.deckDescription?.trim() || undefined,
         subject: body.createDeckSubject?.trim() || parsed.rows[0]?.subject?.trim() || undefined,
         tags: requestedDeckTags.length > 0 ? requestedDeckTags : parsed.rows[0]?.tags.length ? parsed.rows[0].tags : undefined,
-        title: createDeckTitle,
+        title: body.createDeckTitle?.trim() || createDeckTitle || "Imported Study Deck",
         userId: session.user.id,
       });
       deckId = deck.id;
@@ -134,9 +133,12 @@ export async function POST(request: Request) {
       }
     }
 
+    const markDeckOfficial = body.markDeckOfficial === true || parsed.rows.some((row) => row.isOfficial === true);
+
     const saveResult = await saveStudyRichFlashcardImport({
       adminUserId: session.user.id,
       deckId,
+      markDeckOfficial,
       rows: parsed.rows,
     });
 
@@ -158,7 +160,7 @@ export async function POST(request: Request) {
       richCsvImportSaved: true,
       storage: {
         detail:
-          "Rich CSV import saved Study cards plus source and verification metadata. Publish, Official, and broad Verified flows remain disabled.",
+          "Rich CSV import saved Study cards plus source and verification metadata. Admin-only import can mark deck Official and apply conservative card Verified rules; Publish and broad Official/Verified flows remain disabled.",
         durableReviewState: true,
       },
     });

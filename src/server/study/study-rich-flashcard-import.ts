@@ -30,6 +30,8 @@ export const STUDY_RICH_IMPORT_HEADERS = [
   "verificationNotes",
   "verificationEvidence",
   "verifier",
+  "isOfficial",
+  "isVerified",
 ] as const;
 export type StudyRichImportTargetField = (typeof STUDY_RICH_IMPORT_HEADERS)[number];
 export type StudyRichImportColumnMapping = Partial<Record<StudyRichImportTargetField, string>>;
@@ -61,6 +63,8 @@ export const STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING: Record<StudyRichImportTar
   verificationNotes: "verificationNotes",
   verificationStatus: "verificationStatus",
   verifier: "verifier",
+  isOfficial: "isOfficial",
+  isVerified: "isVerified",
 };
 
 type StudyRichImportLevel = "advanced" | "beginner" | "intermediate";
@@ -78,6 +82,7 @@ export type StudyRichImportNormalizedRow = {
   hint?: string;
   level?: StudyRichImportLevel;
   question: string;
+  isOfficial?: boolean;
   source: {
     sourceChunkIds: string[];
     sourceLabel?: string;
@@ -259,6 +264,14 @@ function parseConfidence(value: string): number | undefined {
   return Math.max(0, Math.min(1, parsed));
 }
 
+function parseBooleanLike(value: string): boolean | undefined {
+  const lower = value.trim().toLowerCase();
+  if (!lower) return undefined;
+  if (["1", "true", "yes", "y"].includes(lower)) return true;
+  if (["0", "false", "no", "n"].includes(lower)) return false;
+  return undefined;
+}
+
 function detectDelimiter(headerLine: string): "," | "\t" {
   return headerLine.includes("\t") ? "\t" : ",";
 }
@@ -279,31 +292,38 @@ function shouldVerifyCard(row: StudyRichImportNormalizedRow) {
 function targetFieldAliases(target: StudyRichImportTargetField) {
   const aliases: Record<StudyRichImportTargetField, string[]> = {
     audience: ["audience"],
-    answer: ["answer"],
-    deckDescription: ["deckDescription", "deck_description"],
-    deckTitle: ["deckTitle", "deck_title"],
+    answer: ["answer", "shortAnswer", "short_answer"],
+    deckDescription: ["deckDescription", "deck_description", "version"],
+    deckTitle: ["deckTitle", "deck_title", "examOrStandard", "exam_or_standard", "certification"],
     draftConfidence: ["draftConfidence", "draft_confidence"],
     draftId: ["draftId", "draft_id"],
     draftWarnings: ["draftWarnings", "draft_warnings"],
     externalId: ["externalId", "external_id", "card_id"],
-    hint: ["hint"],
+    hint: ["hint", "explanation"],
     level: ["level"],
     question: ["question"],
     sourceChunkIds: ["sourceChunkIds", "source_chunk_ids"],
-    sourceLabel: ["sourceLabel", "source_label"],
-    sourceNotes: ["sourceNotes", "source_notes"],
-    sourcePackId: ["sourcePackId", "source_pack_id"],
-    sourcePackTitle: ["sourcePackTitle", "source_pack_title"],
+    sourceLabel: ["sourceLabel", "source_label", "officialReference", "official_reference"],
+    sourceNotes: ["sourceNotes", "source_notes", "additionalReferences", "additional_references"],
+    sourcePackId: ["sourcePackId", "source_pack_id", "examOrStandard", "exam_or_standard"],
+    sourcePackTitle: ["sourcePackTitle", "source_pack_title", "certification", "version"],
     sourcePages: ["sourcePages", "source_pages", "source_page_anchors"],
-    sourceUrl: ["sourceUrl", "source_url"],
+    sourceUrl: ["sourceUrl", "source_url", "officialReferenceUrl", "official_reference_url"],
     sourceVisualAssetIds: ["sourceVisualAssetIds", "source_visual_asset_ids", "source_visual_ids"],
     subject: ["subject"],
     tags: ["tags"],
     verificationConfidence: ["verificationConfidence", "verification_confidence"],
-    verificationEvidence: ["verificationEvidence", "verification_evidence"],
+    verificationEvidence: [
+      "verificationEvidence",
+      "verification_evidence",
+      "additionalReferenceUrls",
+      "additional_reference_urls",
+    ],
     verificationNotes: ["verificationNotes", "verification_notes"],
     verificationStatus: ["verificationStatus", "verification_status"],
     verifier: ["verifier"],
+    isOfficial: ["isOfficial", "official", "deckOfficial", "deck_official"],
+    isVerified: ["isVerified", "verified", "cardVerified", "card_verified"],
   };
   return aliases[target];
 }
@@ -325,7 +345,10 @@ function buildEffectiveMapping(args: {
   const requiredFields: StudyRichImportTargetField[] = ["question", "answer"];
   const unmappedRequiredFields = requiredFields.filter((field) => {
     const normalized = normalizeHeader(effective[field]);
-    return !args.normalizedHeaderLookup.has(normalized);
+    if (args.normalizedHeaderLookup.has(normalized)) {
+      return false;
+    }
+    return !targetFieldAliases(field).some((alias) => args.normalizedHeaderLookup.has(normalizeHeader(alias)));
   });
 
   return {
@@ -479,6 +502,31 @@ export function parseStudyRichFlashcardImportText(
       });
     }
 
+    const isOfficialRaw = getMappedValue("isOfficial");
+    const isOfficial = parseBooleanLike(isOfficialRaw);
+    if (isOfficialRaw && isOfficial === undefined) {
+      warnings.push({
+        message: `Invalid isOfficial '${isOfficialRaw}' (ignored).`,
+        row: rowNumber,
+        severity: "warning",
+      });
+    }
+
+    const isVerifiedRaw = getMappedValue("isVerified");
+    const isVerified = parseBooleanLike(isVerifiedRaw);
+    if (isVerifiedRaw && isVerified === undefined) {
+      warnings.push({
+        message: `Invalid isVerified '${isVerifiedRaw}' (ignored).`,
+        row: rowNumber,
+        severity: "warning",
+      });
+    }
+
+    let resolvedVerificationStatus = verificationStatus;
+    if (!resolvedVerificationStatus && isVerified === true) {
+      resolvedVerificationStatus = "verified";
+    }
+
     const normalizedRow: StudyRichImportNormalizedRow = {
       answer,
       audience: getMappedValue("audience") || undefined,
@@ -489,6 +537,7 @@ export function parseStudyRichFlashcardImportText(
       draftWarnings: parseList(getMappedValue("draftWarnings")),
       externalId: getMappedValue("externalId") || undefined,
       hint: getMappedValue("hint") || undefined,
+      isOfficial,
       level,
       question,
       source: {
@@ -507,7 +556,7 @@ export function parseStudyRichFlashcardImportText(
         confidence: verificationConfidence,
         evidence: parseList(getMappedValue("verificationEvidence")),
         notes: getMappedValue("verificationNotes") || undefined,
-        status: verificationStatus,
+        status: resolvedVerificationStatus,
         verifier: getMappedValue("verifier") || undefined,
       },
     };
@@ -555,6 +604,7 @@ export function parseStudyRichFlashcardImportText(
 export async function saveStudyRichFlashcardImport(args: {
   adminUserId: string;
   deckId: string;
+  markDeckOfficial?: boolean;
   rows: StudyRichImportNormalizedRow[];
 }): Promise<StudyRichImportSaveResult> {
   return getDb().transaction(async (tx) => {
@@ -697,6 +747,7 @@ export async function saveStudyRichFlashcardImport(args: {
       .update(studyDecks)
       .set({
         cardCount: sql`greatest(${studyDecks.cardCount} + ${args.rows.length}, 0)`,
+        ...(args.markDeckOfficial ? { isOfficial: true } : {}),
         updatedAt: new Date(),
         verifiedCardCount: sql`(
           select count(*)::int
