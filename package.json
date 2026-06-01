@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "node scripts/db-migrate.mjs",
     "guard:admin": "node scripts/guards/check-lane.mjs admin",
     "guard:dpe": "node scripts/guards/check-lane.mjs dpe",
     "guard:interview": "node scripts/guards/check-lane.mjs interview",
