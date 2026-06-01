@@ -73,7 +73,9 @@ export function SessionView({
   const [runtimeConfig, setRuntimeConfig] = useState<RuntimeConfig>({
     engine: "realtime",
   });
-  const [runtimeConfigLoaded, setRuntimeConfigLoaded] = useState(false);
+  const [runtimeConfigLoaded, setRuntimeConfigLoaded] = useState(
+    snapshot.modeKey !== "rapid_fire",
+  );
   const useTurnBasedRapidFire =
     snapshot.modeKey === "rapid_fire" &&
     runtimeConfigLoaded &&
@@ -82,12 +84,8 @@ export function SessionView({
   useEffect(() => {
     let ignore = false;
     if (snapshot.modeKey !== "rapid_fire") {
-      setRuntimeConfig({ engine: "realtime" });
-      setRuntimeConfigLoaded(true);
       return;
     }
-
-    setRuntimeConfigLoaded(false);
 
     async function loadRuntimeConfig() {
       try {

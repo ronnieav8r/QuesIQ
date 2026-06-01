@@ -436,4 +436,3 @@ export function InterviewRuntimeConfigPanel() {
     </section>
   );
 }
-
