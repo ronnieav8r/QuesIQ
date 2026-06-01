@@ -41,6 +41,26 @@ function scorePercent(score?: number) {
   return Math.round((Math.max(0, Math.min(5, score)) / 5) * 100);
 }
 
+function scoreTone(score?: number) {
+  if (score === undefined) {
+    return "empty";
+  }
+
+  if (score >= 4.2) {
+    return "strong";
+  }
+
+  if (score >= 3.3) {
+    return "steady";
+  }
+
+  if (score >= 2.4) {
+    return "watch";
+  }
+
+  return "needs-work";
+}
+
 function HomeScoreRings({
   emptyLabel,
   scores,
@@ -57,12 +77,16 @@ function HomeScoreRings({
               ? `${score.label}: ${emptyLabel}`
               : `${score.label}: ${score.average.toFixed(1)} out of 5`
           }
-          className={`home-score-ring score-${score.key}`}
+          className={`home-score-card score-${scoreTone(score.average)}`}
           key={score.key}
           style={{ "--score-percent": `${scorePercent(score.average)}%` } as CSSProperties}
         >
-          <strong>{score.average ? score.average.toFixed(1) : "--"}</strong>
-          <span>{score.label}</span>
+          <div className="home-score-ring" aria-hidden="true" />
+          <div>
+            <strong>{score.label}</strong>
+            <b>{score.average === undefined ? "--" : score.average.toFixed(1)}</b>
+            <small>{score.average === undefined ? emptyLabel : "Average score"}</small>
+          </div>
         </div>
       ))}
     </div>
