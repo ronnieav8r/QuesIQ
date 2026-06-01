@@ -119,7 +119,7 @@ type StoriesViewProps = {
   selectedJobTarget?: JobTargetRecord;
 };
 
-type StoryCaptureMode = "dictate" | "type";
+type StoryCaptureMode = "guided" | "dictate" | "type";
 type StoryLabTab = "intro" | "tmaat";
 type StoryLabView = "build" | "library";
 type IntroCaptureMode = "dictate" | "tell" | "type";
@@ -226,7 +226,7 @@ function createInitialStoryTurns() {
   return [
     createTurn(
       "assistant",
-      "Tell me what happened. It does not need to sound like an interview answer yet.",
+      "Tell me what happened in your own words. It does not need to sound like an interview answer yet.",
     ),
   ];
 }
@@ -257,7 +257,7 @@ export function StoriesView({
   const [editError, setEditError] = useState<string>();
   const [editingStoryId, setEditingStoryId] = useState<string>();
   const [error, setError] = useState<string>();
-  const [captureMode, setCaptureMode] = useState<StoryCaptureMode>("dictate");
+  const [captureMode, setCaptureMode] = useState<StoryCaptureMode>("guided");
   const [introAudience, setIntroAudience] = useState<IntroAudience>("virtual");
   const [introCaptureMode, setIntroCaptureMode] = useState<IntroCaptureMode>("tell");
   const [introDraft, setIntroDraft] = useState<IntroDraft>(createEmptyIntroDraft);
@@ -309,7 +309,11 @@ export function StoriesView({
     stories.find((story) => story.id === selectedStoryId) ?? stories[0];
   const editingStory = stories.find((story) => story.id === editingStoryId);
   const captureStatusLabel =
-    captureMode === "dictate"
+    captureMode === "guided"
+      ? canUseSpeech
+        ? "Guided story builder"
+        : "Guided typing"
+      : captureMode === "dictate"
       ? canUseSpeech
         ? "Dictation ready"
         : "Type fallback"
@@ -404,14 +408,24 @@ export function StoriesView({
     };
   }, []);
 
-  function addUserTurn(text: string) {
+  function createUserTurnFromText(text: string) {
     const cleanText = text.trim();
 
     if (!cleanText) {
+      return undefined;
+    }
+
+    return createTurn("user", cleanText);
+  }
+
+  function addUserTurn(text: string) {
+    const turn = createUserTurnFromText(text);
+
+    if (!turn) {
       return;
     }
 
-    setTurns((current) => [...current, createTurn("user", cleanText)]);
+    setTurns((current) => [...current, turn]);
     setDraftText("");
   }
 
@@ -714,12 +728,12 @@ export function StoriesView({
     recognition.start();
   }
 
-  async function askFollowUp() {
+  async function askFollowUp(nextTurns = turns) {
     try {
       setError(undefined);
       setPendingAction("follow_up");
       const response = await fetch("/api/stories/follow-up", {
-        body: JSON.stringify({ turns }),
+        body: JSON.stringify({ turns: nextTurns }),
         headers: {
           "Content-Type": "application/json",
         },
@@ -740,6 +754,22 @@ export function StoriesView({
       setError(error instanceof Error ? error.message : "Que could not ask a follow-up.");
     } finally {
       setPendingAction(undefined);
+    }
+  }
+
+  function submitStoryTurn() {
+    const turn = createUserTurnFromText(draftText);
+
+    if (!turn) {
+      return;
+    }
+
+    const nextTurns = [...turns, turn];
+    setTurns(nextTurns);
+    setDraftText("");
+
+    if (captureMode === "guided") {
+      void askFollowUp(nextTurns);
     }
   }
 
@@ -1564,6 +1594,15 @@ export function StoriesView({
 
           <div className="segmented-control" role="tablist" aria-label="Story capture mode">
             <button
+              aria-selected={captureMode === "guided"}
+              className={captureMode === "guided" ? "active" : undefined}
+              onClick={() => chooseStoryCaptureMode("guided")}
+              role="tab"
+              type="button"
+            >
+              Guided
+            </button>
+            <button
               aria-selected={captureMode === "dictate"}
               className={captureMode === "dictate" ? "active" : undefined}
               onClick={() => chooseStoryCaptureMode("dictate")}
@@ -1584,11 +1623,19 @@ export function StoriesView({
           </div>
 
           <label>
-            <span>{captureMode === "type" ? "Write what happened" : "Dictated story notes"}</span>
+            <span>
+              {captureMode === "guided"
+                ? "Your answer"
+                : captureMode === "type"
+                  ? "Write what happened"
+                  : "Dictated story notes"}
+            </span>
             <textarea
               onChange={(event) => setDraftText(event.target.value)}
               placeholder={
-                captureMode === "dictate"
+                captureMode === "guided"
+                  ? "Answer Que in your own words. Send it when you are ready, then Que will ask the next useful follow-up."
+                  : captureMode === "dictate"
                   ? "Dictate the rough story here, then add it to the story material."
                   : "Type anything Que should know about what happened."
               }
@@ -1606,7 +1653,7 @@ export function StoriesView({
           </div>
 
           <div className="inline-actions">
-            {captureMode === "dictate" && (
+            {(captureMode === "guided" || captureMode === "dictate") && (
               <button
                 className={recording ? "recording-button active" : undefined}
                 onClick={toggleRecording}
@@ -1614,27 +1661,29 @@ export function StoriesView({
               >
                 {recording ? (
                   <>
-                    <Square aria-hidden="true" className="button-icon" /> Stop Dictating
+                    <Square aria-hidden="true" className="button-icon" />{" "}
+                    {captureMode === "guided" ? "Stop Answer" : "Stop Dictating"}
                   </>
                 ) : (
                   <>
-                    <Mic aria-hidden="true" className="button-icon" /> Dictate Story
+                    <Mic aria-hidden="true" className="button-icon" />{" "}
+                    {captureMode === "guided" ? "Tell Answer" : "Dictate Story"}
                   </>
                 )}
               </button>
             )}
             <button
               className="secondary"
-              disabled={!draftText.trim()}
-              onClick={() => addUserTurn(draftText)}
+              disabled={!draftText.trim() || pendingAction === "follow_up"}
+              onClick={submitStoryTurn}
               type="button"
             >
-              Add to Story
+              {captureMode === "guided" ? "Send to Que" : "Add to Story"}
             </button>
             <button
               className="secondary"
-              disabled={!canAskFollowUp}
-              onClick={askFollowUp}
+              disabled={!canAskFollowUp || captureMode === "guided"}
+              onClick={() => void askFollowUp()}
               type="button"
             >
               {pendingAction === "follow_up" ? "Thinking" : "Ask Que to Dig Deeper"}
