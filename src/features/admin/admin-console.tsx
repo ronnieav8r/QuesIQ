@@ -5,7 +5,6 @@ import {
   dpeTargetTracks,
   inferDpeTargetTrackKeyFromCertificate,
 } from "@/features/admin/dpe-target-tracks";
-import { InterviewRuntimeConfigPanel } from "@/features/admin/interview-runtime-config-panel";
 import { AdminView } from "@/components/interview/admin-view";
 import { getStudyLibraryDecks } from "@/features/study/study-data";
 import { getAdminDpePreflightSnapshot } from "@/server/admin-data/dpe-preflight";
@@ -76,12 +75,7 @@ export async function AdminConsole({ product }: { product?: string }) {
       {activeProduct === "overview" && <AdminOverview />}
       {activeProduct === "content" && <ContentStudio />}
       {activeProduct === "quira" && <QuiraAdminPanel />}
-      {activeProduct === "interview" && (
-        <>
-          <InterviewRuntimeConfigPanel />
-          <AdminView eyebrow="Interview" title="Interview" />
-        </>
-      )}
+      {activeProduct === "interview" && <AdminView eyebrow="Interview" title="Interview" />}
       {activeProduct === "study" && <StudyAdminPanel />}
       {activeProduct === "dpe" && <DpeAdminPanel />}
     </section>

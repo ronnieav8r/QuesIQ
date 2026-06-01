@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
+import { InterviewRuntimeConfigPanel } from "@/features/admin/interview-runtime-config-panel";
 import { interviewFirstTurnInstructionTemplate } from "@/product/interview-first-turn";
 import type {
   AdminEvaluationRecord,
@@ -173,6 +174,59 @@ type QuiraAdminSupportData = {
   }>;
 };
 
+type AdminSection =
+  | "data"
+  | "diagnostics"
+  | "feedback"
+  | "mode_playbooks"
+  | "progression"
+  | "prompt_library"
+  | "runtime_cost"
+  | "support";
+
+type PromptSection = "base" | PromptComponentRecord["type"];
+
+type InterviewRuntimeConfigSummary = {
+  enabled: boolean;
+  engine: "realtime" | "turn_based";
+  feedbackDepth: string;
+  maxAnswerSeconds: number;
+  maxDurationSeconds: number;
+  maxTurns: number;
+  modeKey: string;
+  textModel: string;
+  transcriptionModel: string;
+  ttsModel: string;
+  ttsVoice: string;
+};
+
+type InterviewQuestionArchetypeRecord = {
+  difficulty: string;
+  enabled: boolean;
+  examples: string[];
+  id: string;
+  modeKey: string;
+  promptInstructions: string;
+  questionTypeKey?: string;
+  routingPurpose: string;
+  scoringHints: string[];
+  targetSkill: string;
+  title: string;
+};
+
+type PromptPlaybook = {
+  basePromptKeys: PromptConfigKey[];
+  componentModeKeys?: string[];
+  description: string;
+  includeAllQuestionTypes?: boolean;
+  includeAllStyles?: boolean;
+  includeFirstTurn?: boolean;
+  includeRapidFireArchetypes?: boolean;
+  key: string;
+  runtimeModeKey?: string;
+  title: string;
+};
+
 const promptLabels: Record<PromptConfigKey, string> = {
   introduction_draft: "Introduction Draft",
   quira_support_chat: "Quira Support Chat",
@@ -185,6 +239,76 @@ const promptLabels: Record<PromptConfigKey, string> = {
   story_practice_evaluation: "Story Practice Evaluation",
   story_practice_realtime: "Story Practice Realtime",
 };
+
+const promptPlaybooks: PromptPlaybook[] = [
+  {
+    basePromptKeys: ["realtime_interviewer", "session_evaluation"],
+    componentModeKeys: ["rapid_fire"],
+    description:
+      "Paced interview repetition. Que asks one fresh question at a time and saves feedback for review.",
+    includeAllQuestionTypes: true,
+    includeAllStyles: true,
+    includeFirstTurn: true,
+    includeRapidFireArchetypes: true,
+    key: "rapid_fire",
+    runtimeModeKey: "rapid_fire",
+    title: "Rapid Fire",
+  },
+  {
+    basePromptKeys: ["realtime_interviewer", "session_evaluation"],
+    componentModeKeys: ["coaching"],
+    description:
+      "Live answer improvement. Que asks, listens, coaches, and routes retry or follow-up practice.",
+    includeAllQuestionTypes: true,
+    includeAllStyles: true,
+    includeFirstTurn: true,
+    key: "coaching",
+    runtimeModeKey: "coaching",
+    title: "Coaching",
+  },
+  {
+    basePromptKeys: ["realtime_interviewer", "session_evaluation"],
+    componentModeKeys: ["mock_interview"],
+    description:
+      "Realistic interview simulation. Coaching stays out of the live session unless the candidate asks to pause.",
+    includeAllQuestionTypes: true,
+    includeAllStyles: true,
+    includeFirstTurn: true,
+    key: "mock_interview",
+    runtimeModeKey: "mock_interview",
+    title: "Mock Interview",
+  },
+  {
+    basePromptKeys: [
+      "story_conversation_realtime",
+      "story_follow_up",
+      "story_outline",
+      "story_practice_realtime",
+      "story_practice_evaluation",
+      "introduction_draft",
+    ],
+    description:
+      "Story Lab includes TMAAT story capture, Story practice, and Introduction Builder.",
+    key: "story_lab",
+    title: "Story Lab",
+  },
+  {
+    basePromptKeys: ["session_evaluation", "story_practice_evaluation"],
+    description:
+      "Structured written review after Interview practice, including score evidence and coaching memory.",
+    includeAllQuestionTypes: true,
+    includeAllStyles: true,
+    key: "post_session_review",
+    title: "Post-Session Review",
+  },
+  {
+    basePromptKeys: ["session_debrief"],
+    description:
+      "Live voice review of a completed practice session using the saved transcript and written review.",
+    key: "voice_debrief",
+    title: "Voice Debrief",
+  },
+];
 
 const questCheckTypes: QuestCheckType[] = [
   "session_count",
@@ -300,6 +424,25 @@ function dollarsToMicroUsd(value: string) {
 
 function microUsdToDollars(value?: number) {
   return value === undefined ? "" : (value / 1_000_000).toString();
+}
+
+function activePromptConfig(
+  configs: PromptConfigRecord[],
+  key: PromptConfigKey,
+): PromptConfigRecord | undefined {
+  const versions = configs
+    .filter((config) => config.key === key)
+    .sort((left, right) => right.version - left.version);
+
+  return versions.find((config) => config.active) || versions[0];
+}
+
+function promptComponent(
+  components: PromptComponentRecord[],
+  type: PromptComponentRecord["type"],
+  key: string,
+) {
+  return components.find((component) => component.type === type && component.key === key);
 }
 
 function compareSortValues(left: number | string, right: number | string) {
@@ -629,6 +772,10 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     cases: [],
     conversations: [],
   });
+  const [runtimeConfigs, setRuntimeConfigs] = useState<InterviewRuntimeConfigSummary[]>([]);
+  const [questionArchetypes, setQuestionArchetypes] = useState<
+    InterviewQuestionArchetypeRecord[]
+  >([]);
   const [dataError, setDataError] = useState<string>();
   const [dataSection, setDataSection] =
     useState<"evaluations" | "profiles" | "sessions" | "users">("users");
@@ -660,20 +807,10 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     direction: "desc",
     key: "started",
   });
-  const [adminSection, setAdminSection] =
-    useState<
-      | "ai_usage"
-      | "data"
-      | "diagnostics"
-      | "feedback"
-      | "progression"
-      | "prompts"
-      | "support"
-    >("prompts");
+  const [adminSection, setAdminSection] = useState<AdminSection>("mode_playbooks");
   const [componentType, setComponentType] =
     useState<PromptComponentRecord["type"]>("mode");
-  const [promptSection, setPromptSection] =
-    useState<"base" | PromptComponentRecord["type"]>("mode");
+  const [promptSection, setPromptSection] = useState<PromptSection>("base");
   const [pending, setPending] = useState(false);
   const [feedbackKindFilter, setFeedbackKindFilter] =
     useState<FeedbackKind>("feedback");
@@ -1261,6 +1398,36 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     }
   }
 
+  async function loadRuntimeConfigs() {
+    try {
+      const response = await fetch("/api/admin/interview-runtime-configs");
+      const body = (await response.json().catch(() => ({}))) as {
+        configs?: InterviewRuntimeConfigSummary[];
+      };
+
+      if (response.ok && Array.isArray(body.configs)) {
+        setRuntimeConfigs(body.configs);
+      }
+    } catch {
+      setRuntimeConfigs([]);
+    }
+  }
+
+  async function loadQuestionArchetypes() {
+    try {
+      const response = await fetch("/api/admin/interview-question-archetypes");
+      const body = (await response.json().catch(() => ({}))) as {
+        archetypes?: InterviewQuestionArchetypeRecord[];
+      };
+
+      if (response.ok && Array.isArray(body.archetypes)) {
+        setQuestionArchetypes(body.archetypes);
+      }
+    } catch {
+      setQuestionArchetypes([]);
+    }
+  }
+
   useEffect(() => {
     let ignore = false;
 
@@ -1405,9 +1572,14 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     }
 
     void loadInitialConfigs();
+    const playbookDataTimer = window.setTimeout(() => {
+      void loadRuntimeConfigs();
+      void loadQuestionArchetypes();
+    }, 0);
 
     return () => {
       ignore = true;
+      window.clearTimeout(playbookDataTimer);
     };
   }, []);
 
@@ -1560,7 +1732,41 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     applySelectedComponent(components.find((component) => component.type === type));
   }
 
+  function openPromptLibraryConfig(key: PromptConfigKey) {
+    const config = activePromptConfig(configs, key);
+    if (!config) {
+      return;
+    }
+
+    setAdminSection("prompt_library");
+    setPromptSection("base");
+    applySelectedConfig(config);
+  }
+
+  function openPromptLibraryComponent(
+    type: PromptComponentRecord["type"],
+    key: string,
+  ) {
+    const component = promptComponent(components, type, key);
+    if (!component) {
+      return;
+    }
+
+    setAdminSection("prompt_library");
+    setComponentType(type);
+    setPromptSection(type);
+    applySelectedComponent(component);
+  }
+
   function refreshAdminSection() {
+    if (adminSection === "mode_playbooks") {
+      void loadConfigs();
+      void loadComponents();
+      void loadRuntimeConfigs();
+      void loadQuestionArchetypes();
+      return;
+    }
+
     if (adminSection === "data") {
       void loadAdminData();
       return;
@@ -1586,7 +1792,8 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
       return;
     }
 
-    if (adminSection === "ai_usage") {
+    if (adminSection === "runtime_cost") {
+      void loadRuntimeConfigs();
       if (usageSection === "api_calls") {
         void loadAiRuns();
         return;
@@ -1622,9 +1829,231 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
       return;
     }
 
-    setAdminSection("prompts");
+    setAdminSection("prompt_library");
     setPromptSection("base");
     applySelectedConfig(prompt);
+  }
+
+  function renderPromptDisclosure(title: string, body?: string) {
+    if (!body?.trim()) {
+      return <p className="field-note">No instructions are saved for this layer.</p>;
+    }
+
+    return (
+      <details>
+        <summary>{title}</summary>
+        <pre className="prompt-preview">{body}</pre>
+      </details>
+    );
+  }
+
+  function renderBasePromptLayer(key: PromptConfigKey, label = "Base prompt") {
+    const config = activePromptConfig(configs, key);
+
+    return (
+      <article className="prompt-version-card" key={key}>
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">{label}</p>
+            <h3>{promptLabels[key] || key}</h3>
+            {config ? (
+              <p className="field-note">
+                Key `{config.key}` · v{config.version} ·{" "}
+                {config.active ? "active" : "draft"} · model {config.model}
+                {config.voice ? ` · voice ${config.voice}` : ""}
+              </p>
+            ) : (
+              <p className="field-note">No prompt config is loaded for key `{key}`.</p>
+            )}
+          </div>
+          {config && (
+            <button
+              className="secondary"
+              onClick={() => openPromptLibraryConfig(key)}
+              type="button"
+            >
+              Edit in Prompt Library
+            </button>
+          )}
+        </div>
+        {renderPromptDisclosure("Show instructions", config?.instructions)}
+      </article>
+    );
+  }
+
+  function renderComponentLayer(
+    component: PromptComponentRecord | undefined,
+    label: string,
+  ) {
+    const layerKey = component
+      ? `${component.type}:${component.key}`
+      : `${label}:missing`;
+
+    return (
+      <article className="prompt-version-card" key={layerKey}>
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">{label}</p>
+            <h3>{component?.displayName || "Missing component"}</h3>
+            <p className="field-note">
+              {component
+                ? `${component.type.replace("_", " ")} · ${component.key}`
+                : "This layer is not available from the prompt component API."}
+            </p>
+          </div>
+          {component && (
+            <button
+              className="secondary"
+              onClick={() => openPromptLibraryComponent(component.type, component.key)}
+              type="button"
+            >
+              Edit in Prompt Library
+            </button>
+          )}
+        </div>
+        {renderPromptDisclosure("Show instructions", component?.promptInstructions)}
+      </article>
+    );
+  }
+
+  function renderModePlaybook(playbook: PromptPlaybook) {
+    const runtimeConfig = runtimeConfigs.find(
+      (config) => config.modeKey === playbook.runtimeModeKey,
+    );
+    const modeComponents = (playbook.componentModeKeys ?? []).map((key) =>
+      promptComponent(components, "mode", key),
+    );
+    const questionComponents = playbook.includeAllQuestionTypes
+      ? components.filter((component) => component.type === "question_type")
+      : [];
+    const styleComponents = playbook.includeAllStyles
+      ? components.filter((component) => component.type === "style")
+      : [];
+    const archetypes = playbook.includeRapidFireArchetypes
+      ? questionArchetypes.filter((archetype) => archetype.modeKey === "rapid_fire")
+      : [];
+
+    return (
+      <article className="prompt-version-card" key={playbook.key}>
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">Mode Playbook</p>
+            <h2>{playbook.title}</h2>
+            <p>{playbook.description}</p>
+          </div>
+          {runtimeConfig && (
+            <span className="pill">
+              {runtimeConfig.engine === "turn_based" ? "turn-based" : "realtime"}
+            </span>
+          )}
+        </div>
+
+        {runtimeConfig && (
+          <div className="study-stat-strip" aria-label={`${playbook.title} runtime settings`}>
+            <div className="study-stat-chip">
+              <strong>{runtimeConfig.enabled ? "Enabled" : "Disabled"}</strong>
+              <span>Runtime</span>
+            </div>
+            <div className="study-stat-chip">
+              <strong>{runtimeConfig.maxTurns}</strong>
+              <span>Max turns</span>
+            </div>
+            <div className="study-stat-chip">
+              <strong>{runtimeConfig.maxAnswerSeconds}s</strong>
+              <span>Answer limit</span>
+            </div>
+            <div className="study-stat-chip">
+              <strong>{runtimeConfig.maxDurationSeconds}s</strong>
+              <span>Session limit</span>
+            </div>
+          </div>
+        )}
+
+        <section className="runtime-context-panel">
+          <h3>Prompt stack</h3>
+          {playbook.basePromptKeys.map((key) => renderBasePromptLayer(key))}
+          {modeComponents.map((component) => renderComponentLayer(component, "Mode instructions"))}
+          {questionComponents.length > 0 && (
+            <section className="runtime-context-panel">
+              <h3>Selectable question-focus layers</h3>
+              {questionComponents.map((component) =>
+                renderComponentLayer(component, "Question focus"),
+              )}
+            </section>
+          )}
+          {styleComponents.length > 0 && (
+            <section className="runtime-context-panel">
+              <h3>Selectable style layers</h3>
+              {styleComponents.map((component) => renderComponentLayer(component, "Style"))}
+            </section>
+          )}
+          {playbook.includeFirstTurn && (
+            <article className="prompt-version-card">
+              <div className="section-head">
+                <div>
+                  <p className="eyebrow">First turn</p>
+                  <h3>Kickoff template</h3>
+                  <p className="field-note">
+                    Filled with role, company, mode, question focus, and style when
+                    practice starts.
+                  </p>
+                </div>
+              </div>
+              {renderPromptDisclosure(
+                "Show kickoff template",
+                interviewFirstTurnInstructionTemplate,
+              )}
+            </article>
+          )}
+          {playbook.includeRapidFireArchetypes && (
+            <section className="runtime-context-panel">
+              <h3>Rapid Fire question archetypes</h3>
+              {runtimeConfig?.engine !== "turn_based" && (
+                <p className="field-note">
+                  Archetypes are only used when Rapid Fire is running turn-based.
+                </p>
+              )}
+              {archetypes.length > 0 ? (
+                <div className="prompt-version-list">
+                  {archetypes.map((archetype) => (
+                    <article className="prompt-version-card" key={archetype.id}>
+                      <div>
+                        <strong>
+                          {archetype.title} {archetype.enabled ? "" : "(disabled)"}
+                        </strong>
+                        <p className="field-note">
+                          {archetype.questionTypeKey || "any focus"} ·{" "}
+                          {archetype.difficulty} · target skill {archetype.targetSkill}
+                        </p>
+                      </div>
+                      {renderPromptDisclosure(
+                        "Show routing instructions",
+                        [
+                          archetype.routingPurpose,
+                          archetype.promptInstructions,
+                          archetype.examples.length > 0
+                            ? `Examples: ${archetype.examples.join(" | ")}`
+                            : undefined,
+                          archetype.scoringHints.length > 0
+                            ? `Scoring hints: ${archetype.scoringHints.join(" | ")}`
+                            : undefined,
+                        ]
+                          .filter(Boolean)
+                          .join("\n"),
+                      )}
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="field-note">
+                  No archetypes are available from the Admin archetype endpoint.
+                </p>
+              )}
+            </section>
+          )}
+        </section>
+      </article>
+    );
   }
 
   async function savePricing() {
@@ -1747,32 +2176,32 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
         <>
           <div className="admin-tabs" aria-label="Admin sections">
             <button
-              className={adminSection === "prompts" ? "active" : ""}
-              onClick={() => setAdminSection("prompts")}
+              className={adminSection === "mode_playbooks" ? "active" : ""}
+              onClick={() => setAdminSection("mode_playbooks")}
               type="button"
             >
-              Prompts
+              Mode Playbooks
             </button>
             <button
-              className={adminSection === "ai_usage" ? "active" : ""}
-              onClick={() => setAdminSection("ai_usage")}
+              className={adminSection === "prompt_library" ? "active" : ""}
+              onClick={() => setAdminSection("prompt_library")}
               type="button"
             >
-              AI Usage
+              Prompt Library
             </button>
             <button
-              className={adminSection === "feedback" ? "active" : ""}
-              onClick={() => setAdminSection("feedback")}
+              className={adminSection === "runtime_cost" ? "active" : ""}
+              onClick={() => setAdminSection("runtime_cost")}
               type="button"
             >
-              Feedback
+              Runtime & Cost
             </button>
             <button
-              className={adminSection === "support" ? "active" : ""}
-              onClick={() => setAdminSection("support")}
+              className={adminSection === "data" ? "active" : ""}
+              onClick={() => setAdminSection("data")}
               type="button"
             >
-              Support
+              Sessions & Data
             </button>
             <button
               className={adminSection === "diagnostics" ? "active" : ""}
@@ -1782,22 +2211,41 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
               Diagnostics
             </button>
             <button
+              className={adminSection === "feedback" ? "active" : ""}
+              onClick={() => setAdminSection("feedback")}
+              type="button"
+            >
+              Feedback
+            </button>
+            <button
               className={adminSection === "progression" ? "active" : ""}
               onClick={() => setAdminSection("progression")}
               type="button"
             >
               Progression
             </button>
-            <button
-              className={adminSection === "data" ? "active" : ""}
-              onClick={() => setAdminSection("data")}
-              type="button"
-            >
-              Data
-            </button>
           </div>
 
-          {adminSection === "prompts" && (
+          {adminSection === "mode_playbooks" && (
+            <section className="ai-runs-panel" aria-labelledby="mode-playbooks-title">
+              <div className="section-head">
+                <div>
+                  <p className="eyebrow">Prompt map</p>
+                  <h2 id="mode-playbooks-title">Mode Playbooks</h2>
+                  <p>
+                    Review the prompt layers Que uses by workflow. Edit actions jump
+                    to the saved prompt or component in Prompt Library.
+                  </p>
+                </div>
+                <span>{promptPlaybooks.length} workflows</span>
+              </div>
+              <div className="prompt-version-list">
+                {promptPlaybooks.map((playbook) => renderModePlaybook(playbook))}
+              </div>
+            </section>
+          )}
+
+          {adminSection === "prompt_library" && (
             <div className="component-tabs" aria-label="Prompt section">
               <button
                 className={promptSection === "base" ? "active" : ""}
@@ -1830,30 +2278,33 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
             </div>
           )}
 
-          {adminSection === "ai_usage" && (
-            <div className="component-tabs" aria-label="AI usage section">
-              <button
-                className={usageSection === "api_calls" ? "active" : ""}
-                onClick={() => setUsageSection("api_calls")}
-                type="button"
-              >
-                API Calls
-              </button>
-              <button
-                className={usageSection === "realtime" ? "active" : ""}
-                onClick={() => setUsageSection("realtime")}
-                type="button"
-              >
-                Realtime Sessions
-              </button>
-              <button
-                className={usageSection === "pricing" ? "active" : ""}
-                onClick={() => setUsageSection("pricing")}
-                type="button"
-              >
-                Pricing
-              </button>
-            </div>
+          {adminSection === "runtime_cost" && (
+            <>
+              <InterviewRuntimeConfigPanel />
+              <div className="component-tabs" aria-label="AI usage section">
+                <button
+                  className={usageSection === "api_calls" ? "active" : ""}
+                  onClick={() => setUsageSection("api_calls")}
+                  type="button"
+                >
+                  API Calls
+                </button>
+                <button
+                  className={usageSection === "realtime" ? "active" : ""}
+                  onClick={() => setUsageSection("realtime")}
+                  type="button"
+                >
+                  Realtime Sessions
+                </button>
+                <button
+                  className={usageSection === "pricing" ? "active" : ""}
+                  onClick={() => setUsageSection("pricing")}
+                  type="button"
+                >
+                  Pricing
+                </button>
+              </div>
+            </>
           )}
 
           {adminSection === "feedback" && (
@@ -3144,7 +3595,7 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
             </section>
           )}
 
-          {adminSection === "prompts" && promptSection === "base" && (
+          {adminSection === "prompt_library" && promptSection === "base" && (
             <div className="admin-layout">
               <aside className="prompt-version-list" aria-label="Prompt versions">
                 {Object.entries(groupedConfigs).map(([key, group]) => (
@@ -3279,7 +3730,7 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
         </>
       )}
 
-      {adminSection === "prompts" && promptSection !== "base" && status === "ready" && (
+      {adminSection === "prompt_library" && promptSection !== "base" && status === "ready" && (
         <>
           <div className="admin-layout component-admin-layout">
             <aside className="prompt-version-list" aria-label="Prompt components">
@@ -3339,7 +3790,7 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
         </>
       )}
 
-      {adminSection === "ai_usage" && usageSection === "api_calls" && status === "ready" && (
+      {adminSection === "runtime_cost" && usageSection === "api_calls" && status === "ready" && (
         <section className="ai-runs-panel" aria-labelledby="ai-runs-title">
           <div className="section-head">
             <h2 id="ai-runs-title">Recent AI runs</h2>
@@ -3479,7 +3930,7 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
         </section>
       )}
 
-      {adminSection === "ai_usage" && usageSection === "realtime" && status === "ready" && (
+      {adminSection === "runtime_cost" && usageSection === "realtime" && status === "ready" && (
         <section className="ai-runs-panel" aria-labelledby="realtime-usage-title">
           <div className="section-head">
             <h2 id="realtime-usage-title">Realtime Sessions</h2>
@@ -3596,7 +4047,7 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
         </section>
       )}
 
-      {adminSection === "ai_usage" && usageSection === "pricing" && status === "ready" && (
+      {adminSection === "runtime_cost" && usageSection === "pricing" && status === "ready" && (
         <section className="ai-runs-panel" aria-labelledby="pricing-title">
           <div className="section-head">
             <h2 id="pricing-title">Pricing</h2>
