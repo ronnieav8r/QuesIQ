@@ -10,15 +10,20 @@ CREATE TABLE IF NOT EXISTS "quira_conversations" (
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   "updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+--> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS "quira_conversations_created_at_idx"
   ON "quira_conversations" ("created_at");
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "quira_conversations_session_idx"
   ON "quira_conversations" ("session_id");
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "quira_conversations_status_idx"
   ON "quira_conversations" ("status");
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "quira_conversations_user_idx"
   ON "quira_conversations" ("user_id");
+--> statement-breakpoint
 
 CREATE TABLE IF NOT EXISTS "quira_messages" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -29,11 +34,14 @@ CREATE TABLE IF NOT EXISTS "quira_messages" (
   "metadata" jsonb DEFAULT '{}'::jsonb NOT NULL,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+--> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS "quira_messages_conversation_idx"
   ON "quira_messages" ("conversation_id", "created_at");
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "quira_messages_user_idx"
   ON "quira_messages" ("user_id");
+--> statement-breakpoint
 
 CREATE TABLE IF NOT EXISTS "quira_tool_events" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -46,13 +54,17 @@ CREATE TABLE IF NOT EXISTS "quira_tool_events" (
   "error_message" text,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+--> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS "quira_tool_events_conversation_idx"
   ON "quira_tool_events" ("conversation_id");
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "quira_tool_events_message_idx"
   ON "quira_tool_events" ("message_id");
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "quira_tool_events_tool_idx"
   ON "quira_tool_events" ("tool_name");
+--> statement-breakpoint
 
 CREATE TABLE IF NOT EXISTS "quira_knowledge_articles" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -67,13 +79,17 @@ CREATE TABLE IF NOT EXISTS "quira_knowledge_articles" (
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   "updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+--> statement-breakpoint
 
 CREATE UNIQUE INDEX IF NOT EXISTS "quira_knowledge_articles_slug_idx"
   ON "quira_knowledge_articles" ("slug");
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "quira_knowledge_articles_product_idx"
   ON "quira_knowledge_articles" ("product");
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "quira_knowledge_articles_published_idx"
   ON "quira_knowledge_articles" ("published");
+--> statement-breakpoint
 
 CREATE TABLE IF NOT EXISTS "quira_support_cases" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -92,15 +108,20 @@ CREATE TABLE IF NOT EXISTS "quira_support_cases" (
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   "updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+--> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS "quira_support_cases_conversation_idx"
   ON "quira_support_cases" ("conversation_id");
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "quira_support_cases_created_at_idx"
   ON "quira_support_cases" ("created_at");
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "quira_support_cases_status_idx"
   ON "quira_support_cases" ("status");
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "quira_support_cases_user_idx"
   ON "quira_support_cases" ("user_id");
+--> statement-breakpoint
 
 INSERT INTO "quira_knowledge_articles"
   ("slug", "title", "product", "category", "content", "tags", "published", "display_order")
@@ -163,6 +184,7 @@ ON CONFLICT ("slug") DO UPDATE SET
   "published" = EXCLUDED."published",
   "display_order" = EXCLUDED."display_order",
   "updated_at" = now();
+--> statement-breakpoint
 
 INSERT INTO "prompt_configs"
   ("key", "target", "name", "model", "instructions", "version", "active")
