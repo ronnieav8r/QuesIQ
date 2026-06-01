@@ -199,6 +199,29 @@ function extractResponseText(body: ResponsesApiBody) {
     .join("\n");
 }
 
+function countAnsweredUserTurns(artifact: VoiceSessionArtifactDraft) {
+  return artifact.transcript.filter(
+    (turn) => turn.role === "user" || turn.speaker.toLowerCase() === "you",
+  ).length;
+}
+
+function getModeSpecificEvaluationInstructions(snapshot: SessionSetupSnapshot) {
+  if (snapshot.modeKey === "rapid_fire") {
+    return [
+      "This is Rapid Fire turn-based interview practice, not Coaching mode.",
+      "Review the user's answered questions as a paced drill; do not require a 120-second session when at least one user answer exists.",
+      "Do not penalize the session because Que did not coach between turns; Rapid Fire intentionally saves feedback for the final review.",
+      "Focus on quick recall, concise structure, relevance to the target role, composure, specificity, and patterns across answers.",
+    ].join(" ");
+  }
+
+  if (snapshot.modeKey === "coaching") {
+    return "This is Coaching mode. Evaluate answer quality and how the candidate used any in-session coaching or retry guidance.";
+  }
+
+  return undefined;
+}
+
 function buildEvaluationInput(
   snapshot: SessionSetupSnapshot,
   artifact: VoiceSessionArtifactDraft,
@@ -218,6 +241,7 @@ function buildEvaluationInput(
         }
       : "No prior coaching memory. Create a concise first memory from this session.",
     session: {
+      answeredUserTurns: countAnsweredUserTurns(artifact),
       mode: promptComponents.mode?.name || snapshot.modeKey,
       modeInstructions: promptComponents.mode?.promptInstructions || "Not provided",
       questionFocus:
@@ -226,6 +250,7 @@ function buildEvaluationInput(
         promptComponents.questionType?.promptInstructions || "Not provided",
       style: promptComponents.style?.label || snapshot.styleKey,
       styleInstructions: promptComponents.style?.promptInstructions || "Not provided",
+      rapidFireQuestionCount: snapshot.rapidFireQuestionCount ?? null,
       targetCompany: snapshot.interviewContext.targetCompany || "Optional",
       targetRole: snapshot.interviewContext.targetRole || "General practice",
     },
@@ -293,11 +318,12 @@ async function requestEvaluation(
   const storyEvaluationConfig = snapshot.storyContext
     ? await getActivePromptConfig("story_practice_evaluation")
     : undefined;
+  const modeSpecificInstructions = getModeSpecificEvaluationInstructions(snapshot);
   const response = await fetch("https://api.openai.com/v1/responses", {
     body: JSON.stringify({
       input: [
         {
-          content: [instructions, storyEvaluationConfig?.instructions]
+          content: [instructions, modeSpecificInstructions, storyEvaluationConfig?.instructions]
             .filter(Boolean)
             .join(" "),
           role: "system",

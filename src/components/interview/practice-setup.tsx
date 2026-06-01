@@ -19,7 +19,9 @@ type PracticeSetupProps = {
   onLaunch: () => void;
   onMode: (mode: PracticeMode) => void;
   onQuestion: (questionKey: QuestionTypeKey) => void;
+  onRapidFireQuestionCount: (count: number) => void;
   onStyle: (styleKey: InterviewStyleKey) => void;
+  rapidFireQuestionCount: number;
   selectedMode?: PracticeMode;
   selectedJobTarget?: JobTargetRecord;
   selectedQuestion?: QuestionType;
@@ -51,7 +53,9 @@ export function PracticeSetup({
   onLaunch,
   onMode,
   onQuestion,
+  onRapidFireQuestionCount,
   onStyle,
+  rapidFireQuestionCount,
   selectedMode,
   selectedJobTarget,
   selectedQuestion,
@@ -208,6 +212,18 @@ export function PracticeSetup({
               <dt>Interviewer style</dt>
               <dd>{selectedStyle.label}</dd>
             </div>
+            {selectedMode.key === "rapid_fire" && (
+              <>
+                <div>
+                  <dt>Questions</dt>
+                  <dd>{rapidFireQuestionCount}</dd>
+                </div>
+                <div>
+                  <dt>Session limit</dt>
+                  <dd>{rapidFireQuestionCount * 65}s</dd>
+                </div>
+              </>
+            )}
             <div>
               <dt>Target role</dt>
               <dd>{selectedJobTarget?.targetRole || interviewContext.targetRole || "General practice"}</dd>
@@ -224,6 +240,21 @@ export function PracticeSetup({
           <p>
             QuesIQ saves this setup before Que starts the live voice practice.
           </p>
+          {selectedMode.key === "rapid_fire" && (
+            <label>
+              <span>Rapid Fire question count</span>
+              <select
+                onChange={(event) => onRapidFireQuestionCount(Number(event.target.value))}
+                value={rapidFireQuestionCount}
+              >
+                {Array.from({ length: 10 }, (_, index) => index + 1).map((count) => (
+                  <option key={count} value={count}>
+                    {count}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {sessionLaunchError && <p className="form-error">{sessionLaunchError}</p>}
           <button disabled={sessionLaunchPending} onClick={onLaunch} type="button">
             {sessionLaunchPending ? "Creating Session..." : "Launch Voice Session"}

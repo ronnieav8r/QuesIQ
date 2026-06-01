@@ -24,6 +24,16 @@ const styleKeys: InterviewStyleKey[] = ["friendly", "neutral", "tough"];
 const introAudiences: IntroAudience[] = ["hr_phone", "in_person", "virtual"];
 const introLengths: IntroLength[] = ["long", "medium", "short"];
 
+function parseRapidFireQuestionCount(value: unknown) {
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed)) {
+    return undefined;
+  }
+
+  return Math.max(1, Math.min(10, parsed));
+}
+
 function isString(value: unknown): value is string {
   return typeof value === "string";
 }
@@ -138,6 +148,10 @@ export function parseSessionSetupSnapshot(value: unknown): SessionSetupSnapshot 
     introductionContext: parseIntroductionContext(candidate.introductionContext),
     modeKey: candidate.modeKey,
     questionTypeKey: candidate.questionTypeKey,
+    rapidFireQuestionCount:
+      candidate.modeKey === "rapid_fire"
+        ? parseRapidFireQuestionCount(candidate.rapidFireQuestionCount)
+        : undefined,
     storyContext: parseStoryContext(candidate.storyContext),
     styleKey: candidate.styleKey,
   };

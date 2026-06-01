@@ -573,6 +573,7 @@ export function TurnBasedVoiceSession({
         closeMedia();
         appendEvent("turn_based.answer.recorded");
         const nextTurnIndex = turnCountRef.current + 1;
+        updateTurnCount(nextTurnIndex);
         await requestTurn({
           answerAudioBase64,
           answerMimeType,
@@ -582,9 +583,6 @@ export function TurnBasedVoiceSession({
           snapshot,
           turnIndex: nextTurnIndex,
         });
-        if (isSessionActive(runId)) {
-          updateTurnCount(nextTurnIndex);
-        }
       };
       recorder.start();
       recordingStartedAtMsRef.current = Date.now();

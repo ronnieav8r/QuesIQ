@@ -89,6 +89,10 @@ function cleanText(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }
 
+function rapidFireQuestionLimit(snapshot: SessionSetupSnapshot, fallback: number) {
+  return Math.max(1, Math.min(10, snapshot.rapidFireQuestionCount ?? fallback));
+}
+
 function parseDecision(raw: string, mustEnd: boolean): TurnDecision {
   try {
     const parsed = JSON.parse(raw) as Partial<TurnDecision>;
@@ -255,9 +259,10 @@ async function generateTurnDecision(input: {
       (!archetype.questionTypeKey ||
         archetype.questionTypeKey === input.snapshot.questionTypeKey),
   );
+  const maxTurns = rapidFireQuestionLimit(input.snapshot, input.config.maxTurns);
   const mustEnd =
     Boolean(input.latestTranscript) &&
-    (input.endAfterAnswer === true || input.turnIndex + 1 >= input.config.maxTurns);
+    (input.endAfterAnswer === true || input.turnIndex >= maxTurns);
   const run = await startAiRun({
     model: input.config.textModel,
     rawJson: { modeKey: input.snapshot.modeKey, turnIndex: input.turnIndex },
@@ -272,7 +277,8 @@ async function generateTurnDecision(input: {
       : "Log the latest answer internally, choose a fresh Rapid Fire archetype, and write one concise interview question that does not follow up on the previous answer.",
     config: {
       feedbackDepth: input.config.feedbackDepth,
-      maxTurns: input.config.maxTurns,
+      maxTurns,
+      selectedQuestionCount: maxTurns,
       turnIndex: input.turnIndex,
     },
     session: {

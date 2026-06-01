@@ -57,6 +57,7 @@ export default function Home() {
   const [selectedModeKey, setSelectedModeKey] = useState<PracticeMode["key"]>();
   const [selectedQuestionKey, setSelectedQuestionKey] = useState<QuestionTypeKey>();
   const [selectedStyleKey, setSelectedStyleKey] = useState<InterviewStyleKey>();
+  const [rapidFireQuestionCount, setRapidFireQuestionCount] = useState(5);
   const [interviewContext, setInterviewContext] = useState(initialInterviewContext);
   const [jobTargets, setJobTargets] = useState<JobTargetRecord[]>([]);
   const [selectedJobTarget, setSelectedJobTarget] = useState<JobTargetRecord>();
@@ -476,6 +477,7 @@ export default function Home() {
     setSelectedModeKey(undefined);
     setSelectedQuestionKey(undefined);
     setSelectedStyleKey(undefined);
+    setRapidFireQuestionCount(5);
     setPracticeUsesProfileContext(false);
     setSelectedJobTarget((current) => current ?? activeJobTarget ?? jobTargets[0]);
   }
@@ -524,6 +526,8 @@ export default function Home() {
       interviewContext: targetContext,
       modeKey: selectedMode.key,
       questionTypeKey: selectedQuestion?.key,
+      rapidFireQuestionCount:
+        selectedMode.key === "rapid_fire" ? rapidFireQuestionCount : undefined,
       styleKey: selectedStyle.key,
     };
 
@@ -799,7 +803,9 @@ export default function Home() {
               onLaunch={launchSession}
               onMode={chooseMode}
               onQuestion={chooseQuestion}
+              onRapidFireQuestionCount={setRapidFireQuestionCount}
               onStyle={chooseStyle}
+              rapidFireQuestionCount={rapidFireQuestionCount}
               selectedMode={selectedMode}
               selectedJobTarget={practiceUsesProfileContext ? undefined : activeJobTarget}
               selectedQuestion={selectedQuestion}

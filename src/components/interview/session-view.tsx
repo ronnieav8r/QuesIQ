@@ -77,6 +77,15 @@ export function SessionView({
     snapshot.modeKey === "rapid_fire" &&
     runtimeConfigLoaded &&
     runtimeConfig.engine === "turn_based";
+  const rapidFireQuestionCount = snapshot.rapidFireQuestionCount ?? 5;
+  const turnBasedRapidFireConfig: RuntimeConfig = useTurnBasedRapidFire
+    ? {
+        ...runtimeConfig,
+        maxAnswerSeconds: 65,
+        maxDurationSeconds: rapidFireQuestionCount * 65,
+        maxTurns: rapidFireQuestionCount,
+      }
+    : runtimeConfig;
 
   useEffect(() => {
     let ignore = false;
@@ -240,7 +249,7 @@ export function SessionView({
 
       {useTurnBasedRapidFire ? (
         <TurnBasedVoiceSession
-          config={runtimeConfig}
+          config={turnBasedRapidFireConfig}
           onArtifactChange={setArtifactDraft}
           sessionId={session.id}
           snapshot={snapshot}
@@ -269,6 +278,18 @@ export function SessionView({
               <dt>Mode</dt>
               <dd>{mode?.name || snapshot.modeKey}</dd>
             </div>
+            {snapshot.modeKey === "rapid_fire" && (
+              <>
+                <div>
+                  <dt>Questions</dt>
+                  <dd>{rapidFireQuestionCount}</dd>
+                </div>
+                <div>
+                  <dt>Session limit</dt>
+                  <dd>{rapidFireQuestionCount * 65}s</dd>
+                </div>
+              </>
+            )}
             {questionType && (
               <div>
                 <dt>Question focus</dt>
@@ -391,7 +412,9 @@ export function SessionView({
           ) : (
             <p>
               {evaluationError === tooShortReviewMessage
-                ? `This session is saved in your history, but it was under ${minimumReviewDurationSeconds} seconds so it will not be scored.`
+                ? snapshot.modeKey === "rapid_fire"
+                  ? "This session is saved in your history, but Que needs at least one answered Rapid Fire question to create a review."
+                  : `This session is saved in your history, but it was under ${minimumReviewDurationSeconds} seconds so it will not be scored.`
                 : "After the voice artifact is saved, Que will review the transcript and prepare your practice feedback here."}
             </p>
           )}

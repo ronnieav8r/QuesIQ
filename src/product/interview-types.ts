@@ -223,6 +223,7 @@ export type SessionSetupSnapshot = {
   };
   modeKey: PracticeModeKey;
   questionTypeKey?: QuestionTypeKey;
+  rapidFireQuestionCount?: number;
   storyContext?: StoryOutline & {
     storyId: string;
   };
