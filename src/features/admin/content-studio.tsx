@@ -439,6 +439,7 @@ type StudyRichCsvImportPreviewRow = {
   draftId?: string;
   externalId?: string;
   hint?: string;
+  isOfficial?: boolean;
   level?: string;
   question: string;
   source: {
@@ -505,6 +506,8 @@ type StudyRichCsvTargetField =
   | "draftWarnings"
   | "externalId"
   | "hint"
+  | "isOfficial"
+  | "isVerified"
   | "level"
   | "question"
   | "sourceChunkIds"
@@ -569,6 +572,8 @@ const studyRichCsvSkillHeaders: StudyRichCsvTargetField[] = [
   "verificationNotes",
   "verificationEvidence",
   "verifier",
+  "isOfficial",
+  "isVerified",
 ];
 
 const studyRichCsvRequiredFields: StudyRichCsvTargetField[] = [
@@ -1024,6 +1029,33 @@ function buildStudyRichCsvDefaultColumnMapping(): StudyRichCsvColumnMapping {
   );
 }
 
+function studyRichCsvFieldAliases(field: StudyRichCsvTargetField) {
+  const aliases: Partial<Record<StudyRichCsvTargetField, string[]>> = {
+    answer: ["answer", "shortAnswer", "short_answer"],
+    deckDescription: ["deckDescription", "deck_description", "version"],
+    deckTitle: ["deckTitle", "deck_title", "examOrStandard", "exam_or_standard", "certification"],
+    hint: ["hint", "explanation"],
+    isOfficial: ["isOfficial", "official", "deckOfficial", "deck_official"],
+    isVerified: ["isVerified", "verified", "cardVerified", "card_verified"],
+    sourceLabel: ["sourceLabel", "source_label", "officialReference", "official_reference"],
+    sourceNotes: ["sourceNotes", "source_notes", "additionalReferences", "additional_references"],
+    sourcePackId: ["sourcePackId", "source_pack_id", "examOrStandard", "exam_or_standard"],
+    sourcePackTitle: ["sourcePackTitle", "source_pack_title", "certification", "version"],
+    sourceUrl: ["sourceUrl", "source_url", "officialReferenceUrl", "official_reference_url"],
+    verificationEvidence: [
+      "verificationEvidence",
+      "verification_evidence",
+      "additionalReferenceUrls",
+      "additional_reference_urls",
+    ],
+  };
+  return aliases[field] ?? [field];
+}
+
+function resolveStudyRichCsvHeader(field: StudyRichCsvTargetField, detectedHeaders: string[]) {
+  return studyRichCsvFieldAliases(field).find((header) => detectedHeaders.includes(header));
+}
+
 function dpeContextFromRun(run: ContentStudioDraftRun): DpeDraftContext {
   if (run.pipelineKey !== "dpe_content") {
     return emptyDpeContext;
@@ -1218,7 +1250,10 @@ export function ContentStudio() {
     () =>
       studyRichCsvSkillHeaders.filter((field) => {
         const header = studyImportColumnMapping[field]?.trim();
-        return Boolean(header && detectedStudyImportHeaders.includes(header));
+        return Boolean(
+          (header && detectedStudyImportHeaders.includes(header)) ||
+            resolveStudyRichCsvHeader(field, detectedStudyImportHeaders),
+        );
       }),
     [detectedStudyImportHeaders, studyImportColumnMapping],
   );
@@ -1226,7 +1261,10 @@ export function ContentStudio() {
     () =>
       studyRichCsvRequiredFields.filter((field) => {
         const header = studyImportColumnMapping[field]?.trim();
-        return !header || !detectedStudyImportHeaders.includes(header);
+        return !(
+          (header && detectedStudyImportHeaders.includes(header)) ||
+          resolveStudyRichCsvHeader(field, detectedStudyImportHeaders)
+        );
       }),
     [detectedStudyImportHeaders, studyImportColumnMapping],
   );
@@ -2378,7 +2416,7 @@ export function ContentStudio() {
               <span className="pill">No Drive loading</span>
               <span className="pill">No runtime source-pack reads</span>
               <span className="pill">No DPE runtime writes</span>
-              <span className="pill">No Publish / Official writes</span>
+              <span className="pill">Official only through admin import</span>
               <span className="pill">Conservative Verified policy</span>
             </div>
           </div>
@@ -3156,9 +3194,14 @@ function StudyRichCsvImportPreviewPanel({
                   <strong>{row.question}</strong>
                   <p>{row.answer}</p>
                 </div>
-                <span className="pill">{row.verification.status ?? "unverified"}</span>
+                <span className="pill">
+                  {row.isOfficial ? "Official" : row.verification.status ?? "unverified"}
+                </span>
               </div>
               <div className="question-meta">
+                <span className="pill">
+                  Source: {row.source.sourceLabel || row.source.sourceUrl || "none"}
+                </span>
                 <span className="pill">
                   Chunks: {row.source.sourceChunkIds?.join(", ") || "none"}
                 </span>
