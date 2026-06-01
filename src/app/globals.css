@@ -2475,6 +2475,21 @@ textarea::placeholder {
   text-align: center;
 }
 
+.timer-warning {
+  background: rgba(232, 114, 26, 0.13);
+  border: 1px solid var(--action);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-weight: 800;
+  padding: var(--space-2) var(--space-3);
+  text-align: center;
+}
+
+.timer-warning.urgent {
+  animation: recording-glow 1.1s ease-in-out infinite;
+  font-size: var(--font-size-md);
+}
+
 .realtime-grid,
 .realtime-log {
   display: grid;

@@ -86,6 +86,10 @@ async function blobToBase64(blob: Blob) {
   return btoa(binary);
 }
 
+function canShowSessionCountdown(phase: "connecting" | "ended" | "error" | "live" | "ready") {
+  return phase === "connecting" || phase === "live";
+}
+
 export function TurnBasedVoiceSession({
   config,
   onArtifactChange,
@@ -99,8 +103,10 @@ export function TurnBasedVoiceSession({
   const audioRef = useRef<HTMLAudioElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const recordingStartedAtMsRef = useRef<number | undefined>(undefined);
   const sessionStartedAtMsRef = useRef<number | undefined>(undefined);
   const [artifactDraft, setArtifactDraft] = useState<VoiceSessionArtifactDraft>(emptyArtifactDraft);
+  const [answerElapsedSeconds, setAnswerElapsedSeconds] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [phase, setPhase] = useState<"connecting" | "ended" | "error" | "live" | "ready">("ready");
   const [errorMessage, setErrorMessage] = useState<string>();
@@ -111,7 +117,14 @@ export function TurnBasedVoiceSession({
   const [requesting, setRequesting] = useState(false);
 
   const latestEvents = useMemo(() => artifactDraft.events.slice(-6).reverse(), [artifactDraft.events]);
+  const maxAnswerSeconds = config.maxAnswerSeconds ?? 60;
+  const maxDurationSeconds = config.maxDurationSeconds ?? 900;
   const maxTurns = config.maxTurns ?? 5;
+  const answerSecondsRemaining = Math.max(0, maxAnswerSeconds - answerElapsedSeconds);
+  const sessionSecondsRemaining = Math.max(0, maxDurationSeconds - elapsedSeconds);
+  const showAnswerCountdown = recording && answerSecondsRemaining <= 10;
+  const showSessionCountdown =
+    canShowSessionCountdown(phase) && sessionSecondsRemaining <= 60 && sessionSecondsRemaining > 0;
 
   useEffect(() => {
     onArtifactChange?.(artifactDraft);
@@ -126,6 +139,43 @@ export function TurnBasedVoiceSession({
     return () => window.clearInterval(timer);
   }, [phase]);
 
+  useEffect(() => {
+    if (!recording) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      if (!recordingStartedAtMsRef.current) {
+        setAnswerElapsedSeconds(0);
+        return;
+      }
+
+      setAnswerElapsedSeconds(
+        Math.max(0, Math.round((Date.now() - recordingStartedAtMsRef.current) / 1000)),
+      );
+    }, 250);
+
+    return () => window.clearInterval(timer);
+  }, [recording]);
+
+  useEffect(() => {
+    if (!recording || answerElapsedSeconds < maxAnswerSeconds) {
+      return;
+    }
+
+    appendEvent("turn_based.answer.max_seconds_reached");
+    stopRecording();
+  }, [answerElapsedSeconds, maxAnswerSeconds, recording, stopRecording]);
+
+  useEffect(() => {
+    if (!canShowSessionCountdown(phase) || elapsedSeconds < maxDurationSeconds) {
+      return;
+    }
+
+    appendEvent("turn_based.session.max_duration_reached");
+    void finalizeSession("user_ended");
+  }, [elapsedSeconds, finalizeSession, maxDurationSeconds, phase]);
+
   function appendEvent(type: string) {
     setArtifactDraft((current) => ({ ...current, events: [...current.events, artifactEvent(type)] }));
   }
@@ -136,10 +186,11 @@ export function TurnBasedVoiceSession({
   }
 
   function closeMedia() {
-    mediaRecorderRef.current?.stop();
     mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
     mediaRecorderRef.current = null;
     mediaStreamRef.current = null;
+    recordingStartedAtMsRef.current = undefined;
+    setAnswerElapsedSeconds(0);
     setRecording(false);
   }
 
@@ -174,7 +225,7 @@ export function TurnBasedVoiceSession({
         appendTranscript(transcriptTurn("Que", "assistant", body.question));
       }
       if (body.transcript?.trim()) {
-        appendTranscript(transcriptTurn("Que", "assistant", body.transcript));
+        appendTranscript(transcriptTurn("You", "user", body.transcript));
       }
       if (body.feedback?.trim()) {
         appendTranscript(transcriptTurn("Que", "assistant", body.feedback));
@@ -257,7 +308,7 @@ export function TurnBasedVoiceSession({
         const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
         const answerMimeType = blob.type || "audio/webm";
         const answerAudioBase64 = await blobToBase64(blob);
-        setRecording(false);
+        closeMedia();
         appendEvent("turn_based.answer.recorded");
         await requestTurn({
           answerAudioBase64,
@@ -270,6 +321,8 @@ export function TurnBasedVoiceSession({
         setTurnCount((current) => current + 1);
       };
       recorder.start();
+      recordingStartedAtMsRef.current = Date.now();
+      setAnswerElapsedSeconds(0);
       setRecording(true);
       appendEvent("turn_based.answer.recording_start");
     } catch (error) {
@@ -282,8 +335,14 @@ export function TurnBasedVoiceSession({
   function stopRecording() {
     if (!recording) return;
     mediaRecorderRef.current?.stop();
-    closeMedia();
     appendEvent("turn_based.answer.recording_stop");
+  }
+
+  function formatClock(totalSeconds: number) {
+    const nextSeconds = Math.max(0, Math.ceil(totalSeconds));
+    const nextMinutes = Math.floor(nextSeconds / 60).toString().padStart(2, "0");
+    const nextRemainder = (nextSeconds % 60).toString().padStart(2, "0");
+    return `${nextMinutes}:${nextRemainder}`;
   }
 
   const canStart = phase === "ready" || phase === "ended" || phase === "error";
@@ -323,6 +382,16 @@ export function TurnBasedVoiceSession({
       <div className="session-timer" aria-label="Session duration">
         {minutes}:{seconds}
       </div>
+      {showSessionCountdown && (
+        <div className="timer-warning" role="status">
+          Session wraps in {formatClock(sessionSecondsRemaining)}.
+        </div>
+      )}
+      {showAnswerCountdown && (
+        <div className="timer-warning urgent" role="status">
+          Finish your answer: {answerSecondsRemaining}
+        </div>
+      )}
       <audio autoPlay ref={audioRef} />
       <div className="inline-actions">
         <button disabled={!canStart || requesting} onClick={startSession} type="button">
