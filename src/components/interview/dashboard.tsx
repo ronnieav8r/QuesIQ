@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import { Flame } from "lucide-react";
 
@@ -25,6 +26,48 @@ type DashboardProps = {
   onStories: () => void;
   selectedJobTarget?: JobTargetRecord;
 };
+
+type ScoreAverage = {
+  average?: number;
+  key: string;
+  label: string;
+};
+
+function scorePercent(score?: number) {
+  if (score === undefined) {
+    return 0;
+  }
+
+  return Math.round((Math.max(0, Math.min(5, score)) / 5) * 100);
+}
+
+function HomeScoreRings({
+  emptyLabel,
+  scores,
+}: {
+  emptyLabel: string;
+  scores: ScoreAverage[];
+}) {
+  return (
+    <div className="home-score-rings">
+      {scores.map((score) => (
+        <div
+          aria-label={
+            score.average === undefined
+              ? `${score.label}: ${emptyLabel}`
+              : `${score.label}: ${score.average.toFixed(1)} out of 5`
+          }
+          className={`home-score-ring score-${score.key}`}
+          key={score.key}
+          style={{ "--score-percent": `${scorePercent(score.average)}%` } as CSSProperties}
+        >
+          <strong>{score.average ? score.average.toFixed(1) : "--"}</strong>
+          <span>{score.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function Dashboard({
   contextReady,
@@ -553,18 +596,7 @@ export function Dashboard({
                 : "Waiting for feedback"}
             </span>
           </div>
-          <div className="score-strip">
-            {recentScoreAverages.map((score) => (
-              <span
-                className={score.key === "overall" ? "score-overall" : undefined}
-                key={score.key}
-              >
-                <strong>{score.label}</strong>
-                <b>{score.average ? score.average.toFixed(1) : "--"}</b>
-                <small>{score.average ? "Recent average" : "No reviews yet"}</small>
-              </span>
-            ))}
-          </div>
+          <HomeScoreRings emptyLabel="No recent reviews yet" scores={recentScoreAverages} />
         </section>
 
         <section aria-labelledby="all-time-stats-title" className="panel score-panel">
@@ -576,18 +608,7 @@ export function Dashboard({
                 : "Waiting for feedback"}
             </span>
           </div>
-          <div className="score-strip">
-            {allTimeScoreAverages.map((score) => (
-              <span
-                className={score.key === "overall" ? "score-overall" : undefined}
-                key={score.key}
-              >
-                <strong>{score.label}</strong>
-                <b>{score.average ? score.average.toFixed(1) : "--"}</b>
-                <small>{score.average ? "All-time average" : "No reviews yet"}</small>
-              </span>
-            ))}
-          </div>
+          <HomeScoreRings emptyLabel="No reviews yet" scores={allTimeScoreAverages} />
         </section>
       </div>
     </section>

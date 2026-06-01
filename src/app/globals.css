@@ -1911,6 +1911,72 @@ label span {
   line-height: 1.3;
 }
 
+.home-score-rings {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fit, minmax(4.8rem, 1fr));
+}
+
+.home-score-ring {
+  --score-accent: var(--brand-strong);
+  --score-percent: 0%;
+  align-items: center;
+  aspect-ratio: 1;
+  background:
+    radial-gradient(circle at center, var(--surface-raised) 58%, transparent 60%),
+    conic-gradient(var(--score-accent) 0 var(--score-percent), rgba(255, 255, 255, 0.1) var(--score-percent) 100%);
+  border: 1px solid rgba(140, 82, 255, 0.34);
+  border-radius: 999px;
+  display: inline-grid;
+  justify-items: center;
+  max-width: 5.7rem;
+  min-width: 4.8rem;
+  padding: 0.85rem;
+  place-self: center;
+}
+
+.home-score-ring strong {
+  color: var(--text);
+  font-size: 1.25rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.home-score-ring span {
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 800;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.home-score-ring.score-overall {
+  --score-accent: var(--focus);
+}
+
+.home-score-ring.score-clarity {
+  --score-accent: #26d6a6;
+}
+
+.home-score-ring.score-confidence {
+  --score-accent: #8c52ff;
+}
+
+.home-score-ring.score-relevance {
+  --score-accent: #ef7c24;
+}
+
+.home-score-ring.score-impact {
+  --score-accent: #4fa3ff;
+}
+
+.home-score-ring.score-authenticity {
+  --score-accent: #f4c95d;
+}
+
 .practice-screen,
 .onboarding-screen,
 .auth-screen {
