@@ -104,6 +104,7 @@ export function TurnBasedVoiceSession({
 }: TurnBasedVoiceSessionProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const audioContextRef = useRef<AudioContext | undefined>(undefined);
+  const currentRequestAbortRef = useRef<AbortController | undefined>(undefined);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const recordingStartedAtMsRef = useRef<number | undefined>(undefined);
@@ -115,6 +116,9 @@ export function TurnBasedVoiceSession({
   const phaseRef = useRef<TurnBasedPhase>("ready");
   const recordingRef = useRef(false);
   const requestingRef = useRef(false);
+  const sessionActiveRef = useRef(false);
+  const sessionRunIdRef = useRef(0);
+  const suppressRecordingSubmitRef = useRef(false);
   const turnCountRef = useRef(0);
   const artifactDraftRef = useRef<VoiceSessionArtifactDraft>(emptyArtifactDraft);
   const [artifactDraft, setArtifactDraft] = useState<VoiceSessionArtifactDraft>(emptyArtifactDraft);
@@ -161,6 +165,14 @@ export function TurnBasedVoiceSession({
   function updateTurnCount(nextTurnCount: number) {
     turnCountRef.current = nextTurnCount;
     setTurnCount(nextTurnCount);
+  }
+
+  function isSessionActive(runId = sessionRunIdRef.current) {
+    return (
+      sessionActiveRef.current &&
+      phaseRef.current === "live" &&
+      sessionRunIdRef.current === runId
+    );
   }
 
   useEffect(() => {
@@ -238,6 +250,23 @@ export function TurnBasedVoiceSession({
     updateRecording(false);
   }
 
+  function cancelInFlightTurn() {
+    currentRequestAbortRef.current?.abort();
+    currentRequestAbortRef.current = undefined;
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+    }
+    updateRequesting(false);
+  }
+
+  async function warmMicrophone() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((track) => track.stop());
+  }
+
   function startSilenceMonitor(stream: MediaStream) {
     window.clearInterval(silenceTimerRef.current);
 
@@ -295,8 +324,15 @@ export function TurnBasedVoiceSession({
     }, 250);
   }
 
-  async function playQuestionAudio(response: NextTurnResponse) {
-    if (!response.questionAudioBase64 || !response.questionAudioMimeType || !audioRef.current) return;
+  async function playQuestionAudio(response: NextTurnResponse, runId: number) {
+    if (
+      !response.questionAudioBase64 ||
+      !response.questionAudioMimeType ||
+      !audioRef.current ||
+      !isSessionActive(runId)
+    ) {
+      return;
+    }
     const source = `data:${response.questionAudioMimeType};base64,${response.questionAudioBase64}`;
     audioRef.current.src = source;
     try {
@@ -337,17 +373,26 @@ export function TurnBasedVoiceSession({
   }
 
   async function requestTurn(payload: TurnPayload) {
+    const runId = sessionRunIdRef.current;
+    const abortController = new AbortController();
+    currentRequestAbortRef.current?.abort();
+    currentRequestAbortRef.current = abortController;
     updateRequesting(true);
     appendEvent("turn_based.next_turn.request");
     try {
       const response = await fetch("/api/interview/turn-based/next-turn", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+        signal: abortController.signal,
       });
       const body = (await response.json()) as { detail?: string; error?: string; question?: string } & NextTurnResponse;
       if (!response.ok) {
         throw new Error(body.detail || body.error || "Rapid Fire turn request failed.");
+      }
+
+      if (!isSessionActive(runId)) {
+        return;
       }
 
       appendEvent("turn_based.next_turn.response");
@@ -362,17 +407,21 @@ export function TurnBasedVoiceSession({
         appendTranscript(transcriptTurn("Que", "assistant", body.question));
       }
       updateRequesting(false);
-      await playQuestionAudio(body);
-      if (body.question?.trim() && !body.done) {
-        void startRecording();
+      await playQuestionAudio(body, runId);
+      if (body.question?.trim() && !body.done && isSessionActive(runId)) {
+        void startRecording(runId);
       }
-      if (body.done) {
+      if (body.done && isSessionActive(runId)) {
         updateDone(true);
       }
     } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
       const message = toErrorMessage(error);
       setErrorMessage(message);
       updatePhase("error");
+      sessionActiveRef.current = false;
       appendEvent("turn_based.next_turn.error");
       logDiagnosticEvent({
         endpoint: "/api/interview/turn-based/next-turn",
@@ -384,15 +433,31 @@ export function TurnBasedVoiceSession({
         source: "realtime",
       });
     } finally {
-      updateRequesting(false);
+      if (currentRequestAbortRef.current === abortController) {
+        currentRequestAbortRef.current = undefined;
+      }
+      if (sessionRunIdRef.current === runId) {
+        updateRequesting(false);
+      }
     }
   }
 
   async function finalizeSession(endReason: VoiceSessionArtifactDraft["endReason"]) {
+    sessionActiveRef.current = false;
+    suppressRecordingSubmitRef.current = true;
+    sessionRunIdRef.current += 1;
+    cancelInFlightTurn();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
     closeMedia();
     const durationSeconds = sessionStartedAtMsRef.current
       ? Math.max(0, Math.round((Date.now() - sessionStartedAtMsRef.current) / 1000))
       : undefined;
+    sessionStartedAtMsRef.current = undefined;
+    setAnswerElapsedSeconds(0);
+    setElapsedSeconds(durationSeconds ?? 0);
+    updateDone(true);
     setArtifactDraft((current) => {
       const finalized = {
         ...current,
@@ -408,6 +473,12 @@ export function TurnBasedVoiceSession({
 
   async function startSession() {
     try {
+      cancelInFlightTurn();
+      closeMedia();
+      const runId = sessionRunIdRef.current + 1;
+      sessionRunIdRef.current = runId;
+      sessionActiveRef.current = true;
+      suppressRecordingSubmitRef.current = false;
       setErrorMessage(undefined);
       updatePhase("connecting");
       updateDone(false);
@@ -421,6 +492,10 @@ export function TurnBasedVoiceSession({
       };
       artifactDraftRef.current = initialArtifact;
       setArtifactDraft(initialArtifact);
+      await warmMicrophone();
+      if (!isSessionActive(runId) && phaseRef.current !== "connecting") {
+        return;
+      }
       updatePhase("live");
       await requestTurn({
         priorTurns: [],
@@ -430,14 +505,15 @@ export function TurnBasedVoiceSession({
       });
     } catch (error) {
       setErrorMessage(toErrorMessage(error));
+      sessionActiveRef.current = false;
       updatePhase("error");
     }
   }
 
-  async function startRecording() {
+  async function startRecording(runId = sessionRunIdRef.current) {
     if (
       recordingRef.current ||
-      phaseRef.current !== "live" ||
+      !isSessionActive(runId) ||
       doneRef.current ||
       requestingRef.current
     ) {
@@ -445,6 +521,10 @@ export function TurnBasedVoiceSession({
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!isSessionActive(runId)) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       mediaStreamRef.current = stream;
       startSilenceMonitor(stream);
       const recorder = new MediaRecorder(stream);
@@ -454,6 +534,11 @@ export function TurnBasedVoiceSession({
         if (event.data.size > 0) chunks.push(event.data);
       };
       recorder.onstop = async () => {
+        if (suppressRecordingSubmitRef.current || !isSessionActive(runId)) {
+          closeMedia();
+          appendEvent("turn_based.answer.recording_cancelled");
+          return;
+        }
         const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
         const answerMimeType = blob.type || "audio/webm";
         const answerAudioBase64 = await blobToBase64(blob);
@@ -468,7 +553,9 @@ export function TurnBasedVoiceSession({
           snapshot,
           turnIndex: nextTurnIndex,
         });
-        updateTurnCount(nextTurnIndex);
+        if (isSessionActive(runId)) {
+          updateTurnCount(nextTurnIndex);
+        }
       };
       recorder.start();
       recordingStartedAtMsRef.current = Date.now();
@@ -551,15 +638,16 @@ export function TurnBasedVoiceSession({
           End Session
         </button>
       </div>
-      {phase === "live" && (
-        <div className="inline-actions">
-          <button disabled={recording || done || requesting || turnCount >= maxTurns} onClick={startRecording} type="button">
-            Record Answer
-          </button>
-          <button className="secondary" disabled={!recording} onClick={stopRecording} type="button">
-            Stop Answer
-          </button>
-        </div>
+      {phase === "live" && !done && (
+        <p className="field-note">
+          {recording
+            ? "Listening now. Pause after your answer to submit it."
+            : requesting
+              ? "Que is preparing the next question."
+              : turnCount >= maxTurns
+                ? "Turn limit reached. End the session for review."
+                : "Que will listen automatically after each question."}
+        </p>
       )}
 
       {currentQuestion && (
