@@ -57,7 +57,7 @@ function HomeScoreRings({
               ? `${score.label}: ${emptyLabel}`
               : `${score.label}: ${score.average.toFixed(1)} out of 5`
           }
-          className="home-score-card"
+          className={`home-score-card score-${score.key}`}
           key={score.key}
           style={{ "--score-percent": `${scorePercent(score.average)}%` } as CSSProperties}
         >

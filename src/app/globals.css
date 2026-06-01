@@ -1919,6 +1919,9 @@ label span {
 
 .home-score-card {
   --score-percent: 0%;
+  --ring-a: #26d6a6;
+  --ring-b: #8c52ff;
+  --ring-c: #ef7c24;
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -1937,17 +1940,53 @@ label span {
     radial-gradient(circle at center, var(--surface-raised) 58%, transparent 60%),
     conic-gradient(
       from -90deg,
-      #26d6a6 0 calc(var(--score-percent) * 0.38),
-      #8c52ff calc(var(--score-percent) * 0.38) calc(var(--score-percent) * 0.72),
-      #ef7c24 calc(var(--score-percent) * 0.72) var(--score-percent),
+      color-mix(in srgb, var(--ring-a) 86%, var(--ring-b) 14%) 0 calc(var(--score-percent) * 0.34),
+      color-mix(in srgb, var(--ring-a) 42%, var(--ring-b) 58%) calc(var(--score-percent) * 0.34) calc(var(--score-percent) * 0.68),
+      color-mix(in srgb, var(--ring-b) 46%, var(--ring-c) 54%) calc(var(--score-percent) * 0.68) var(--score-percent),
       rgba(255, 255, 255, 0.1) var(--score-percent) 100%
     );
-  border: 1px solid rgba(140, 82, 255, 0.34);
+  border: 1px solid color-mix(in srgb, var(--ring-b) 42%, transparent);
   border-radius: 999px;
   display: block;
   height: 3.2rem;
   justify-self: center;
   width: 3.2rem;
+}
+
+.home-score-card.score-overall {
+  --ring-a: #26d6a6;
+  --ring-b: #8c52ff;
+  --ring-c: #ef7c24;
+}
+
+.home-score-card.score-confidence {
+  --ring-a: #8c52ff;
+  --ring-b: #4fa3ff;
+  --ring-c: #26d6a6;
+}
+
+.home-score-card.score-clarity {
+  --ring-a: #26d6a6;
+  --ring-b: #4fa3ff;
+  --ring-c: #8c52ff;
+}
+
+.home-score-card.score-relevance {
+  --ring-a: #ef7c24;
+  --ring-b: #f4c95d;
+  --ring-c: #26d6a6;
+}
+
+.home-score-card.score-impact {
+  --ring-a: #4fa3ff;
+  --ring-b: #8c52ff;
+  --ring-c: #ff5c7a;
+}
+
+.home-score-card.score-authenticity {
+  --ring-a: #f4c95d;
+  --ring-b: #ef7c24;
+  --ring-c: #8c52ff;
 }
 
 .home-score-card strong {
