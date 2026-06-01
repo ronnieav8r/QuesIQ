@@ -378,6 +378,10 @@ function readMappedValue(args: {
   return "";
 }
 
+function hasDetectedHeader(headerIndex: Map<string, number>, aliases: string[]) {
+  return aliases.some((alias) => headerIndex.has(normalizeHeader(alias)));
+}
+
 export function parseStudyRichFlashcardImportText(
   text: string,
   options?: { columnMapping?: StudyRichImportColumnMapping },
@@ -527,6 +531,18 @@ export function parseStudyRichFlashcardImportText(
       resolvedVerificationStatus = "verified";
     }
 
+    const sourceLabel = getMappedValue("sourceLabel") || undefined;
+    const sourceUrl = getMappedValue("sourceUrl") || undefined;
+    const inferredOfficialFromReference =
+      !isOfficialRaw &&
+      hasDetectedHeader(headerIndex, [
+        "officialReference",
+        "official_reference",
+        "officialReferenceUrl",
+        "official_reference_url",
+      ]) &&
+      Boolean(sourceLabel || sourceUrl);
+
     const normalizedRow: StudyRichImportNormalizedRow = {
       answer,
       audience: getMappedValue("audience") || undefined,
@@ -537,17 +553,17 @@ export function parseStudyRichFlashcardImportText(
       draftWarnings: parseList(getMappedValue("draftWarnings")),
       externalId: getMappedValue("externalId") || undefined,
       hint: getMappedValue("hint") || undefined,
-      isOfficial,
+      isOfficial: isOfficial ?? inferredOfficialFromReference,
       level,
       question,
       source: {
         sourceChunkIds: parseList(getMappedValue("sourceChunkIds")),
-        sourceLabel: getMappedValue("sourceLabel") || undefined,
+        sourceLabel,
         sourceNotes: getMappedValue("sourceNotes") || undefined,
         sourcePackId: getMappedValue("sourcePackId") || undefined,
         sourcePackTitle: getMappedValue("sourcePackTitle") || undefined,
         sourcePages: parsePages(getMappedValue("sourcePages")),
-        sourceUrl: getMappedValue("sourceUrl") || undefined,
+        sourceUrl,
         sourceVisualAssetIds: parseList(getMappedValue("sourceVisualAssetIds")),
       },
       subject: getMappedValue("subject") || undefined,

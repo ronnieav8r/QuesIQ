@@ -127,6 +127,8 @@ The first Study slice is imported:
   `shortAnswer`, `explanation`, `officialReference`, `officialReferenceUrl`,
   `additionalReferences`, `additionalReferenceUrls`, and optional
   `official`/`verified` booleans without requiring explicit column mapping.
+  Rows with `officialReference`/`officialReferenceUrl` infer Official deck
+  import intent unless an explicit `official` value is provided.
 - `drizzle/0054_add_study_source_verification_metadata.sql` adds structured
   source metadata and verification status/evidence/verifier fields so rich CSV
   imports do not have to preserve chunk/page/visual details only inside labels

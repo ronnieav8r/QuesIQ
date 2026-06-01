@@ -15,8 +15,15 @@ sample-001,What is trim?,Relieves control pressure in steady flight.,Set pitch f
 const mappedCsv = `Prompt,Response,Memo,Difficulty,CategoryTags,PackIdentifier,ChunkRefs,PageRefs,VisualRefs,ReviewState,ReviewConfidence,ReviewNotes,EvidenceRows,Reviewer,DraftRef,ExternalRef
 "When do you re-trim?","After any sustained pitch or power change.","Trim removes control pressure.","beginner","fundamentals|trim","phak-25c","chunk-010|chunk-011","14|15","figure-14-a","needs_review","0.73","Needs follow-up","chunk-010|chunk-011","admin_qc","draft-abc","row-abc"`;
 
-const officialSchemaCsv = `industry,role,certification,examOrStandard,version,subject,question,shortAnswer,explanation,officialReference,officialReferenceUrl,additionalReferences,additionalReferenceUrls,tags,official,verified
-Aviation,Pilot,Private Pilot,Private Pilot ACS,"FAA-S-ACS-6C, April 2024",Certification Requirements,What are the basic eligibility requirements for a private pilot certificate?,"Be 17, read/speak/write English, meet training, knowledge, experience, and practical test requirements.","14 CFR 61.103 sets the basic eligibility gate.",14 CFR 61.103,https://www.ecfr.gov/current/title-14/chapter-I/subchapter-D/part-61/subpart-E/section-61.103,Private Pilot ACS Task I.A,https://www.ecfr.gov/current/title-14/chapter-I/subchapter-D/part-61/subpart-E/section-61.105,acs|private-pilot,true,true`;
+const officialSchemaHeader =
+  "industry,role,certification,examOrStandard,version,subject,question,shortAnswer,explanation,officialReference,officialReferenceUrl,additionalReferences,additionalReferenceUrls,tags";
+const officialSchemaRow =
+  "Aviation,Pilot,Private Pilot,Private Pilot ACS,\"FAA-S-ACS-6C, April 2024\",Certification Requirements,What are the basic eligibility requirements for a private pilot certificate?,\"Be 17, read/speak/write English, meet training, knowledge, experience, and practical test requirements.\",\"14 CFR 61.103 sets the basic eligibility gate.\",14 CFR 61.103,https://www.ecfr.gov/current/title-14/chapter-I/subchapter-D/part-61/subpart-E/section-61.103,Private Pilot ACS Task I.A,https://www.ecfr.gov/current/title-14/chapter-I/subchapter-D/part-61/subpart-E/section-61.105,acs|private-pilot";
+const officialSchemaCsv = `${officialSchemaHeader}
+${officialSchemaRow}`;
+
+const explicitOfficialVerifiedCsv = `${officialSchemaHeader},official,verified
+${officialSchemaRow},true,true`;
 
 const mappedColumnMapping = {
   ...STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING,
@@ -99,11 +106,17 @@ async function runParseOnly() {
   assert(officialSchemaParsed.errors.length === 0, `Expected no official-schema parse errors, got ${JSON.stringify(officialSchemaParsed.errors)}`);
   assert(officialSchemaParsed.rowCount === 1, `Expected one official-schema row, got ${officialSchemaParsed.rowCount}`);
   assert(officialSchemaParsed.rows[0].answer.startsWith("Be 17"), "Expected shortAnswer to map into answer.");
-  assert(officialSchemaParsed.rows[0].isOfficial === true, "Expected official boolean to map.");
-  assert(officialSchemaParsed.rows[0].verification.status === "verified", "Expected verified boolean to map into verification status.");
+  assert(officialSchemaParsed.rows[0].isOfficial === true, "Expected officialReference schema to infer official row.");
+  assert(officialSchemaParsed.rows[0].verification.status === undefined, "Expected verified status to remain unset without explicit field.");
   assert(
     officialSchemaParsed.rows[0].source.sourceUrl?.includes("ecfr.gov"),
     "Expected officialReferenceUrl to map into sourceUrl.",
+  );
+
+  const explicitOfficialVerifiedParsed = parseStudyRichFlashcardImportText(explicitOfficialVerifiedCsv);
+  assert(
+    explicitOfficialVerifiedParsed.rows[0].verification.status === "verified",
+    "Expected explicit verified boolean to map into verification status.",
   );
 
   console.log("rich CSV parser smoke passed (default + mapped + official-schema headers)");
