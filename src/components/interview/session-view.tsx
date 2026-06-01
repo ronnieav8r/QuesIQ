@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { FeedbackButton } from "@/components/interview/feedback-button";
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import { ReviewDetailSections } from "@/components/interview/review-detail-sections";
+import { TurnBasedVoiceSession } from "@/components/interview/turn-based-voice-session";
 import { getPostReviewFeedbackPrompt } from "@/product/beta-feedback-prompts";
 import { buildInterviewFirstTurnInstructions } from "@/product/interview-first-turn";
 import {
@@ -25,6 +26,13 @@ type SessionViewProps = {
   onExit: () => void;
   session: SessionLaunchRecord;
   snapshot: SessionSetupSnapshot;
+};
+
+type RuntimeConfig = {
+  engine: "realtime" | "turn_based";
+  maxAnswerSeconds?: number;
+  maxDurationSeconds?: number;
+  maxTurns?: number;
 };
 
 export function SessionView({
@@ -62,6 +70,56 @@ export function SessionView({
   );
   const tooShortReviewMessage = getTooShortReviewMessage(snapshot);
   const minimumReviewDurationSeconds = getMinimumReviewDurationSeconds(snapshot);
+  const [runtimeConfig, setRuntimeConfig] = useState<RuntimeConfig>({
+    engine: "realtime",
+  });
+  const [runtimeConfigLoaded, setRuntimeConfigLoaded] = useState(false);
+  const useTurnBasedRapidFire =
+    snapshot.modeKey === "rapid_fire" &&
+    runtimeConfigLoaded &&
+    runtimeConfig.engine === "turn_based";
+
+  useEffect(() => {
+    let ignore = false;
+    if (snapshot.modeKey !== "rapid_fire") {
+      setRuntimeConfig({ engine: "realtime" });
+      setRuntimeConfigLoaded(true);
+      return;
+    }
+
+    setRuntimeConfigLoaded(false);
+
+    async function loadRuntimeConfig() {
+      try {
+        const response = await fetch("/api/interview/runtime-config?modeKey=rapid_fire");
+        const body = (await response.json()) as {
+          config?: RuntimeConfig;
+          detail?: string;
+          error?: string;
+        };
+
+        if (!response.ok || !body.config) {
+          throw new Error(body.detail || body.error || "Runtime config unavailable.");
+        }
+
+        if (!ignore) {
+          setRuntimeConfig(body.config);
+          setRuntimeConfigLoaded(true);
+        }
+      } catch {
+        if (!ignore) {
+          setRuntimeConfig({ engine: "realtime" });
+          setRuntimeConfigLoaded(true);
+        }
+      }
+    }
+
+    void loadRuntimeConfig();
+
+    return () => {
+      ignore = true;
+    };
+  }, [snapshot.modeKey]);
 
   useEffect(() => {
     if (!artifactDraft.endedAt || savedArtifactRef.current === artifactDraft.endedAt) {
@@ -185,12 +243,21 @@ export function SessionView({
         </div>
       </section>
 
-      <RealtimeVoiceSession
-        firstTurnInstructions={buildInterviewFirstTurnInstructions(snapshot)}
-        onArtifactChange={setArtifactDraft}
-        sessionId={session.id}
-        snapshot={snapshot}
-      />
+      {useTurnBasedRapidFire ? (
+        <TurnBasedVoiceSession
+          config={runtimeConfig}
+          onArtifactChange={setArtifactDraft}
+          sessionId={session.id}
+          snapshot={snapshot}
+        />
+      ) : (
+        <RealtimeVoiceSession
+          firstTurnInstructions={buildInterviewFirstTurnInstructions(snapshot)}
+          onArtifactChange={setArtifactDraft}
+          sessionId={session.id}
+          snapshot={snapshot}
+        />
+      )}
 
       <div className="session-grid">
         {evaluationStatus === "ready" && (
