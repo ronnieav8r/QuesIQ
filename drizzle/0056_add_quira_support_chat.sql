@@ -170,6 +170,7 @@ VALUES
     'voice-troubleshooting',
     'Troubleshoot voice practice',
     'shared',
+    'troubleshooting',
     'For voice practice, confirm microphone permission, use a supported browser, avoid multiple tabs using the microphone, and retry from the product practice screen. If the session starts but review is missing, include the screen and session context in a support case.',
     '["voice","microphone","realtime","troubleshooting"]'::jsonb,
     true,
