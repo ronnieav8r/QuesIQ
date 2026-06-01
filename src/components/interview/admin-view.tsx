@@ -148,7 +148,9 @@ type QuiraAdminSupportData = {
     updatedAt: string;
   }>;
   cases: Array<{
+    conversationId?: string;
     createdAt: string;
+    details?: Record<string, unknown>;
     id: string;
     kind: string;
     product: string;
@@ -157,6 +159,7 @@ type QuiraAdminSupportData = {
     status: string;
     summary: string;
     title: string;
+    updatedAt: string;
     urgency: string;
     userEmail?: string;
     userId?: string;
@@ -169,6 +172,16 @@ type QuiraAdminSupportData = {
     status: string;
     title: string;
     updatedAt: string;
+    userEmail?: string;
+    userId?: string;
+  }>;
+  messages: Array<{
+    content: string;
+    conversationId: string;
+    createdAt: string;
+    id: string;
+    metadata?: Record<string, unknown>;
+    role: "assistant" | "system" | "tool" | "user";
     userEmail?: string;
     userId?: string;
   }>;
@@ -771,7 +784,10 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     articles: [],
     cases: [],
     conversations: [],
+    messages: [],
   });
+  const [selectedSupportCaseId, setSelectedSupportCaseId] = useState<string>();
+  const [selectedSupportConversationId, setSelectedSupportConversationId] = useState<string>();
   const [runtimeConfigs, setRuntimeConfigs] = useState<InterviewRuntimeConfigSummary[]>([]);
   const [questionArchetypes, setQuestionArchetypes] = useState<
     InterviewQuestionArchetypeRecord[]
@@ -894,6 +910,30 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
         getProgressionSummarySortValue,
       ),
     [progressionSummaries, progressionSummarySort],
+  );
+  const selectedSupportCase = useMemo(
+    () =>
+      quiraSupport.cases.find((supportCase) => supportCase.id === selectedSupportCaseId),
+    [quiraSupport.cases, selectedSupportCaseId],
+  );
+  const supportConversationId =
+    selectedSupportConversationId ?? selectedSupportCase?.conversationId;
+  const selectedSupportConversation = useMemo(
+    () =>
+      quiraSupport.conversations.find(
+        (conversation) => conversation.id === supportConversationId,
+      ),
+    [quiraSupport.conversations, supportConversationId],
+  );
+  const supportConversationMessages = useMemo(
+    () =>
+      quiraSupport.messages
+        .filter((message) => message.conversationId === supportConversationId)
+        .sort(
+          (left, right) =>
+            new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
+        ),
+    [quiraSupport.messages, supportConversationId],
   );
   const feedbackCounts = useMemo(
     () => ({
@@ -1111,6 +1151,7 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
           articles: [],
           cases: [],
           conversations: [],
+          messages: [],
         },
       );
     } catch (loadError) {
@@ -1119,6 +1160,46 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
           ? loadError.message
           : "Quira support data could not be loaded.",
       );
+    }
+  }
+
+  async function updateSupportCaseStatus(caseId: string, status: string) {
+    try {
+      setPending(true);
+      setError(undefined);
+      const response = await fetch("/api/admin/support", {
+        body: JSON.stringify({ caseId, status }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "PUT",
+      });
+      const body = (await response.json()) as {
+        error?: string;
+        supportCase?: { id: string; status: string };
+      };
+
+      if (!response.ok || !body.supportCase) {
+        throw new Error(body.error || "Support case status could not be updated.");
+      }
+
+      setQuiraSupport((current) => ({
+        ...current,
+        cases: current.cases.map((supportCase) =>
+          supportCase.id === body.supportCase?.id
+            ? { ...supportCase, status: body.supportCase.status }
+            : supportCase,
+        ),
+      }));
+      void loadQuiraSupport();
+    } catch (updateError) {
+      setError(
+        updateError instanceof Error
+          ? updateError.message
+          : "Support case status could not be updated.",
+      );
+    } finally {
+      setPending(false);
     }
   }
 
@@ -2484,13 +2565,30 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
                         <th>User</th>
                         <th>Title</th>
                         <th>Summary</th>
+                        <th>Conversation</th>
                       </tr>
                     </thead>
                     <tbody>
                       {quiraSupport.cases.map((supportCase) => (
                         <tr key={supportCase.id}>
                           <td>{new Date(supportCase.createdAt).toLocaleString()}</td>
-                          <td>{supportCase.status}</td>
+                          <td>
+                            <select
+                              disabled={pending}
+                              onChange={(event) =>
+                                void updateSupportCaseStatus(
+                                  supportCase.id,
+                                  event.target.value,
+                                )
+                              }
+                              value={supportCase.status}
+                            >
+                              <option value="new">new</option>
+                              <option value="triage">triage</option>
+                              <option value="in_progress">in_progress</option>
+                              <option value="resolved">resolved</option>
+                            </select>
+                          </td>
                           <td>{supportCase.urgency}</td>
                           <td>{supportCase.kind}</td>
                           <td>{supportCase.product}</td>
@@ -2505,6 +2603,19 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
                           </td>
                           <td>
                             <ExpandableCell value={supportCase.summary} />
+                          </td>
+                          <td>
+                            <button
+                              onClick={() => {
+                                setSelectedSupportCaseId(supportCase.id);
+                                setSelectedSupportConversationId(
+                                  supportCase.conversationId,
+                                );
+                              }}
+                              type="button"
+                            >
+                              Open
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -2530,6 +2641,7 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
                         <th>Screen</th>
                         <th>User</th>
                         <th>Title</th>
+                        <th>Messages</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2547,6 +2659,17 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
                           <td>
                             <ExpandableCell value={conversation.title} />
                           </td>
+                          <td>
+                            <button
+                              onClick={() => {
+                                setSelectedSupportCaseId(undefined);
+                                setSelectedSupportConversationId(conversation.id);
+                              }}
+                              type="button"
+                            >
+                              Open
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -2554,6 +2677,46 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
                 </div>
               ) : (
                 <p>No Quira conversations have been recorded yet.</p>
+              )}
+
+              <div className="section-head">
+                <h3>Conversation Detail</h3>
+                <span>{supportConversationMessages.length} messages</span>
+              </div>
+              {selectedSupportConversation ? (
+                <div className="prompt-version-list">
+                  <article className="prompt-version-card">
+                    <div>
+                      <strong>{selectedSupportConversation.title}</strong>
+                      <p className="field-note">
+                        {selectedSupportConversation.product} / {selectedSupportConversation.screen} /{" "}
+                        {selectedSupportConversation.status}
+                      </p>
+                      <p className="field-note">
+                        {selectedSupportConversation.userEmail ||
+                          selectedSupportConversation.userId}
+                      </p>
+                    </div>
+                  </article>
+                  {supportConversationMessages.length > 0 ? (
+                    supportConversationMessages.map((message) => (
+                      <article className="prompt-version-card" key={message.id}>
+                        <div>
+                          <strong>{message.role}</strong>
+                          <p className="field-note">
+                            {new Date(message.createdAt).toLocaleString()} /{" "}
+                            {message.userEmail || message.userId || "unknown user"}
+                          </p>
+                          <p>{message.content}</p>
+                        </div>
+                      </article>
+                    ))
+                  ) : (
+                    <p>No messages were stored for this conversation yet.</p>
+                  )}
+                </div>
+              ) : (
+                <p>Select a case or conversation to inspect chat context.</p>
               )}
 
               <div className="section-head">

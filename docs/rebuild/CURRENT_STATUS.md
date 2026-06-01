@@ -400,18 +400,17 @@ Last updated: 2026-05-30
   - sessions under 120 seconds are saved and shown in History as too short to
     score, but do not generate evaluations, score averages, review XP, or review
     retry prompts
-- Embedded Quira support baseline:
+- Embedded Quira support V1:
   - global support now uses a small Quira launcher instead of a plain Feedback
     button
-  - Quira offers Help, Feedback, and Bug paths from any signed-in screen
-  - Help currently uses curated QuesIQ product guidance for core workflows and
-    can capture unanswered questions for the team
-  - Feedback and Bug paths continue to save rating, note, optional screenshot,
-    screen, session id, browser language, viewport, and user agent through the
-    existing feedback storage/admin path
-  - this is intentionally only a baseline; the target future Quira experience
-    is an AI chat bot that calls a model, holds a support conversation, walks
-    users through QuesIQ, and handles minor troubleshooting
+  - launcher is chat-first and opens a messenger-style support window
+  - Quira chat runs through `/api/support/chat` with signed-in context, curated
+    KB, and support-case tool escalation
+  - explicit Quira bug/feedback reports save into Quira support storage via
+    `/api/support/report` (conversation + case), with compatibility support for
+    `/api/feedback` callers that set `supportSource: "quira"`
+  - Admin support now includes practical case workflow controls (status update)
+    and conversation message context, not only read-only lists
 - Story Lab Phase 1 started:
   - the former Stories placeholder is now positioned as Story Lab
   - users can now choose Tell Que, Dictate, or Type as story-capture modes:
@@ -706,10 +705,10 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
 - Keep Make for automation edges, not the interview session state machine.
 - Que is the in-app interview coach. Quira is the product/support assistant.
 - For V1, Quira is implemented inside QuesIQ rather than deployed as a separate
-  Render service. The current Quira surface is only a baseline launcher/support
-  panel; the desired future version is an AI-backed chat bot and QuesIQ product
-  expert. Keep the UI/data boundaries clean so she can become a shared service
-  later if multiple products need her.
+  Render service. The current Quira surface is an AI-backed signed-in support
+  chat with support-case storage and Admin review controls. Keep UI/data
+  boundaries clean so Quira can become a shared service later if multiple
+  products need her.
 - UI modernization is active and incremental. Phase 1A established global
   design tokens/base styling. Phase 1B cleaned up core user-screen rhythm,
   small-screen behavior, and user-facing copy. Phase 2A completed text-first
@@ -783,8 +782,8 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
    visible by default, hide only on meaningful downward scroll, show
    immediately on upward scroll, and never hide during active voice/session,
    error, modal, save, or onboarding states.
-16. Later Quira work: replace the curated Help panel with an AI chat bot backed
-   by a maintained QuesIQ product knowledge base.
+16. Later Quira work: extend KB management and add richer case workflow
+   operations (assignment/history/triage notes) without overbuilding ticketing.
 17. Product gap backlog from the Bubble reference, ordered by current user value:
    richer coaching memory controls, tuning XP rules from beta behavior, and
    AI-backed Quira support.

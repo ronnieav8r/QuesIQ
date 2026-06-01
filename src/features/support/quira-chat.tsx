@@ -314,12 +314,15 @@ export function QuiraChatLauncher({
       setSubmitState("sending");
       setError(undefined);
 
-      const response = await fetch("/api/feedback", {
+      const response = await fetch("/api/support/report", {
         body: JSON.stringify({
+          browserContext: getBrowserContext(),
           browserLanguage:
             typeof navigator === "undefined" ? undefined : navigator.language,
+          conversationId,
           kind: "bug",
           message: `[${product}:${screen}] ${bugMessage}`.trim(),
+          product,
           rating,
           ratingPrompt: "How disruptive is this issue?",
           screen,
@@ -328,6 +331,8 @@ export function QuiraChatLauncher({
           screenshotName: screenshot?.name,
           screenshotSize: screenshot?.size,
           sessionId,
+          supportSource: "quira",
+          urgency: "high",
           userAgent: typeof navigator === "undefined" ? undefined : navigator.userAgent,
           viewport: getViewport(),
         }),

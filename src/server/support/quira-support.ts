@@ -18,6 +18,7 @@ import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 
 type QuiraProduct = "dpe" | "interview" | "shared" | "study";
 type SupportCaseKind = "bug" | "feedback" | "support";
+type SupportCaseStatus = "in_progress" | "new" | "resolved" | "triage";
 type SupportCaseUrgency = "high" | "low" | "normal";
 
 type QuiraChatInput = {
@@ -27,6 +28,22 @@ type QuiraChatInput = {
   product?: string;
   screen?: string;
   sessionId?: string;
+};
+
+type QuiraSupportReportInput = {
+  browserContext?: Record<string, unknown>;
+  conversationId?: string;
+  kind: SupportCaseKind;
+  message: string;
+  product?: string;
+  rating?: number;
+  screen?: string;
+  screenshotDataUrl?: string;
+  screenshotMimeType?: string;
+  screenshotName?: string;
+  screenshotSize?: number;
+  sessionId?: string;
+  urgency?: SupportCaseUrgency;
 };
 
 type QuiraChatUser = {
@@ -148,6 +165,60 @@ export function parseQuiraChatInput(body: unknown): QuiraChatInput | undefined {
     product: cleanProduct(candidate.product),
     screen: cleanText(candidate.screen, MAX_SCREEN_LENGTH) ?? "unknown",
     sessionId: cleanUuid(candidate.sessionId),
+  };
+}
+
+export function parseQuiraSupportReportInput(
+  body: unknown,
+): QuiraSupportReportInput | undefined {
+  if (!body || typeof body !== "object") {
+    return undefined;
+  }
+
+  const candidate = body as Record<string, unknown>;
+  const message = cleanText(candidate.message, MAX_MESSAGE_LENGTH);
+  const rating =
+    typeof candidate.rating === "number" &&
+    Number.isInteger(candidate.rating) &&
+    candidate.rating >= 1 &&
+    candidate.rating <= 5
+      ? candidate.rating
+      : undefined;
+  const screenshotSize =
+    typeof candidate.screenshotSize === "number" &&
+    Number.isInteger(candidate.screenshotSize) &&
+    candidate.screenshotSize > 0 &&
+    candidate.screenshotSize <= 1_500_000
+      ? candidate.screenshotSize
+      : undefined;
+  const kind =
+    candidate.kind === "bug"
+      ? "bug"
+      : candidate.kind === "feedback"
+        ? "feedback"
+        : "support";
+
+  if (!message && rating === undefined && !cleanText(candidate.screenshotDataUrl, 2_100_000)) {
+    return undefined;
+  }
+
+  return {
+    browserContext: cleanBrowserContext(candidate.browserContext),
+    conversationId: cleanUuid(candidate.conversationId),
+    kind,
+    message: message ?? "",
+    product: cleanProduct(candidate.product),
+    rating,
+    screen: cleanText(candidate.screen, MAX_SCREEN_LENGTH) ?? "unknown",
+    screenshotDataUrl: cleanText(candidate.screenshotDataUrl, 2_100_000),
+    screenshotMimeType: cleanText(candidate.screenshotMimeType, 80),
+    screenshotName: cleanText(candidate.screenshotName, 180),
+    screenshotSize,
+    sessionId: cleanUuid(candidate.sessionId),
+    urgency:
+      candidate.urgency === "high" || candidate.urgency === "low"
+        ? candidate.urgency
+        : "normal",
   };
 }
 
@@ -350,6 +421,80 @@ async function createSupportCase(input: {
     .where(eq(quiraConversations.id, input.conversationId));
 
   return supportCase;
+}
+
+export function parseQuiraSupportCaseStatus(value: unknown): SupportCaseStatus | undefined {
+  return value === "new" ||
+    value === "triage" ||
+    value === "in_progress" ||
+    value === "resolved"
+    ? value
+    : undefined;
+}
+
+export async function updateQuiraSupportCaseStatus(input: {
+  caseId: string;
+  status: SupportCaseStatus;
+  userId?: string;
+}) {
+  const caseId = cleanUuid(input.caseId);
+  if (!caseId) {
+    return undefined;
+  }
+
+  const [existing] = await getDb()
+    .select({
+      conversationId: quiraSupportCases.conversationId,
+      id: quiraSupportCases.id,
+      status: quiraSupportCases.status,
+      title: quiraSupportCases.title,
+      userId: quiraSupportCases.userId,
+    })
+    .from(quiraSupportCases)
+    .where(eq(quiraSupportCases.id, caseId))
+    .limit(1);
+
+  if (!existing) {
+    return undefined;
+  }
+
+  const now = new Date();
+  const [updated] = await getDb()
+    .update(quiraSupportCases)
+    .set({
+      status: input.status,
+      updatedAt: now,
+    })
+    .where(eq(quiraSupportCases.id, existing.id))
+    .returning({
+      conversationId: quiraSupportCases.conversationId,
+      id: quiraSupportCases.id,
+      status: quiraSupportCases.status,
+      updatedAt: quiraSupportCases.updatedAt,
+    });
+
+  if (existing.conversationId) {
+    await getDb()
+      .update(quiraConversations)
+      .set({
+        status: input.status === "resolved" ? "resolved" : "escalated",
+        updatedAt: now,
+      })
+      .where(eq(quiraConversations.id, existing.conversationId));
+
+    await addMessage({
+      content: `Admin updated support case "${existing.title}" to ${input.status}.`,
+      conversationId: existing.conversationId,
+      metadata: {
+        caseId: existing.id,
+        updatedByUserId: input.userId,
+      },
+      role: "system",
+      userId: existing.userId ?? undefined,
+    });
+  }
+
+  return updated;
 }
 
 async function getSessionSupportSnapshot(input: {
@@ -847,11 +992,85 @@ export async function handleQuiraChat(input: QuiraChatInput, user: QuiraChatUser
   };
 }
 
+export async function createQuiraSupportReport(
+  input: QuiraSupportReportInput,
+  user: QuiraChatUser,
+) {
+  const reportMessage =
+    cleanText(input.message, MAX_MESSAGE_LENGTH) ||
+    "Support report submitted without text. See metadata for rating/screenshot context.";
+  const conversation = await getOrCreateConversation(
+    {
+      browserContext: input.browserContext,
+      conversationId: input.conversationId,
+      message: reportMessage,
+      product: input.product,
+      screen: input.screen,
+      sessionId: input.sessionId,
+    },
+    user,
+  );
+  const userMessage = await addMessage({
+    content: reportMessage,
+    conversationId: conversation.id,
+    metadata: {
+      kind: input.kind,
+      rating: input.rating,
+      screenshot: {
+        dataUrl: input.screenshotDataUrl,
+        mimeType: input.screenshotMimeType,
+        name: input.screenshotName,
+        size: input.screenshotSize,
+      },
+      source: "quira_report",
+    },
+    role: "user",
+    userId: user.id,
+  });
+
+  const supportCase = await createSupportCase({
+    conversationId: conversation.id,
+    details: {
+      browserContext: input.browserContext,
+      rating: input.rating,
+      screenshot: {
+        dataUrl: input.screenshotDataUrl,
+        mimeType: input.screenshotMimeType,
+        name: input.screenshotName,
+        size: input.screenshotSize,
+      },
+      source: "quira_report",
+    },
+    kind: input.kind,
+    product: input.product,
+    screen: input.screen,
+    sessionId: input.sessionId,
+    summary: reportMessage,
+    title:
+      input.kind === "bug"
+        ? "Bug report from Quira"
+        : input.kind === "feedback"
+          ? "Feedback from Quira"
+          : "Support report from Quira",
+    urgency: input.urgency,
+    userId: user.id,
+  });
+
+  return {
+    caseId: supportCase.id,
+    conversationId: conversation.id,
+    messageId: userMessage.id,
+    status: supportCase.status,
+  };
+}
+
 export async function listQuiraAdminSupportData(limit = 100) {
-  const [cases, conversations, articles] = await Promise.all([
+  const [cases, conversations, articles, messages] = await Promise.all([
     getDb()
       .select({
+        conversationId: quiraSupportCases.conversationId,
         createdAt: quiraSupportCases.createdAt,
+        details: quiraSupportCases.details,
         id: quiraSupportCases.id,
         kind: quiraSupportCases.kind,
         product: quiraSupportCases.product,
@@ -860,6 +1079,7 @@ export async function listQuiraAdminSupportData(limit = 100) {
         status: quiraSupportCases.status,
         summary: quiraSupportCases.summary,
         title: quiraSupportCases.title,
+        updatedAt: quiraSupportCases.updatedAt,
         urgency: quiraSupportCases.urgency,
         userEmail: users.email,
         userId: quiraSupportCases.userId,
@@ -900,6 +1120,21 @@ export async function listQuiraAdminSupportData(limit = 100) {
       .from(quiraKnowledgeArticles)
       .orderBy(desc(quiraKnowledgeArticles.updatedAt))
       .limit(limit),
+    getDb()
+      .select({
+        content: quiraMessages.content,
+        conversationId: quiraMessages.conversationId,
+        createdAt: quiraMessages.createdAt,
+        id: quiraMessages.id,
+        metadata: quiraMessages.metadata,
+        role: quiraMessages.role,
+        userEmail: users.email,
+        userId: quiraMessages.userId,
+      })
+      .from(quiraMessages)
+      .leftJoin(users, eq(users.id, quiraMessages.userId))
+      .orderBy(desc(quiraMessages.createdAt))
+      .limit(limit * 4),
   ]);
 
   return {
@@ -910,11 +1145,16 @@ export async function listQuiraAdminSupportData(limit = 100) {
     cases: cases.map((supportCase) => ({
       ...supportCase,
       createdAt: supportCase.createdAt.toISOString(),
+      updatedAt: supportCase.updatedAt.toISOString(),
     })),
     conversations: conversations.map((conversation) => ({
       ...conversation,
       createdAt: conversation.createdAt.toISOString(),
       updatedAt: conversation.updatedAt.toISOString(),
+    })),
+    messages: messages.map((message) => ({
+      ...message,
+      createdAt: message.createdAt.toISOString(),
     })),
   };
 }

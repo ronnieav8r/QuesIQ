@@ -128,6 +128,7 @@ async function QuiraAdminPanel() {
     articles: [],
     cases: [],
     conversations: [],
+    messages: [],
   };
   let promptConfig: PromptConfigRecord = {
     ...promptConfigFallbacks.quira_support_chat,

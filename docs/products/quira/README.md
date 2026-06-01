@@ -7,12 +7,14 @@ feature, not a separate support service.
 ## V1 Scope
 
 - Signed-in support chat through `POST /api/support/chat`.
+- Signed-in bug/feedback report capture through `POST /api/support/report`.
 - Stored support conversations, messages, tool events, curated knowledge
   articles, and support cases in Postgres.
 - Admin-managed prompt key: `quira_support_chat`.
 - Initial curated KB seeded for Interview practice, missing reviews, History,
   account/profile targets, and voice troubleshooting.
-- Admin review data API at `GET /api/admin/support`.
+- Admin review API at `GET /api/admin/support` and case status updates at
+  `PUT /api/admin/support`.
 - Public anonymous website widget, external ticketing, Make, VAPI, Intercom,
   and Zendesk are intentionally out of V1.
 
@@ -27,6 +29,11 @@ human follow-up.
 Safe session snapshots currently expose Interview session status fields only.
 They do not expose raw transcripts by default.
 
+The launcher flow is chat-first. Bug report capture is a secondary path from
+inside the same messenger-style window. Explicit Quira bug/feedback reports are
+saved to Quira conversations and support cases with product/screen/session
+context, rating, browser context, and screenshot metadata.
+
 ## Admin Review
 
 The V1 backend stores the Admin review objects needed for the Support area:
@@ -39,8 +46,11 @@ The V1 backend stores the Admin review objects needed for the Support area:
 - `quira_support_cases`: Admin inbox items with `new`, `triage`,
   `in_progress`, and `resolved` statuses.
 
-The first Admin UI pass can use `/api/admin/support` to list these records and
-then add KB editing and case workflow actions.
+Admin now has practical V1 support workflow controls:
+
+- inbox listing with status/urgency/kind/product/screen/user context
+- status update controls for each case
+- conversation detail view with recent stored messages
 
 ## Required Environment
 
@@ -51,3 +61,8 @@ then add KB editing and case workflow actions.
 
 If no support AI key is configured, the API still saves the user message and
 returns a clear unavailable response instead of pretending the chat answered.
+
+## Migration Requirement
+
+Production must include migration `drizzle/0056_add_quira_support_chat.sql`
+before Quira chat/report storage and Admin support review will function.
