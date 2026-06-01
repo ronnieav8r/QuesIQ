@@ -27,6 +27,7 @@ import {
   progressionLevelThresholds,
   progressionQuests,
   progressionXpRules,
+  practiceModes,
   sessions,
   stories,
   userProgression,
@@ -724,6 +725,7 @@ async function getQuestProgress(
     voiceDebriefRows,
     storyRows,
     introductionRows,
+    enabledPracticeModeRows,
   ] = await Promise.all([
     getDb()
       .select({
@@ -773,16 +775,23 @@ async function getQuestProgress(
       })
       .from(introductions)
       .where(eq(introductions.userId, userId)),
+    getDb()
+      .select({
+        key: practiceModes.key,
+      })
+      .from(practiceModes)
+      .where(eq(practiceModes.enabled, true)),
   ]);
   const completedSessions = sessionRows.filter((session) => session.status !== "created");
   const modeKeys = completedSessions.map((session) => session.modeKey);
+  const enabledModeKeys = new Set(enabledPracticeModeRows.map((mode) => mode.key));
   const questionTypeKeys = completedSessions.map((session) => session.questionTypeKey);
   const threshold = quest.checkThreshold;
   const profile = profileRows[0];
 
   switch (quest.checkType) {
     case "all_modes_used":
-      return new Set(modeKeys).size;
+      return new Set(modeKeys.filter((modeKey) => enabledModeKeys.has(modeKey))).size;
     case "all_question_types_used":
       return new Set(questionTypeKeys.filter(Boolean)).size;
     case "all_scores_min": {

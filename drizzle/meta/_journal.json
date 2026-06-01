@@ -414,6 +414,13 @@
       "when": 1780365600000,
       "tag": "0059_set_coaching_turn_based_runtime",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1780416000000,
+      "tag": "0060_tune_interview_practice_story_quests",
+      "breakpoints": true
     }
   ]
 }

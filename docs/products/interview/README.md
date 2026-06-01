@@ -63,3 +63,11 @@ Current static readiness checklist:
   missing.
 - Voice QA and production browser QA remain manual/unavailable in static check
   output and are never marked as passed by this script.
+
+## Progression Notes (V1)
+
+- Practice mode quest coverage now tracks the active Practice trio:
+  Coaching, Rapid Fire, and Mock Interview.
+- Retired First Impression remains disabled for normal Practice questing.
+- Story Lab quest coverage includes first saved Introduction, first saved TMAAT
+  story, and a deeper TMAAT story-bank quest at three saved stories.
