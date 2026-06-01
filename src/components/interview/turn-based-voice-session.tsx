@@ -420,7 +420,8 @@ export function TurnBasedVoiceSession({
         void startRecording(runId);
       }
       if (body.done && isSessionActive(runId)) {
-        updateDone(true);
+        appendEvent("turn_based.session.auto_complete");
+        completeFinalization("user_ended");
       }
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {

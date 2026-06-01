@@ -302,11 +302,11 @@ function turnTask(
 
   if (modeKey === "coaching") {
     if (retryAlreadyOffered) {
-      return "Give one short coaching note about the latest answer, then move on to a new or tighter follow-up question. Do not ask the user to retry the same answer again.";
+      return "Give one short coaching note about the latest answer, then move on to a completely new interview question. Do not ask about the same scenario again.";
     }
 
     return hasLatestAnswer
-      ? "Give one short, specific coaching note about the latest answer, then ask either one retry prompt for the same answer or one tighter follow-up question."
+      ? "Give one short, specific coaching note about the latest answer, then ask a completely new interview question. Only ask one retry prompt when the answer is unusable, off-topic, or too fragmented to coach."
       : "Generate the opening Coaching question for this session.";
   }
 
@@ -318,11 +318,13 @@ function turnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) {
     return [
       "You route QuesIQ Interview Coaching turns.",
       "Return only compact JSON with keys: archetypeId, question, feedback, routingReason, targetSkill, done.",
-      "Coaching is a question-answer-coach-retry/follow-up loop.",
+      "Coaching is a question-answer-coach-next-question loop.",
       "After each user answer, write one brief, specific feedback sentence tied to what the user actually said.",
-      "Then ask one concise next prompt: either one retry prompt for the same answer or a tighter follow-up question.",
-      "Never ask the user to retry the same answer twice in a row. If the previous Que prompt was a retry, move on with a follow-up or a new question.",
-      "For retry prompts, make the retry instruction clear inside the question field.",
+      "Then ask one concise new interview question from a different scenario or angle by default.",
+      "Only ask the user to retry when the latest answer is unusable, off-topic, or too fragmented to evaluate.",
+      "If the previous Que prompt was a retry, move on to a completely new question no matter how incomplete the new answer was.",
+      "The selected question count means distinct primary questions, not repeated retries on the same scenario.",
+      "For rare retry prompts, make the retry instruction clear inside the question field.",
       "Do not invent experience, credentials, metrics, or motivations.",
       "For the opening turn, leave feedback empty and ask one focused interview question.",
     ].join(" ");
@@ -521,8 +523,8 @@ async function generateTurnDecision(input: {
       return {
         ...decision,
         question:
-          "Let's move forward. What is one thing you would do differently if this situation came up again?",
-        routingReason: `${decision.routingReason} Replaced repeated retry with a follow-up prompt.`,
+          "Let's move to a different scenario. Tell me about a time you had to adapt quickly when conditions changed.",
+        routingReason: `${decision.routingReason} Replaced repeated retry with a new primary question.`,
       };
     }
 
