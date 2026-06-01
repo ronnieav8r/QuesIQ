@@ -48,6 +48,8 @@ type NextTurnResponse = {
   turnId?: string;
 };
 
+type TurnBasedPhase = "connecting" | "ended" | "error" | "live" | "ready";
+
 const emptyArtifactDraft: VoiceSessionArtifactDraft = { events: [], transcript: [] };
 
 function createRecordId(prefix: string) {
@@ -86,7 +88,7 @@ async function blobToBase64(blob: Blob) {
   return btoa(binary);
 }
 
-function canShowSessionCountdown(phase: "connecting" | "ended" | "error" | "live" | "ready") {
+function canShowSessionCountdown(phase: TurnBasedPhase) {
   return phase === "connecting" || phase === "live";
 }
 
@@ -109,11 +111,16 @@ export function TurnBasedVoiceSession({
   const silenceStartedAtMsRef = useRef<number | undefined>(undefined);
   const silenceTimerRef = useRef<number | undefined>(undefined);
   const voiceDetectedRef = useRef(false);
+  const doneRef = useRef(false);
+  const phaseRef = useRef<TurnBasedPhase>("ready");
+  const recordingRef = useRef(false);
+  const requestingRef = useRef(false);
+  const turnCountRef = useRef(0);
   const artifactDraftRef = useRef<VoiceSessionArtifactDraft>(emptyArtifactDraft);
   const [artifactDraft, setArtifactDraft] = useState<VoiceSessionArtifactDraft>(emptyArtifactDraft);
   const [answerElapsedSeconds, setAnswerElapsedSeconds] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [phase, setPhase] = useState<"connecting" | "ended" | "error" | "live" | "ready">("ready");
+  const [phase, setPhase] = useState<TurnBasedPhase>("ready");
   const [errorMessage, setErrorMessage] = useState<string>();
   const [currentQuestion, setCurrentQuestion] = useState<string>();
   const [recording, setRecording] = useState(false);
@@ -130,6 +137,31 @@ export function TurnBasedVoiceSession({
   const showAnswerCountdown = recording && answerSecondsRemaining <= 10;
   const showSessionCountdown =
     canShowSessionCountdown(phase) && sessionSecondsRemaining <= 60 && sessionSecondsRemaining > 0;
+
+  function updatePhase(nextPhase: TurnBasedPhase) {
+    phaseRef.current = nextPhase;
+    setPhase(nextPhase);
+  }
+
+  function updateRecording(nextRecording: boolean) {
+    recordingRef.current = nextRecording;
+    setRecording(nextRecording);
+  }
+
+  function updateRequesting(nextRequesting: boolean) {
+    requestingRef.current = nextRequesting;
+    setRequesting(nextRequesting);
+  }
+
+  function updateDone(nextDone: boolean) {
+    doneRef.current = nextDone;
+    setDone(nextDone);
+  }
+
+  function updateTurnCount(nextTurnCount: number) {
+    turnCountRef.current = nextTurnCount;
+    setTurnCount(nextTurnCount);
+  }
 
   useEffect(() => {
     artifactDraftRef.current = artifactDraft;
@@ -203,7 +235,7 @@ export function TurnBasedVoiceSession({
     silenceStartedAtMsRef.current = undefined;
     voiceDetectedRef.current = false;
     setAnswerElapsedSeconds(0);
-    setRecording(false);
+    updateRecording(false);
   }
 
   function startSilenceMonitor(stream: MediaStream) {
@@ -305,7 +337,7 @@ export function TurnBasedVoiceSession({
   }
 
   async function requestTurn(payload: TurnPayload) {
-    setRequesting(true);
+    updateRequesting(true);
     appendEvent("turn_based.next_turn.request");
     try {
       const response = await fetch("/api/interview/turn-based/next-turn", {
@@ -329,18 +361,18 @@ export function TurnBasedVoiceSession({
         setCurrentQuestion(body.question.trim());
         appendTranscript(transcriptTurn("Que", "assistant", body.question));
       }
-      setRequesting(false);
+      updateRequesting(false);
       await playQuestionAudio(body);
       if (body.question?.trim() && !body.done) {
-        startRecording();
+        void startRecording();
       }
       if (body.done) {
-        setDone(true);
+        updateDone(true);
       }
     } catch (error) {
       const message = toErrorMessage(error);
       setErrorMessage(message);
-      setPhase("error");
+      updatePhase("error");
       appendEvent("turn_based.next_turn.error");
       logDiagnosticEvent({
         endpoint: "/api/interview/turn-based/next-turn",
@@ -352,7 +384,7 @@ export function TurnBasedVoiceSession({
         source: "realtime",
       });
     } finally {
-      setRequesting(false);
+      updateRequesting(false);
     }
   }
 
@@ -371,15 +403,15 @@ export function TurnBasedVoiceSession({
       onArtifactFinalized?.(finalized);
       return finalized;
     });
-    setPhase(endReason === "user_ended" ? "ended" : "error");
+    updatePhase(endReason === "user_ended" ? "ended" : "error");
   }
 
   async function startSession() {
     try {
       setErrorMessage(undefined);
-      setPhase("connecting");
-      setDone(false);
-      setTurnCount(0);
+      updatePhase("connecting");
+      updateDone(false);
+      updateTurnCount(0);
       setCurrentQuestion(undefined);
       sessionStartedAtMsRef.current = Date.now();
       const initialArtifact = {
@@ -389,7 +421,7 @@ export function TurnBasedVoiceSession({
       };
       artifactDraftRef.current = initialArtifact;
       setArtifactDraft(initialArtifact);
-      setPhase("live");
+      updatePhase("live");
       await requestTurn({
         priorTurns: [],
         sessionId,
@@ -398,12 +430,19 @@ export function TurnBasedVoiceSession({
       });
     } catch (error) {
       setErrorMessage(toErrorMessage(error));
-      setPhase("error");
+      updatePhase("error");
     }
   }
 
   async function startRecording() {
-    if (recording || phase !== "live" || done || requesting) return;
+    if (
+      recordingRef.current ||
+      phaseRef.current !== "live" ||
+      doneRef.current ||
+      requestingRef.current
+    ) {
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
@@ -420,20 +459,21 @@ export function TurnBasedVoiceSession({
         const answerAudioBase64 = await blobToBase64(blob);
         closeMedia();
         appendEvent("turn_based.answer.recorded");
+        const nextTurnIndex = turnCountRef.current + 1;
         await requestTurn({
           answerAudioBase64,
           answerMimeType,
           priorTurns: artifactDraftRef.current.transcript,
           sessionId,
           snapshot,
-          turnIndex: turnCount + 1,
+          turnIndex: nextTurnIndex,
         });
-        setTurnCount((current) => current + 1);
+        updateTurnCount(nextTurnIndex);
       };
       recorder.start();
       recordingStartedAtMsRef.current = Date.now();
       setAnswerElapsedSeconds(0);
-      setRecording(true);
+      updateRecording(true);
       appendEvent("turn_based.answer.recording_start");
     } catch (error) {
       const message = toErrorMessage(error);
@@ -443,7 +483,7 @@ export function TurnBasedVoiceSession({
   }
 
   function stopRecording() {
-    if (!recording) return;
+    if (!recordingRef.current) return;
     mediaRecorderRef.current?.stop();
     appendEvent("turn_based.answer.recording_stop");
   }
