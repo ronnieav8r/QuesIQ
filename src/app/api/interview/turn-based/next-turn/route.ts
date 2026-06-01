@@ -10,6 +10,7 @@ export const runtime = "nodejs";
 type RequestBody = {
   answerAudioBase64?: string;
   answerMimeType?: string;
+  endAfterAnswer?: boolean;
   priorTurns?: Array<{
     feedback?: string;
     question?: string;
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
       turnInput: {
         answerAudioBase64: body.answerAudioBase64,
         answerMimeType: body.answerMimeType,
+        endAfterAnswer: body.endAfterAnswer === true,
         priorTurns: body.priorTurns ?? [],
         sessionId,
         snapshot,

@@ -26,6 +26,7 @@ type PriorTurn = {
 export type TurnBasedInput = {
   answerAudioBase64?: string;
   answerMimeType?: string;
+  endAfterAnswer?: boolean;
   priorTurns: PriorTurn[];
   sessionId: string;
   snapshot: SessionSetupSnapshot;
@@ -237,6 +238,7 @@ async function generateTurnDecision(input: {
   snapshot: SessionSetupSnapshot;
   turnIndex: number;
   userId: string;
+  endAfterAnswer?: boolean;
   priorTurns: PriorTurn[];
 }) {
   const promptComponents = await getSessionPromptComponents(input.snapshot);
@@ -253,7 +255,9 @@ async function generateTurnDecision(input: {
       (!archetype.questionTypeKey ||
         archetype.questionTypeKey === input.snapshot.questionTypeKey),
   );
-  const mustEnd = Boolean(input.latestTranscript) && input.turnIndex + 1 >= input.config.maxTurns;
+  const mustEnd =
+    Boolean(input.latestTranscript) &&
+    (input.endAfterAnswer === true || input.turnIndex + 1 >= input.config.maxTurns);
   const run = await startAiRun({
     model: input.config.textModel,
     rawJson: { modeKey: input.snapshot.modeKey, turnIndex: input.turnIndex },
@@ -440,6 +444,7 @@ export async function runTurnBasedRapidFireTurn(input: {
   const decision = await generateTurnDecision({
     apiKey,
     config: input.config,
+    endAfterAnswer: input.turnInput.endAfterAnswer,
     latestTranscript,
     priorTurns: input.turnInput.priorTurns,
     sessionId: input.turnInput.sessionId,
