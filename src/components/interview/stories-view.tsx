@@ -119,7 +119,7 @@ type StoriesViewProps = {
   selectedJobTarget?: JobTargetRecord;
 };
 
-type StoryCaptureMode = "dictate" | "tell" | "type";
+type StoryCaptureMode = "dictate" | "type";
 type StoryLabTab = "intro" | "tmaat";
 type StoryLabView = "build" | "library";
 type IntroCaptureMode = "dictate" | "tell" | "type";
@@ -241,7 +241,6 @@ export function StoriesView({
   selectedJobTarget,
 }: StoriesViewProps) {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
-  const conversationArtifactKeyRef = useRef<string | undefined>(undefined);
   const introConversationArtifactKeyRef = useRef<string | undefined>(undefined);
   const introMaterialRef = useRef("");
   const introSpeechBaseTextRef = useRef("");
@@ -258,9 +257,7 @@ export function StoriesView({
   const [editError, setEditError] = useState<string>();
   const [editingStoryId, setEditingStoryId] = useState<string>();
   const [error, setError] = useState<string>();
-  const [captureMode, setCaptureMode] = useState<StoryCaptureMode>("tell");
-  const [conversationStatus, setConversationStatus] =
-    useState<"idle" | "ready">("idle");
+  const [captureMode, setCaptureMode] = useState<StoryCaptureMode>("dictate");
   const [introAudience, setIntroAudience] = useState<IntroAudience>("virtual");
   const [introCaptureMode, setIntroCaptureMode] = useState<IntroCaptureMode>("tell");
   const [introDraft, setIntroDraft] = useState<IntroDraft>(createEmptyIntroDraft);
@@ -312,13 +309,11 @@ export function StoriesView({
     stories.find((story) => story.id === selectedStoryId) ?? stories[0];
   const editingStory = stories.find((story) => story.id === editingStoryId);
   const captureStatusLabel =
-    captureMode === "tell"
-      ? "Live conversation"
-      : captureMode === "dictate"
-        ? canUseSpeech
-          ? "Dictation ready"
-          : "Type fallback"
-        : "Writing";
+    captureMode === "dictate"
+      ? canUseSpeech
+        ? "Dictation ready"
+        : "Type fallback"
+      : "Writing";
   const introCaptureStatusLabel =
     introCaptureMode === "tell"
       ? "Live conversation"
@@ -427,8 +422,6 @@ export function StoriesView({
     speechTranscriptRef.current = "";
     speechBaseTextRef.current = "";
     draftTextRef.current = "";
-    conversationArtifactKeyRef.current = undefined;
-    setConversationStatus("idle");
     setDraftText("");
     setPendingAction(undefined);
     setRecording(false);
@@ -490,27 +483,6 @@ export function StoriesView({
 
     setError(undefined);
     setIntroCaptureMode(nextMode);
-  }
-
-  function saveConversationArtifact(artifact: VoiceSessionArtifactDraft) {
-    if (artifact.transcript.length === 0) {
-      return;
-    }
-
-    const artifactKey = `${artifact.endedAt}:${artifact.transcript.length}`;
-
-    if (conversationArtifactKeyRef.current === artifactKey) {
-      return;
-    }
-
-    conversationArtifactKeyRef.current = artifactKey;
-    setTurns(
-      artifact.transcript.map((turn) =>
-        createTurn(turn.role === "assistant" ? "assistant" : "user", turn.text),
-      ),
-    );
-    setDraftText("");
-    setConversationStatus("ready");
   }
 
   function saveIntroConversationArtifact(artifact: VoiceSessionArtifactDraft) {
@@ -1592,15 +1564,6 @@ export function StoriesView({
 
           <div className="segmented-control" role="tablist" aria-label="Story capture mode">
             <button
-              aria-selected={captureMode === "tell"}
-              className={captureMode === "tell" ? "active" : undefined}
-              onClick={() => chooseStoryCaptureMode("tell")}
-              role="tab"
-              type="button"
-            >
-              Tell Que
-            </button>
-            <button
               aria-selected={captureMode === "dictate"}
               className={captureMode === "dictate" ? "active" : undefined}
               onClick={() => chooseStoryCaptureMode("dictate")}
@@ -1620,51 +1583,27 @@ export function StoriesView({
             </button>
           </div>
 
-          {captureMode === "tell" && (
-            <div className="story-live-panel">
-              <RealtimeVoiceSession
-                endpoint="/api/realtime/story"
-                firstTurnInstructions="Speak in English only. Start this Story Lab capture using the active Admin-visible Story Conversation Realtime prompt and the provided capture-purpose context. Ask exactly one opening question."
-                onArtifactFinalized={saveConversationArtifact}
-                realtimeInstructions="Capture purpose: TMAAT Story Lab."
-                sessionId="story-lab"
-                startButtonLabel="Start Conversation"
-                surfaceClassName="realtime-session story-realtime-session"
-                title="Tell Que what happened"
-              />
-              {conversationStatus === "ready" && (
-                <p>
-                  Conversation captured. Shape it into a reusable story when you are ready.
-                </p>
-              )}
-            </div>
-          )}
+          <label>
+            <span>{captureMode === "type" ? "Write what happened" : "Dictated story notes"}</span>
+            <textarea
+              onChange={(event) => setDraftText(event.target.value)}
+              placeholder={
+                captureMode === "dictate"
+                  ? "Dictate the rough story here, then add it to the story material."
+                  : "Type anything Que should know about what happened."
+              }
+              value={draftText}
+            />
+          </label>
 
-          {captureMode === "tell" && (
-            <div className="story-chat" aria-label="Story Lab conversation">
-              {turns.map((turn) => (
-                <article className={`story-turn ${turn.role}`} key={turn.id}>
-                  <strong>{turn.role === "assistant" ? "Que" : "You"}</strong>
-                  <p>{turn.text}</p>
-                </article>
-              ))}
-            </div>
-          )}
-
-          {captureMode !== "tell" && (
-            <label>
-              <span>{captureMode === "type" ? "Write what happened" : "Dictated story notes"}</span>
-              <textarea
-                onChange={(event) => setDraftText(event.target.value)}
-                placeholder={
-                  captureMode === "dictate"
-                    ? "Dictate the rough story here, then add it to the story material."
-                    : "Type anything Que should know about what happened."
-                }
-                value={draftText}
-              />
-            </label>
-          )}
+          <div className="story-chat" aria-label="Story Lab material">
+            {turns.map((turn) => (
+              <article className={`story-turn ${turn.role}`} key={turn.id}>
+                <strong>{turn.role === "assistant" ? "Que" : "You"}</strong>
+                <p>{turn.text}</p>
+              </article>
+            ))}
+          </div>
 
           <div className="inline-actions">
             {captureMode === "dictate" && (
@@ -1686,7 +1625,7 @@ export function StoriesView({
             )}
             <button
               className="secondary"
-              disabled={!draftText.trim() || captureMode === "tell"}
+              disabled={!draftText.trim()}
               onClick={() => addUserTurn(draftText)}
               type="button"
             >
