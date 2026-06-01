@@ -31,6 +31,9 @@ type PracticeSetupProps = {
   step: PracticeStep;
 };
 
+const minimumRapidFireQuestions = 1;
+const maximumRapidFireQuestions = 10;
+
 function stepLabel(step: PracticeStep) {
   switch (step) {
     case "mode":
@@ -197,6 +200,41 @@ export function PracticeSetup({
         <section aria-labelledby="ready-title" className="ready-view">
           <p className="eyebrow">Session Preview</p>
           <h2 id="ready-title">Ready for Que</h2>
+          {selectedMode.key === "rapid_fire" && (
+            <fieldset className="rapid-fire-question-picker">
+              <legend>Questions</legend>
+              <div className="number-stepper" role="group" aria-label="Rapid Fire question count">
+                <button
+                  aria-label="Reduce Rapid Fire questions"
+                  disabled={rapidFireQuestionCount <= minimumRapidFireQuestions}
+                  onClick={() =>
+                    onRapidFireQuestionCount(
+                      Math.max(minimumRapidFireQuestions, rapidFireQuestionCount - 1),
+                    )
+                  }
+                  type="button"
+                >
+                  -
+                </button>
+                <output aria-live="polite">
+                  <strong>{rapidFireQuestionCount}</strong>
+                  <span>{rapidFireQuestionCount === 1 ? "question" : "questions"}</span>
+                </output>
+                <button
+                  aria-label="Add Rapid Fire questions"
+                  disabled={rapidFireQuestionCount >= maximumRapidFireQuestions}
+                  onClick={() =>
+                    onRapidFireQuestionCount(
+                      Math.min(maximumRapidFireQuestions, rapidFireQuestionCount + 1),
+                    )
+                  }
+                  type="button"
+                >
+                  +
+                </button>
+              </div>
+            </fieldset>
+          )}
           <dl>
             <div>
               <dt>Mode</dt>
@@ -218,10 +256,6 @@ export function PracticeSetup({
                   <dt>Questions</dt>
                   <dd>{rapidFireQuestionCount}</dd>
                 </div>
-                <div>
-                  <dt>Session limit</dt>
-                  <dd>{rapidFireQuestionCount * 65}s</dd>
-                </div>
               </>
             )}
             <div>
@@ -232,29 +266,10 @@ export function PracticeSetup({
               <dt>Target company</dt>
               <dd>{selectedJobTarget?.targetCompany || interviewContext.targetCompany || "Optional"}</dd>
             </div>
-            <div>
-              <dt>Resume context</dt>
-              <dd>{interviewContext.resumeText ? "Parsed for Que" : "Not added"}</dd>
-            </div>
           </dl>
           <p>
             QuesIQ saves this setup before Que starts the live voice practice.
           </p>
-          {selectedMode.key === "rapid_fire" && (
-            <label>
-              <span>Rapid Fire question count</span>
-              <select
-                onChange={(event) => onRapidFireQuestionCount(Number(event.target.value))}
-                value={rapidFireQuestionCount}
-              >
-                {Array.from({ length: 10 }, (_, index) => index + 1).map((count) => (
-                  <option key={count} value={count}>
-                    {count}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
           {sessionLaunchError && <p className="form-error">{sessionLaunchError}</p>}
           <button disabled={sessionLaunchPending} onClick={onLaunch} type="button">
             {sessionLaunchPending ? "Creating Session..." : "Launch Voice Session"}

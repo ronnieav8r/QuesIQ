@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { parseSessionSetupSnapshot } from "@/product/session-snapshot";
 import { getInterviewRuntimeConfig } from "@/server/interview/runtime-configs";
-import { runTurnBasedRapidFireTurn } from "@/server/interview/turn-based";
+import { runTurnBasedInterviewTurn } from "@/server/interview/turn-based";
 
 export const runtime = "nodejs";
 
@@ -40,8 +40,15 @@ export async function POST(request: Request) {
   const sessionId = body.sessionId?.trim();
   const turnIndex = Number(body.turnIndex);
 
-  if (!sessionId || !snapshot || snapshot.modeKey !== "rapid_fire") {
-    return NextResponse.json({ error: "Rapid Fire turn payload is invalid." }, { status: 400 });
+  if (
+    !sessionId ||
+    !snapshot ||
+    (snapshot.modeKey !== "rapid_fire" && snapshot.modeKey !== "coaching")
+  ) {
+    return NextResponse.json(
+      { error: "Turn-based Interview payload is invalid." },
+      { status: 400 },
+    );
   }
 
   if (!Number.isInteger(turnIndex) || turnIndex < 0 || turnIndex > 50) {
@@ -49,16 +56,16 @@ export async function POST(request: Request) {
   }
 
   try {
-    const config = await getInterviewRuntimeConfig("rapid_fire");
+    const config = await getInterviewRuntimeConfig(snapshot.modeKey);
 
     if (!config.enabled || config.engine !== "turn_based") {
       return NextResponse.json(
-        { error: "Rapid Fire turn-based engine is not enabled." },
+        { error: "Turn-based Interview engine is not enabled for this mode." },
         { status: 409 },
       );
     }
 
-    const result = await runTurnBasedRapidFireTurn({
+    const result = await runTurnBasedInterviewTurn({
       config,
       turnInput: {
         answerAudioBase64: body.answerAudioBase64,
@@ -78,11 +85,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Rapid Fire turn failed.", error);
+    console.error("Turn-based Interview turn failed.", error);
     return NextResponse.json(
       {
-        detail: error instanceof Error ? error.message : "Rapid Fire turn failed.",
-        error: "Rapid Fire turn could not be created.",
+        detail: error instanceof Error ? error.message : "Turn-based Interview turn failed.",
+        error: "Turn-based Interview turn could not be created.",
       },
       { status: 503 },
     );

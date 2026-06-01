@@ -37,7 +37,7 @@ export const defaultInterviewRuntimeConfigs: InterviewRuntimeConfigRecord[] = [
   },
   {
     enabled: true,
-    engine: "realtime",
+    engine: "turn_based",
     feedbackDepth: "coaching",
     maxAnswerSeconds: 90,
     maxDurationSeconds: 900,

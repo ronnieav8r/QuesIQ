@@ -20,6 +20,9 @@ import type { InterviewRuntimeConfigRecord } from "@/server/interview/runtime-co
 type PriorTurn = {
   feedback?: string;
   question?: string;
+  role?: string;
+  speaker?: string;
+  text?: string;
   transcript?: string;
 };
 
@@ -93,24 +96,62 @@ function rapidFireQuestionLimit(snapshot: SessionSetupSnapshot, fallback: number
   return Math.max(1, Math.min(10, snapshot.rapidFireQuestionCount ?? fallback));
 }
 
-function parseDecision(raw: string, mustEnd: boolean): TurnDecision {
+function turnLimit(snapshot: SessionSetupSnapshot, fallback: number) {
+  if (snapshot.modeKey === "rapid_fire") {
+    return rapidFireQuestionLimit(snapshot, fallback);
+  }
+
+  return Math.max(1, Math.min(25, fallback));
+}
+
+function modeLabel(modeKey: SessionSetupSnapshot["modeKey"]) {
+  return modeKey === "rapid_fire" ? "Rapid Fire" : "Coaching";
+}
+
+function fallbackQuestion(modeKey: SessionSetupSnapshot["modeKey"]) {
+  if (modeKey === "coaching") {
+    return "Tell me about a recent work challenge and what you did.";
+  }
+
+  return "Tell me about a time you had to respond under pressure.";
+}
+
+function fallbackRoutingReason(modeKey: SessionSetupSnapshot["modeKey"]) {
+  return modeKey === "coaching"
+    ? "Coaching prompt used for focused answer improvement."
+    : "Fallback question used after a malformed routing response.";
+}
+
+function fallbackTargetSkill(modeKey: SessionSetupSnapshot["modeKey"]) {
+  return modeKey === "coaching" ? "clearer interview answer structure" : "clear concise answers";
+}
+
+function parseDecision(
+  raw: string,
+  input: { mustEnd: boolean; modeKey: SessionSetupSnapshot["modeKey"] },
+): TurnDecision {
+  const allowFeedback = input.mustEnd || input.modeKey === "coaching";
   try {
     const parsed = JSON.parse(raw) as Partial<TurnDecision>;
     return {
       archetypeId: cleanText(parsed.archetypeId) || undefined,
-      done: mustEnd || parsed.done === true,
-      feedback: mustEnd ? cleanText(parsed.feedback) || undefined : undefined,
-      question: mustEnd ? undefined : cleanText(parsed.question) || undefined,
-      routingReason: cleanText(parsed.routingReason, "Balanced Rapid Fire practice."),
-      targetSkill: cleanText(parsed.targetSkill, "clear concise answers"),
+      done: input.mustEnd || parsed.done === true,
+      feedback: allowFeedback ? cleanText(parsed.feedback) || undefined : undefined,
+      question: input.mustEnd ? undefined : cleanText(parsed.question) || undefined,
+      routingReason: cleanText(parsed.routingReason, fallbackRoutingReason(input.modeKey)),
+      targetSkill: cleanText(parsed.targetSkill, fallbackTargetSkill(input.modeKey)),
     };
   } catch {
     return {
-      done: mustEnd,
-      feedback: mustEnd ? "Rapid Fire complete. End the session for your review." : undefined,
-      question: mustEnd ? undefined : "Tell me about a time you had to respond under pressure.",
-      routingReason: "Fallback question used after a malformed routing response.",
-      targetSkill: "clear concise answers",
+      done: input.mustEnd,
+      feedback: input.mustEnd
+        ? `${modeLabel(input.modeKey)} complete. End the session for your review.`
+        : input.modeKey === "coaching"
+          ? "Start with a clear situation, then name your action and the result."
+          : undefined,
+      question: input.mustEnd ? undefined : fallbackQuestion(input.modeKey),
+      routingReason: fallbackRoutingReason(input.modeKey),
+      targetSkill: fallbackTargetSkill(input.modeKey),
     };
   }
 }
@@ -138,7 +179,7 @@ async function transcribeAnswer(input: {
     formData.append(
       "file",
       new Blob([audioBuffer], { type: input.mimeType || "audio/webm" }),
-      `rapid-fire-answer.${input.mimeType?.includes("mp4") ? "m4a" : "webm"}`,
+      `interview-answer.${input.mimeType?.includes("mp4") ? "m4a" : "webm"}`,
     );
 
     const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
@@ -234,6 +275,49 @@ async function generateSpeech(input: {
   }
 }
 
+function turnTask(
+  modeKey: SessionSetupSnapshot["modeKey"],
+  mustEnd: boolean,
+  hasLatestAnswer: boolean,
+) {
+  if (mustEnd) {
+    return modeKey === "coaching"
+      ? "Give brief final coaching feedback and set done true. Do not return a next question."
+      : "Give brief Rapid Fire wrap-up feedback and set done true. Do not return a next question.";
+  }
+
+  if (modeKey === "coaching") {
+    return hasLatestAnswer
+      ? "Give one short, specific coaching note about the latest answer, then ask either a retry prompt for the same answer or one tighter follow-up question."
+      : "Generate the opening Coaching question for this session.";
+  }
+
+  return "Log the latest answer internally, choose a fresh Rapid Fire archetype, and write one concise interview question that does not follow up on the previous answer.";
+}
+
+function turnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) {
+  if (modeKey === "coaching") {
+    return [
+      "You route QuesIQ Interview Coaching turns.",
+      "Return only compact JSON with keys: archetypeId, question, feedback, routingReason, targetSkill, done.",
+      "Coaching is a question-answer-coach-retry/follow-up loop.",
+      "After each user answer, write one brief, specific feedback sentence tied to what the user actually said.",
+      "Then ask one concise next prompt: either a retry prompt for the same answer or a tighter follow-up question.",
+      "For retry prompts, make the retry instruction clear inside the question field.",
+      "Do not invent experience, credentials, metrics, or motivations.",
+      "For the opening turn, leave feedback empty and ask one focused interview question.",
+    ].join(" ");
+  }
+
+  return [
+    "You route QuesIQ Interview Rapid Fire turns.",
+    "Return only compact JSON with keys: archetypeId, question, feedback, routingReason, targetSkill, done.",
+    "Rapid Fire is not coaching: after each answer, do not ask a follow-up about that answer, do not reference the previous answer, and do not provide between-question feedback.",
+    "Generate a fresh, unrelated one-sentence interview question within the selected focus.",
+    "Set feedback to an empty string except on final wrap-up.",
+  ].join(" ");
+}
+
 async function generateTurnDecision(input: {
   apiKey: string;
   config: InterviewRuntimeConfigRecord;
@@ -250,16 +334,17 @@ async function generateTurnDecision(input: {
   const archetypes = await getDb()
     .select()
     .from(interviewQuestionArchetypes)
-    .where(eq(interviewQuestionArchetypes.modeKey, "rapid_fire"))
+    .where(eq(interviewQuestionArchetypes.modeKey, input.snapshot.modeKey))
     .orderBy(asc(interviewQuestionArchetypes.displayOrder));
   const matchingArchetypes = archetypes.filter(
     (archetype) =>
       archetype.enabled &&
-      archetype.title !== "Vague answer recovery" &&
+      (input.snapshot.modeKey !== "rapid_fire" ||
+        archetype.title !== "Vague answer recovery") &&
       (!archetype.questionTypeKey ||
         archetype.questionTypeKey === input.snapshot.questionTypeKey),
   );
-  const maxTurns = rapidFireQuestionLimit(input.snapshot, input.config.maxTurns);
+  const maxTurns = turnLimit(input.snapshot, input.config.maxTurns);
   const mustEnd =
     Boolean(input.latestTranscript) &&
     (input.endAfterAnswer === true || input.turnIndex >= maxTurns);
@@ -272,13 +357,11 @@ async function generateTurnDecision(input: {
   });
 
   const payload = {
-    task: mustEnd
-      ? "Give brief Rapid Fire wrap-up feedback and set done true. Do not return a next question."
-      : "Log the latest answer internally, choose a fresh Rapid Fire archetype, and write one concise interview question that does not follow up on the previous answer.",
+    task: turnTask(input.snapshot.modeKey, mustEnd, Boolean(input.latestTranscript)),
     config: {
       feedbackDepth: input.config.feedbackDepth,
       maxTurns,
-      selectedQuestionCount: maxTurns,
+      selectedQuestionCount: input.snapshot.rapidFireQuestionCount ?? null,
       turnIndex: input.turnIndex,
     },
     session: {
@@ -324,8 +407,7 @@ async function generateTurnDecision(input: {
       body: JSON.stringify({
         input: [
           {
-            content:
-              "You route QuesIQ Interview Rapid Fire turns. Return only compact JSON with keys: archetypeId, question, feedback, routingReason, targetSkill, done. Rapid Fire is not coaching: after each answer, do not ask a follow-up about that answer, do not reference the previous answer, and do not provide between-question feedback. Generate a fresh, unrelated one-sentence interview question within the selected focus. Set feedback to an empty string except on final wrap-up.",
+            content: turnSystemPrompt(input.snapshot.modeKey),
             role: "system",
           },
           {
@@ -336,7 +418,7 @@ async function generateTurnDecision(input: {
         model: input.config.textModel,
         text: {
           format: {
-            name: "rapid_fire_turn",
+            name: "interview_turn",
             schema: {
               additionalProperties: false,
               properties: {
@@ -371,18 +453,18 @@ async function generateTurnDecision(input: {
     if (!response.ok) {
       const detail = await response.text();
       await completeAiRun(run.id, {
-        errorMessage: `Rapid Fire turn failed: ${detail.slice(0, 300)}`,
+        errorMessage: `Interview turn failed: ${detail.slice(0, 300)}`,
         rawJson: { status: response.status },
         status: "failed",
       });
-      throw new Error("Rapid Fire turn generation failed.");
+      throw new Error("Interview turn generation failed.");
     }
 
     const providerRequestId = response.headers.get("x-request-id") ?? undefined;
     const body = (await response.json()) as ResponsesApiBody;
     const outputText = extractResponseText(body);
     if (!outputText) {
-      throw new Error("Rapid Fire turn generation returned no text.");
+      throw new Error("Interview turn generation returned no text.");
     }
     const pricing = await getActiveAiPricing(input.config.textModel, "text");
     const estimatedCostMicroUsd = estimateTokenCostMicroUsd(
@@ -402,17 +484,17 @@ async function generateTurnDecision(input: {
       totalTokens: body.usage?.total_tokens,
     });
 
-    return parseDecision(outputText, mustEnd);
+    return parseDecision(outputText, { modeKey: input.snapshot.modeKey, mustEnd });
   } catch (error) {
     await completeAiRun(run.id, {
-      errorMessage: error instanceof Error ? error.message : "Rapid Fire turn failed.",
+      errorMessage: error instanceof Error ? error.message : "Interview turn failed.",
       status: "failed",
     });
     throw error;
   }
 }
 
-export async function runTurnBasedRapidFireTurn(input: {
+export async function runTurnBasedInterviewTurn(input: {
   config: InterviewRuntimeConfigRecord;
   turnInput: TurnBasedInput;
   userId: string;
@@ -459,11 +541,12 @@ export async function runTurnBasedRapidFireTurn(input: {
     userId: input.userId,
   });
 
-  const questionAudioBase64 = decision.question
+  const speechText = [decision.feedback, decision.question].filter(Boolean).join(" ");
+  const questionAudioBase64 = speechText
     ? await generateSpeech({
         apiKey,
         model: input.config.ttsModel,
-        question: decision.question,
+        question: speechText,
         sessionId: input.turnInput.sessionId,
         userId: input.userId,
         voice: input.config.ttsVoice,
@@ -477,7 +560,7 @@ export async function runTurnBasedRapidFireTurn(input: {
       archetypeId: decision.archetypeId,
       feedback: decision.feedback,
       modeKey: session.modeKey,
-      question: decision.question || "Rapid Fire complete.",
+      question: decision.question || `${modeLabel(input.turnInput.snapshot.modeKey)} complete.`,
       routingReason: decision.routingReason,
       sessionId: input.turnInput.sessionId,
       targetSkill: decision.targetSkill,
@@ -490,7 +573,7 @@ export async function runTurnBasedRapidFireTurn(input: {
         answerTranscript: latestTranscript,
         archetypeId: decision.archetypeId,
         feedback: decision.feedback,
-        question: decision.question || "Rapid Fire complete.",
+        question: decision.question || `${modeLabel(input.turnInput.snapshot.modeKey)} complete.`,
         routingReason: decision.routingReason,
         targetSkill: decision.targetSkill,
         updatedAt: new Date(),

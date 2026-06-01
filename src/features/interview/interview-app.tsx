@@ -57,7 +57,7 @@ export default function Home() {
   const [selectedModeKey, setSelectedModeKey] = useState<PracticeMode["key"]>();
   const [selectedQuestionKey, setSelectedQuestionKey] = useState<QuestionTypeKey>();
   const [selectedStyleKey, setSelectedStyleKey] = useState<InterviewStyleKey>();
-  const [rapidFireQuestionCount, setRapidFireQuestionCount] = useState(5);
+  const [rapidFireQuestionCount, setRapidFireQuestionCount] = useState(4);
   const [interviewContext, setInterviewContext] = useState(initialInterviewContext);
   const [jobTargets, setJobTargets] = useState<JobTargetRecord[]>([]);
   const [selectedJobTarget, setSelectedJobTarget] = useState<JobTargetRecord>();
@@ -477,7 +477,7 @@ export default function Home() {
     setSelectedModeKey(undefined);
     setSelectedQuestionKey(undefined);
     setSelectedStyleKey(undefined);
-    setRapidFireQuestionCount(5);
+    setRapidFireQuestionCount(4);
     setPracticeUsesProfileContext(false);
     setSelectedJobTarget((current) => current ?? activeJobTarget ?? jobTargets[0]);
   }

@@ -407,6 +407,13 @@
       "when": 1780362000000,
       "tag": "0058_disable_rapid_fire_recovery_archetype",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1780365600000,
+      "tag": "0059_set_coaching_turn_based_runtime",
+      "breakpoints": true
     }
   ]
 }

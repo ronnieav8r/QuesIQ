@@ -22,8 +22,12 @@ const lanes = {
     "src/server/dpe/",
   ],
   interview: [
+    "drizzle/0059_set_coaching_turn_based_runtime.sql",
+    "drizzle/meta/_journal.json",
     "docs/products/interview/",
+    "scripts/guards/check-lane.mjs",
     "scripts/interview/",
+    "src/app/globals.css",
     "src/app/api/catalog/",
     "src/app/api/coaching-memory/",
     "src/app/api/debriefs/",

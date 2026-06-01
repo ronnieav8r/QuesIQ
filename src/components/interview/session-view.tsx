@@ -70,15 +70,15 @@ export function SessionView({
   const [runtimeConfig, setRuntimeConfig] = useState<RuntimeConfig>({
     engine: "realtime",
   });
+  const canLoadTurnBasedRuntime =
+    snapshot.modeKey === "rapid_fire" || snapshot.modeKey === "coaching";
   const [runtimeConfigLoaded, setRuntimeConfigLoaded] = useState(
-    snapshot.modeKey !== "rapid_fire",
+    !canLoadTurnBasedRuntime,
   );
-  const useTurnBasedRapidFire =
-    snapshot.modeKey === "rapid_fire" &&
-    runtimeConfigLoaded &&
-    runtimeConfig.engine === "turn_based";
-  const rapidFireQuestionCount = snapshot.rapidFireQuestionCount ?? 5;
-  const turnBasedRapidFireConfig: RuntimeConfig = useTurnBasedRapidFire
+  const useTurnBasedSession = runtimeConfigLoaded && runtimeConfig.engine === "turn_based";
+  const rapidFireQuestionCount = snapshot.rapidFireQuestionCount ?? 4;
+  const turnBasedRuntimeConfig: RuntimeConfig =
+    useTurnBasedSession && snapshot.modeKey === "rapid_fire"
     ? {
         ...runtimeConfig,
         maxAnswerSeconds: 65,
@@ -89,13 +89,13 @@ export function SessionView({
 
   useEffect(() => {
     let ignore = false;
-    if (snapshot.modeKey !== "rapid_fire") {
+    if (snapshot.modeKey !== "rapid_fire" && snapshot.modeKey !== "coaching") {
       return;
     }
 
     async function loadRuntimeConfig() {
       try {
-        const response = await fetch("/api/interview/runtime-config?modeKey=rapid_fire");
+        const response = await fetch(`/api/interview/runtime-config?modeKey=${snapshot.modeKey}`);
         const body = (await response.json()) as {
           config?: RuntimeConfig;
           detail?: string;
@@ -247,9 +247,9 @@ export function SessionView({
         </div>
       </section>
 
-      {useTurnBasedRapidFire ? (
+      {useTurnBasedSession ? (
         <TurnBasedVoiceSession
-          config={turnBasedRapidFireConfig}
+          config={turnBasedRuntimeConfig}
           onArtifactChange={setArtifactDraft}
           sessionId={session.id}
           snapshot={snapshot}
