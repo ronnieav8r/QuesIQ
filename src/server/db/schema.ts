@@ -153,6 +153,88 @@ export const interviewStyles = pgTable("interview_styles", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const interviewRuntimeConfigs = pgTable(
+  "interview_runtime_configs",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    enabled: boolean("enabled").default(true).notNull(),
+    engine: text("engine").$type<"realtime" | "turn_based">().default("realtime").notNull(),
+    feedbackDepth: text("feedback_depth")
+      .$type<"brief" | "coaching" | "review_only">()
+      .default("brief")
+      .notNull(),
+    maxAnswerSeconds: integer("max_answer_seconds").default(60).notNull(),
+    maxDurationSeconds: integer("max_duration_seconds").default(900).notNull(),
+    maxTurns: integer("max_turns").default(10).notNull(),
+    modeKey: text("mode_key").primaryKey(),
+    textModel: text("text_model").default("gpt-5.4-mini").notNull(),
+    transcriptionModel: text("transcription_model").default("gpt-4o-mini-transcribe").notNull(),
+    ttsModel: text("tts_model").default("tts-1").notNull(),
+    ttsVoice: text("tts_voice").default("alloy").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (config) => ({
+    engineIdx: index("interview_runtime_configs_engine_idx").on(config.engine),
+  }),
+);
+
+export const interviewQuestionArchetypes = pgTable(
+  "interview_question_archetypes",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    difficulty: text("difficulty").default("standard").notNull(),
+    displayOrder: integer("display_order").default(0).notNull(),
+    enabled: boolean("enabled").default(true).notNull(),
+    examples: jsonb("examples").$type<string[]>().default([]).notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    modeKey: text("mode_key").notNull(),
+    promptInstructions: text("prompt_instructions").default("").notNull(),
+    questionTypeKey: text("question_type_key"),
+    routingPurpose: text("routing_purpose").default("").notNull(),
+    scoringHints: jsonb("scoring_hints").$type<string[]>().default([]).notNull(),
+    targetSkill: text("target_skill").notNull(),
+    title: text("title").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (archetype) => ({
+    modeIdx: index("interview_question_archetypes_mode_idx").on(
+      archetype.modeKey,
+      archetype.enabled,
+    ),
+  }),
+);
+
+export const interviewTurnBasedTurns = pgTable(
+  "interview_turn_based_turns",
+  {
+    answerTranscript: text("answer_transcript"),
+    archetypeId: uuid("archetype_id").references(() => interviewQuestionArchetypes.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    feedback: text("feedback"),
+    id: uuid("id").defaultRandom().primaryKey(),
+    modeKey: text("mode_key").notNull(),
+    question: text("question").notNull(),
+    routingReason: text("routing_reason").default("").notNull(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    status: text("status").$type<"failed" | "succeeded">().default("succeeded").notNull(),
+    targetSkill: text("target_skill").default("").notNull(),
+    turnIndex: integer("turn_index").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  },
+  (turn) => ({
+    sessionTurnIdx: uniqueIndex("interview_turn_based_turns_session_turn_idx").on(
+      turn.sessionId,
+      turn.turnIndex,
+    ),
+    userIdx: index("interview_turn_based_turns_user_idx").on(turn.userId),
+  }),
+);
+
 export const profiles = pgTable(
   "profiles",
   {
@@ -437,6 +519,9 @@ export const aiRuns = pgTable(
         | "debrief"
         | "dpe_review"
         | "evaluation"
+        | "interview_transcription"
+        | "interview_tts"
+        | "interview_turn"
         | "introduction_draft"
         | "pricing_review"
         | "quira_support"

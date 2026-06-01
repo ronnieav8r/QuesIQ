@@ -393,6 +393,13 @@
       "when": 1780264800000,
       "tag": "0056_add_quira_support_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1780358400000,
+      "tag": "0057_add_interview_turn_based_runtime",
+      "breakpoints": true
     }
   ]
 }
