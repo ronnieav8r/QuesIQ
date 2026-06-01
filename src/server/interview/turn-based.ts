@@ -92,6 +92,15 @@ function cleanText(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }
 
+function cleanUuid(value: unknown) {
+  const text = cleanText(value);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    text,
+  )
+    ? text
+    : undefined;
+}
+
 function rapidFireQuestionLimit(snapshot: SessionSetupSnapshot, fallback: number) {
   return Math.max(1, Math.min(10, snapshot.rapidFireQuestionCount ?? fallback));
 }
@@ -134,7 +143,7 @@ function parseDecision(
   try {
     const parsed = JSON.parse(raw) as Partial<TurnDecision>;
     return {
-      archetypeId: cleanText(parsed.archetypeId) || undefined,
+      archetypeId: cleanUuid(parsed.archetypeId),
       done: input.mustEnd || parsed.done === true,
       feedback: allowFeedback ? cleanText(parsed.feedback) || undefined : undefined,
       question: input.mustEnd ? undefined : cleanText(parsed.question) || undefined,
