@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import { ReviewDetailSections } from "@/components/interview/review-detail-sections";
-import { withOverallScore } from "@/product/scoring";
+import { ReviewScoreSummary } from "@/components/interview/review-score-summary";
 import type {
   InterviewCatalog,
   SessionEvaluationResult,
@@ -246,18 +246,7 @@ export function ReviewDetail({
         {currentSession.evaluation ? (
           <div className="review-body">
             <p>{currentSession.evaluation.summary}</p>
-            <div className="score-strip review-scores">
-              {withOverallScore(currentSession.evaluation).map((score) => (
-                <span
-                  className={score.key === "overall" ? "score-overall" : undefined}
-                  key={score.key}
-                >
-                  <strong>{score.label}</strong>
-                  <b>{score.score.toFixed(1)}/5</b>
-                  <small>{score.summary}</small>
-                </span>
-              ))}
-            </div>
+            <ReviewScoreSummary evaluation={currentSession.evaluation} />
             <div className="review-callout">
               <h3>Coach Note</h3>
               <p>{currentSession.evaluation.coachingInsight}</p>

@@ -2671,6 +2671,123 @@ textarea::placeholder {
   gap: var(--space-3);
 }
 
+.review-score-summary {
+  align-items: center;
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: minmax(7.5rem, 0.35fr) minmax(0, 1fr);
+}
+
+.review-score-ring {
+  --score-accent: var(--focus);
+  --score-percent: 0%;
+  align-items: center;
+  aspect-ratio: 1;
+  background:
+    radial-gradient(circle at center, var(--surface-raised) 58%, transparent 60%),
+    conic-gradient(var(--score-accent) 0 var(--score-percent), rgba(255, 255, 255, 0.12) var(--score-percent) 100%);
+  border: 1px solid rgba(140, 82, 255, 0.45);
+  border-radius: 999px;
+  display: inline-grid;
+  justify-items: center;
+  min-width: 7.5rem;
+  padding: var(--space-4);
+  place-self: center;
+}
+
+.review-score-ring strong {
+  color: var(--text);
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.review-score-ring span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.review-score-bars {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.review-score-bar {
+  --score-accent: var(--brand-strong);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.review-score-bar > div {
+  align-items: baseline;
+  display: flex;
+  gap: var(--space-2);
+  justify-content: space-between;
+}
+
+.review-score-bar strong {
+  color: var(--text);
+}
+
+.review-score-bar > div span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.review-score-bar i {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  display: block;
+  height: 0.48rem;
+  overflow: hidden;
+}
+
+.review-score-bar i span {
+  background: linear-gradient(90deg, var(--score-accent), var(--action));
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+}
+
+.review-score-bar small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.review-score-bar.score-clarity {
+  --score-accent: #26d6a6;
+}
+
+.review-score-bar.score-confidence {
+  --score-accent: #8c52ff;
+}
+
+.review-score-bar.score-relevance {
+  --score-accent: #ef7c24;
+}
+
+.review-score-bar.score-impact {
+  --score-accent: #4fa3ff;
+}
+
+.review-score-bar.score-authenticity {
+  --score-accent: #f4c95d;
+}
+
+@media (max-width: 640px) {
+  .review-score-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .review-score-ring {
+    max-width: 9rem;
+    width: 44vw;
+  }
+}
+
 .review-scores span {
   display: grid;
   gap: var(--space-1);

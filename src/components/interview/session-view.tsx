@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import { ReviewDetailSections } from "@/components/interview/review-detail-sections";
+import { ReviewScoreSummary } from "@/components/interview/review-score-summary";
 import { TurnBasedVoiceSession } from "@/components/interview/turn-based-voice-session";
 import { buildInterviewFirstTurnInstructions } from "@/product/interview-first-turn";
 import {
@@ -9,7 +10,6 @@ import {
   getTooShortReviewMessage,
   isArtifactTooShortToReview,
 } from "@/product/review-eligibility";
-import { withOverallScore } from "@/product/scoring";
 import type {
   InterviewCatalog,
   SessionEvaluationResult,
@@ -410,18 +410,7 @@ export function SessionView({
           {evaluation ? (
             <div className="review-body">
               <p>{evaluation.summary}</p>
-              <div className="score-strip review-scores">
-                {withOverallScore(evaluation).map((score) => (
-                  <span
-                    className={score.key === "overall" ? "score-overall" : undefined}
-                    key={score.key}
-                  >
-                    <strong>{score.label}</strong>
-                    <b>{score.score.toFixed(1)}/5</b>
-                    <small>{score.summary}</small>
-                  </span>
-                ))}
-              </div>
+              <ReviewScoreSummary evaluation={evaluation} />
               <div className="review-callout">
                 <h3>Coach Note</h3>
                 <p>{evaluation.coachingInsight}</p>
