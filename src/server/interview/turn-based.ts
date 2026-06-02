@@ -310,7 +310,7 @@ async function generateSpeech(input: {
   }
 }
 
-function turnTask(
+export function buildTurnTaskInstruction(
   snapshot: SessionSetupSnapshot,
   mustEnd: boolean,
   hasLatestAnswer: boolean,
@@ -347,7 +347,7 @@ function turnTask(
   return "Log the latest answer internally, choose a fresh Rapid Fire archetype, and write one concise interview question that does not follow up on the previous answer.";
 }
 
-function turnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) {
+export function buildTurnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) {
   const universalRules = [
     "Universal next-turn rules:",
     "Generate at most one Que spoken question.",
@@ -448,7 +448,7 @@ async function generateTurnDecision(input: {
   });
 
   const payload = {
-    task: turnTask(
+    task: buildTurnTaskInstruction(
       input.snapshot,
       mustEnd,
       Boolean(input.latestTranscript),
@@ -541,7 +541,7 @@ async function generateTurnDecision(input: {
       body: JSON.stringify({
         input: [
           {
-            content: turnSystemPrompt(input.snapshot.modeKey),
+            content: buildTurnSystemPrompt(input.snapshot.modeKey),
             role: "system",
           },
           {

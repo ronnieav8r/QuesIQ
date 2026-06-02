@@ -233,6 +233,44 @@ type TestTunnelTurnResponse = {
   transcript?: string;
 };
 
+type AdminPanelMode = "legacy" | "prompt_workspace";
+
+type PromptWorkspaceActionKey =
+  | "coaching"
+  | "debrief"
+  | "evaluation"
+  | "introduction_builder"
+  | "mock_interview"
+  | "rapid_fire"
+  | "story_lab"
+  | "tmaat_story";
+
+type PromptWorkspaceBlock = {
+  body: string;
+  collapsed?: boolean;
+  editable?: {
+    key: string;
+    kind: "component" | "prompt_config";
+    target?: PromptConfigRecord["target"];
+    type?: PromptComponentRecord["type"];
+  };
+  meta?: string;
+  readOnly?: boolean;
+  title: string;
+};
+
+type PromptWorkspaceAction = {
+  blocks: PromptWorkspaceBlock[];
+  description: string;
+  key: PromptWorkspaceActionKey;
+  modeKey?: SessionSetupSnapshot["modeKey"];
+  testTunnel?: {
+    endpoint?: TestTunnelRealtimeEndpoint;
+    mode: TestTunnelMode;
+  };
+  title: string;
+};
+
 type InterviewQuestionArchetypeRecord = {
   difficulty: string;
   enabled: boolean;
@@ -877,6 +915,19 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
   const [componentDraft, setComponentDraft] = useState("");
   const [draft, setDraft] = useState<PromptDraft>(emptyDraft);
   const [error, setError] = useState<string>();
+  const [adminPanelMode, setAdminPanelMode] =
+    useState<AdminPanelMode>("prompt_workspace");
+  const [promptWorkspaceActions, setPromptWorkspaceActions] = useState<
+    PromptWorkspaceAction[]
+  >([]);
+  const [promptWorkspaceActionKey, setPromptWorkspaceActionKey] =
+    useState<PromptWorkspaceActionKey>("coaching");
+  const [promptWorkspaceDrafts, setPromptWorkspaceDrafts] = useState<
+    Record<string, string>
+  >({});
+  const [promptWorkspaceError, setPromptWorkspaceError] = useState<string>();
+  const [promptWorkspaceStatus, setPromptWorkspaceStatus] =
+    useState<"loading" | "ready">("loading");
   const [aiRunSort, setAiRunSort] = useState<SortState<AiRunSortKey>>({
     direction: "desc",
     key: "started",
@@ -1024,6 +1075,12 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     sessions: adminData.sessions.length,
     users: adminData.users.length,
   };
+  const selectedPromptWorkspaceAction = useMemo(
+    () =>
+      promptWorkspaceActions.find((action) => action.key === promptWorkspaceActionKey) ||
+      promptWorkspaceActions[0],
+    [promptWorkspaceActionKey, promptWorkspaceActions],
+  );
 
   function applySelectedConfig(config?: PromptConfigRecord) {
     if (!config) {
@@ -1724,6 +1781,7 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
       } finally {
         if (!ignore) {
           setStatus("ready");
+          void loadPromptWorkspace();
         }
       }
     }
@@ -1916,6 +1974,13 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
   }
 
   function refreshAdminSection() {
+    if (adminPanelMode === "prompt_workspace") {
+      void loadPromptWorkspace();
+      void loadConfigs();
+      void loadComponents();
+      return;
+    }
+
     if (adminSection === "test_tunnel") {
       return;
     }
@@ -1975,6 +2040,40 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     }
 
     void loadComponents();
+  }
+
+  async function loadPromptWorkspace() {
+    try {
+      setPromptWorkspaceError(undefined);
+      const response = await fetch("/api/admin/interview/prompt-workspace");
+      const body = (await response.json()) as {
+        actions?: PromptWorkspaceAction[];
+        detail?: string;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(
+          body.detail || body.error || "Prompt workspace could not be loaded.",
+        );
+      }
+
+      const actions = body.actions ?? [];
+      setPromptWorkspaceActions(actions);
+      setPromptWorkspaceActionKey((current) =>
+        actions.some((action) => action.key === current)
+          ? current
+          : actions[0]?.key ?? "coaching",
+      );
+    } catch (loadError) {
+      setPromptWorkspaceError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Prompt workspace could not be loaded.",
+      );
+    } finally {
+      setPromptWorkspaceStatus("ready");
+    }
   }
 
   function testTunnelSnapshot(): SessionSetupSnapshot {
@@ -2162,6 +2261,129 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     applySelectedConfig(prompt);
   }
 
+  function promptWorkspaceBlockId(
+    actionKey: PromptWorkspaceActionKey,
+    block: PromptWorkspaceBlock,
+  ) {
+    return `${actionKey}:${block.editable?.kind ?? "readonly"}:${block.editable?.type ?? "base"}:${block.editable?.key ?? block.title}`;
+  }
+
+  function promptWorkspaceDraft(
+    actionKey: PromptWorkspaceActionKey,
+    block: PromptWorkspaceBlock,
+  ) {
+    return promptWorkspaceDrafts[promptWorkspaceBlockId(actionKey, block)] ?? block.body;
+  }
+
+  function setPromptWorkspaceDraft(
+    actionKey: PromptWorkspaceActionKey,
+    block: PromptWorkspaceBlock,
+    value: string,
+  ) {
+    const id = promptWorkspaceBlockId(actionKey, block);
+    setPromptWorkspaceDrafts((current) => ({ ...current, [id]: value }));
+  }
+
+  async function savePromptWorkspaceBlock(
+    actionKey: PromptWorkspaceActionKey,
+    block: PromptWorkspaceBlock,
+  ) {
+    if (!block.editable) {
+      return;
+    }
+
+    const nextInstructions = promptWorkspaceDraft(actionKey, block);
+
+    try {
+      setPending(true);
+      setPromptWorkspaceError(undefined);
+
+      if (block.editable.kind === "prompt_config") {
+        const config = activePromptConfig(configs, block.editable.key as PromptConfigKey);
+
+        if (!config) {
+          throw new Error("Prompt config could not be found.");
+        }
+
+        const response = await fetch("/api/admin/prompt-configs", {
+          body: JSON.stringify({
+            activate: true,
+            instructions: nextInstructions,
+            key: config.key,
+            model: config.model,
+            name: config.name,
+            target: config.target,
+            voice: config.target === "realtime" ? config.voice : undefined,
+          }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+        const body = (await response.json()) as {
+          config?: PromptConfigRecord;
+          detail?: string;
+          error?: string;
+        };
+
+        if (!response.ok || !body.config) {
+          throw new Error(body.detail || body.error || "Prompt config could not be saved.");
+        }
+      } else {
+        const response = await fetch("/api/admin/prompt-components", {
+          body: JSON.stringify({
+            key: block.editable.key,
+            promptInstructions: nextInstructions,
+            type: block.editable.type,
+          }),
+          headers: { "Content-Type": "application/json" },
+          method: "PATCH",
+        });
+        const body = (await response.json()) as {
+          component?: PromptComponentRecord;
+          error?: string;
+        };
+
+        if (!response.ok || !body.component) {
+          throw new Error(body.error || "Prompt component could not be saved.");
+        }
+      }
+
+      setPromptWorkspaceDrafts((current) => {
+        const next = { ...current };
+        delete next[promptWorkspaceBlockId(actionKey, block)];
+        return next;
+      });
+      await Promise.all([loadConfigs(), loadComponents(), loadPromptWorkspace()]);
+    } catch (saveError) {
+      setPromptWorkspaceError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Prompt workspace block could not be saved.",
+      );
+    } finally {
+      setPending(false);
+    }
+  }
+
+  function testPromptWorkspaceAction(action: PromptWorkspaceAction) {
+    if (!action.testTunnel) {
+      return;
+    }
+
+    setAdminPanelMode("legacy");
+    setAdminSection("test_tunnel");
+    setTestTunnelMode(action.testTunnel.mode);
+
+    if (action.testTunnel.endpoint) {
+      setTestTunnelRealtimeEndpoint(action.testTunnel.endpoint);
+    } else if (action.testTunnel.mode === "mock_interview") {
+      setTestTunnelRealtimeEndpoint("/api/realtime/session");
+    }
+
+    if (action.testTunnel.mode === "rapid_fire" || action.testTunnel.mode === "coaching") {
+      setTestTunnelQuestionType("behavioral");
+    }
+  }
+
   function renderPromptDisclosure(title: string, body?: string) {
     if (!body?.trim()) {
       return <p className="field-note">No instructions are saved for this layer.</p>;
@@ -2172,6 +2394,122 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
         <summary>{title}</summary>
         <pre className="prompt-preview">{body}</pre>
       </details>
+    );
+  }
+
+  function renderPromptWorkspaceBlock(
+    action: PromptWorkspaceAction,
+    block: PromptWorkspaceBlock,
+  ) {
+    const value = promptWorkspaceDraft(action.key, block);
+    const dirty = block.editable
+      ? value !== block.body
+      : false;
+
+    return (
+      <article
+        className="prompt-version-card"
+        key={promptWorkspaceBlockId(action.key, block)}
+      >
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">{block.readOnly ? "Read-only" : "Editable"}</p>
+            <h3>{block.title}</h3>
+            {block.meta && <p className="field-note">{block.meta}</p>}
+          </div>
+          {block.editable && (
+            <button
+              disabled={pending || !dirty}
+              onClick={() => void savePromptWorkspaceBlock(action.key, block)}
+              type="button"
+            >
+              Save Active Version
+            </button>
+          )}
+        </div>
+
+        {block.editable ? (
+          <label>
+            <span>{block.title}</span>
+            <textarea
+              onChange={(event) =>
+                setPromptWorkspaceDraft(action.key, block, event.target.value)
+              }
+              rows={Math.min(18, Math.max(6, value.split(/\r?\n/).length + 2))}
+              value={value}
+            />
+          </label>
+        ) : (
+          <details open={!block.collapsed}>
+            <summary>{block.title}</summary>
+            <pre className="prompt-preview">{block.body}</pre>
+          </details>
+        )}
+      </article>
+    );
+  }
+
+  function renderPromptWorkspace() {
+    const action = selectedPromptWorkspaceAction;
+
+    return (
+      <section className="ai-runs-panel" aria-labelledby="prompt-workspace-title">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">Interview Admin</p>
+            <h2 id="prompt-workspace-title">Prompt Workspace</h2>
+            <p>
+              Prompts are grouped by what the user is doing in the app. Editable
+              prompt blocks save through the existing prompt version and component
+              APIs.
+            </p>
+          </div>
+          <span>{promptWorkspaceActions.length} actions</span>
+        </div>
+
+        <div className="component-tabs" aria-label="Prompt workspace actions">
+          {promptWorkspaceActions.map((item) => (
+            <button
+              className={item.key === promptWorkspaceActionKey ? "active" : ""}
+              key={item.key}
+              onClick={() => setPromptWorkspaceActionKey(item.key)}
+              type="button"
+            >
+              {item.title}
+            </button>
+          ))}
+        </div>
+
+        {promptWorkspaceStatus === "loading" ? (
+          <p>Loading prompt workspace.</p>
+        ) : promptWorkspaceError ? (
+          <p className="form-error">{promptWorkspaceError}</p>
+        ) : action ? (
+          <>
+            <div className="section-head">
+              <div>
+                <p className="eyebrow">Prompt stack</p>
+                <h3>{action.title}</h3>
+                <p>{action.description}</p>
+              </div>
+              {action.testTunnel && (
+                <button
+                  className="secondary"
+                  onClick={() => testPromptWorkspaceAction(action)}
+                  type="button"
+                >
+                  Test This Mode
+                </button>
+              )}
+            </div>
+            <div className="prompt-version-list">
+              {action.blocks.map((block) => renderPromptWorkspaceBlock(action, block))}
+            </div>
+          </>
+        ) : (
+          <p>No prompt workspace actions are available.</p>
+        )}
+      </section>
     );
   }
 
@@ -2498,8 +2836,27 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
         </button>
       </div>
 
+      <div className="admin-tabs" aria-label="Interview admin panel">
+        <button
+          className={adminPanelMode === "prompt_workspace" ? "active" : ""}
+          onClick={() => setAdminPanelMode("prompt_workspace")}
+          type="button"
+        >
+          Prompt Workspace
+        </button>
+        <button
+          className={adminPanelMode === "legacy" ? "active" : ""}
+          onClick={() => setAdminPanelMode("legacy")}
+          type="button"
+        >
+          Legacy Panel
+        </button>
+      </div>
+
       {status === "loading" ? (
         <p>Loading prompt configs.</p>
+      ) : adminPanelMode === "prompt_workspace" ? (
+        renderPromptWorkspace()
       ) : (
         <>
           <div className="admin-tabs" aria-label="Admin sections">
