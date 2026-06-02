@@ -9,6 +9,8 @@ strategy, or reference notes.
 Start here for broad resume work and manager handoffs:
 
 - `docs/rebuild/HANDOFF.md`: current resume snapshot and product handoff.
+- `docs/rebuild/LOCAL_DEVELOPMENT.md`: local Windows/Docker/Postgres setup for
+  running the app without Render.
 - `docs/rebuild/CURRENT_STATUS.md`: current platform status and deployment
   context.
 - `docs/rebuild/DECISIONS.md`: durable product and architecture decisions.

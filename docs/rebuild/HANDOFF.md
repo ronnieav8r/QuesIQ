@@ -1,9 +1,16 @@
 # Handoff
 
-Last updated: 2026-05-30
+Last updated: 2026-06-02
 
 ## Immediate Handoff Snapshot
 
+- Local development is now available without Render. Docker Desktop is
+  installed, local Postgres runs through `docker-compose.yml` on
+  `127.0.0.1:5433`, migrations have applied successfully through
+  `0062_add_account_password_credentials`, and the app has been verified at
+  `http://127.0.0.1:3100` with title `QuesIQ | AI Practice Platform`. See
+  `docs/rebuild/LOCAL_DEVELOPMENT.md` before retrying old `localhost:3000`
+  workflows.
 - Current manager workspace:
   `C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-manager` on `main`.
   Use the manager/worker clone flow in `docs/rebuild/BRANCHING_AND_RELEASES.md`

@@ -1,0 +1,23 @@
+name: quesiq-local
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: quesiq-local-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: quesiq_local
+      POSTGRES_USER: quesiq_local
+      POSTGRES_PASSWORD: quesiq_local_password
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - quesiq-local-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quesiq_local -d quesiq_local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  quesiq-local-postgres-data:

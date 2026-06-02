@@ -4,9 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:local": "next dev -H 127.0.0.1 -p 3100",
     "build": "next build",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/db-migrate.mjs",
+    "db:local:up": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-docker-compose.ps1 up -d postgres",
+    "db:local:down": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-docker-compose.ps1 down",
+    "db:local:migrate": "node --env-file=.env.local scripts/db-migrate.mjs",
     "guard:admin": "node scripts/guards/check-lane.mjs admin",
     "guard:dpe": "node scripts/guards/check-lane.mjs dpe",
     "guard:interview": "node scripts/guards/check-lane.mjs interview",
