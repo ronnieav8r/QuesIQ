@@ -112,6 +112,10 @@ export function TurnBasedVoiceSession({
   const sessionStartedAtMsRef = useRef<number | undefined>(undefined);
   const silenceStartedAtMsRef = useRef<number | undefined>(undefined);
   const silenceTimerRef = useRef<number | undefined>(undefined);
+  const finalizeSessionRef = useRef<
+    (endReason: VoiceSessionArtifactDraft["endReason"]) => Promise<void>
+  >(undefined);
+  const stopRecordingRef = useRef<(() => void) | undefined>(undefined);
   const voiceDetectedRef = useRef(false);
   const doneRef = useRef(false);
   const phaseRef = useRef<TurnBasedPhase>("ready");
@@ -217,8 +221,8 @@ export function TurnBasedVoiceSession({
     }
 
     appendEvent("turn_based.answer.max_seconds_reached");
-    stopRecording();
-  }, [answerElapsedSeconds, maxAnswerSeconds, recording, stopRecording]);
+    stopRecordingRef.current?.();
+  }, [answerElapsedSeconds, maxAnswerSeconds, recording]);
 
   useEffect(() => {
     if (!canShowSessionCountdown(phase) || elapsedSeconds < maxDurationSeconds) {
@@ -226,8 +230,8 @@ export function TurnBasedVoiceSession({
     }
 
     appendEvent("turn_based.session.max_duration_reached");
-    void finalizeSession("user_ended");
-  }, [elapsedSeconds, finalizeSession, maxDurationSeconds, phase]);
+    void finalizeSessionRef.current?.("user_ended");
+  }, [elapsedSeconds, maxDurationSeconds, phase]);
 
   function appendEvent(type: string) {
     setArtifactDraft((current) => ({ ...current, events: [...current.events, artifactEvent(type)] }));
@@ -602,6 +606,9 @@ export function TurnBasedVoiceSession({
     mediaRecorderRef.current?.stop();
     appendEvent("turn_based.answer.recording_stop");
   }
+
+  finalizeSessionRef.current = finalizeSession;
+  stopRecordingRef.current = stopRecording;
 
   function formatClock(totalSeconds: number) {
     const nextSeconds = Math.max(0, Math.ceil(totalSeconds));
