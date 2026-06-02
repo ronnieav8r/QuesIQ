@@ -39,6 +39,10 @@ export function CreateAccountPage({ nextPath }: { nextPath: string }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [preferredName, setPreferredName] = useState("");
+  const [magicLinkEmail, setMagicLinkEmail] = useState("");
+  const [magicLinkError, setMagicLinkError] = useState<string>();
+  const [magicLinkPending, setMagicLinkPending] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "saved" | "saving">("idle");
   const [error, setError] = useState<string>();
 
@@ -160,6 +164,33 @@ export function CreateAccountPage({ nextPath }: { nextPath: string }) {
     }
   }
 
+  async function sendMagicLink(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    try {
+      setMagicLinkError(undefined);
+      setMagicLinkPending(true);
+      setMagicLinkSent(false);
+      const response = await signIn("email", {
+        email: magicLinkEmail,
+        redirect: false,
+        redirectTo: "/create-account",
+      });
+
+      if (!response?.ok) {
+        throw new Error(response?.error || "Sign-in link could not be sent.");
+      }
+
+      setMagicLinkSent(true);
+    } catch (linkError) {
+      setMagicLinkError(
+        linkError instanceof Error ? linkError.message : "Sign-in link could not be sent.",
+      );
+    } finally {
+      setMagicLinkPending(false);
+    }
+  }
+
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -211,13 +242,13 @@ export function CreateAccountPage({ nextPath }: { nextPath: string }) {
           <p className="marketing-kicker">Create Account</p>
           <h1>Set up one QuesIQ account for every app.</h1>
           <p>
-            Create your shared account, then add the name fields QuesIQ can use for a
-            more personal experience across Interview, Study, DPE, and Quira.
+            Build confidence faster with one AI practice platform for interviews, study
+            sessions, and aviation oral prep.
           </p>
           <ul className="create-account-notes">
-            <li>Email is used for sign-in and account recovery.</li>
-            <li>Name fields personalize the app and future account messaging.</li>
-            <li>Product visits and active time are tracked after sign-in.</li>
+            <li>Practice out loud with AI feedback that helps you improve between sessions.</li>
+            <li>Move between Interview, Study, and DPE without creating separate accounts.</li>
+            <li>Keep progress, history, and support connected under one QuesIQ profile.</li>
           </ul>
         </div>
 
@@ -316,6 +347,35 @@ export function CreateAccountPage({ nextPath }: { nextPath: string }) {
               </p>
             )}
             {error && <p className="form-error">{error}</p>}
+            <div className="auth-divider">already have an account?</div>
+            <div className="magic-link-box">
+              <div>
+                <h3>Sign in with magic link</h3>
+                <p>No password needed. We will send a secure sign-in link.</p>
+              </div>
+              <form className="magic-link-form" onSubmit={sendMagicLink}>
+                <label>
+                  <span>Email address</span>
+                  <input
+                    autoComplete="email"
+                    onChange={(event) => {
+                      setMagicLinkEmail(event.target.value);
+                      setMagicLinkSent(false);
+                    }}
+                    required
+                    type="email"
+                    value={magicLinkEmail}
+                  />
+                </label>
+                <button className="secondary" disabled={magicLinkPending} type="submit">
+                  {magicLinkPending ? "Sending Link" : "Send Magic Link"}
+                </button>
+                {magicLinkSent && (
+                  <p className="form-note">Check your email for the sign-in link.</p>
+                )}
+                {magicLinkError && <p className="form-error">{magicLinkError}</p>}
+              </form>
+            </div>
             <div className="auth-divider">or</div>
             <button
               className="secondary provider-button"

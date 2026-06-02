@@ -2089,6 +2089,25 @@ label span {
   height: 1px;
 }
 
+.magic-link-box {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.magic-link-box h3,
+.magic-link-box p {
+  margin: 0;
+}
+
+.magic-link-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
 .back-button {
   background: transparent;
   border-color: var(--border);
