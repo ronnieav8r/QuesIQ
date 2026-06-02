@@ -11,47 +11,14 @@ import {
   TrendingUp,
   Volume2,
 } from "lucide-react";
+import type { CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
+import { auth } from "@/auth";
 import { AccountActions } from "@/components/auth-control";
 import { MarketingQuiraLauncher } from "@/features/marketing/marketing-quira-launcher";
-
-const productCards = [
-  {
-    badge: "Best for job seekers",
-    body:
-      "Realistic mock interviews with AI interviewers, instant scoring, and coaching that helps you speak with impact.",
-    cta: "Practice interviews",
-    href: "/login?next=/interview",
-    icon: Mic,
-    name: "QuesIQ Interview",
-    preview: "interview",
-    subhead: "Voice-first interview practice",
-  },
-  {
-    badge: "Best for students",
-    body:
-      "AI-assisted studying with smart flashcards, spaced repetition, verbal review, and instant explanations.",
-    cta: "Study smarter",
-    href: "/login?next=/study",
-    icon: BookOpenCheck,
-    name: "QuesIQ Study",
-    preview: "study",
-    subhead: "AI study and flashcards",
-  },
-  {
-    badge: "Best for pilots",
-    body:
-      "Pilot oral exam preparation with FAA-style questioning, scenario-based practice, and detailed debriefs.",
-    cta: "Prep for checkride",
-    href: "/login?next=/dpe",
-    icon: Plane,
-    name: "QuesIQ DPE",
-    preview: "dpe",
-    subhead: "Pilot oral exam preparation",
-  },
-];
+import { getMarketingAppStatuses } from "@/server/platform/marketing-status";
 
 const trustItems = [
   { icon: Volume2, label: "Voice-first practice" },
@@ -78,7 +45,10 @@ const steps = [
   },
 ];
 
-export default function MarketingHome() {
+export default async function MarketingHome() {
+  const appSession = await auth();
+  const appStatuses = await getMarketingAppStatuses(appSession?.user?.id);
+
   return (
     <main className="marketing-page">
       <header className="marketing-nav">
@@ -204,33 +174,70 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      <section className="marketing-products" id="products">
+      <section className="marketing-products marketing-app-statuses" id="products">
         <div className="marketing-section-heading">
-          <p>Our Products</p>
-          <h2>Three powerful ways to prepare</h2>
-          <span>Choose the path. QuesIQ helps you improve with focused practice.</span>
+          <p>App Status</p>
+          <h2>{appSession?.user ? "Your QuesIQ command center" : "Three ways to prepare"}</h2>
+          <span>
+            {appSession?.user
+              ? "Jump into the app that needs attention next, with progress visible at a glance."
+              : "Sign in to turn these previews into personal progress dashboards."}
+          </span>
         </div>
-        <div className="marketing-product-grid">
-          {productCards.map((product) => {
-            const Icon = product.icon;
+        <div className="marketing-status-grid">
+          {appStatuses.map((status) => {
+            const scoreStyle = { "--status-score": `${status.score}%` } as CSSProperties;
+
             return (
-              <article className="marketing-product-card" key={product.name}>
-                <div className="product-title-row">
-                  <span className="product-icon">
-                    <Icon aria-hidden="true" />
-                  </span>
+              <article className={`marketing-status-card ${status.key}`} key={status.key}>
+                <div className="status-card-top">
+                  <Image
+                    alt={status.logoAlt}
+                    height={58}
+                    src={status.logoSrc}
+                    width={172}
+                  />
                   <div>
-                    <h3>{product.name}</h3>
-                    <p>{product.subhead}</p>
+                    <p>{status.levelLabel}</p>
+                    <h3>{status.title}</h3>
                   </div>
                 </div>
-                <span className="product-badge">{product.badge}</span>
-                <ProductMiniPreview type={product.preview} />
-                <p>{product.body}</p>
-                <Link href={product.href}>
-                  {product.cta}
+                <div className="status-card-body">
+                  <div className="status-score-ring" style={scoreStyle}>
+                    <strong>{status.score}</strong>
+                    <span>{status.metricLabel}</span>
+                  </div>
+                  <div className="status-summary">
+                    <p>{status.subtitle}</p>
+                    <div className="status-facts">
+                      <span>
+                        <b>{status.statValue}</b>
+                        {status.statLabel}
+                      </span>
+                      <span>
+                        <b>{status.lastUsedLabel}</b>
+                        Activity
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="status-bars">
+                  {status.bars.map((bar) => (
+                    <div className="status-bar-row" key={bar.label}>
+                      <span>{bar.label}</span>
+                      <i className={bar.tone}>
+                        <b style={{ width: `${bar.value}%` }} />
+                      </i>
+                    </div>
+                  ))}
+                </div>
+                <div className="status-next-action">
+                  <p>{status.nextAction}</p>
+                  <Link href={status.href}>
+                    Open {status.title}
                   <ArrowRight aria-hidden="true" />
                 </Link>
+                </div>
               </article>
             );
           })}
@@ -312,40 +319,5 @@ export default function MarketingHome() {
       </footer>
       <MarketingQuiraLauncher />
     </main>
-  );
-}
-
-function ProductMiniPreview({ type }: { type: string }) {
-  if (type === "study") {
-    return (
-      <div className="product-mini-preview">
-        <div className="study-card-face">What is spaced repetition?</div>
-        <div className="mini-progress">
-          <span>Mastery</span>
-          <i style={{ width: "76%" }} />
-        </div>
-      </div>
-    );
-  }
-
-  if (type === "dpe") {
-    return (
-      <div className="product-mini-preview">
-        <Plane aria-hidden="true" />
-        <span>Topic: Weather Minimums</span>
-        <div className="mini-progress">
-          <span>Readiness</span>
-          <i style={{ width: "72%" }} />
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="product-mini-preview">
-      <span>Mock Interview</span>
-      <p>Why do you want to work at our company?</p>
-      <div className="mini-score">88</div>
-    </div>
   );
 }

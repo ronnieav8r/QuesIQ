@@ -11,7 +11,7 @@ export default async function AccountPage() {
     <PlatformRouteShell
       actions={
         <Link className="button-link secondary" href="/">
-          Product Home
+          QuesIQ Home
         </Link>
       }
       eyebrow="QuesIQ Account"
@@ -27,11 +27,9 @@ export default async function AccountPage() {
         </p>
         <div className="inline-actions">
           {appSession?.user ? (
-            platformProducts.map((product) => (
-              <Link className="button-link" href={product.href} key={product.key}>
-                {product.shortName}
-              </Link>
-            ))
+            <Link className="button-link" href="/apps">
+              Open Apps
+            </Link>
           ) : (
             <>
               <Link className="button-link" href="/create-account">

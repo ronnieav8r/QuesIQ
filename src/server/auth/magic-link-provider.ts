@@ -1,17 +1,6 @@
 import type { EmailConfig } from "@auth/core/providers/email";
 
-type BrevoEmailResponse = {
-  code?: string;
-  message?: string;
-};
-
-function senderName() {
-  return process.env.AUTH_EMAIL_FROM_NAME || "QuesIQ";
-}
-
-function senderEmail() {
-  return process.env.AUTH_EMAIL_FROM || "no-reply@quesiq.com";
-}
+import { sendTransactionalAuthEmail } from "@/server/auth/auth-email";
 
 function buildEmailHtml(url: string) {
   return `
@@ -46,37 +35,12 @@ export function MagicLinkProvider(): EmailConfig {
     name: "Email",
     type: "email",
     async sendVerificationRequest({ identifier, url }) {
-      const apiKey = process.env.BREVO_API_KEY;
-
-      if (!apiKey) {
-        throw new Error("BREVO_API_KEY is not configured.");
-      }
-
-      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
-        body: JSON.stringify({
-          htmlContent: buildEmailHtml(url),
-          sender: {
-            email: senderEmail(),
-            name: senderName(),
-          },
-          subject: "Sign in to QuesIQ",
-          textContent: buildEmailText(url),
-          to: [{ email: identifier }],
-        }),
-        headers: {
-          "Content-Type": "application/json",
-          "api-key": apiKey,
-        },
-        method: "POST",
+      await sendTransactionalAuthEmail({
+        html: buildEmailHtml(url),
+        subject: "Sign in to QuesIQ",
+        text: buildEmailText(url),
+        to: identifier,
       });
-
-      if (!response.ok) {
-        const body = (await response.json().catch(() => undefined)) as
-          | BrevoEmailResponse
-          | undefined;
-
-        throw new Error(body?.message || "Brevo could not send the sign-in email.");
-      }
     },
   };
 }

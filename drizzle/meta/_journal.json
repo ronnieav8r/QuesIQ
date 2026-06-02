@@ -435,6 +435,13 @@
       "when": 1780506000000,
       "tag": "0062_add_account_password_credentials",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1780592400000,
+      "tag": "0063_add_account_password_reset_tokens",
+      "breakpoints": true
     }
   ]
 }

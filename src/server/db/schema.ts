@@ -110,6 +110,28 @@ export const accountPasswordCredentials = pgTable(
   }),
 );
 
+export const accountPasswordResetTokens = pgTable(
+  "account_password_reset_tokens",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    email: text("email").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    tokenHash: text("token_hash").notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (token) => ({
+    emailIdx: index("account_password_reset_tokens_email_idx").on(token.email),
+    tokenHashIdx: uniqueIndex("account_password_reset_tokens_token_hash_idx").on(
+      token.tokenHash,
+    ),
+    userIdx: index("account_password_reset_tokens_user_idx").on(token.userId),
+  }),
+);
+
 export const platformProductUsage = pgTable(
   "platform_product_usage",
   {

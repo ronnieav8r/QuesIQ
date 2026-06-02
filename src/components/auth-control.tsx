@@ -275,6 +275,9 @@ export function AuthView({
             <button disabled={passwordPending} type="submit">
               {passwordPending ? "Signing In" : "Sign In"}
             </button>
+            <Link className="auth-text-link" href="/reset-password">
+              Forgot password?
+            </Link>
             {passwordError && <p className="form-error">{passwordError}</p>}
           </form>
 

@@ -5170,6 +5170,229 @@ textarea::placeholder {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.marketing-status-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.marketing-status-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.018)),
+    var(--marketing-panel);
+  border: 1px solid rgba(140, 82, 255, 0.3);
+  border-radius: 0.9rem;
+  display: grid;
+  gap: 1rem;
+  min-height: 30rem;
+  overflow: hidden;
+  padding: 1.1rem;
+  position: relative;
+}
+
+.marketing-status-card::before {
+  background: linear-gradient(90deg, #8c52ff, #d668ff, #ff7a18);
+  content: "";
+  height: 0.26rem;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.marketing-status-card.study::before {
+  background: linear-gradient(90deg, #7c4dff, #4fa8ff, #35d6a5);
+}
+
+.marketing-status-card.dpe::before {
+  background: linear-gradient(90deg, #ff7a18, #f2d35e, #51d36a);
+}
+
+.status-card-top {
+  align-items: center;
+  display: flex;
+  gap: 0.9rem;
+  min-height: 4.8rem;
+}
+
+.status-card-top img {
+  height: auto;
+  max-height: 3.6rem;
+  max-width: 10.8rem;
+  object-fit: contain;
+  object-position: left center;
+  width: auto;
+}
+
+.status-card-top h3 {
+  color: #ffffff;
+  font-size: 1.35rem;
+  margin: 0.15rem 0 0;
+}
+
+.status-card-top p {
+  color: var(--marketing-muted);
+  font-size: 0.75rem;
+  font-weight: 850;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.status-card-body {
+  align-items: center;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.status-score-ring {
+  --status-score: 0%;
+  align-items: center;
+  background:
+    radial-gradient(circle at center, #0b1124 58%, transparent 60%),
+    conic-gradient(#8c52ff 0 22%, #4fa8ff 35%, #35d6a5 var(--status-score), rgba(255, 255, 255, 0.13) var(--status-score) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  color: #ffffff;
+  display: grid;
+  flex: 0 0 auto;
+  height: 6.4rem;
+  justify-items: center;
+  place-content: center;
+  width: 6.4rem;
+}
+
+.marketing-status-card.study .status-score-ring {
+  background:
+    radial-gradient(circle at center, #0b1124 58%, transparent 60%),
+    conic-gradient(#7c4dff 0 18%, #4fa8ff 40%, #35d6a5 var(--status-score), rgba(255, 255, 255, 0.13) var(--status-score) 100%);
+}
+
+.marketing-status-card.dpe .status-score-ring {
+  background:
+    radial-gradient(circle at center, #0b1124 58%, transparent 60%),
+    conic-gradient(#ff7a18 0 25%, #f2d35e 52%, #51d36a var(--status-score), rgba(255, 255, 255, 0.13) var(--status-score) 100%);
+}
+
+.status-score-ring strong {
+  font-size: 1.9rem;
+  line-height: 1;
+}
+
+.status-score-ring span {
+  color: var(--marketing-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.status-summary {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.status-summary p,
+.status-next-action p {
+  color: var(--marketing-muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.status-facts {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.status-facts span {
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(185, 191, 216, 0.15);
+  border-radius: 0.65rem;
+  color: var(--marketing-muted);
+  display: grid;
+  font-size: 0.75rem;
+  min-height: 4.1rem;
+  padding: 0.65rem;
+}
+
+.status-facts b {
+  color: #ffffff;
+  font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-bars {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.status-bar-row {
+  display: grid;
+  gap: 0.32rem;
+}
+
+.status-bar-row span {
+  color: var(--marketing-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.status-bar-row i {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  display: block;
+  height: 0.58rem;
+  overflow: hidden;
+}
+
+.status-bar-row b {
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+}
+
+.status-bar-row .violet b {
+  background: linear-gradient(90deg, #7c4dff, #b868ff, #ff7aef);
+}
+
+.status-bar-row .orange b {
+  background: linear-gradient(90deg, #ff7a18, #ffb347, #ff5e8a);
+}
+
+.status-bar-row .blue b {
+  background: linear-gradient(90deg, #4f7dff, #3dd4ff, #35d6a5);
+}
+
+.status-bar-row .green b {
+  background: linear-gradient(90deg, #35d6a5, #51d36a, #f2d35e);
+}
+
+.status-bar-row .amber b {
+  background: linear-gradient(90deg, #f2d35e, #ff9a3d, #8c52ff);
+}
+
+.status-next-action {
+  align-content: end;
+  border-top: 1px solid rgba(185, 191, 216, 0.14);
+  display: grid;
+  gap: 0.8rem;
+  padding-top: 0.95rem;
+}
+
+.status-next-action a {
+  align-items: center;
+  color: #d9c8ff;
+  display: inline-flex;
+  font-weight: 850;
+  gap: 0.45rem;
+}
+
+.status-next-action a:hover {
+  color: #ffffff;
+}
+
 .marketing-product-card {
   display: grid;
   gap: 1rem;
@@ -5592,6 +5815,17 @@ textarea::placeholder {
   border-color: rgba(185, 191, 216, 0.2);
 }
 
+.auth-text-link {
+  color: #d9c8ff;
+  font-size: 0.88rem;
+  font-weight: 800;
+  justify-self: start;
+}
+
+.auth-text-link:hover {
+  color: #ffffff;
+}
+
 @media (max-width: 66rem) {
   .marketing-hero {
     grid-template-columns: 1fr;
@@ -5606,6 +5840,7 @@ textarea::placeholder {
   }
 
   .marketing-product-grid,
+  .marketing-status-grid,
   .marketing-split,
   .marketing-proof,
   .apps-card-grid,
@@ -5613,7 +5848,8 @@ textarea::placeholder {
     grid-template-columns: 1fr;
   }
 
-  .marketing-product-card {
+  .marketing-product-card,
+  .marketing-status-card {
     min-height: auto;
   }
 
@@ -5694,6 +5930,14 @@ textarea::placeholder {
   .trust-grid,
   .proof-stats {
     grid-template-columns: 1fr;
+  }
+
+  .status-card-body {
+    grid-template-columns: 1fr;
+  }
+
+  .status-score-ring {
+    justify-self: start;
   }
 
   .dashboard-topline {

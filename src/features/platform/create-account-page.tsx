@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 
 import {
   AuthControl,
@@ -11,16 +11,6 @@ import {
   GoogleLogo,
   useAuthSession,
 } from "@/components/auth-control";
-
-type AccountProfileResponse = {
-  email?: string | null;
-  name?: string | null;
-  profile?: {
-    firstName?: string;
-    lastName?: string;
-    preferredName?: string;
-  };
-};
 
 export function CreateAccountPage({ nextPath }: { nextPath: string }) {
   const authSession = useAuthSession();
@@ -36,62 +26,7 @@ export function CreateAccountPage({ nextPath }: { nextPath: string }) {
   const [magicLinkPending, setMagicLinkPending] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [password, setPassword] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "saved" | "saving">("idle");
   const [error, setError] = useState<string>();
-
-  useEffect(() => {
-    if (!authSession?.user) {
-      return;
-    }
-
-    async function loadProfile() {
-      try {
-        setStatus("loading");
-        const response = await fetch("/api/account/profile");
-        const body = (await response.json()) as AccountProfileResponse;
-
-        if (!response.ok) {
-          throw new Error("Account profile could not be loaded.");
-        }
-
-        setFirstName(body.profile?.firstName ?? "");
-        setLastName(body.profile?.lastName ?? "");
-        setPreferredName(body.profile?.preferredName ?? "");
-        setStatus("idle");
-      } catch (profileError) {
-        setError(
-          profileError instanceof Error
-            ? profileError.message
-            : "Account profile could not be loaded.",
-        );
-        setStatus("idle");
-      }
-    }
-
-    void loadProfile();
-  }, [authSession?.user]);
-
-  async function savePlatformProfile(input: {
-    firstName: string;
-    lastName: string;
-    preferredName: string;
-  }) {
-    const response = await fetch("/api/account/profile", {
-      body: JSON.stringify({
-        firstName: input.firstName,
-        lastName: input.lastName,
-        preferredName: input.preferredName,
-      }),
-      headers: {
-        "Content-Type": "application/json",
-      },
-      method: "PUT",
-    });
-
-    if (!response.ok) {
-      throw new Error("Account profile could not be saved.");
-    }
-  }
 
   async function createAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -125,7 +60,7 @@ export function CreateAccountPage({ nextPath }: { nextPath: string }) {
       const response = await signIn("email", {
         email,
         redirect: false,
-        redirectTo: "/create-account",
+        redirectTo: "/account",
       });
 
       if (!response?.ok) {
@@ -154,7 +89,7 @@ export function CreateAccountPage({ nextPath }: { nextPath: string }) {
       const response = await signIn("email", {
         email: magicLinkEmail,
         redirect: false,
-        redirectTo: "/create-account",
+        redirectTo: "/account",
       });
 
       if (!response?.ok) {
@@ -168,24 +103,6 @@ export function CreateAccountPage({ nextPath }: { nextPath: string }) {
       );
     } finally {
       setMagicLinkPending(false);
-    }
-  }
-
-  async function saveProfile(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    try {
-      setError(undefined);
-      setStatus("saving");
-      await savePlatformProfile({ firstName, lastName, preferredName });
-      setStatus("saved");
-    } catch (profileError) {
-      setError(
-        profileError instanceof Error
-          ? profileError.message
-          : "Account profile could not be saved.",
-      );
-      setStatus("idle");
     }
   }
 
@@ -233,46 +150,23 @@ export function CreateAccountPage({ nextPath }: { nextPath: string }) {
         </div>
 
         {signedInUser ? (
-          <form className="auth-panel create-account-form" onSubmit={saveProfile}>
+          <section className="auth-panel create-account-form">
             <div>
-              <h2>Account details</h2>
-              <p>{signedInUser.email || "Your signed-in QuesIQ account"}</p>
+              <h2>Account active</h2>
+              <p>
+                {signedInUser.email || "Your QuesIQ account is signed in."} Open your account page
+                to manage profile details and app access.
+              </p>
             </div>
-            <label>
-              <span>First name</span>
-              <input
-                autoComplete="given-name"
-                onChange={(event) => setFirstName(event.target.value)}
-                value={firstName}
-              />
-            </label>
-            <label>
-              <span>Last name</span>
-              <input
-                autoComplete="family-name"
-                onChange={(event) => setLastName(event.target.value)}
-                value={lastName}
-              />
-            </label>
-            <label>
-              <span>Preferred name</span>
-              <input
-                autoComplete="nickname"
-                onChange={(event) => setPreferredName(event.target.value)}
-                value={preferredName}
-              />
-            </label>
             <div className="inline-actions">
-              <button disabled={status === "saving" || status === "loading"} type="submit">
-                {status === "saving" ? "Saving" : "Save Account"}
-              </button>
+              <Link className="button-link" href="/account">
+                Account
+              </Link>
               <Link className="button-link secondary" href={nextPath}>
-                Continue
+                Open Apps
               </Link>
             </div>
-            {status === "saved" && <p className="form-note">Account details saved.</p>}
-            {error && <p className="form-error">{error}</p>}
-          </form>
+          </section>
         ) : (
           <form className="auth-panel create-account-form" onSubmit={createAccount}>
             <div>
@@ -386,7 +280,7 @@ export function CreateAccountPage({ nextPath }: { nextPath: string }) {
             <div className="auth-divider">or</div>
             <button
               className="secondary provider-button"
-              onClick={() => signIn("google", { redirectTo: "/create-account" })}
+              onClick={() => signIn("google", { redirectTo: "/account" })}
               type="button"
             >
               <GoogleLogo />
@@ -394,7 +288,7 @@ export function CreateAccountPage({ nextPath }: { nextPath: string }) {
             </button>
             <button
               className="secondary provider-button"
-              onClick={() => signIn("github", { redirectTo: "/create-account" })}
+              onClick={() => signIn("github", { redirectTo: "/account" })}
               type="button"
             >
               <GitHubLogo />
