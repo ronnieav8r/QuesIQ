@@ -2430,6 +2430,10 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     const dirty = block.editable
       ? value !== block.body
       : false;
+    const isQuestionFocusBlock =
+      block.editable?.kind === "component" && block.editable.type === "question_type";
+    const isStyleBlock =
+      block.editable?.kind === "component" && block.editable.type === "style";
 
     return (
       <article
@@ -2452,6 +2456,42 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
             </button>
           )}
         </div>
+
+        {isQuestionFocusBlock && (
+          <div className="component-tabs" aria-label="Question focus options">
+            {promptWorkspaceQuestionTypeOptions.map((option) => (
+              <button
+                className={option.key === promptWorkspaceQuestionTypeKey ? "active" : ""}
+                key={option.key}
+                onClick={() => {
+                  setPromptWorkspaceQuestionTypeKey(option.key);
+                  void loadPromptWorkspace(promptWorkspaceStyleKey, option.key);
+                }}
+                type="button"
+              >
+                {option.displayName}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {isStyleBlock && (
+          <div className="component-tabs" aria-label="Style options">
+            {promptWorkspaceStyleOptions.map((option) => (
+              <button
+                className={option.key === promptWorkspaceStyleKey ? "active" : ""}
+                key={option.key}
+                onClick={() => {
+                  setPromptWorkspaceStyleKey(option.key);
+                  void loadPromptWorkspace(option.key, promptWorkspaceQuestionTypeKey);
+                }}
+                type="button"
+              >
+                {option.displayName}
+              </button>
+            ))}
+          </div>
+        )}
 
         {block.editable ? (
           <label>
@@ -2526,38 +2566,6 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
                   Test This Mode
                 </button>
               )}
-            </div>
-            <div className="component-tabs" aria-label="Prompt workspace question type options">
-              {promptWorkspaceQuestionTypeOptions.map((option) => (
-                <button
-                  className={
-                    option.key === promptWorkspaceQuestionTypeKey ? "active" : ""
-                  }
-                  key={option.key}
-                  onClick={() => {
-                    setPromptWorkspaceQuestionTypeKey(option.key);
-                    void loadPromptWorkspace(promptWorkspaceStyleKey, option.key);
-                  }}
-                  type="button"
-                >
-                  {option.displayName}
-                </button>
-              ))}
-            </div>
-            <div className="component-tabs" aria-label="Prompt workspace style options">
-              {promptWorkspaceStyleOptions.map((option) => (
-                <button
-                  className={option.key === promptWorkspaceStyleKey ? "active" : ""}
-                  key={option.key}
-                  onClick={() => {
-                    setPromptWorkspaceStyleKey(option.key);
-                    void loadPromptWorkspace(option.key, promptWorkspaceQuestionTypeKey);
-                  }}
-                  type="button"
-                >
-                  {option.displayName}
-                </button>
-              ))}
             </div>
             <div className="prompt-version-list">
               {action.blocks.map((block) => renderPromptWorkspaceBlock(action, block))}
