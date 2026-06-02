@@ -662,7 +662,10 @@ p {
   display: inline-flex;
   font-weight: 700;
   justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.72rem 1rem;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .app-body {
@@ -2053,6 +2056,37 @@ label span {
 .auth-secondary {
   align-content: start;
   background: var(--surface-raised);
+}
+
+.provider-button {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.65rem;
+  justify-content: center;
+}
+
+.provider-button svg {
+  flex: 0 0 auto;
+  height: 1.2rem;
+  width: 1.2rem;
+}
+
+.auth-divider {
+  align-items: center;
+  color: var(--muted);
+  display: grid;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  gap: var(--space-2);
+  grid-template-columns: 1fr auto 1fr;
+  text-transform: uppercase;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  background: var(--border);
+  content: "";
+  height: 1px;
 }
 
 .back-button {
@@ -5497,12 +5531,31 @@ textarea::placeholder {
   gap: 1.2rem;
 }
 
-.trust-grid.compact {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.create-account-notes {
+  color: var(--marketing-muted);
+  display: grid;
+  gap: 0.7rem;
+  line-height: 1.55;
+  list-style: none;
+  margin: 0;
+  max-width: 40rem;
+  padding: 0;
 }
 
-.trust-grid.compact article {
-  min-height: 8rem;
+.create-account-notes li {
+  align-items: start;
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: auto 1fr;
+}
+
+.create-account-notes li::before {
+  background: linear-gradient(135deg, #8c52ff, #ff6a12);
+  border-radius: 999px;
+  content: "";
+  height: 0.55rem;
+  margin-top: 0.48rem;
+  width: 0.55rem;
 }
 
 .create-account-form {
