@@ -17,7 +17,7 @@ const productMeta: Record<
   dpe: {
     accent: "Aviation oral prep",
     icon: Plane,
-    logo: "/brand/quesiq-icon.png",
+    logo: "/brand/quesiq-dpe-logo.png",
     proof: "Scenario-based checkride practice for pilots.",
   },
   interview: {

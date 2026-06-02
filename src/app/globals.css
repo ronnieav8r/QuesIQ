@@ -84,6 +84,16 @@
   gap: 0.1rem;
 }
 
+.dpe-shell .dpe-brand-logo {
+  display: block;
+  height: auto;
+  max-height: 2.45rem;
+  max-width: min(14rem, 48vw);
+  object-fit: contain;
+  object-position: left center;
+  width: auto;
+}
+
 .dpe-shell .brand-title {
   font-size: var(--font-size-md);
   line-height: var(--line-tight);

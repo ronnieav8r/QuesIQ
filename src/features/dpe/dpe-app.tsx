@@ -20,6 +20,7 @@ import {
   SkipForward,
   User
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { signIn, signOut } from "next-auth/react";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -1216,7 +1217,14 @@ export default function App() {
             )}
           </div>
           <div className="brand-lockup">
-            <h1 className="brand-title">QuesIQ DPE</h1>
+            <Image
+              alt="QuesIQ DPE"
+              className="brand-logo dpe-brand-logo"
+              height={72}
+              priority
+              src="/brand/quesiq-dpe-logo.png"
+              width={260}
+            />
             <span className="brand-subtitle">{brandSubtitle}</span>
           </div>
           <div className="inline-actions">
@@ -1536,7 +1544,14 @@ function SignInScreen({
       <div className="app-frame">
         <header className="app-header">
           <div className="brand-lockup">
-            <h1 className="brand-title">QuesIQ DPE</h1>
+            <Image
+              alt="QuesIQ DPE"
+              className="brand-logo dpe-brand-logo"
+              height={72}
+              priority
+              src="/brand/quesiq-dpe-logo.png"
+              width={260}
+            />
             <span className="brand-subtitle">Target-track oral prep</span>
           </div>
           <Link className="button-link secondary" href="/">
