@@ -780,7 +780,11 @@ export default function Home() {
             </section>
           )}
           {authSession !== undefined && !signedIn && (
-            <AuthView authSession={authSession} onContinue={() => setActiveView("home")} />
+            <AuthView
+              authSession={authSession}
+              onContinue={() => setActiveView("home")}
+              redirectTo="/interview"
+            />
           )}
           {signedIn && activeView === "home" && (
             <Dashboard

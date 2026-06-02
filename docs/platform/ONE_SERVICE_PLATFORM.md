@@ -91,6 +91,11 @@ The Auth.js tables stay generic:
 - `session`
 - `verificationToken`
 
+Shared account auth now supports email/password, email verification links,
+magic-link sign-in, Google, and GitHub. Password hashes are stored in
+`account_password_credentials`; email/password sign-in requires the Auth.js
+`emailVerified` timestamp to be set.
+
 Product data stays product-specific:
 
 - Interview sessions, evaluations, stories, introductions, job targets,

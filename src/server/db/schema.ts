@@ -91,6 +91,25 @@ export const platformUserProfiles = pgTable("platform_user_profiles", {
     .references(() => users.id, { onDelete: "cascade" }),
 });
 
+export const accountPasswordCredentials = pgTable(
+  "account_password_credentials",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    email: text("email").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    passwordUpdatedAt: timestamp("password_updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (credential) => ({
+    emailIdx: uniqueIndex("account_password_credentials_email_idx").on(credential.email),
+  }),
+);
+
 export const platformProductUsage = pgTable(
   "platform_product_usage",
   {

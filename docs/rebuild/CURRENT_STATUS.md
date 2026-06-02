@@ -65,7 +65,9 @@ Last updated: 2026-06-02
     `?next=/study`, and `?next=/dpe`
   - `/apps` is the shared app-routing page for Interview, Study, and DPE
   - `/create-account` captures shared first name, last name, preferred name,
-    and email context after sign-in
+    email, and password, then sends an email verification link
+  - `/login` supports email/password sign-in, magic-link sign-in, Google, and
+    GitHub; password sign-in requires verified email
   - `/account` now acts as a product hub for the shared Auth.js account
   - signed-in Interview, Study, and DPE app shells record passive product usage
     heartbeats into platform-owned usage tables

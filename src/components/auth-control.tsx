@@ -145,6 +145,47 @@ export function AuthView({
   const [emailError, setEmailError] = useState<string>();
   const [emailPending, setEmailPending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [password, setPassword] = useState("");
+  const [passwordEmail, setPasswordEmail] = useState("");
+  const [passwordError, setPasswordError] = useState<string>();
+  const [passwordPending, setPasswordPending] = useState(false);
+
+  function continueAfterSignIn() {
+    if (redirectTo && redirectTo !== "/") {
+      window.location.href = redirectTo;
+      return;
+    }
+
+    window.location.reload();
+  }
+
+  async function signInWithPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    try {
+      setPasswordError(undefined);
+      setPasswordPending(true);
+      const response = await signIn("credentials", {
+        email: passwordEmail,
+        password,
+        redirect: false,
+        redirectTo,
+      });
+
+      if (!response?.ok) {
+        throw new Error(
+          "Sign-in failed. Check your email and password, and verify your email if this is a new account.",
+        );
+      }
+
+      onContinue();
+      continueAfterSignIn();
+    } catch (error) {
+      setPasswordError(error instanceof Error ? error.message : "Sign-in failed.");
+    } finally {
+      setPasswordPending(false);
+    }
+  }
 
   async function sendMagicLink(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -199,10 +240,48 @@ export function AuthView({
         </section>
       ) : (
         <div className="auth-layout">
-          <form className="auth-panel" onSubmit={sendMagicLink}>
+          <form className="auth-panel" onSubmit={signInWithPassword}>
             <div>
-              <h2>Email sign-in</h2>
-              <p>No password needed. We will send a secure link to your inbox.</p>
+              <h2>Email and password</h2>
+              <p>Use the password you created for your QuesIQ account.</p>
+            </div>
+            <label>
+              <span>Email address</span>
+              <input
+                autoComplete="email"
+                onChange={(event) => {
+                  setPasswordEmail(event.target.value);
+                  setPasswordError(undefined);
+                }}
+                placeholder="you@example.com"
+                required
+                type="email"
+                value={passwordEmail}
+              />
+            </label>
+            <label>
+              <span>Password</span>
+              <input
+                autoComplete="current-password"
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  setPasswordError(undefined);
+                }}
+                required
+                type="password"
+                value={password}
+              />
+            </label>
+            <button disabled={passwordPending} type="submit">
+              {passwordPending ? "Signing In" : "Sign In"}
+            </button>
+            {passwordError && <p className="form-error">{passwordError}</p>}
+          </form>
+
+          <form className="auth-panel auth-secondary" onSubmit={sendMagicLink}>
+            <div>
+              <h2>Magic link</h2>
+              <p>No password needed. We will send a secure sign-in link to your inbox.</p>
             </div>
             <label>
               <span>Email address</span>

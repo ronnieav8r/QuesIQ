@@ -22,17 +22,9 @@ type AccountProfileResponse = {
   };
 };
 
-const pendingProfileStorageKey = "quesiq.pendingAccountProfile";
-
-type PendingAccountProfile = {
-  email: string;
-  firstName: string;
-  lastName: string;
-  preferredName: string;
-};
-
 export function CreateAccountPage({ nextPath }: { nextPath: string }) {
   const authSession = useAuthSession();
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [email, setEmail] = useState("");
   const [emailPending, setEmailPending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -43,6 +35,7 @@ export function CreateAccountPage({ nextPath }: { nextPath: string }) {
   const [magicLinkError, setMagicLinkError] = useState<string>();
   const [magicLinkPending, setMagicLinkPending] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "saved" | "saving">("idle");
   const [error, setError] = useState<string>();
 
@@ -64,19 +57,6 @@ export function CreateAccountPage({ nextPath }: { nextPath: string }) {
         setFirstName(body.profile?.firstName ?? "");
         setLastName(body.profile?.lastName ?? "");
         setPreferredName(body.profile?.preferredName ?? "");
-
-        const pending = readPendingAccountProfile();
-
-        if (pending && (!body.profile?.firstName || !body.profile?.lastName)) {
-          setFirstName(pending.firstName);
-          setLastName(pending.lastName);
-          setPreferredName(pending.preferredName);
-          await savePlatformProfile(pending);
-          window.localStorage.removeItem(pendingProfileStorageKey);
-          setStatus("saved");
-          return;
-        }
-
         setStatus("idle");
       } catch (profileError) {
         setError(
@@ -90,19 +70,6 @@ export function CreateAccountPage({ nextPath }: { nextPath: string }) {
 
     void loadProfile();
   }, [authSession?.user]);
-
-  function readPendingAccountProfile() {
-    if (typeof window === "undefined") {
-      return undefined;
-    }
-
-    try {
-      const raw = window.localStorage.getItem(pendingProfileStorageKey);
-      return raw ? (JSON.parse(raw) as PendingAccountProfile) : undefined;
-    } catch {
-      return undefined;
-    }
-  }
 
   async function savePlatformProfile(input: {
     firstName: string;
@@ -133,15 +100,28 @@ export function CreateAccountPage({ nextPath }: { nextPath: string }) {
       setError(undefined);
       setEmailPending(true);
       setEmailSent(false);
-      window.localStorage.setItem(
-        pendingProfileStorageKey,
-        JSON.stringify({
+      const createResponse = await fetch("/api/account/password", {
+        body: JSON.stringify({
+          confirmPassword,
           email,
           firstName,
           lastName,
+          password,
           preferredName,
         }),
-      );
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const createBody = (await createResponse.json().catch(() => ({}))) as {
+        error?: string;
+      };
+
+      if (!createResponse.ok) {
+        throw new Error(createBody.error || "Account could not be created.");
+      }
+
       const response = await signIn("email", {
         email,
         redirect: false,
@@ -157,7 +137,7 @@ export function CreateAccountPage({ nextPath }: { nextPath: string }) {
       setError(
         createError instanceof Error
           ? createError.message
-          : "Confirmation email could not be sent.",
+          : "Account could not be created.",
       );
     } finally {
       setEmailPending(false);
@@ -338,12 +318,39 @@ export function CreateAccountPage({ nextPath }: { nextPath: string }) {
                 value={email}
               />
             </label>
+            <label>
+              <span>Password</span>
+              <input
+                autoComplete="new-password"
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  setEmailSent(false);
+                }}
+                required
+                type="password"
+                value={password}
+              />
+            </label>
+            <label>
+              <span>Confirm password</span>
+              <input
+                autoComplete="new-password"
+                onChange={(event) => {
+                  setConfirmPassword(event.target.value);
+                  setEmailSent(false);
+                }}
+                required
+                type="password"
+                value={confirmPassword}
+              />
+            </label>
             <button disabled={emailPending} type="submit">
               {emailPending ? "Sending Confirmation" : "Create Account"}
             </button>
             {emailSent && (
               <p className="form-note">
-                Check your email and use the confirmation link to finish setup.
+                Check your email and use the confirmation link to verify your account.
+                Password sign-in will work after verification.
               </p>
             )}
             {error && <p className="form-error">{error}</p>}

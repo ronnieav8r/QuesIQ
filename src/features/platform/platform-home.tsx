@@ -39,7 +39,7 @@ export default function PlatformHome() {
       <main className="product-shell">
         <section className="app-frame platform-route-frame">
           <div className="app-body">
-            <AuthView authSession={authSession} onContinue={() => undefined} />
+            <AuthView authSession={authSession} onContinue={() => undefined} redirectTo="/apps" />
           </div>
         </section>
       </main>

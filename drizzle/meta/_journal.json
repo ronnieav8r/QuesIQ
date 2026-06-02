@@ -428,6 +428,13 @@
       "when": 1780502400000,
       "tag": "0061_add_platform_profiles_and_usage",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1780506000000,
+      "tag": "0062_add_account_password_credentials",
+      "breakpoints": true
     }
   ]
 }
