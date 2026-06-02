@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
-import { getOpenAiRealtimeApiKey } from "@/server/openai/keys";
+import { isAdminEmail } from "@/server/admin";
+import {
+  getOpenAiInterviewTestTunnelApiKey,
+  getOpenAiRealtimeApiKey,
+} from "@/server/openai/keys";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 import { buildRealtimeAudioInputConfig } from "@/server/realtime/audio-config";
 
@@ -11,6 +15,7 @@ export const runtime = "nodejs";
 type RealtimeStoryRequest = {
   realtimeInstructions?: string;
   sdp?: string;
+  testTunnel?: boolean;
 };
 
 function getRealtimeCallId(location?: string | null) {
@@ -24,7 +29,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
   }
 
-  const apiKey = getOpenAiRealtimeApiKey("interview");
+  const body = (await request.json()) as RealtimeStoryRequest;
+  const useTestTunnelKey = body.testTunnel === true;
+
+  if (useTestTunnelKey && !isAdminEmail(appSession.user.email)) {
+    return NextResponse.json({ error: "Admin access is required." }, { status: 403 });
+  }
+
+  const apiKey = useTestTunnelKey
+    ? getOpenAiInterviewTestTunnelApiKey()
+    : getOpenAiRealtimeApiKey("interview");
 
   if (!apiKey) {
     return NextResponse.json(
@@ -35,8 +49,6 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
-
-  const body = (await request.json()) as RealtimeStoryRequest;
 
   if (!body.sdp) {
     return NextResponse.json({ error: "Missing WebRTC SDP offer." }, { status: 400 });

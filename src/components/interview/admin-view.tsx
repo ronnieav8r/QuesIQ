@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
+import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import { InterviewRuntimeConfigPanel } from "@/features/admin/interview-runtime-config-panel";
 import { interviewFirstTurnInstructionTemplate } from "@/product/interview-first-turn";
 import type {
@@ -25,6 +26,10 @@ import type {
   PromptConfigKey,
   PromptConfigRecord,
   RealtimeSessionUsageRecord,
+  SessionLaunchRecord,
+  SessionSetupSnapshot,
+  VoiceSessionArtifactDraft,
+  VoiceTranscriptTurn,
   QuestCheckType,
   XpRuleAwardMode,
   XpRuleConditionType,
@@ -195,7 +200,8 @@ type AdminSection =
   | "progression"
   | "prompt_library"
   | "runtime_cost"
-  | "support";
+  | "support"
+  | "test_tunnel";
 
 type PromptSection = "base" | PromptComponentRecord["type"];
 
@@ -211,6 +217,20 @@ type InterviewRuntimeConfigSummary = {
   transcriptionModel: string;
   ttsModel: string;
   ttsVoice: string;
+};
+
+type TestTunnelMode = "coaching" | "first_impression" | "mock_interview" | "rapid_fire";
+
+type TestTunnelRealtimeEndpoint =
+  | "/api/realtime/debrief"
+  | "/api/realtime/session"
+  | "/api/realtime/story";
+
+type TestTunnelTurnResponse = {
+  done?: boolean;
+  feedback?: string;
+  question?: string;
+  transcript?: string;
 };
 
 type InterviewQuestionArchetypeRecord = {
@@ -763,6 +783,44 @@ function aiRunRawJsonText(run: AiRunRecord) {
   return run.rawJson ? JSON.stringify(run.rawJson) : "";
 }
 
+function createAdminTranscriptTurn(
+  speaker: VoiceTranscriptTurn["speaker"],
+  role: VoiceTranscriptTurn["role"],
+  text: string,
+): VoiceTranscriptTurn {
+  return {
+    createdAt: new Date().toISOString(),
+    id: `admin-test-${role}-${Date.now()}-${crypto.randomUUID()}`,
+    role,
+    speaker,
+    text: text.trim(),
+  };
+}
+
+function createTestTunnelArtifact(transcript: VoiceTranscriptTurn[]): VoiceSessionArtifactDraft {
+  const now = new Date().toISOString();
+
+  return {
+    durationSeconds: Math.max(1, transcript.length * 45),
+    endedAt: now,
+    endReason: "user_ended",
+    events: [
+      {
+        createdAt: now,
+        id: `admin-test-event-${crypto.randomUUID()}`,
+        type: "admin_text_tunnel.finalized",
+      },
+    ],
+    metadata: {
+      inputModality: "text_simulated_voice",
+      testTunnel: true,
+      testTunnelSource: "admin_text_input",
+    },
+    startedAt: transcript[0]?.createdAt ?? now,
+    transcript,
+  };
+}
+
 type AdminViewProps = {
   eyebrow?: string;
   title?: string;
@@ -856,6 +914,24 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
   const [usageSection, setUsageSection] =
     useState<"api_calls" | "pricing" | "realtime">("api_calls");
   const [selectedPricingId, setSelectedPricingId] = useState<string>();
+  const [testTunnelAnswer, setTestTunnelAnswer] = useState("");
+  const [testTunnelArtifact, setTestTunnelArtifact] = useState<VoiceSessionArtifactDraft>();
+  const [testTunnelCreateReview, setTestTunnelCreateReview] = useState(false);
+  const [testTunnelError, setTestTunnelError] = useState<string>();
+  const [testTunnelMode, setTestTunnelMode] = useState<TestTunnelMode>("coaching");
+  const [testTunnelQuestionType, setTestTunnelQuestionType] = useState("behavioral");
+  const [testTunnelRealtimeEndpoint, setTestTunnelRealtimeEndpoint] =
+    useState<TestTunnelRealtimeEndpoint>("/api/realtime/session");
+  const [testTunnelRealtimeSessionId, setTestTunnelRealtimeSessionId] = useState("");
+  const [testTunnelRole, setTestTunnelRole] = useState("Pilot");
+  const [testTunnelCompany, setTestTunnelCompany] = useState("NetJets");
+  const [testTunnelSession, setTestTunnelSession] = useState<SessionLaunchRecord>();
+  const [testTunnelStatus, setTestTunnelStatus] = useState<
+    "error" | "idle" | "ready" | "running" | "saved"
+  >("idle");
+  const [testTunnelStyle, setTestTunnelStyle] = useState("friendly");
+  const [testTunnelTranscript, setTestTunnelTranscript] = useState<VoiceTranscriptTurn[]>([]);
+  const [testTunnelTurnIndex, setTestTunnelTurnIndex] = useState(0);
 
   const selectedConfig = useMemo(
     () => configs.find((config) => config.id === selectedId),
@@ -1840,6 +1916,10 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
   }
 
   function refreshAdminSection() {
+    if (adminSection === "test_tunnel") {
+      return;
+    }
+
     if (adminSection === "mode_playbooks") {
       void loadConfigs();
       void loadComponents();
@@ -1895,6 +1975,173 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     }
 
     void loadComponents();
+  }
+
+  function testTunnelSnapshot(): SessionSetupSnapshot {
+    return {
+      interviewContext: {
+        jobDescription:
+          "Admin Prompt Test Tunnel context. Use this as a normal target role context for QA.",
+        preferredName: "Admin Tester",
+        targetCompany: testTunnelCompany,
+        targetRole: testTunnelRole,
+      },
+      modeKey: testTunnelMode,
+      questionTypeKey:
+        testTunnelMode === "first_impression"
+          ? undefined
+          : (testTunnelQuestionType as SessionSetupSnapshot["questionTypeKey"]),
+      styleKey: testTunnelStyle as SessionSetupSnapshot["styleKey"],
+      turnBasedQuestionCount: 4,
+    };
+  }
+
+  async function createTestTunnelSession() {
+    try {
+      setTestTunnelError(undefined);
+      setTestTunnelStatus("running");
+      setTestTunnelArtifact(undefined);
+      setTestTunnelTranscript([]);
+      setTestTunnelTurnIndex(0);
+      const snapshot = testTunnelSnapshot();
+      const response = await fetch("/api/admin/interview/test-tunnel/session", {
+        body: JSON.stringify({ snapshot }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const body = (await response.json()) as {
+        error?: string;
+        session?: SessionLaunchRecord;
+      };
+
+      if (!response.ok || !body.session) {
+        throw new Error(body.error || "Test session could not be created.");
+      }
+
+      setTestTunnelSession(body.session);
+      setTestTunnelRealtimeSessionId(body.session.id);
+      if (snapshot.modeKey === "mock_interview") {
+        setTestTunnelArtifact(createTestTunnelArtifact([]));
+        setTestTunnelStatus("ready");
+        return;
+      }
+
+      const initialTurn = await requestTestTunnelTurn(body.session.id, snapshot, [], 0);
+      const initialTranscript = initialTurn.question?.trim()
+        ? [createAdminTranscriptTurn("Que", "assistant", initialTurn.question)]
+        : [];
+      setTestTunnelTranscript(initialTranscript);
+      setTestTunnelArtifact(createTestTunnelArtifact(initialTranscript));
+      setTestTunnelStatus("ready");
+    } catch (error) {
+      setTestTunnelStatus("error");
+      setTestTunnelError(error instanceof Error ? error.message : "Test tunnel failed.");
+    }
+  }
+
+  async function requestTestTunnelTurn(
+    sessionId: string,
+    snapshot: SessionSetupSnapshot,
+    priorTurns: VoiceTranscriptTurn[],
+    turnIndex: number,
+    answerTranscript?: string,
+  ) {
+    const response = await fetch("/api/admin/interview/test-tunnel/turn", {
+      body: JSON.stringify({
+        answerTranscript,
+        priorTurns,
+        sessionId,
+        snapshot,
+        turnIndex,
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
+    const body = (await response.json()) as TestTunnelTurnResponse & {
+      detail?: string;
+      error?: string;
+    };
+
+    if (!response.ok) {
+      throw new Error(body.detail || body.error || "Test turn could not be created.");
+    }
+
+    return body;
+  }
+
+  async function submitTestTunnelAnswer() {
+    const answer = testTunnelAnswer.trim();
+
+    if (!testTunnelSession || !answer) {
+      return;
+    }
+
+    try {
+      setTestTunnelError(undefined);
+      setTestTunnelStatus("running");
+      const snapshot = testTunnelSnapshot();
+      const userTurn = createAdminTranscriptTurn("You", "user", answer);
+      const nextTurnIndex = testTunnelTurnIndex + 1;
+      const result = await requestTestTunnelTurn(
+        testTunnelSession.id,
+        snapshot,
+        testTunnelTranscript,
+        nextTurnIndex,
+        answer,
+      );
+      const nextTurns = [...testTunnelTranscript, userTurn];
+
+      if (result.feedback?.trim()) {
+        nextTurns.push(createAdminTranscriptTurn("Que", "assistant", result.feedback));
+      }
+
+      if (result.question?.trim()) {
+        nextTurns.push(createAdminTranscriptTurn("Que", "assistant", result.question));
+      }
+
+      setTestTunnelAnswer("");
+      setTestTunnelTranscript(nextTurns);
+      setTestTunnelTurnIndex(nextTurnIndex);
+      setTestTunnelStatus(result.done ? "saved" : "ready");
+      setTestTunnelArtifact(createTestTunnelArtifact(nextTurns));
+    } catch (error) {
+      setTestTunnelStatus("error");
+      setTestTunnelError(error instanceof Error ? error.message : "Test turn failed.");
+    }
+  }
+
+  async function finalizeTestTunnelSession() {
+    if (!testTunnelSession || testTunnelTranscript.length === 0) {
+      return;
+    }
+
+    try {
+      setTestTunnelError(undefined);
+      setTestTunnelStatus("running");
+      const artifact = testTunnelArtifact ?? createTestTunnelArtifact(testTunnelTranscript);
+      const response = await fetch("/api/admin/interview/test-tunnel/finalize", {
+        body: JSON.stringify({
+          artifact,
+          createEvaluation: testTunnelCreateReview,
+          sessionId: testTunnelSession.id,
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const body = (await response.json()) as { detail?: string; error?: string };
+
+      if (!response.ok) {
+        throw new Error(body.detail || body.error || "Test session could not be finalized.");
+      }
+
+      setTestTunnelArtifact(artifact);
+      setTestTunnelStatus("saved");
+      void loadAdminData();
+      void loadAiRuns();
+    } catch (error) {
+      setTestTunnelStatus("error");
+      setTestTunnelError(error instanceof Error ? error.message : "Test finalize failed.");
+    }
   }
 
   function openPromptFromRun(run: AiRunRecord) {
@@ -2278,6 +2525,13 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
               Runtime & Cost
             </button>
             <button
+              className={adminSection === "test_tunnel" ? "active" : ""}
+              onClick={() => setAdminSection("test_tunnel")}
+              type="button"
+            >
+              Prompt Test Tunnel
+            </button>
+            <button
               className={adminSection === "data" ? "active" : ""}
               onClick={() => setAdminSection("data")}
               type="button"
@@ -2386,6 +2640,223 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
                 </button>
               </div>
             </>
+          )}
+
+          {adminSection === "test_tunnel" && (
+            <section className="ai-runs-panel" aria-labelledby="test-tunnel-title">
+              <div className="section-head">
+                <div>
+                  <p className="eyebrow">Admin QA</p>
+                  <h2 id="test-tunnel-title">Prompt Test Tunnel</h2>
+                  <p>
+                    Admin-only typed input for testing prompt/runtime behavior from the
+                    transcript boundary forward. Normal app screens do not mount these
+                    controls.
+                  </p>
+                </div>
+                <span>{testTunnelStatus}</span>
+              </div>
+
+              <div className="admin-data-grid">
+                <section className="auth-panel auth-secondary">
+                  <h3>Session context</h3>
+                  <label>
+                    <span>Mode</span>
+                    <select
+                      onChange={(event) =>
+                        setTestTunnelMode(event.target.value as TestTunnelMode)
+                      }
+                      value={testTunnelMode}
+                    >
+                      <option value="coaching">Coaching</option>
+                      <option value="rapid_fire">Rapid Fire</option>
+                      <option value="first_impression">Intro Practice</option>
+                      <option value="mock_interview">Mock Interview Realtime</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Question focus</span>
+                    <select
+                      disabled={testTunnelMode === "first_impression"}
+                      onChange={(event) => setTestTunnelQuestionType(event.target.value)}
+                      value={testTunnelQuestionType}
+                    >
+                      <option value="behavioral">Behavioral</option>
+                      <option value="technical">Technical</option>
+                      <option value="hypothetical">Hypothetical</option>
+                      <option value="motivational">Motivational</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Style</span>
+                    <select
+                      onChange={(event) => setTestTunnelStyle(event.target.value)}
+                      value={testTunnelStyle}
+                    >
+                      <option value="friendly">Friendly</option>
+                      <option value="neutral">Neutral</option>
+                      <option value="tough">Tough</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Target role</span>
+                    <input
+                      onChange={(event) => setTestTunnelRole(event.target.value)}
+                      value={testTunnelRole}
+                    />
+                  </label>
+                  <label>
+                    <span>Target company</span>
+                    <input
+                      onChange={(event) => setTestTunnelCompany(event.target.value)}
+                      value={testTunnelCompany}
+                    />
+                  </label>
+                  <button
+                    disabled={testTunnelStatus === "running"}
+                    onClick={() => void createTestTunnelSession()}
+                    type="button"
+                  >
+                    Create Test Session
+                  </button>
+                  {testTunnelSession && (
+                    <p className="field-note">Session ID: {testTunnelSession.id}</p>
+                  )}
+                </section>
+
+                <section className="auth-panel auth-secondary">
+                  <h3>Turn-based typed turns</h3>
+                  <p className="field-note">
+                    Uses admin-only APIs and the same next-turn server path after
+                    transcription would normally produce a transcript.
+                  </p>
+                  <label>
+                    <span>Typed candidate answer</span>
+                    <textarea
+                      disabled={!testTunnelSession || testTunnelMode === "mock_interview"}
+                      onChange={(event) => setTestTunnelAnswer(event.target.value)}
+                      placeholder="Type the candidate answer to submit as transcript."
+                      rows={5}
+                      value={testTunnelAnswer}
+                    />
+                  </label>
+                  <div className="inline-actions">
+                    <button
+                      disabled={
+                        !testTunnelSession ||
+                        !testTunnelAnswer.trim() ||
+                        testTunnelMode === "mock_interview" ||
+                        testTunnelStatus === "running"
+                      }
+                      onClick={() => void submitTestTunnelAnswer()}
+                      type="button"
+                    >
+                      Submit Text Turn
+                    </button>
+                    <label className="inline-check">
+                      <input
+                        checked={testTunnelCreateReview}
+                        onChange={(event) =>
+                          setTestTunnelCreateReview(event.target.checked)
+                        }
+                        type="checkbox"
+                      />
+                      Create review on finalize
+                    </label>
+                    <button
+                      className="secondary"
+                      disabled={!testTunnelSession || testTunnelTranscript.length === 0}
+                      onClick={() => void finalizeTestTunnelSession()}
+                      type="button"
+                    >
+                      Finalize Artifact
+                    </button>
+                  </div>
+                  {testTunnelError && <p className="form-error">{testTunnelError}</p>}
+                </section>
+              </div>
+
+              <section className="realtime-log transcript-log" aria-label="Test transcript">
+                <p className="eyebrow">Test transcript</p>
+                {testTunnelTranscript.length === 0 ? (
+                  <p>Create a test session to collect typed transcript turns.</p>
+                ) : (
+                  testTunnelTranscript.map((turn) => (
+                    <p key={turn.id}>
+                      <strong>{turn.speaker}:</strong> {turn.text}
+                    </p>
+                  ))
+                )}
+              </section>
+
+              <section className="auth-panel auth-secondary">
+                <h3>Realtime text injection</h3>
+                <p className="field-note">
+                  Starts the selected Realtime endpoint and injects typed user messages
+                  into the active data channel. This bypasses microphone capture only.
+                </p>
+                <div className="admin-data-grid">
+                  <label>
+                    <span>Realtime endpoint</span>
+                    <select
+                      onChange={(event) =>
+                        setTestTunnelRealtimeEndpoint(
+                          event.target.value as TestTunnelRealtimeEndpoint,
+                        )
+                      }
+                      value={testTunnelRealtimeEndpoint}
+                    >
+                      <option value="/api/realtime/session">Mock Interview</option>
+                      <option value="/api/realtime/story">Story Lab Capture</option>
+                      <option value="/api/realtime/debrief">Voice Debrief</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Session ID</span>
+                    <input
+                      onChange={(event) =>
+                        setTestTunnelRealtimeSessionId(event.target.value)
+                      }
+                      placeholder="Required for Mock Interview and Debrief"
+                      value={testTunnelRealtimeSessionId}
+                    />
+                  </label>
+                </div>
+                <RealtimeVoiceSession
+                  adminTextInputEnabled
+                  endpoint={testTunnelRealtimeEndpoint}
+                  firstTurnInstructions={
+                    testTunnelRealtimeEndpoint === "/api/realtime/debrief"
+                      ? "Speak in English only. If no user question has been provided yet, output exactly: I'm ready to help you review this session. If the user asks a question, answer it directly using the compact session review context."
+                      : undefined
+                  }
+                  initialResponseMode={
+                    testTunnelRealtimeEndpoint === "/api/realtime/debrief"
+                      ? "static"
+                      : "model"
+                  }
+                  initialStaticMessage="I'm ready to help you review this session."
+                  realtimeInstructions={
+                    testTunnelRealtimeEndpoint === "/api/realtime/story"
+                      ? "Capture purpose: TMAAT Story Lab."
+                      : undefined
+                  }
+                  sessionId={
+                    testTunnelRealtimeSessionId.trim() ||
+                    "00000000-0000-4000-8000-000000000000"
+                  }
+                  snapshot={
+                    testTunnelRealtimeEndpoint === "/api/realtime/session"
+                      ? testTunnelSnapshot()
+                      : undefined
+                  }
+                  startButtonLabel="Start Realtime Text Test"
+                  surfaceClassName="panel realtime-session"
+                  testTunnel
+                  title="Admin Realtime text injection"
+                />
+              </section>
+            </section>
           )}
 
           {adminSection === "feedback" && (

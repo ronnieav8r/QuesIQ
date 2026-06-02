@@ -13,6 +13,7 @@ import type {
 } from "@/product/interview-types";
 
 type RealtimeVoiceSessionProps = {
+  adminTextInputEnabled?: boolean;
   endpoint?: string;
   errorActionLabel?: string;
   firstTurnInstructions?: string;
@@ -20,6 +21,7 @@ type RealtimeVoiceSessionProps = {
   initialResponseMode?: "model" | "static" | "wait_for_user";
   initialStaticMessage?: string;
   realtimeInstructions?: string;
+  testTunnel?: boolean;
   onErrorAction?: () => void;
   onArtifactChange?: (artifact: VoiceSessionArtifactDraft) => void;
   onArtifactFinalized?: (artifact: VoiceSessionArtifactDraft) => void;
@@ -44,6 +46,22 @@ function shouldAutoCreateResponseAfterUserTurn(endpoint: string) {
     endpoint === "/api/dpe/realtime/session" ||
     endpoint === "/api/realtime/debrief"
   );
+}
+
+function createTextInputItem(text: string) {
+  return {
+    item: {
+      content: [
+        {
+          text,
+          type: "input_text",
+        },
+      ],
+      role: "user",
+      type: "message",
+    },
+    type: "conversation.item.create",
+  };
 }
 
 function toErrorMessage(error: unknown) {
@@ -72,6 +90,7 @@ function getPhaseLabel(phase: VoiceSessionPhase, errorMessage?: string) {
 }
 
 export function RealtimeVoiceSession({
+  adminTextInputEnabled = false,
   endpoint = "/api/realtime/session",
   errorActionLabel,
   firstTurnInstructions,
@@ -79,6 +98,7 @@ export function RealtimeVoiceSession({
   initialResponseMode = "model",
   initialStaticMessage,
   realtimeInstructions,
+  testTunnel = false,
   onErrorAction,
   onArtifactChange,
   onArtifactFinalized,
@@ -101,6 +121,8 @@ export function RealtimeVoiceSession({
   const sessionStartedAtMsRef = useRef<number | undefined>(undefined);
   const [artifactDraft, setArtifactDraft] =
     useState<VoiceSessionArtifactDraft>(emptyArtifactDraft);
+  const [adminTextInput, setAdminTextInput] = useState("");
+  const [dataChannelReady, setDataChannelReady] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [ending, setEnding] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
@@ -153,6 +175,7 @@ export function RealtimeVoiceSession({
     window.clearTimeout(endFinalizeTimeoutRef.current);
     sessionStartedAtMsRef.current = Date.now();
     setElapsedSeconds(0);
+    setDataChannelReady(false);
     setEnding(false);
     setArtifactDraft({
       events: [],
@@ -165,6 +188,7 @@ export function RealtimeVoiceSession({
     window.clearTimeout(endFinalizeTimeoutRef.current);
     peerConnectionRef.current?.close();
     dataChannelRef.current = null;
+    setDataChannelReady(false);
     mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
     peerConnectionRef.current = null;
     mediaStreamRef.current = null;
@@ -319,15 +343,20 @@ export function RealtimeVoiceSession({
     try {
       setErrorMessage(undefined);
       beginArtifactDraft();
-      setPhase("requesting_microphone");
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setPhase(adminTextInputEnabled ? "connecting" : "requesting_microphone");
+      const mediaStream = adminTextInputEnabled
+        ? undefined
+        : await navigator.mediaDevices.getUserMedia({ audio: true });
       const peerConnection = new RTCPeerConnection();
       const dataChannel = peerConnection.createDataChannel("oai-events");
 
-      mediaStreamRef.current = mediaStream;
+      mediaStreamRef.current = mediaStream ?? null;
       peerConnectionRef.current = peerConnection;
       dataChannelRef.current = dataChannel;
-      mediaStream.getTracks().forEach((track) => peerConnection.addTrack(track, mediaStream));
+      mediaStream?.getTracks().forEach((track) => peerConnection.addTrack(track, mediaStream));
+      if (adminTextInputEnabled) {
+        peerConnection.addTransceiver("audio", { direction: "recvonly" });
+      }
       peerConnection.ontrack = (event) => {
         if (audioRef.current) {
           audioRef.current.srcObject = event.streams[0];
@@ -363,7 +392,12 @@ export function RealtimeVoiceSession({
       };
       dataChannel.addEventListener("open", () => {
         addEvent("data_channel.open");
+        setDataChannelReady(true);
         startQue(dataChannel);
+      });
+      dataChannel.addEventListener("close", () => {
+        addEvent("data_channel.close");
+        setDataChannelReady(false);
       });
       dataChannel.addEventListener("message", (event) => {
         let message: { delta?: string; transcript?: string; type?: string };
@@ -447,6 +481,7 @@ export function RealtimeVoiceSession({
           sdp: offer.sdp,
           sessionId,
           snapshot,
+          testTunnel,
           realtimeInstructions,
         }),
         headers: {
@@ -481,6 +516,22 @@ export function RealtimeVoiceSession({
       });
       finishSession("start_failed", "error");
     }
+  }
+
+  function submitAdminTextInput() {
+    const text = adminTextInput.trim();
+    const dataChannel = dataChannelRef.current;
+
+    if (!adminTextInputEnabled || !text || dataChannel?.readyState !== "open") {
+      return;
+    }
+
+    addTranscriptTurn("You", "user", text);
+    dataChannel.send(JSON.stringify(createTextInputItem(text)));
+    dataChannel.send(JSON.stringify({ type: "response.create" }));
+    addEvent("client.admin_text_input");
+    addEvent("client.response.create.admin_text");
+    setAdminTextInput("");
   }
 
   const latestEvents = artifactDraft.events.slice(-6).reverse();
@@ -524,6 +575,35 @@ export function RealtimeVoiceSession({
           {ending ? "Ending" : "End Session"}
         </button>
       </div>
+      {adminTextInputEnabled && (
+        <div className="auth-panel auth-secondary">
+          <label>
+            <span>Admin text input</span>
+            <textarea
+              onChange={(event) => setAdminTextInput(event.target.value)}
+              placeholder="Type the candidate's next message."
+              rows={4}
+              value={adminTextInput}
+            />
+          </label>
+          <button
+            className="secondary"
+            disabled={
+      !adminTextInput.trim() ||
+              !dataChannelReady ||
+              phase !== "live"
+            }
+            onClick={submitAdminTextInput}
+            type="button"
+          >
+            Send Text Turn
+          </button>
+          <p className="field-note">
+            Admin-only test input. This bypasses microphone capture and injects text into the
+            active Realtime conversation.
+          </p>
+        </div>
+      )}
       {errorMessage && <p className="form-error">{errorMessage}</p>}
       {errorMessage && onErrorAction && (
         <div className="inline-actions">

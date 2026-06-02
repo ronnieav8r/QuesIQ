@@ -10,10 +10,14 @@ import type {
   VoiceSessionArtifactDraft,
 } from "@/product/interview-types";
 import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
+import { isAdminEmail } from "@/server/admin";
 import { getCoachingMemory } from "@/server/coaching-memory/coaching-memory";
 import { getDb } from "@/server/db/client";
 import { evaluations, sessions } from "@/server/db/schema";
-import { getOpenAiRealtimeApiKey } from "@/server/openai/keys";
+import {
+  getOpenAiInterviewTestTunnelApiKey,
+  getOpenAiRealtimeApiKey,
+} from "@/server/openai/keys";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 import { buildRealtimeAudioInputConfig } from "@/server/realtime/audio-config";
 
@@ -23,6 +27,7 @@ type RealtimeDebriefRequest = {
   debriefIntent?: "practice_fix" | "score_explanation" | "what_to_improve_first";
   sdp?: string;
   sessionId?: string;
+  testTunnel?: boolean;
   userQuestion?: string;
 };
 
@@ -154,7 +159,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
   }
 
-  const apiKey = getOpenAiRealtimeApiKey("interview");
+  const body = (await request.json()) as RealtimeDebriefRequest;
+  const useTestTunnelKey = body.testTunnel === true;
+
+  if (useTestTunnelKey && !isAdminEmail(appSession.user.email)) {
+    return NextResponse.json({ error: "Admin access is required." }, { status: 403 });
+  }
+
+  const apiKey = useTestTunnelKey
+    ? getOpenAiInterviewTestTunnelApiKey()
+    : getOpenAiRealtimeApiKey("interview");
 
   if (!apiKey) {
     return NextResponse.json(
@@ -165,8 +179,6 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
-
-  const body = (await request.json()) as RealtimeDebriefRequest;
 
   if (!body.sdp) {
     return NextResponse.json({ error: "Missing WebRTC SDP offer." }, { status: 400 });

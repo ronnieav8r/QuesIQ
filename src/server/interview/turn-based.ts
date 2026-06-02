@@ -30,6 +30,7 @@ type PriorTurn = {
 export type TurnBasedInput = {
   answerAudioBase64?: string;
   answerMimeType?: string;
+  answerTranscript?: string;
   endAfterAnswer?: boolean;
   priorTurns: PriorTurn[];
   sessionId: string;
@@ -642,6 +643,7 @@ async function generateTurnDecision(input: {
 }
 
 export async function runTurnBasedInterviewTurn(input: {
+  apiKeyOverride?: string;
   config: InterviewRuntimeConfigRecord;
   turnInput: TurnBasedInput;
   userId: string;
@@ -660,13 +662,15 @@ export async function runTurnBasedInterviewTurn(input: {
     return undefined;
   }
 
-  const apiKey = getOpenAiApiKey("interview");
+  const apiKey = input.apiKeyOverride || getOpenAiApiKey("interview");
   if (!apiKey) {
     throw new Error("Interview OpenAI key is not configured.");
   }
 
-  const latestTranscript = input.turnInput.answerAudioBase64
-    ? await transcribeAnswer({
+  const latestTranscript = input.turnInput.answerTranscript?.trim()
+    ? input.turnInput.answerTranscript.trim()
+    : input.turnInput.answerAudioBase64
+      ? await transcribeAnswer({
         apiKey,
         audioBase64: input.turnInput.answerAudioBase64,
         mimeType: input.turnInput.answerMimeType || "audio/webm",
@@ -674,7 +678,7 @@ export async function runTurnBasedInterviewTurn(input: {
         sessionId: input.turnInput.sessionId,
         userId: input.userId,
       })
-    : undefined;
+      : undefined;
 
   const decision = await generateTurnDecision({
     apiKey,

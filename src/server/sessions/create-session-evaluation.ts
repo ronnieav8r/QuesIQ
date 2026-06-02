@@ -315,6 +315,7 @@ async function requestEvaluation(
   model: string,
   storyLibrary: StoryLibraryContextItem[],
   memory?: CoachingMemoryRecord,
+  apiKeyOverride?: string,
 ) {
   const storyEvaluationConfig = snapshot.storyContext
     ? await getActivePromptConfig("story_practice_evaluation")
@@ -354,7 +355,7 @@ async function requestEvaluation(
       },
     }),
     headers: {
-      Authorization: `Bearer ${getOpenAiApiKey("interview")}`,
+      Authorization: `Bearer ${apiKeyOverride || getOpenAiApiKey("interview")}`,
       "Content-Type": "application/json",
     },
     method: "POST",
@@ -412,6 +413,7 @@ function getProviderRequestId(error: unknown): string | undefined {
 export async function createSessionEvaluation(
   sessionId: string,
   userId: string,
+  options: { apiKeyOverride?: string } = {},
 ): Promise<SessionEvaluationRecord | undefined> {
   const now = new Date();
   const [existing] = await getDb()
@@ -560,6 +562,7 @@ export async function createSessionEvaluation(
       model,
       storyLibrary,
       memory,
+      options.apiKeyOverride,
     );
     result = evaluationResponse.evaluation;
     if (result.coachingMemory) {

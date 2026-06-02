@@ -547,6 +547,11 @@ export type VoiceSessionArtifactDraft = {
   endedAt?: string;
   endReason?: "connection_lost" | "start_failed" | "user_ended";
   events: VoiceSessionEvent[];
+  metadata?: {
+    inputModality?: "text_simulated_voice" | "voice";
+    testTunnel?: boolean;
+    testTunnelSource?: "admin_text_input";
+  };
   startedAt?: string;
   transcript: VoiceTranscriptTurn[];
 };

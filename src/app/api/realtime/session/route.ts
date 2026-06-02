@@ -5,10 +5,14 @@ import type { CoachingMemoryRecord } from "@/product/interview-types";
 import type { SessionSetupSnapshot } from "@/product/interview-types";
 import type { PromptConfigRecord } from "@/product/interview-types";
 import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
+import { isAdminEmail } from "@/server/admin";
 import type { SessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
 import { getSessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
 import { getCoachingMemory } from "@/server/coaching-memory/coaching-memory";
-import { getOpenAiRealtimeApiKey } from "@/server/openai/keys";
+import {
+  getOpenAiInterviewTestTunnelApiKey,
+  getOpenAiRealtimeApiKey,
+} from "@/server/openai/keys";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 import { buildRealtimeAudioInputConfig } from "@/server/realtime/audio-config";
 import { getOwnedSession } from "@/server/sessions/get-owned-session";
@@ -24,6 +28,7 @@ type RealtimeSessionRequest = {
   sdp?: string;
   sessionId?: string;
   snapshot?: SessionSetupSnapshot;
+  testTunnel?: boolean;
 };
 
 const strictSpokenTurnContract = [
@@ -161,7 +166,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
   }
 
-  const apiKey = getOpenAiRealtimeApiKey("interview");
+  const body = (await request.json()) as RealtimeSessionRequest;
+  const useTestTunnelKey = body.testTunnel === true;
+
+  if (useTestTunnelKey && !isAdminEmail(appSession.user.email)) {
+    return NextResponse.json({ error: "Admin access is required." }, { status: 403 });
+  }
+
+  const apiKey = useTestTunnelKey
+    ? getOpenAiInterviewTestTunnelApiKey()
+    : getOpenAiRealtimeApiKey("interview");
 
   if (!apiKey) {
     return NextResponse.json(
@@ -172,8 +186,6 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
-
-  const body = (await request.json()) as RealtimeSessionRequest;
 
   if (!body.sdp) {
     return NextResponse.json({ error: "Missing WebRTC SDP offer." }, { status: 400 });

@@ -73,6 +73,22 @@ export function parseVoiceSessionArtifact(
     endedAt: candidate.endedAt,
     endReason: candidate.endReason,
     events: candidate.events,
+    metadata:
+      candidate.metadata &&
+      typeof candidate.metadata === "object" &&
+      candidate.metadata.testTunnel === true
+        ? {
+            inputModality:
+              candidate.metadata.inputModality === "text_simulated_voice"
+                ? "text_simulated_voice"
+                : undefined,
+            testTunnel: true,
+            testTunnelSource:
+              candidate.metadata.testTunnelSource === "admin_text_input"
+                ? "admin_text_input"
+                : undefined,
+          }
+        : undefined,
     startedAt: candidate.startedAt,
     transcript: candidate.transcript,
   };

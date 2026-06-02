@@ -16,6 +16,16 @@ export function getOpenAiApiKey(product: OpenAiProduct = "interview") {
   return process.env.OPENAI_INTERVIEW_API_KEY || process.env.OPENAI_API_KEY;
 }
 
+export function getOpenAiInterviewTestTunnelApiKey() {
+  return (
+    process.env.OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY ||
+    process.env.OPENAI_INTERVIEW_REALTIME_API_KEY ||
+    process.env.OPENAI_INTERVIEW_API_KEY ||
+    process.env.OPENAI_REALTIME_API_KEY ||
+    process.env.OPENAI_API_KEY
+  );
+}
+
 export function getOpenAiRealtimeApiKey(product: OpenAiProduct = "interview") {
   if (product === "study") {
     return (
