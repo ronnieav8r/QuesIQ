@@ -17,6 +17,8 @@ type RealtimeVoiceSessionProps = {
   errorActionLabel?: string;
   firstTurnInstructions?: string;
   hideTranscript?: boolean;
+  initialResponseMode?: "model" | "static" | "wait_for_user";
+  initialStaticMessage?: string;
   realtimeInstructions?: string;
   onErrorAction?: () => void;
   onArtifactChange?: (artifact: VoiceSessionArtifactDraft) => void;
@@ -37,7 +39,11 @@ const defaultFirstTurnInstruction =
   "Speak in English only. Start the live voice session now using the active Admin prompt, mode instructions, question-focus instructions, style instructions, and session context already provided. Use only provided session context. Do not infer or mention the user's surroundings, camera view, current activity, food, cooking, location, objects, clothing, or what they appear to be doing. Ask exactly one opening question.";
 
 function shouldAutoCreateResponseAfterUserTurn(endpoint: string) {
-  return endpoint === "/api/realtime/session" || endpoint === "/api/dpe/realtime/session";
+  return (
+    endpoint === "/api/realtime/session" ||
+    endpoint === "/api/dpe/realtime/session" ||
+    endpoint === "/api/realtime/debrief"
+  );
 }
 
 function toErrorMessage(error: unknown) {
@@ -70,6 +76,8 @@ export function RealtimeVoiceSession({
   errorActionLabel,
   firstTurnInstructions,
   hideTranscript = false,
+  initialResponseMode = "model",
+  initialStaticMessage,
   realtimeInstructions,
   onErrorAction,
   onArtifactChange,
@@ -243,6 +251,23 @@ export function RealtimeVoiceSession({
 
   function startQue(dataChannel: RTCDataChannel) {
     if (queStartedRef.current) {
+      return;
+    }
+
+    if (initialResponseMode === "static") {
+      addTranscriptTurn(
+        "Que",
+        "assistant",
+        initialStaticMessage || firstTurnInstructions || defaultFirstTurnInstruction,
+      );
+      queStartedRef.current = true;
+      addEvent("client.response.static_first_turn");
+      return;
+    }
+
+    if (initialResponseMode === "wait_for_user") {
+      queStartedRef.current = true;
+      addEvent("client.response.wait_for_user");
       return;
     }
 

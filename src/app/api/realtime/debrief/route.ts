@@ -20,47 +20,104 @@ import { buildRealtimeAudioInputConfig } from "@/server/realtime/audio-config";
 export const runtime = "nodejs";
 
 type RealtimeDebriefRequest = {
+  debriefIntent?: "practice_fix" | "score_explanation" | "what_to_improve_first";
   sdp?: string;
   sessionId?: string;
+  userQuestion?: string;
 };
 
-function summarizeScores(review?: SessionEvaluationResult) {
-  if (!review) {
-    return "No written review is available yet.";
-  }
-
-  return review.scores
-    .map((score) => {
-      const evidence = score.evidence ? ` Evidence: ${score.evidence}` : "";
-      const nextStep = score.nextStep ? ` Next step: ${score.nextStep}` : "";
-
-      return `${score.label}: ${score.score}/5. ${score.summary}${evidence}${nextStep}`;
-    })
-    .join(" ");
+function compactTranscriptExcerpt(session?: VoiceSessionArtifactDraft | null) {
+  return (
+    session?.transcript
+      .slice(-6)
+      .map((turn) => `${turn.speaker}: ${turn.text}`)
+      .filter(Boolean)
+      .slice(-4) ?? []
+  );
 }
 
-function summarizeReviewDetail(review?: SessionEvaluationResult) {
-  if (!review?.reviewDetail) {
-    return "No expanded review detail is available.";
+function reviewEvidence(review?: SessionEvaluationResult) {
+  if (!review) {
+    return ["No written review evidence is available yet."];
   }
 
-  return [
-    `What worked: ${review.reviewDetail.strengths.join(" | ") || "Not provided"}.`,
-    `Focus areas: ${review.reviewDetail.focusAreas.join(" | ") || "Not provided"}.`,
-    `Practice plan: ${review.reviewDetail.practicePlan.join(" | ") || "Not provided"}.`,
-    `Follow-up questions: ${
-      review.reviewDetail.followUpQuestions.join(" | ") || "Not provided"
-    }.`,
-    `Evidence: ${review.reviewDetail.evidence.join(" | ") || "Not provided"}.`,
-  ].join(" ");
+  const evidence = [
+    ...(review.reviewDetail?.evidence ?? []),
+    ...(review.reviewDetail?.focusAreas ?? []),
+    ...review.scores.flatMap((score) => [score.evidence, score.nextStep].filter(Boolean)),
+  ]
+    .map((item) => item?.trim())
+    .filter((item): item is string => Boolean(item));
+
+  return evidence.length > 0 ? evidence.slice(0, 3) : [review.summary];
+}
+
+function starDiagnosis(review?: SessionEvaluationResult) {
+  const focusArea = review?.reviewDetail?.focusAreas[0] || review?.coachingInsight;
+  const strongest = review?.reviewDetail?.strengths[0] ? "Evidence" : "Context";
+
+  if (!focusArea) {
+    return {
+      reason: "No written review diagnosis is available yet.",
+      strongest,
+      weakest: "Action",
+    };
+  }
+
+  return {
+    reason: focusArea,
+    strongest,
+    weakest: /result|outcome|impact/i.test(focusArea) ? "Result" : "Action",
+  };
+}
+
+function buildDebriefCard({
+  body,
+  memory,
+  review,
+  session,
+}: {
+  body: RealtimeDebriefRequest;
+  memory?: CoachingMemoryRecord;
+  review?: SessionEvaluationResult;
+  session: {
+    contextSnapshot: SessionSetupSnapshot;
+    voiceArtifact?: VoiceSessionArtifactDraft | null;
+  };
+}) {
+  const snapshot = session.contextSnapshot;
+
+  return {
+    coaching_memory_hint: memory
+      ? {
+          latest_recommendation: memory.latestRecommendation,
+          recurring_patterns: memory.recurringPatterns.slice(0, 2),
+          summary: memory.summary,
+        }
+      : undefined,
+    debrief_intent: body.debriefIntent ?? "open_review",
+    practice_mode: snapshot.modeKey,
+    question_focus: snapshot.questionTypeKey ?? null,
+    recommended_next_action:
+      review?.nextAction || "Choose one answer to improve, then practice one specific STAR gap.",
+    review_evidence: reviewEvidence(review),
+    star_diagnosis: starDiagnosis(review),
+    target_company: snapshot.interviewContext.targetCompany || "Optional",
+    target_role: snapshot.interviewContext.targetRole || "General practice",
+    transcript_excerpt: compactTranscriptExcerpt(session.voiceArtifact),
+    user_question: body.userQuestion?.trim() || null,
+    user_requested_practice: body.debriefIntent === "practice_fix",
+  };
 }
 
 function buildDebriefInstructions({
+  body,
   memory,
   promptConfig,
   review,
   session,
 }: {
+  body: RealtimeDebriefRequest;
   memory?: CoachingMemoryRecord;
   promptConfig: PromptConfigRecord;
   review?: SessionEvaluationResult;
@@ -69,27 +126,18 @@ function buildDebriefInstructions({
     voiceArtifact?: VoiceSessionArtifactDraft | null;
   };
 }) {
-  const snapshot = session.contextSnapshot;
-  const transcript = session.voiceArtifact?.transcript
-    .map((turn) => `${turn.speaker}: ${turn.text}`)
-    .join(" | ");
+  const debriefCard = buildDebriefCard({
+    body,
+    memory,
+    review,
+    session,
+  });
 
   return [
     promptConfig.instructions,
-    "Runtime context for this debrief:",
-    `Target role: ${snapshot.interviewContext.targetRole || "General practice"}.`,
-    `Target company: ${snapshot.interviewContext.targetCompany || "Optional"}.`,
-    `Practice mode: ${snapshot.modeKey}.`,
-    snapshot.questionTypeKey ? `Question focus: ${snapshot.questionTypeKey}.` : undefined,
-    `Written review summary: ${review?.summary || "No written review summary available."}`,
-    `Coach note: ${review?.coachingInsight || "No coaching note available."}`,
-    `Next move: ${review?.nextAction || "No next move available."}`,
-    `Scores: ${summarizeScores(review)}`,
-    `Expanded review detail: ${summarizeReviewDetail(review)}`,
-    memory
-      ? `Coaching memory: ${memory.summary} Latest focus: ${memory.latestRecommendation}. Recurring patterns: ${memory.recurringPatterns.join(" | ") || "None yet"}. Use this quietly to make advice more personal.`
-      : "No prior coaching memory was provided.",
-    `Transcript: ${transcript || "No transcript turns were saved."}`,
+    "Use this compact debrief card as your only runtime context. Do not ask a default opening question. If the user has not asked a question yet, say exactly: I'm ready to help you review this session.",
+    "When the user asks a question, answer directly from the card. Mention scores only if the user asks about scores. Prefer transcript excerpts and review evidence over score tables.",
+    JSON.stringify(debriefCard),
   ]
     .filter(Boolean)
     .join(" ");
@@ -162,8 +210,10 @@ export async function POST(request: Request) {
     promptConfigVersion: promptConfig.version,
     promptSnapshot: promptConfig.instructions,
     rawJson: {
+      debriefIntent: body.debriefIntent,
       endpoint: "/api/realtime/debrief",
       transcriptTurns: session.voiceArtifact.transcript.length,
+      userQuestionPresent: Boolean(body.userQuestion),
     },
     runType: "realtime",
     sessionId: body.sessionId,
@@ -177,6 +227,7 @@ export async function POST(request: Request) {
       },
     },
     instructions: buildDebriefInstructions({
+      body,
       memory,
       promptConfig,
       review: session.evaluationResult ?? undefined,

@@ -18,6 +18,8 @@ type DebriefViewProps = {
   session?: SessionHistoryItem;
 };
 
+const debriefReadyMessage = "I'm ready to help you review this session.";
+
 export function DebriefView({ catalog, onBack, onReview, session }: DebriefViewProps) {
   const savedArtifactKeyRef = useRef<string | undefined>(undefined);
   const [saveError, setSaveError] = useState<string>();
@@ -142,7 +144,7 @@ export function DebriefView({ catalog, onBack, onReview, session }: DebriefViewP
       {review && (
         <section className="panel session-review" aria-labelledby="debrief-review-title">
           <div className="section-head">
-            <h2 id="debrief-review-title">Review Que Will Use</h2>
+            <h2 id="debrief-review-title">Session review context</h2>
             <span>Ready</span>
           </div>
           <div className="review-body">
@@ -167,7 +169,9 @@ export function DebriefView({ catalog, onBack, onReview, session }: DebriefViewP
       {canDebrief ? (
         <RealtimeVoiceSession
           endpoint="/api/realtime/debrief"
-          firstTurnInstructions="Speak in English only. Start this debrief using the active Admin-visible Session Debrief prompt and the saved session context already provided. Ask exactly one opening question."
+          firstTurnInstructions="Speak in English only. If no user question has been provided yet, output exactly: I'm ready to help you review this session. If the user asks a question, answer it directly using the compact session review context."
+          initialResponseMode="static"
+          initialStaticMessage={debriefReadyMessage}
           onArtifactFinalized={saveDebriefArtifact}
           sessionId={session.id}
           startButtonLabel="Start Debrief"

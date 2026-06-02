@@ -347,10 +347,22 @@ function turnTask(
 }
 
 function turnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) {
+  const universalRules = [
+    "Universal next-turn rules:",
+    "Generate at most one Que spoken question.",
+    "The question must ask for one thing only.",
+    "No compound questions, slash choices, menu questions, or STAR bundles.",
+    "Do not ask for full STAR in one turn.",
+    "Do not invent candidate facts, company facts, resume facts, credentials, metrics, or motivations.",
+    "Keep feedback to one short sentence when feedback is allowed.",
+    "Each call must make one clear state transition.",
+  ].join(" ");
+
   if (modeKey === "first_impression") {
     return [
       "You route QuesIQ Interview Intro Practice turns.",
       "Return only compact JSON with keys: archetypeId, question, feedback, routingReason, targetSkill, done.",
+      universalRules,
       "Intro Practice is a one-question saved-introduction rehearsal.",
       "For the opening turn, ask one natural tell-me-about-yourself style question based on the saved introduction context.",
       "Do not read or quote the saved script to the user.",
@@ -363,6 +375,7 @@ function turnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) {
     return [
       "You route QuesIQ Interview Coaching turns.",
       "Return only compact JSON with keys: archetypeId, question, feedback, routingReason, targetSkill, done.",
+      universalRules,
       "Coaching is a question-answer-coach-next-question loop.",
       "After each user answer, write one brief, specific feedback sentence tied to what the user actually said.",
       "Then ask one concise new interview question from a different scenario or angle by default.",
@@ -370,6 +383,7 @@ function turnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) {
       "If the previous Que prompt was a retry, move on to a completely new question no matter how incomplete the new answer was.",
       "The selected question count means distinct primary questions, not repeated retries on the same scenario.",
       "When a saved story practice context is provided, treat the session as a one-question Story Lab rehearsal: ask a behavioral question that fits that story or selected spin, then after the answer give final feedback and set done true.",
+      "For Story Practice, coach with STAR, but focus on one STAR gap only.",
       "When saved story library context is provided without a specific story practice context, use it quietly to occasionally ask a behavioral question that gives the candidate an opportunity to use a strong saved story.",
       "For rare retry prompts, make the retry instruction clear inside the question field.",
       "Do not invent experience, credentials, metrics, or motivations.",
@@ -380,6 +394,7 @@ function turnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) {
   return [
     "You route QuesIQ Interview Rapid Fire turns.",
     "Return only compact JSON with keys: archetypeId, question, feedback, routingReason, targetSkill, done.",
+    universalRules,
     "Rapid Fire is not coaching: after each answer, do not ask a follow-up about that answer, do not reference the previous answer, and do not provide between-question feedback.",
     "Generate a fresh, unrelated one-sentence interview question within the selected focus.",
     "Set feedback to an empty string except on final wrap-up.",

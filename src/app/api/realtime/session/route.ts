@@ -26,6 +26,28 @@ type RealtimeSessionRequest = {
   snapshot?: SessionSetupSnapshot;
 };
 
+const strictSpokenTurnContract = [
+  "Strict spoken-turn contract:",
+  "Output one short spoken line.",
+  "Use at most one short transition sentence.",
+  "Ask exactly one question when a question is needed.",
+  "The question must ask for one thing only.",
+  "No compound questions, slash choices, menu questions, or STAR bundles.",
+  "Do not ask for Situation, Task, Action, and Result together.",
+  "Do not ask for stakes, action, result, and impact together.",
+  "If more detail is needed, ask for exactly one missing detail now and save the rest for later.",
+  "You may ask for one clarification or retry on the same question.",
+  "After one retry or clarification, accept the answer and move to a new question or next step, even if the answer is incomplete.",
+  "Do not demand perfection before moving on.",
+  "Missing or incomplete answers should be handled by the written evaluation, not by trapping the candidate in a loop.",
+  "Keep the session moving and do not repeat the same scenario after a retry.",
+  "In Coaching mode, give one concrete coaching point before a retry, then move on.",
+  "In Rapid Fire mode, do not coach between turns; ask the next concise question and leave scoring for the final review.",
+  "Encourage STAR over time, but never ask for the full STAR structure in one turn.",
+  "Prefer one STAR element per prompt. For behavioral answers, Action and Result are usually the most useful follow-up targets.",
+  "Sound natural, direct, and human. Avoid bullets, labels, headings, hidden analysis, and written-report phrasing.",
+].join(" ");
+
 function resumeExcerpt(snapshot?: SessionSetupSnapshot) {
   return snapshot?.interviewContext.resumeText?.trim().slice(0, 3000);
 }
@@ -81,7 +103,7 @@ function buildQueInstructions(
   const storyLibraryContext =
     storyLibrary.length > 0
       ? [
-          "Saved story library context: use this quietly when choosing behavioral questions and coaching after an answer. In Mock Interview, ask natural questions that give the candidate a chance to use one or two strong saved stories without saying you are selecting from their library. If another saved story seems like a stronger fit for the question than the answer they gave, briefly suggest it by title, such as: that answer was workable, but your story about X may fit this question even better. Do not force a story suggestion when none is clearly relevant.",
+          "Saved story library context: use this quietly when choosing behavioral questions and coaching after an answer. In Mock Interview, ask natural questions that may give the candidate a chance to use a strong saved story without saying you are selecting from their library. Do not compare multiple saved stories during a live turn. If one saved story is clearly a better fit after the candidate answers, you may briefly suggest it by title. Do not force a story suggestion when none is clearly relevant.",
           ...storyLibrary
             .filter((story) => story.id !== snapshot?.storyContext?.storyId)
             .slice(0, 8)
@@ -122,6 +144,7 @@ function buildQueInstructions(
     resumeContext
       ? `Resume context: ${resumeContext}. Use it quietly to ask role-relevant questions. If the candidate asks whether you have their resume, say you have the context they provided for this practice session and can tailor questions from it. Do not say you have a file, a private file, or a resume summary in front of you. Do not read resume text aloud unless the candidate asks about a specific detail.`
       : "No parsed resume context was provided.",
+    strictSpokenTurnContract,
   ]
     .filter(Boolean)
     .join(" ");

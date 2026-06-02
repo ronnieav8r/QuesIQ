@@ -53,6 +53,7 @@ const lanes = {
     "src/server/introductions/",
     "src/server/interview/",
     "src/server/progression/",
+    "src/server/prompts/defaults.ts",
     "src/server/realtime-usage/",
     "src/server/sessions/",
     "src/server/stories/",
