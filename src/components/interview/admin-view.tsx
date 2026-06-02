@@ -271,16 +271,6 @@ type PromptWorkspaceAction = {
   title: string;
 };
 
-const promptWorkspaceModeOptions: Array<{
-  actionKey: PromptWorkspaceActionKey;
-  label: string;
-}> = [
-  { actionKey: "coaching", label: "Coaching" },
-  { actionKey: "rapid_fire", label: "Rapid Fire" },
-  { actionKey: "mock_interview", label: "Mock Interview" },
-  { actionKey: "introduction_builder", label: "Intro Practice" },
-];
-
 type InterviewQuestionArchetypeRecord = {
   difficulty: string;
   enabled: boolean;
@@ -932,6 +922,8 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
   >([]);
   const [promptWorkspaceActionKey, setPromptWorkspaceActionKey] =
     useState<PromptWorkspaceActionKey>("coaching");
+  const [promptWorkspaceQuestionTypeKey, setPromptWorkspaceQuestionTypeKey] =
+    useState("behavioral");
   const [promptWorkspaceStyleKey, setPromptWorkspaceStyleKey] = useState("friendly");
   const [promptWorkspaceDrafts, setPromptWorkspaceDrafts] = useState<
     Record<string, string>
@@ -1094,6 +1086,10 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
   );
   const promptWorkspaceStyleOptions = useMemo(
     () => components.filter((component) => component.type === "style"),
+    [components],
+  );
+  const promptWorkspaceQuestionTypeOptions = useMemo(
+    () => components.filter((component) => component.type === "question_type"),
     [components],
   );
 
@@ -2059,12 +2055,18 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     void loadComponents();
   }
 
-  async function loadPromptWorkspace(styleKey = promptWorkspaceStyleKey) {
+  async function loadPromptWorkspace(
+    styleKey = promptWorkspaceStyleKey,
+    questionTypeKey = promptWorkspaceQuestionTypeKey,
+  ) {
     try {
       setPromptWorkspaceError(undefined);
       const params = new URLSearchParams();
       if (styleKey) {
         params.set("styleKey", styleKey);
+      }
+      if (questionTypeKey) {
+        params.set("questionTypeKey", questionTypeKey);
       }
       const response = await fetch(
         `/api/admin/interview/prompt-workspace?${params.toString()}`,
@@ -2490,35 +2492,6 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
           <span>{promptWorkspaceActions.length} actions</span>
         </div>
 
-        <div className="component-tabs" aria-label="Prompt workspace mode options">
-          {promptWorkspaceModeOptions.map((option) => (
-            <button
-              className={option.actionKey === promptWorkspaceActionKey ? "active" : ""}
-              key={option.actionKey}
-              onClick={() => setPromptWorkspaceActionKey(option.actionKey)}
-              type="button"
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="component-tabs" aria-label="Prompt workspace style options">
-          {promptWorkspaceStyleOptions.map((option) => (
-            <button
-              className={option.key === promptWorkspaceStyleKey ? "active" : ""}
-              key={option.key}
-              onClick={() => {
-                setPromptWorkspaceStyleKey(option.key);
-                void loadPromptWorkspace(option.key);
-              }}
-              type="button"
-            >
-              {option.displayName}
-            </button>
-          ))}
-        </div>
-
         <div className="component-tabs" aria-label="Prompt workspace actions">
           {promptWorkspaceActions.map((item) => (
             <button
@@ -2553,6 +2526,38 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
                   Test This Mode
                 </button>
               )}
+            </div>
+            <div className="component-tabs" aria-label="Prompt workspace question type options">
+              {promptWorkspaceQuestionTypeOptions.map((option) => (
+                <button
+                  className={
+                    option.key === promptWorkspaceQuestionTypeKey ? "active" : ""
+                  }
+                  key={option.key}
+                  onClick={() => {
+                    setPromptWorkspaceQuestionTypeKey(option.key);
+                    void loadPromptWorkspace(promptWorkspaceStyleKey, option.key);
+                  }}
+                  type="button"
+                >
+                  {option.displayName}
+                </button>
+              ))}
+            </div>
+            <div className="component-tabs" aria-label="Prompt workspace style options">
+              {promptWorkspaceStyleOptions.map((option) => (
+                <button
+                  className={option.key === promptWorkspaceStyleKey ? "active" : ""}
+                  key={option.key}
+                  onClick={() => {
+                    setPromptWorkspaceStyleKey(option.key);
+                    void loadPromptWorkspace(option.key, promptWorkspaceQuestionTypeKey);
+                  }}
+                  type="button"
+                >
+                  {option.displayName}
+                </button>
+              ))}
             </div>
             <div className="prompt-version-list">
               {action.blocks.map((block) => renderPromptWorkspaceBlock(action, block))}

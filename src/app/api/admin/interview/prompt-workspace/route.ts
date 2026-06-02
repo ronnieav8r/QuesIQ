@@ -322,6 +322,7 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const styleKey = url.searchParams.get("styleKey")?.trim() || undefined;
+    const questionTypeKey = url.searchParams.get("questionTypeKey")?.trim() || undefined;
     const [configs, components] = await Promise.all([
       listPromptConfigs(),
       listPromptComponents(),
@@ -331,14 +332,27 @@ export async function GET(request: Request) {
         .filter((item) => item.type === "style")
         .map((item) => item.key),
     );
+    const questionTypeKeys = new Set(
+      components
+        .filter((item) => item.type === "question_type")
+        .map((item) => item.key),
+    );
     const selectedStyleKey: SessionSetupSnapshot["styleKey"] | undefined =
       styleKey && styleKeys.has(styleKey)
         ? (styleKey as SessionSetupSnapshot["styleKey"])
+        : undefined;
+    const selectedQuestionTypeKey: SessionSetupSnapshot["questionTypeKey"] | undefined =
+      questionTypeKey && questionTypeKeys.has(questionTypeKey)
+        ? (questionTypeKey as SessionSetupSnapshot["questionTypeKey"])
         : undefined;
 
     const actions: WorkspaceAction[] = actionDefinitions.map((definition) => {
       const effectiveDefinition = {
         ...definition,
+        questionTypeKey:
+          selectedQuestionTypeKey && definition.questionTypeKey
+            ? selectedQuestionTypeKey
+            : definition.questionTypeKey,
         styleKey:
           selectedStyleKey && definition.styleKey ? selectedStyleKey : definition.styleKey,
       };
