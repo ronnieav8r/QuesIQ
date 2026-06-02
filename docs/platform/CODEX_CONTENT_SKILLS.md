@@ -29,6 +29,7 @@ PHAK deck in one pass.
 | --- | --- | --- | --- |
 | `quesiq-source-scrubber` | Ingest PDFs, Markdown, webpages, or text into reusable source material. | Source pack with manifest, chunks, page anchors, clean text, and visual/table candidates. | It does not create final Study cards or mark anything Verified. |
 | `quesiq-study-deck-drafter` | Create Study flashcard draft JSON from reviewed source chunks. | `study.sourcePackDeckDraft.v1` plus optional rich Admin CSV. | Draft quality depends on source review and model quality; cards still need verification. |
+| `quesiq-study-deck-generator` | Generate final-quality cards from bounded generation packets or drafter output. | Final deck draft JSON preserving source chunks, pages, visuals, tags, and draft metadata. | It should work on bounded chapter/subject packets, not an entire handbook in one pass. |
 | `quesiq-study-verifier` | Check drafted cards against source-pack evidence and trusted sources. | Verification JSON with status, confidence, evidence, and recommended fixes. | It can recommend verification but should not write broad app-side Verified state. |
 | `quesiq-study-content-pipeline` | Orchestrate source pack to draft deck to verification to rich CSV import artifact. | Complete handoff set: source pack path, draft JSON, verification JSON, rich CSV, smoke results. | It coordinates the steps; it does not replace human review or production DB checks. |
 | `quesiq-dpe-reference-drafter` | Create DPE source-reference packets from reviewed chunks for oral-question/rubric drafting. | `quesiq.dpeReferencePacket.v1` and optional prompt file. | It does not import raw source packs into DPE learner runtime or publish DPE content. |
@@ -80,6 +81,15 @@ Requirements:
   QuesIQ Study rich CSV headers.
 - Do not mark Publish, Official, or app-side Verified.
 ```
+
+For higher-quality final card generation, split work into stages:
+
+1. `quesiq-source-scrubber` creates or refreshes the source pack.
+2. `quesiq-study-deck-drafter` creates bounded generation packets by chapter or
+   subject.
+3. `quesiq-study-deck-generator` writes the actual card draft JSON from one
+   bounded packet.
+4. `quesiq-study-verifier` checks the generated cards before import/review.
 
 ## Operational Notes
 

@@ -1,6 +1,6 @@
 # Current Status
 
-Last updated: 2026-05-30
+Last updated: 2026-06-02
 
 ## Rebuild Location
 
@@ -37,12 +37,12 @@ Last updated: 2026-05-30
 - User is not expecting to manually review code for correctness. Future Codex
   passes should own verification, explain outcomes plainly, and when requested
   prepare the GitHub push/deploy path instead of leaving that work to the user.
-- Latest integration pass: `1c42658 Add admin DPE progression visibility`.
-  `QuesIQ-manager/main` is clean and aligned with `origin/main` at that commit.
-- Quira support chatbot V1 foundation is now in progress on top of that
-  baseline. It adds signed-in `/api/support/chat`, Quira storage tables,
-  Admin Support readout, prompt key `quira_support_chat`, and the first shared
-  support chat UI hosted from Interview.
+- Latest integration pass: `ea1a41b Ignore local export artifacts`.
+  `QuesIQ-manager/main` is aligned with `origin/main` at that commit.
+- Quira support chatbot V1 is active inside the shared app platform. It includes
+  signed-in `/api/support/chat`, `/api/support/report`, Quira storage tables,
+  Admin Support readout/status updates, prompt key `quira_support_chat`, and
+  shared messenger-style support UI hosted across the product apps.
 
 ## Built So Far
 
@@ -140,6 +140,10 @@ Last updated: 2026-05-30
     `study_flashcards`. This save mode stores Admin review artifacts only and
     keeps Study runtime import, Publish, Official, Verified, source-pack file
     loading, and verifier AI calls disabled.
+  - Admin prompt operations now include a local read-only prompt export utility:
+    `npm run prompts:export`. It accepts `EXTERNAL_DATABASE_URL` or
+    `DATABASE_URL` and writes local JSON/CSV exports under ignored
+    `artifacts/prompt-exports/`.
   - DPE draft generation is product-owned at `/api/dpe/content/draft` and
     returns certificate, ACS, oral-question, answer-key, rubric, confidence,
     warning, readiness, and missing-field draft JSON without saving live content

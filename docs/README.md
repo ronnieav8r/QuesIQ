@@ -55,6 +55,7 @@ shared platform layer.
 Current product docs:
 
 - `docs/products/interview/README.md`
+- `docs/products/interview/QA_CHECKLIST.md`
 - `docs/products/study/README.md`
 - `docs/products/study/HANDOFF.md`
 - `docs/products/dpe/README.md`
