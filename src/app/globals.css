@@ -1940,9 +1940,11 @@ label span {
     radial-gradient(circle at center, var(--surface-raised) 58%, transparent 60%),
     conic-gradient(
       from -90deg,
-      color-mix(in srgb, var(--ring-a) 86%, var(--ring-b) 14%) 0 calc(var(--score-percent) * 0.34),
-      color-mix(in srgb, var(--ring-a) 42%, var(--ring-b) 58%) calc(var(--score-percent) * 0.34) calc(var(--score-percent) * 0.68),
-      color-mix(in srgb, var(--ring-b) 46%, var(--ring-c) 54%) calc(var(--score-percent) * 0.68) var(--score-percent),
+      var(--ring-a) 0%,
+      color-mix(in srgb, var(--ring-a) 55%, var(--ring-b) 45%) calc(var(--score-percent) * 0.28),
+      var(--ring-b) calc(var(--score-percent) * 0.5),
+      color-mix(in srgb, var(--ring-b) 45%, var(--ring-c) 55%) calc(var(--score-percent) * 0.72),
+      var(--ring-c) var(--score-percent),
       rgba(255, 255, 255, 0.1) var(--score-percent) 100%
     );
   border: 1px solid color-mix(in srgb, var(--ring-b) 42%, transparent);
