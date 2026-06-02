@@ -15,6 +15,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { AccountActions } from "@/components/auth-control";
+import { MarketingQuiraLauncher } from "@/features/marketing/marketing-quira-launcher";
 
 const productCards = [
   {
@@ -91,7 +92,7 @@ export default function MarketingHome() {
         </nav>
         <div className="marketing-actions">
           <AccountActions />
-          <Link className="marketing-cta" href="/login?next=/interview">
+          <Link className="marketing-cta" href="/apps">
             Start Practicing
           </Link>
         </div>
@@ -112,9 +113,12 @@ export default function MarketingHome() {
             practice, personalized feedback, and focused study tools.
           </p>
           <div className="marketing-hero-actions">
-            <Link className="marketing-cta" href="/login?next=/interview">
+            <Link className="marketing-cta" href="/apps">
               Start Practicing
               <ArrowRight aria-hidden="true" />
+            </Link>
+            <Link className="marketing-secondary" href="/create-account">
+              Create Account
             </Link>
             <a className="marketing-secondary" href="#products">
               Explore Products
@@ -253,7 +257,7 @@ export default function MarketingHome() {
               );
             })}
           </div>
-          <Link className="marketing-cta" href="/login?next=/interview">
+          <Link className="marketing-cta" href="/apps">
             Start Practicing
           </Link>
         </div>
@@ -301,9 +305,12 @@ export default function MarketingHome() {
           <Link href="/login?next=/interview">Interview</Link>
           <Link href="/login?next=/study">Study</Link>
           <Link href="/login?next=/dpe">DPE</Link>
+          <Link href="/apps">Apps</Link>
+          <Link href="/create-account">Create Account</Link>
           <Link href="/account">Account</Link>
         </nav>
       </footer>
+      <MarketingQuiraLauncher />
     </main>
   );
 }

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 
 import { AuthControl, type AppAuthSession } from "@/components/auth-control";
+import { ProductUsageTracker } from "@/features/platform/product-usage-tracker";
 import { QuiraChatLauncher } from "@/features/support/quira-chat";
 
 type StudyShellProps = {
@@ -227,6 +228,11 @@ export function StudyShell({ authSession, children }: StudyShellProps) {
           authLoaded={authSession !== undefined}
           product="study"
           screen={pathname}
+          signedIn={Boolean(authSession?.user)}
+        />
+        <ProductUsageTracker
+          authLoaded={authSession !== undefined}
+          productKey="study"
           signedIn={Boolean(authSession?.user)}
         />
       </section>

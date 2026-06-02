@@ -1,6 +1,6 @@
 # One-Service Platform
 
-Last updated: 2026-05-29
+Last updated: 2026-06-02
 
 ## Decision
 
@@ -15,8 +15,10 @@ but they do not require separate Render services:
 - `app.quesiq.com/interview` for QuesIQ Interview
 - `app.quesiq.com/study` for QuesIQ Study
 - `app.quesiq.com/dpe` for QuesIQ DPE
+- `app.quesiq.com/apps` as the shared product picker after a marketing CTA
 - `app.quesiq.com/login?next=/interview` as the shared marketing-to-app
   sign-in gateway, with `next=/study` and `next=/dpe` supported
+- `app.quesiq.com/create-account` for shared account creation/profile capture
 - `app.quesiq.com/account` for shared account/settings
 - `app.quesiq.com/admin` for shared admin
 
@@ -39,7 +41,9 @@ boundary is established. New products should land in product-owned lanes.
 
 Current route shell:
 
-- `/` serves the shared product selector.
+- `/` serves the public marketing homepage.
+- `/apps` serves the shared app-routing page. Product cards open the app for
+  signed-in users and route signed-out users through `/login?next=...`.
 - `/interview` serves the existing Interview beta.
 - The shared Interview entry component now lives in
   `src/features/interview/interview-app.tsx`.
@@ -47,6 +51,8 @@ Current route shell:
 - `/dpe` is a placeholder product lane for QuesIQ DPE.
 - `/login` is the shared sign-in gateway for marketing pages and product
   deep-links.
+- `/create-account` lets a signed-in user save shared first name, last name,
+  and preferred name fields. Signed-out users can create/sign in first.
 - `/account` is the shared account/product hub.
 - `/admin` is a direct admin route for signed-in admin users, while the
   existing in-app Admin entry remains available.
@@ -93,6 +99,15 @@ Product data stays product-specific:
 - QuesIQ DPE should add DPE-owned tables.
 - Shared billing, entitlements, and memberships wait until requirements are
   concrete.
+
+Shared account/product tracking is platform-owned:
+
+- `platform_user_profiles` stores first name, last name, and preferred name
+  against the shared Auth.js user id.
+- `platform_product_usage` summarizes per-product first use, last use, total
+  active seconds, and session count.
+- `platform_usage_events` stores signed-in app open, heartbeat, and close
+  events for later analytics/admin reporting.
 
 ## Service Boundary
 

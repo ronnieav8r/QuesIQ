@@ -5343,6 +5343,173 @@ textarea::placeholder {
   gap: 1rem;
 }
 
+.apps-route-page,
+.create-account-page {
+  padding-bottom: 3rem;
+}
+
+.apps-hero,
+.create-account-shell,
+.apps-card-grid {
+  margin: 0 auto;
+  max-width: 1180px;
+  width: min(100% - 48px, 1180px);
+}
+
+.apps-hero {
+  padding: clamp(2.4rem, 6vw, 5rem) 0 1.6rem;
+}
+
+.apps-hero h1,
+.create-account-copy h1 {
+  color: #ffffff;
+  font-size: clamp(2.35rem, 5vw, 4.2rem);
+  line-height: 1.02;
+  margin: 0.35rem 0 1rem;
+}
+
+.apps-hero p,
+.create-account-copy > p {
+  color: var(--marketing-muted);
+  font-size: 1.08rem;
+  line-height: 1.7;
+  max-width: 44rem;
+}
+
+.apps-card-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.apps-product-card {
+  align-content: space-between;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+    rgba(14, 22, 44, 0.8);
+  border: 1px solid rgba(185, 191, 216, 0.18);
+  border-radius: 0.75rem;
+  display: grid;
+  gap: 1.2rem;
+  min-height: 27rem;
+  overflow: hidden;
+  padding: 1.2rem;
+  position: relative;
+}
+
+.apps-product-card::before {
+  background: linear-gradient(90deg, #8c52ff, #ff6a12);
+  content: "";
+  height: 0.28rem;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.apps-product-card.study::before {
+  background: linear-gradient(90deg, #7c4dff, #35d6a5);
+}
+
+.apps-product-card.dpe::before {
+  background: linear-gradient(90deg, #ff7a18, #f2d35e);
+}
+
+.apps-product-card:hover {
+  border-color: rgba(255, 255, 255, 0.34);
+  transform: translateY(-2px);
+}
+
+.apps-card-accent,
+.apps-proof {
+  color: var(--marketing-muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.apps-card-accent {
+  text-transform: uppercase;
+}
+
+.apps-product-logo {
+  align-items: center;
+  display: flex;
+  min-height: 5rem;
+}
+
+.apps-product-logo img {
+  height: auto;
+  max-height: 4.5rem;
+  max-width: 12rem;
+  object-fit: contain;
+  object-position: left center;
+  width: auto;
+}
+
+.apps-product-card h2 {
+  color: #ffffff;
+  font-size: 1.6rem;
+  margin: 0 0 0.5rem;
+}
+
+.apps-product-card p {
+  color: var(--marketing-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.apps-proof {
+  align-items: center;
+  border-top: 1px solid rgba(185, 191, 216, 0.14);
+  display: flex;
+  gap: 0.65rem;
+  padding-top: 1rem;
+}
+
+.apps-proof svg {
+  color: var(--marketing-orange);
+  flex: 0 0 auto;
+  height: 1.3rem;
+  width: 1.3rem;
+}
+
+.apps-product-card strong {
+  align-items: center;
+  background: linear-gradient(135deg, rgba(255, 122, 24, 0.95), rgba(236, 93, 0, 0.95));
+  border-radius: 0.55rem;
+  color: #ffffff;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0.8rem 1rem;
+}
+
+.create-account-shell {
+  align-items: start;
+  display: grid;
+  gap: clamp(1.5rem, 5vw, 3rem);
+  grid-template-columns: minmax(0, 0.95fr) minmax(22rem, 0.8fr);
+  padding: clamp(2rem, 6vw, 4.8rem) 0;
+}
+
+.create-account-copy {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.trust-grid.compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.trust-grid.compact article {
+  min-height: 8rem;
+}
+
+.create-account-form {
+  background: rgba(14, 22, 44, 0.86);
+  border-color: rgba(185, 191, 216, 0.2);
+}
+
 @media (max-width: 66rem) {
   .marketing-hero {
     grid-template-columns: 1fr;
@@ -5358,12 +5525,18 @@ textarea::placeholder {
 
   .marketing-product-grid,
   .marketing-split,
-  .marketing-proof {
+  .marketing-proof,
+  .apps-card-grid,
+  .create-account-shell {
     grid-template-columns: 1fr;
   }
 
   .marketing-product-card {
     min-height: auto;
+  }
+
+  .apps-product-card {
+    min-height: 22rem;
   }
 
   .trust-grid {
@@ -5377,7 +5550,10 @@ textarea::placeholder {
   .marketing-products,
   .marketing-split,
   .marketing-proof,
-  .marketing-footer {
+  .marketing-footer,
+  .apps-hero,
+  .apps-card-grid,
+  .create-account-shell {
     width: min(100% - 28px, 1180px);
   }
 
@@ -5394,6 +5570,10 @@ textarea::placeholder {
   .marketing-actions {
     justify-content: space-between;
     width: 100%;
+  }
+
+  .marketing-actions .auth-control {
+    justify-content: start;
   }
 
   .marketing-signin,

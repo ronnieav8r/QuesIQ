@@ -25,6 +25,7 @@ import { signIn, signOut } from "next-auth/react";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import { inferDpeTargetTrackKeyFromCertificate } from "@/features/admin/dpe-target-tracks";
+import { ProductUsageTracker } from "@/features/platform/product-usage-tracker";
 import { QuiraChatLauncher } from "@/features/support/quira-chat";
 import type { VoiceSessionArtifactDraft } from "@/product/interview-types";
 import {
@@ -1437,6 +1438,11 @@ export default function App() {
           authLoaded
           product="dpe"
           screen={screen}
+          signedIn={authState.authenticated}
+        />
+        <ProductUsageTracker
+          authLoaded
+          productKey="dpe"
           signedIn={authState.authenticated}
         />
       </div>

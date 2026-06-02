@@ -88,6 +88,9 @@ export function AuthControl({ authSession }: { authSession: AppAuthSession }) {
       <Link className="quiet-button account-link" href="/login">
         Sign In
       </Link>
+      <Link className="quiet-button account-link" href="/create-account">
+        Create Account
+      </Link>
     </div>
   );
 }

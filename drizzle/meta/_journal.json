@@ -421,6 +421,13 @@
       "when": 1780416000000,
       "tag": "0060_tune_interview_practice_story_quests",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1780502400000,
+      "tag": "0061_add_platform_profiles_and_usage",
+      "breakpoints": true
     }
   ]
 }

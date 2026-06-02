@@ -29,6 +29,7 @@ import { QuiraSupportLauncher } from "@/components/interview/quira-support-launc
 import { ReviewDetail } from "@/components/interview/review-detail";
 import { SessionView } from "@/components/interview/session-view";
 import { StoriesView } from "@/components/interview/stories-view";
+import { ProductUsageTracker } from "@/features/platform/product-usage-tracker";
 import { initialInterviewContext } from "@/product/practice-data";
 import type {
   AppView,
@@ -971,6 +972,11 @@ export default function Home() {
           authLoaded={authSession !== undefined}
           screen={activeView}
           sessionId={feedbackSessionId}
+          signedIn={signedIn}
+        />
+        <ProductUsageTracker
+          authLoaded={authSession !== undefined}
+          productKey="interview"
           signedIn={signedIn}
         />
         {signedIn && (

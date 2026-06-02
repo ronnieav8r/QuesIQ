@@ -17,7 +17,7 @@ function buildEmailHtml(url: string) {
   return `
     <div style="font-family: Arial, sans-serif; color: #101521; line-height: 1.5;">
       <h1 style="font-size: 22px;">Sign in to QuesIQ</h1>
-      <p>Use this secure link to continue your interview practice.</p>
+      <p>Use this secure link to continue to your QuesIQ account.</p>
       <p>
         <a href="${url}" style="background: #e8721a; color: #ffffff; display: inline-block; padding: 12px 18px; text-decoration: none; border-radius: 6px; font-weight: 700;">
           Continue to QuesIQ
@@ -32,7 +32,7 @@ function buildEmailText(url: string) {
   return [
     "Sign in to QuesIQ",
     "",
-    "Use this secure link to continue your interview practice:",
+    "Use this secure link to continue to your QuesIQ account:",
     url,
     "",
     "If you did not request it, you can ignore this email.",

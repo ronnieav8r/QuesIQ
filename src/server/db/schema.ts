@@ -80,6 +80,64 @@ export const authSessions = pgTable("session", {
     .references(() => users.id, { onDelete: "cascade" }),
 });
 
+export const platformUserProfiles = pgTable("platform_user_profiles", {
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  firstName: text("first_name").default("").notNull(),
+  lastName: text("last_name").default("").notNull(),
+  preferredName: text("preferred_name").default("").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+});
+
+export const platformProductUsage = pgTable(
+  "platform_product_usage",
+  {
+    firstUsedAt: timestamp("first_used_at", { withTimezone: true }).defaultNow().notNull(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }).defaultNow().notNull(),
+    productKey: text("product_key").notNull(),
+    sessionCount: integer("session_count").default(0).notNull(),
+    totalActiveSeconds: integer("total_active_seconds").default(0).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (usage) => ({
+    productLastUsedIdx: index("platform_product_usage_product_last_used_idx").on(
+      usage.productKey,
+      usage.lastUsedAt,
+    ),
+    userProductKey: primaryKey({
+      columns: [usage.userId, usage.productKey],
+    }),
+  }),
+);
+
+export const platformUsageEvents = pgTable(
+  "platform_usage_events",
+  {
+    activeSeconds: integer("active_seconds").default(0).notNull(),
+    browserContext: jsonb("browser_context").$type<Record<string, unknown>>().default({}).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    eventType: text("event_type")
+      .$type<"app_close" | "app_open" | "heartbeat">()
+      .default("heartbeat")
+      .notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    productKey: text("product_key").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (event) => ({
+    createdAtIdx: index("platform_usage_events_created_at_idx").on(event.createdAt),
+    productIdx: index("platform_usage_events_product_idx").on(event.productKey),
+    userIdx: index("platform_usage_events_user_idx").on(event.userId),
+  }),
+);
+
 export const verificationTokens = pgTable(
   "verificationToken",
   {

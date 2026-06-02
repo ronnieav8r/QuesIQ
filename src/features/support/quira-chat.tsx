@@ -176,7 +176,7 @@ export function QuiraChatLauncher({
     }
 
     if (!signedIn) {
-      return "Sign in to chat with Quira from inside QuesIQ.";
+      return "Quira can help with QuesIQ questions after you sign in. Create an account or sign in to start a support chat.";
     }
 
     return "Ask about this screen, troubleshooting, or how QuesIQ works.";
@@ -474,6 +474,16 @@ export function QuiraChatLauncher({
                     <>
                       <h3>Ready</h3>
                       <p>{emptyStateText}</p>
+                      {!signedIn && authLoaded && (
+                        <div className="inline-actions">
+                          <a className="button-link" href="/create-account">
+                            Create Account
+                          </a>
+                          <a className="button-link secondary" href="/login">
+                            Sign In
+                          </a>
+                        </div>
+                      )}
                     </>
                   ) : (
                     <div

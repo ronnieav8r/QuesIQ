@@ -37,8 +37,8 @@ Last updated: 2026-06-02
 - User is not expecting to manually review code for correctness. Future Codex
   passes should own verification, explain outcomes plainly, and when requested
   prepare the GitHub push/deploy path instead of leaving that work to the user.
-- Latest integration pass: `ea1a41b Ignore local export artifacts`.
-  `QuesIQ-manager/main` is aligned with `origin/main` at that commit.
+- Latest pushed integration pass before the account-routing slice:
+  `691ccad Fix turn-based voice hook warnings`.
 - Quira support chatbot V1 is active inside the shared app platform. It includes
   signed-in `/api/support/chat`, `/api/support/report`, Quira storage tables,
   Admin Support readout/status updates, prompt key `quira_support_chat`, and
@@ -54,13 +54,21 @@ Last updated: 2026-06-02
   - homepage sections include brand nav, hero CTA, dashboard-style product
     preview, Interview/Study/DPE product cards, how-it-works, trust grid,
     proof stats, and footer product links
-  - CTAs route into the shared login flow with product-aware `next` paths
+  - primary Start Practicing CTAs route to `/apps` instead of automatically
+    opening Interview
+  - product-specific cards still route signed-out users into the shared login
+    flow with product-aware `next` paths
   - app metadata now describes the broader QuesIQ AI practice platform instead
     of only QuesIQ Interview
 - Shared platform login/account gateway:
   - `/login` supports product-aware redirects such as `?next=/interview`,
     `?next=/study`, and `?next=/dpe`
+  - `/apps` is the shared app-routing page for Interview, Study, and DPE
+  - `/create-account` captures shared first name, last name, preferred name,
+    and email context after sign-in
   - `/account` now acts as a product hub for the shared Auth.js account
+  - signed-in Interview, Study, and DPE app shells record passive product usage
+    heartbeats into platform-owned usage tables
   - shared product definitions live in `src/features/platform/products.ts`
 - QuesIQ DPE import:
   - DPE lives as its own product lane under `/dpe`

@@ -33,9 +33,14 @@ export default async function AccountPage() {
               </Link>
             ))
           ) : (
-            <Link className="button-link" href="/login">
-              Sign In
-            </Link>
+            <>
+              <Link className="button-link" href="/create-account">
+                Create Account
+              </Link>
+              <Link className="button-link secondary" href="/login">
+                Sign In
+              </Link>
+            </>
           )}
         </div>
       </section>

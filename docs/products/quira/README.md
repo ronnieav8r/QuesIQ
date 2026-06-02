@@ -15,8 +15,11 @@ feature, not a separate support service.
   account/profile targets, and voice troubleshooting.
 - Admin review API at `GET /api/admin/support` and case status updates at
   `PUT /api/admin/support`.
-- Public anonymous website widget, external ticketing, Make, VAPI, Intercom,
-  and Zendesk are intentionally out of V1.
+- Quira is visible on the public marketing page, but the AI chat/report
+  backend is still signed-in for V1. Signed-out users are routed toward account
+  creation/sign-in.
+- Anonymous AI receptionist behavior, lead capture, external ticketing, Make,
+  VAPI, Intercom, and Zendesk are intentionally out of V1.
 
 ## Runtime Behavior
 
