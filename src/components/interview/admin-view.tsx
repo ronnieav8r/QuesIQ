@@ -271,6 +271,16 @@ type PromptWorkspaceAction = {
   title: string;
 };
 
+const promptWorkspaceModeOptions: Array<{
+  actionKey: PromptWorkspaceActionKey;
+  label: string;
+}> = [
+  { actionKey: "coaching", label: "Coaching" },
+  { actionKey: "rapid_fire", label: "Rapid Fire" },
+  { actionKey: "mock_interview", label: "Mock Interview" },
+  { actionKey: "introduction_builder", label: "Intro Practice" },
+];
+
 type InterviewQuestionArchetypeRecord = {
   difficulty: string;
   enabled: boolean;
@@ -922,6 +932,7 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
   >([]);
   const [promptWorkspaceActionKey, setPromptWorkspaceActionKey] =
     useState<PromptWorkspaceActionKey>("coaching");
+  const [promptWorkspaceStyleKey, setPromptWorkspaceStyleKey] = useState("friendly");
   const [promptWorkspaceDrafts, setPromptWorkspaceDrafts] = useState<
     Record<string, string>
   >({});
@@ -1080,6 +1091,10 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
       promptWorkspaceActions.find((action) => action.key === promptWorkspaceActionKey) ||
       promptWorkspaceActions[0],
     [promptWorkspaceActionKey, promptWorkspaceActions],
+  );
+  const promptWorkspaceStyleOptions = useMemo(
+    () => components.filter((component) => component.type === "style"),
+    [components],
   );
 
   function applySelectedConfig(config?: PromptConfigRecord) {
@@ -1796,6 +1811,8 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
       ignore = true;
       window.clearTimeout(playbookDataTimer);
     };
+  // Initial admin bootstrap intentionally runs once; refresh handles later workspace reloads.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -2042,10 +2059,16 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     void loadComponents();
   }
 
-  async function loadPromptWorkspace() {
+  async function loadPromptWorkspace(styleKey = promptWorkspaceStyleKey) {
     try {
       setPromptWorkspaceError(undefined);
-      const response = await fetch("/api/admin/interview/prompt-workspace");
+      const params = new URLSearchParams();
+      if (styleKey) {
+        params.set("styleKey", styleKey);
+      }
+      const response = await fetch(
+        `/api/admin/interview/prompt-workspace?${params.toString()}`,
+      );
       const body = (await response.json()) as {
         actions?: PromptWorkspaceAction[];
         detail?: string;
@@ -2465,6 +2488,35 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
             </p>
           </div>
           <span>{promptWorkspaceActions.length} actions</span>
+        </div>
+
+        <div className="component-tabs" aria-label="Prompt workspace mode options">
+          {promptWorkspaceModeOptions.map((option) => (
+            <button
+              className={option.actionKey === promptWorkspaceActionKey ? "active" : ""}
+              key={option.actionKey}
+              onClick={() => setPromptWorkspaceActionKey(option.actionKey)}
+              type="button"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="component-tabs" aria-label="Prompt workspace style options">
+          {promptWorkspaceStyleOptions.map((option) => (
+            <button
+              className={option.key === promptWorkspaceStyleKey ? "active" : ""}
+              key={option.key}
+              onClick={() => {
+                setPromptWorkspaceStyleKey(option.key);
+                void loadPromptWorkspace(option.key);
+              }}
+              type="button"
+            >
+              {option.displayName}
+            </button>
+          ))}
         </div>
 
         <div className="component-tabs" aria-label="Prompt workspace actions">

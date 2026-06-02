@@ -312,7 +312,7 @@ function finalPreview(blocks: WorkspaceBlock[]) {
     .join("\n\n");
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const appSession = await requireAdminSession();
 
   if (!appSession) {
@@ -320,30 +320,46 @@ export async function GET() {
   }
 
   try {
+    const url = new URL(request.url);
+    const styleKey = url.searchParams.get("styleKey")?.trim() || undefined;
     const [configs, components] = await Promise.all([
       listPromptConfigs(),
       listPromptComponents(),
     ]);
+    const styleKeys = new Set(
+      components
+        .filter((item) => item.type === "style")
+        .map((item) => item.key),
+    );
+    const selectedStyleKey: SessionSetupSnapshot["styleKey"] | undefined =
+      styleKey && styleKeys.has(styleKey)
+        ? (styleKey as SessionSetupSnapshot["styleKey"])
+        : undefined;
 
     const actions: WorkspaceAction[] = actionDefinitions.map((definition) => {
+      const effectiveDefinition = {
+        ...definition,
+        styleKey:
+          selectedStyleKey && definition.styleKey ? selectedStyleKey : definition.styleKey,
+      };
       const blocks: WorkspaceBlock[] = [
-        ...definition.basePromptKeys
+        ...effectiveDefinition.basePromptKeys
           .map((key) => blockFromConfig(activeConfig(configs, key)))
           .filter((block): block is WorkspaceBlock => Boolean(block)),
         blockFromComponent(
-          component(components, "mode", definition.modeKey),
+          component(components, "mode", effectiveDefinition.modeKey),
           "Mode Instructions",
         ),
         blockFromComponent(
-          component(components, "question_type", definition.questionTypeKey),
+          component(components, "question_type", effectiveDefinition.questionTypeKey),
           "Question Focus",
         ),
         blockFromComponent(
-          component(components, "style", definition.styleKey),
+          component(components, "style", effectiveDefinition.styleKey),
           "Style",
         ),
-        runtimeContextBlock(definition),
-        ...generatedBlocks(definition),
+        runtimeContextBlock(effectiveDefinition),
+        ...generatedBlocks(effectiveDefinition),
       ].filter((block): block is WorkspaceBlock => Boolean(block));
 
       blocks.push({
