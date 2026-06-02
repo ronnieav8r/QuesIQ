@@ -1,6 +1,17 @@
 import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
-import { Flame } from "lucide-react";
+import {
+  CalendarDays,
+  Flame,
+  GraduationCap,
+  ShieldCheck,
+  Sparkles,
+  Target,
+  UserRound,
+  Users,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 
 import { useSessionHistory } from "@/components/interview/session-history";
 import { getOverallScore } from "@/product/scoring";
@@ -41,34 +52,156 @@ function scorePercent(score?: number) {
   return Math.round((Math.max(0, Math.min(5, score)) / 5) * 100);
 }
 
-function HomeScoreRings({
+const scoreDisplayConfig: Record<
+  string,
+  {
+    Icon: LucideIcon;
+    note: string;
+    tone: string;
+  }
+> = {
+  authenticity: {
+    Icon: UserRound,
+    note: "Keep being genuine",
+    tone: "authenticity",
+  },
+  clarity: {
+    Icon: Sparkles,
+    note: "Improve structure and flow",
+    tone: "clarity",
+  },
+  confidence: {
+    Icon: ShieldCheck,
+    note: "Build conviction and clarity",
+    tone: "confidence",
+  },
+  impact: {
+    Icon: Zap,
+    note: "Stronger punch and outcomes",
+    tone: "impact",
+  },
+  relevance: {
+    Icon: Target,
+    note: "Tighten alignment to goals",
+    tone: "relevance",
+  },
+};
+
+function scoreStatus(score?: number) {
+  if (score === undefined) {
+    return {
+      body: "Complete reviews to build this score profile.",
+      label: "Waiting for feedback",
+    };
+  }
+
+  if (score >= 4) {
+    return {
+      body: "Strong performance. Keep practicing to maintain consistency.",
+      label: "Strong",
+    };
+  }
+
+  if (score >= 3) {
+    return {
+      body: "Good foundation with room to sharpen the next response.",
+      label: "Developing",
+    };
+  }
+
+  return {
+    body: "Focus on building confidence and relevance.",
+    label: "Needs improvement",
+  };
+}
+
+function HomeScorePanel({
   emptyLabel,
+  metaLabel,
   scores,
+  subtitle,
+  titleId,
+  title,
+  type,
 }: {
   emptyLabel: string;
+  metaLabel: string;
   scores: ScoreAverage[];
+  subtitle: string;
+  titleId: string;
+  title: string;
+  type: "recent" | "skills";
 }) {
+  const overallScore = scores.find((score) => score.key === "overall");
+  const dimensionScores = scores.filter((score) => score.key !== "overall");
+  const overallStatus = scoreStatus(overallScore?.average);
+  const HeaderIcon = type === "recent" ? Sparkles : GraduationCap;
+  const MetaIcon = type === "recent" ? CalendarDays : Users;
+
   return (
-    <div className="home-score-rings">
-      {scores.map((score) => (
-        <div
-          aria-label={
-            score.average === undefined
-              ? `${score.label}: ${emptyLabel}`
-              : `${score.label}: ${score.average.toFixed(1)} out of 5`
-          }
-          className={`home-score-card score-${score.key}`}
-          key={score.key}
-          style={{ "--score-percent": `${scorePercent(score.average)}%` } as CSSProperties}
-        >
-          <div>
-            <strong>{score.label}</strong>
-            <b>{score.average === undefined ? "--" : score.average.toFixed(1)}</b>
-            <small>{score.average === undefined ? emptyLabel : "Average score"}</small>
-          </div>
-          <div className="home-score-ring" aria-hidden="true" />
+    <div className="home-score-board">
+      <div className="score-board-heading">
+        <div className="score-heading-icon">
+          <HeaderIcon aria-hidden="true" />
         </div>
-      ))}
+        <div>
+          <h2 id={titleId}>{title}</h2>
+          <p>{subtitle}</p>
+        </div>
+        <span className="score-meta-pill">
+          <MetaIcon aria-hidden="true" />
+          {metaLabel}
+        </span>
+      </div>
+
+      <div className="score-board-layout">
+        <article
+          aria-label={
+            overallScore?.average === undefined
+              ? `Overall score: ${emptyLabel}`
+              : `Overall score: ${overallScore.average.toFixed(1)} out of 5`
+          }
+          className="score-overview-card"
+          style={
+            { "--score-percent": `${scorePercent(overallScore?.average)}%` } as CSSProperties
+          }
+        >
+          <span>Overall Score</span>
+          <div className="score-overview-ring">
+            <strong>{overallScore?.average === undefined ? "--" : overallScore.average.toFixed(1)}</strong>
+            <small>/ 5</small>
+          </div>
+          <b>{overallStatus.label}</b>
+          <p>{overallScore?.average === undefined ? emptyLabel : overallStatus.body}</p>
+        </article>
+
+        <div className="score-breakdown-list">
+          {dimensionScores.map((score) => {
+            const config = scoreDisplayConfig[score.key] ?? {
+              Icon: Sparkles,
+              note: "Keep practicing this skill",
+              tone: "default",
+            };
+            const Icon = config.Icon;
+
+            return (
+              <article className={`score-breakdown-row score-${config.tone}`} key={score.key}>
+                <span className="score-skill-icon">
+                  <Icon aria-hidden="true" />
+                </span>
+                <div className="score-skill-label">
+                  <strong>{score.label}</strong>
+                  <small>{score.average === undefined ? emptyLabel : config.note}</small>
+                </div>
+                <i aria-hidden="true">
+                  <span style={{ width: `${scorePercent(score.average)}%` }} />
+                </i>
+                <b>{score.average === undefined ? "--" : score.average.toFixed(1)} <small>/ 5</small></b>
+              </article>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -592,27 +725,35 @@ export function Dashboard({
         </section>
 
         <section aria-labelledby="stats-title" className="panel score-panel">
-          <div className="section-head">
-            <h2 id="stats-title">Recent Scores</h2>
-            <span>
-              {recentCompletedReviews.length > 0
+          <HomeScorePanel
+            emptyLabel="No recent reviews yet"
+            metaLabel={
+              recentCompletedReviews.length > 0
                 ? `Last ${recentCompletedReviews.length} reviews`
-                : "Waiting for feedback"}
-            </span>
-          </div>
-          <HomeScoreRings emptyLabel="No recent reviews yet" scores={recentScoreAverages} />
+                : "Waiting for feedback"
+            }
+            scores={recentScoreAverages}
+            subtitle="Your performance in your most recent reviews."
+            title="Recent Scores"
+            titleId="stats-title"
+            type="recent"
+          />
         </section>
 
         <section aria-labelledby="all-time-stats-title" className="panel score-panel">
-          <div className="section-head">
-            <h2 id="all-time-stats-title">Skill Scores</h2>
-            <span>
-              {completedReviews.length > 0
+          <HomeScorePanel
+            emptyLabel="No reviews yet"
+            metaLabel={
+              completedReviews.length > 0
                 ? `${completedReviews.length} all-time reviews`
-                : "Waiting for feedback"}
-            </span>
-          </div>
-          <HomeScoreRings emptyLabel="No reviews yet" scores={allTimeScoreAverages} />
+                : "Waiting for feedback"
+            }
+            scores={allTimeScoreAverages}
+            subtitle="Your overall skill performance across all reviews."
+            title="Skill Scores"
+            titleId="all-time-stats-title"
+            type="skills"
+          />
         </section>
       </div>
     </section>
