@@ -12,6 +12,7 @@
     "guard:interview": "node scripts/guards/check-lane.mjs interview",
     "guard:quira": "node scripts/guards/check-lane.mjs quira",
     "guard:study": "node scripts/guards/check-lane.mjs study",
+    "prompts:export": "node scripts/admin/export-prompts.mjs",
     "preflight:dpe": "node scripts/dpe/mvp-preflight.mjs",
     "readiness:dpe": "node scripts/dpe/mvp-preflight.mjs",
     "readiness:interview": "node scripts/interview/readiness-check.mjs",

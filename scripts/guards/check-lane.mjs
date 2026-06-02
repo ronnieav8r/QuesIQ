@@ -2,10 +2,12 @@ import { execFileSync } from "node:child_process";
 
 const lanes = {
   admin: [
+    ".env.example",
     "docs/platform/",
     "docs/rebuild/CURRENT_STATUS.md",
     "docs/README.md",
     "package.json",
+    "scripts/admin/",
     "scripts/guards/",
     "src/app/admin/",
     "src/app/api/admin/",
