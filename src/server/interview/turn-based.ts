@@ -1,4 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
+import { createHash } from "node:crypto";
 
 import type { SessionSetupSnapshot, VoiceTranscriptTurn } from "@/product/interview-types";
 import { getTurnSpeechMetrics } from "@/product/speech-metrics";
@@ -8,9 +9,11 @@ import { getCoachingMemory } from "@/server/coaching-memory/coaching-memory";
 import { getDb } from "@/server/db/client";
 import {
   interviewQuestionArchetypes,
+  interviewQuestions,
   interviewTurnBasedTurns,
   sessions,
 } from "@/server/db/schema";
+import { isInterviewStorageConfigured, uploadInterviewAudio } from "@/server/interview/storage";
 import { getOpenAiApiKey } from "@/server/openai/keys";
 import {
   estimateTokenCostMicroUsd,
@@ -43,8 +46,11 @@ export type TurnBasedInput = {
 export type TurnBasedResult = {
   done: boolean;
   feedback?: string;
+  feedbackAudioBase64?: string;
+  feedbackAudioMimeType?: string;
   question?: string;
   questionAudioBase64?: string;
+  questionAudioCacheStatus?: "hit" | "miss" | "stored";
   questionAudioMimeType?: string;
   routingReason?: string;
   targetSkill?: string;
@@ -63,6 +69,11 @@ type TurnDecision = {
   question?: string;
   routingReason: string;
   targetSkill: string;
+};
+
+type SpeechResult = {
+  audioBase64: string;
+  cacheStatus?: "hit" | "miss" | "stored";
 };
 
 type ResponsesApiBody = {
@@ -258,7 +269,22 @@ async function transcribeAnswer(input: {
   }
 }
 
-async function generateSpeech(input: {
+function questionAudioHash(input: { model: string; question: string; voice: string }) {
+  return createHash("sha256")
+    .update([input.model, input.voice, input.question.trim()].join("\n"))
+    .digest("hex");
+}
+
+async function fetchCachedAudio(url: string) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    return undefined;
+  }
+
+  return Buffer.from(await response.arrayBuffer());
+}
+
+async function generateSpeechBuffer(input: {
   apiKey: string;
   model: string;
   question: string;
@@ -306,7 +332,7 @@ async function generateSpeech(input: {
       rawJson: { bytes: audioBuffer.byteLength },
       status: "succeeded",
     });
-    return audioBuffer.toString("base64");
+    return audioBuffer;
   } catch (error) {
     await completeAiRun(run.id, {
       errorMessage: error instanceof Error ? error.message : "Interview TTS failed.",
@@ -314,6 +340,105 @@ async function generateSpeech(input: {
     });
     throw error;
   }
+}
+
+async function getSelectedQuestionSpeech(input: {
+  apiKey: string;
+  model: string;
+  question: string;
+  questionId?: string;
+  sessionId: string;
+  userId: string;
+  voice: string;
+}): Promise<SpeechResult> {
+  const textHash = questionAudioHash({
+    model: input.model,
+    question: input.question,
+    voice: input.voice,
+  });
+
+  if (input.questionId) {
+    const [cachedQuestion] = await getDb()
+      .select({
+        questionAudioModel: interviewQuestions.questionAudioModel,
+        questionAudioTextHash: interviewQuestions.questionAudioTextHash,
+        questionAudioUrl: interviewQuestions.questionAudioUrl,
+        questionAudioVoice: interviewQuestions.questionAudioVoice,
+      })
+      .from(interviewQuestions)
+      .where(eq(interviewQuestions.id, input.questionId))
+      .limit(1);
+
+    if (
+      cachedQuestion?.questionAudioUrl &&
+      cachedQuestion.questionAudioModel === input.model &&
+      cachedQuestion.questionAudioVoice === input.voice &&
+      cachedQuestion.questionAudioTextHash === textHash
+    ) {
+      try {
+        const cachedBuffer = await fetchCachedAudio(cachedQuestion.questionAudioUrl);
+        if (cachedBuffer) {
+          return {
+            audioBase64: cachedBuffer.toString("base64"),
+            cacheStatus: "hit",
+          };
+        }
+      } catch {
+        // Cache read failures fall through to fresh generation.
+      }
+    }
+  }
+
+  const audioBuffer = await generateSpeechBuffer(input);
+
+  if (input.questionId && isInterviewStorageConfigured()) {
+    try {
+      const cachedUrl = await uploadInterviewAudio(
+        `interview/questions/${input.questionId}_${textHash.slice(0, 16)}.mp3`,
+        audioBuffer,
+      );
+      await getDb()
+        .update(interviewQuestions)
+        .set({
+          questionAudioModel: input.model,
+          questionAudioTextHash: textHash,
+          questionAudioUrl: cachedUrl,
+          questionAudioVoice: input.voice,
+          updatedAt: new Date(),
+        })
+        .where(eq(interviewQuestions.id, input.questionId));
+
+      return {
+        audioBase64: audioBuffer.toString("base64"),
+        cacheStatus: "stored",
+      };
+    } catch {
+      return {
+        audioBase64: audioBuffer.toString("base64"),
+        cacheStatus: "miss",
+      };
+    }
+  }
+
+  return {
+    audioBase64: audioBuffer.toString("base64"),
+    cacheStatus: "miss",
+  };
+}
+
+async function generateSpeech(input: {
+  apiKey: string;
+  model: string;
+  question: string;
+  sessionId: string;
+  userId: string;
+  voice: string;
+}): Promise<SpeechResult> {
+  const audioBuffer = await generateSpeechBuffer(input);
+
+  return {
+    audioBase64: audioBuffer.toString("base64"),
+  };
 }
 
 export function buildTurnTaskInstruction(
@@ -745,17 +870,43 @@ export async function runTurnBasedInterviewTurn(input: {
         }
       : generatedDecision;
 
-  const speechText = [decision.feedback, decision.question].filter(Boolean).join(" ");
-  const questionAudioBase64 = speechText
+  const reusableQuestion =
+    queuedNextQuestion && decision.question === queuedNextQuestion.questionText
+      ? queuedNextQuestion
+      : undefined;
+  const shouldSplitFeedbackAudio = Boolean(reusableQuestion) || !decision.question;
+  const feedbackAudio = decision.feedback && shouldSplitFeedbackAudio
     ? await generateSpeech({
         apiKey,
         model: input.config.ttsModel,
-        question: speechText,
+        question: decision.feedback,
         sessionId: input.turnInput.sessionId,
         userId: input.userId,
         voice: input.config.ttsVoice,
       })
     : undefined;
+  const questionAudio = reusableQuestion
+    ? await getSelectedQuestionSpeech({
+        apiKey,
+        model: input.config.ttsModel,
+        question: reusableQuestion.questionText,
+        questionId: reusableQuestion.id,
+        sessionId: input.turnInput.sessionId,
+        userId: input.userId,
+        voice: input.config.ttsVoice,
+      })
+    : decision.question
+      ? await generateSpeech({
+          apiKey,
+          model: input.config.ttsModel,
+          question: decision.feedback && !shouldSplitFeedbackAudio
+            ? [decision.feedback, decision.question].filter(Boolean).join(" ")
+            : decision.question,
+          sessionId: input.turnInput.sessionId,
+          userId: input.userId,
+          voice: input.config.ttsVoice,
+        })
+      : undefined;
 
   const [turn] = await getDb()
     .insert(interviewTurnBasedTurns)
@@ -789,9 +940,12 @@ export async function runTurnBasedInterviewTurn(input: {
   return {
     done: decision.done === true,
     feedback: decision.feedback,
+    feedbackAudioBase64: feedbackAudio?.audioBase64,
+    feedbackAudioMimeType: feedbackAudio ? "audio/mpeg" : undefined,
     question: decision.question,
-    questionAudioBase64,
-    questionAudioMimeType: questionAudioBase64 ? "audio/mpeg" : undefined,
+    questionAudioBase64: questionAudio?.audioBase64,
+    questionAudioCacheStatus: questionAudio?.cacheStatus,
+    questionAudioMimeType: questionAudio ? "audio/mpeg" : undefined,
     routingReason: decision.routingReason,
     targetSkill: decision.targetSkill,
     transcript: latestTranscript,

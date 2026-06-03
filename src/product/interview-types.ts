@@ -230,6 +230,10 @@ export type InterviewQuestionRecord = {
   externalId?: string;
   id: string;
   ownerUserId?: string;
+  questionAudioModel?: string;
+  questionAudioTextHash?: string;
+  questionAudioUrl?: string;
+  questionAudioVoice?: string;
   questionText: string;
   questionTypeKey?: QuestionTypeKey;
   roleFamily: string;

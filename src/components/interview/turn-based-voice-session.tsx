@@ -43,8 +43,11 @@ type TurnPayload = {
 type NextTurnResponse = {
   done?: boolean;
   feedback?: string;
+  feedbackAudioBase64?: string;
+  feedbackAudioMimeType?: string;
   question?: string;
   questionAudioBase64?: string;
+  questionAudioCacheStatus?: "hit" | "miss" | "stored";
   questionAudioMimeType?: string;
   transcript?: string;
   transcriptMetrics?: Pick<
@@ -341,16 +344,15 @@ export function TurnBasedVoiceSession({
     }, 250);
   }
 
-  async function playQuestionAudio(response: NextTurnResponse, runId: number) {
-    if (
-      !response.questionAudioBase64 ||
-      !response.questionAudioMimeType ||
-      !audioRef.current ||
-      !isSessionActive(runId)
-    ) {
+  async function playAudioClip(
+    audioBase64: string | undefined,
+    audioMimeType: string | undefined,
+    runId: number,
+  ) {
+    if (!audioBase64 || !audioMimeType || !audioRef.current || !isSessionActive(runId)) {
       return;
     }
-    const source = `data:${response.questionAudioMimeType};base64,${response.questionAudioBase64}`;
+    const source = `data:${audioMimeType};base64,${audioBase64}`;
     audioRef.current.src = source;
     try {
       await new Promise<void>((resolve) => {
@@ -387,6 +389,11 @@ export function TurnBasedVoiceSession({
     } catch {
       appendEvent("turn_based.question_audio.play_failed");
     }
+  }
+
+  async function playQuestionAudio(response: NextTurnResponse, runId: number) {
+    await playAudioClip(response.feedbackAudioBase64, response.feedbackAudioMimeType, runId);
+    await playAudioClip(response.questionAudioBase64, response.questionAudioMimeType, runId);
   }
 
   async function requestTurn(payload: TurnPayload) {
