@@ -36,6 +36,10 @@ import type {
   IntroductionPracticeCoachingEntry,
   IntroAudience,
   IntroLength,
+  InterviewQuestionDifficulty,
+  InterviewQuestionSource,
+  PracticeModeKey,
+  QuestionTypeKey,
 } from "@/product/interview-types";
 
 export const users = pgTable("user", {
@@ -210,6 +214,7 @@ export const sessions = pgTable("sessions", {
   realtimePromptConfigKey: text("realtime_prompt_config_key"),
   realtimePromptConfigVersion: integer("realtime_prompt_config_version"),
   realtimeVoice: text("realtime_voice"),
+  selectedQuestionId: uuid("selected_question_id"),
   startedAt: timestamp("started_at", { withTimezone: true }),
   status: text("status").$type<SessionStatus>().default("created").notNull(),
   styleKey: text("style_key").notNull(),
@@ -300,6 +305,88 @@ export const interviewQuestionArchetypes = pgTable(
       archetype.modeKey,
       archetype.enabled,
     ),
+  }),
+);
+
+export const interviewQuestions = pgTable(
+  "interview_questions",
+  {
+    compatibleModes: jsonb("compatible_modes").$type<PracticeModeKey[]>().default([]).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    difficulty: text("difficulty")
+      .$type<InterviewQuestionDifficulty>()
+      .default("standard")
+      .notNull(),
+    displayOrder: integer("display_order").default(0).notNull(),
+    enabled: boolean("enabled").default(true).notNull(),
+    externalId: text("external_id"),
+    id: uuid("id").defaultRandom().primaryKey(),
+    ownerUserId: text("owner_user_id").references(() => users.id, { onDelete: "cascade" }),
+    questionText: text("question_text").notNull(),
+    questionTypeKey: text("question_type_key").$type<QuestionTypeKey>(),
+    roleFamily: text("role_family").default("").notNull(),
+    scoringHints: text("scoring_hints").default("").notNull(),
+    source: text("source").$type<InterviewQuestionSource>().default("official").notNull(),
+    sourceLabel: text("source_label").default("QuesIQ").notNull(),
+    suggestedUse: text("suggested_use").default("").notNull(),
+    tags: jsonb("tags").$type<string[]>().default([]).notNull(),
+    targetSkill: text("target_skill").default("").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (question) => ({
+    externalIdIdx: uniqueIndex("interview_questions_external_id_idx").on(question.externalId),
+    ownerIdx: index("interview_questions_owner_idx").on(question.ownerUserId, question.enabled),
+    sourceIdx: index("interview_questions_source_idx").on(question.source, question.enabled),
+    typeIdx: index("interview_questions_type_idx").on(question.questionTypeKey, question.enabled),
+  }),
+);
+
+export const interviewQuestionImports = pgTable(
+  "interview_question_imports",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    createdCount: integer("created_count").default(0).notNull(),
+    errorCount: integer("error_count").default(0).notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    rowCount: integer("row_count").default(0).notNull(),
+    sourceLabel: text("source_label").default("QuesIQ").notNull(),
+    status: text("status").$type<"failed" | "previewed" | "saved">().default("previewed").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedCount: integer("updated_count").default(0).notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  },
+  (questionImport) => ({
+    createdAtIdx: index("interview_question_imports_created_at_idx").on(
+      questionImport.createdAt,
+    ),
+  }),
+);
+
+export const interviewQuestionPracticeAttempts = pgTable(
+  "interview_question_practice_attempts",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    questionId: uuid("question_id")
+      .notNull()
+      .references(() => interviewQuestions.id, { onDelete: "cascade" }),
+    retryCount: integer("retry_count").default(0).notNull(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    status: text("status")
+      .$type<"answered" | "reviewed" | "started">()
+      .default("started")
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+  },
+  (attempt) => ({
+    questionUserIdx: index("interview_question_attempts_question_user_idx").on(
+      attempt.questionId,
+      attempt.userId,
+    ),
+    sessionIdx: uniqueIndex("interview_question_attempts_session_idx").on(attempt.sessionId),
   }),
 );
 

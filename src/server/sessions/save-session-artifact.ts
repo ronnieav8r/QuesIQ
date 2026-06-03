@@ -6,6 +6,7 @@ import {
   isArtifactTooShortToReview,
 } from "@/product/review-eligibility";
 import { getDb } from "@/server/db/client";
+import { markQuestionAttemptAnswered } from "@/server/interview/question-bank";
 import { sessions } from "@/server/db/schema";
 import { saveRealtimeSessionUsage } from "@/server/realtime-usage/realtime-session-usage";
 
@@ -57,6 +58,16 @@ export async function saveSessionArtifact(
     });
 
   if (session) {
+    if (hasTranscript && existingSession.contextSnapshot.selectedQuestionContext?.id) {
+      const userTurns = artifact.transcript.filter(
+        (turn) => turn.role === "user" || turn.speaker === "You",
+      ).length;
+      await markQuestionAttemptAnswered({
+        retryCount: Math.max(0, userTurns - 1),
+        sessionId,
+        userId,
+      });
+    }
     await saveRealtimeSessionUsage(sessionId, userId, artifact);
   }
 

@@ -692,17 +692,27 @@ export async function runTurnBasedInterviewTurn(input: {
       })
     : undefined;
 
-  const decision = await generateTurnDecision({
-    apiKey,
-    config: input.config,
-    endAfterAnswer: input.turnInput.endAfterAnswer,
-    latestTranscript,
-    priorTurns: input.turnInput.priorTurns,
-    sessionId: input.turnInput.sessionId,
-    snapshot: input.turnInput.snapshot,
-    turnIndex: input.turnInput.turnIndex,
-    userId: input.userId,
-  });
+  const selectedQuestionContext = input.turnInput.snapshot.selectedQuestionContext;
+  const decision =
+    selectedQuestionContext && !latestTranscript && input.turnInput.turnIndex === 0
+      ? {
+          done: false,
+          feedback: undefined,
+          question: selectedQuestionContext.questionText,
+          routingReason: "Selected learner question used exactly from the Interview question bank.",
+          targetSkill: selectedQuestionContext.targetSkill || "selected question practice",
+        }
+      : await generateTurnDecision({
+          apiKey,
+          config: input.config,
+          endAfterAnswer: input.turnInput.endAfterAnswer,
+          latestTranscript,
+          priorTurns: input.turnInput.priorTurns,
+          sessionId: input.turnInput.sessionId,
+          snapshot: input.turnInput.snapshot,
+          turnIndex: input.turnInput.turnIndex,
+          userId: input.userId,
+        });
 
   const speechText = [decision.feedback, decision.question].filter(Boolean).join(" ");
   const questionAudioBase64 = speechText

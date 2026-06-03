@@ -186,6 +186,8 @@ export type QuestionTypeKey =
   | "motivational";
 
 export type InterviewStyleKey = "friendly" | "neutral" | "tough";
+export type InterviewQuestionDifficulty = "beginner" | "standard" | "advanced";
+export type InterviewQuestionSource = "custom" | "official";
 
 export type PracticeMode = {
   description: string;
@@ -218,6 +220,39 @@ export type InterviewCatalog = {
   questionTypes: QuestionType[];
 };
 
+export type InterviewQuestionRecord = {
+  compatibleModes: PracticeModeKey[];
+  createdAt: string;
+  difficulty: InterviewQuestionDifficulty;
+  displayOrder: number;
+  enabled: boolean;
+  externalId?: string;
+  id: string;
+  ownerUserId?: string;
+  questionText: string;
+  questionTypeKey?: QuestionTypeKey;
+  roleFamily: string;
+  scoringHints: string;
+  source: InterviewQuestionSource;
+  sourceLabel: string;
+  suggestedUse: string;
+  tags: string[];
+  targetSkill: string;
+  updatedAt: string;
+};
+
+export type SelectedQuestionContext = {
+  difficulty: InterviewQuestionDifficulty;
+  id: string;
+  questionText: string;
+  questionTypeKey?: QuestionTypeKey;
+  roleFamily: string;
+  source: InterviewQuestionSource;
+  sourceLabel: string;
+  suggestedUse: string;
+  targetSkill: string;
+};
+
 export type SessionSetupSnapshot = {
   interviewContext: InterviewContext;
   introductionContext?: IntroductionRecord & {
@@ -231,6 +266,7 @@ export type SessionSetupSnapshot = {
     storyId: string;
   };
   storyPracticeSpin?: StorySpin;
+  selectedQuestionContext?: SelectedQuestionContext;
   styleKey: InterviewStyleKey;
 };
 

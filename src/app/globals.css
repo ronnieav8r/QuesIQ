@@ -2567,6 +2567,91 @@ label span {
   border-color: var(--focus);
 }
 
+.question-bank-picker {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.question-bank-controls,
+.question-bank-add,
+.question-card-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.question-bank-controls label,
+.question-bank-add label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.question-bank-controls input,
+.question-bank-add input,
+.question-bank-add textarea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 0.75rem;
+}
+
+.question-bank-add {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-3);
+}
+
+.question-bank-add textarea {
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+.question-bank-recommendations {
+  background: rgba(124, 92, 255, 0.1);
+  border: 1px solid rgba(124, 92, 255, 0.3);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+
+.question-bank-recommendations button {
+  text-align: left;
+}
+
+.question-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.question-card p {
+  color: var(--muted);
+  margin-bottom: 0;
+}
+
+.question-card dl {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.question-card dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.question-card dd {
+  margin: 0;
+}
+
 .ready-view {
   background: var(--surface-band);
   display: grid;

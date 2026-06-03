@@ -34,6 +34,7 @@ import { initialInterviewContext } from "@/product/practice-data";
 import type {
   AppView,
   InterviewStyleKey,
+  InterviewQuestionRecord,
   IntroductionRecord,
   JobTargetRecord,
   PracticeMode,
@@ -572,6 +573,74 @@ export default function Home() {
     }
   }
 
+  async function launchQuestionPractice(question: InterviewQuestionRecord) {
+    const targetContext = selectedJobTarget
+      ? {
+          ...interviewContext,
+          jobDescription: selectedJobTarget.jobDescription,
+          jobTargetId: selectedJobTarget.id,
+          targetCompany: selectedJobTarget.targetCompany,
+          targetRole: selectedJobTarget.targetRole,
+        }
+      : { ...interviewContext, jobTargetId: undefined };
+    const snapshot: SessionSetupSnapshot = {
+      interviewContext: targetContext,
+      modeKey: "coaching",
+      questionTypeKey: question.questionTypeKey,
+      selectedQuestionContext: {
+        difficulty: question.difficulty,
+        id: question.id,
+        questionText: question.questionText,
+        questionTypeKey: question.questionTypeKey,
+        roleFamily: question.roleFamily,
+        source: question.source,
+        sourceLabel: question.sourceLabel,
+        suggestedUse: question.suggestedUse,
+        targetSkill: question.targetSkill,
+      },
+      styleKey: "friendly",
+      turnBasedQuestionCount: 1,
+    };
+
+    try {
+      setSessionLaunchError(undefined);
+      setSessionLaunchPending(true);
+      const response = await fetch("/api/sessions", {
+        body: JSON.stringify({ snapshot }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        session?: SessionLaunchRecord;
+      };
+
+      if (!response.ok || !body.session) {
+        throw new Error(body.detail || body.error || "Question practice could not be created.");
+      }
+
+      setSelectedModeKey("coaching");
+      setSelectedQuestionKey(question.questionTypeKey);
+      setSelectedStyleKey("friendly");
+      setTurnBasedQuestionCount(1);
+      setSessionSnapshot(snapshot);
+      setSessionLaunchRecord(body.session);
+      if (selectedJobTarget) {
+        await refreshJobTargets();
+      }
+      setActiveView("session");
+    } catch (error) {
+      setSessionLaunchError(
+        error instanceof Error ? error.message : "Question practice could not be created.",
+      );
+    } finally {
+      setSessionLaunchPending(false);
+    }
+  }
+
   async function launchStoryPractice(story: StoryRecord, spin?: StorySpin) {
     const snapshot: SessionSetupSnapshot = {
       interviewContext: { ...interviewContext },
@@ -815,6 +884,7 @@ export default function Home() {
               onJobTarget={selectPracticeJobTarget}
               onLaunch={launchSession}
               onMode={chooseMode}
+              onQuestionBankPractice={launchQuestionPractice}
               onQuestion={chooseQuestion}
               onTurnBasedQuestionCount={setTurnBasedQuestionCount}
               onStyle={chooseStyle}
@@ -887,11 +957,36 @@ export default function Home() {
               }
               catalog={interviewCatalog.catalog}
               onBack={() => setActiveView(reviewReturnView)}
+              onChooseAnotherQuestion={() => {
+                openPractice();
+              }}
               onDebrief={(session) => {
                 setSelectedDebriefSession(session);
                 setActiveView("debrief");
               }}
               onPractice={openPractice}
+              onPracticeQuestion={() => {
+                const questionContext = selectedReview.contextSnapshot?.selectedQuestionContext;
+                if (!questionContext) return;
+                void launchQuestionPractice({
+                  compatibleModes: ["coaching"],
+                  createdAt: new Date().toISOString(),
+                  difficulty: questionContext.difficulty,
+                  displayOrder: 0,
+                  enabled: true,
+                  id: questionContext.id,
+                  questionText: questionContext.questionText,
+                  questionTypeKey: questionContext.questionTypeKey,
+                  roleFamily: questionContext.roleFamily,
+                  scoringHints: "",
+                  source: questionContext.source,
+                  sourceLabel: questionContext.sourceLabel,
+                  suggestedUse: questionContext.suggestedUse,
+                  tags: [],
+                  targetSkill: questionContext.targetSkill,
+                  updatedAt: new Date().toISOString(),
+                });
+              }}
               session={selectedReview}
             />
           )}

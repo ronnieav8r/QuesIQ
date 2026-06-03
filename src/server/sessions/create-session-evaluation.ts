@@ -26,6 +26,7 @@ import {
   getActiveAiPricing,
 } from "@/server/pricing/ai-pricing";
 import { getOpenAiApiKey } from "@/server/openai/keys";
+import { markQuestionAttemptReviewed } from "@/server/interview/question-bank";
 import { recordReviewProgression } from "@/server/progression/progression";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 import {
@@ -258,6 +259,18 @@ function buildEvaluationInput(
       targetCompany: snapshot.interviewContext.targetCompany || "Optional",
       targetRole: snapshot.interviewContext.targetRole || "General practice",
     },
+    selectedQuestion: snapshot.selectedQuestionContext
+      ? {
+          difficulty: snapshot.selectedQuestionContext.difficulty,
+          questionText: snapshot.selectedQuestionContext.questionText,
+          questionTypeKey: snapshot.selectedQuestionContext.questionTypeKey,
+          roleFamily: snapshot.selectedQuestionContext.roleFamily,
+          source: snapshot.selectedQuestionContext.source,
+          sourceLabel: snapshot.selectedQuestionContext.sourceLabel,
+          suggestedUse: snapshot.selectedQuestionContext.suggestedUse,
+          targetSkill: snapshot.selectedQuestionContext.targetSkill,
+        }
+      : "No selected question context.",
     speechSummary: speechSummary ?? "No reliable speech metrics available.",
     candidateContext: {
       jobDescription: snapshot.interviewContext.jobDescription || "Not provided",
@@ -667,6 +680,9 @@ export async function createSessionEvaluation(
       updatedAt: now,
     })
     .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
+  if (session.contextSnapshot.selectedQuestionContext?.id) {
+    await markQuestionAttemptReviewed(sessionId, userId);
+  }
   await recordReviewProgression(userId, sessionId, result, session.voiceArtifact);
   if (session.contextSnapshot.storyContext?.storyId) {
     await recordStoryPracticeCoaching({

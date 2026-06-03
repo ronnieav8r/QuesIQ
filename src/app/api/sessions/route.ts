@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { parseSessionSetupSnapshot } from "@/product/session-snapshot";
+import {
+  getAccessibleInterviewQuestion,
+  toSelectedQuestionContext,
+} from "@/server/interview/question-bank";
 import { createSession } from "@/server/sessions/create-session";
 import { listOwnedSessions } from "@/server/sessions/list-owned-sessions";
 
@@ -55,9 +59,9 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json()) as { snapshot?: unknown };
-  const snapshot = parseSessionSetupSnapshot(body.snapshot);
+  const parsedSnapshot = parseSessionSetupSnapshot(body.snapshot);
 
-  if (!snapshot) {
+  if (!parsedSnapshot) {
     return NextResponse.json(
       { error: "Session setup snapshot is invalid." },
       { status: 400 },
@@ -75,6 +79,28 @@ export async function POST(request: Request) {
   }
 
   try {
+    let snapshot = parsedSnapshot;
+    const selectedQuestionId = parsedSnapshot.selectedQuestionContext?.id;
+    if (selectedQuestionId) {
+      const question = await getAccessibleInterviewQuestion(selectedQuestionId, appSession.user.id);
+      if (!question) {
+        return NextResponse.json(
+          { error: "Selected question was not found or is not available." },
+          { status: 404 },
+        );
+      }
+
+      snapshot = {
+        ...parsedSnapshot,
+        modeKey: "coaching",
+        questionTypeKey: question.questionTypeKey ?? parsedSnapshot.questionTypeKey,
+        rapidFireQuestionCount: undefined,
+        selectedQuestionContext: toSelectedQuestionContext(question),
+        styleKey: "friendly",
+        turnBasedQuestionCount: 1,
+      };
+    }
+
     const session = await createSession(snapshot, appSession.user.id);
 
     return NextResponse.json(

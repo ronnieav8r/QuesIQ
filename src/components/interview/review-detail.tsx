@@ -19,7 +19,9 @@ type ReviewDetailProps = {
   catalog: InterviewCatalog;
   onBack: () => void;
   onDebrief: (session: SessionHistoryItem) => void;
+  onChooseAnotherQuestion?: () => void;
   onPractice: () => void;
+  onPracticeQuestion?: (questionId: string) => void;
   session: SessionHistoryItem;
 };
 
@@ -30,7 +32,9 @@ export function ReviewDetail({
   catalog,
   onBack,
   onDebrief,
+  onChooseAnotherQuestion,
   onPractice,
+  onPracticeQuestion,
   session,
 }: ReviewDetailProps) {
   const [currentSession, setCurrentSession] = useState(session);
@@ -78,6 +82,12 @@ export function ReviewDetail({
         {
           label: "Target company",
           value: snapshot.interviewContext.targetCompany || "Optional",
+        },
+        {
+          label: "Selected question",
+          value: snapshot.selectedQuestionContext
+            ? `${snapshot.selectedQuestionContext.questionText} (${snapshot.selectedQuestionContext.sourceLabel})`
+            : "Not used",
         },
         {
           label: "Selected question count",
@@ -305,6 +315,21 @@ export function ReviewDetail({
       </details>
 
       <div className="inline-actions">
+        {currentSession.contextSnapshot?.selectedQuestionContext && onPracticeQuestion && (
+          <button
+            onClick={() =>
+              onPracticeQuestion(currentSession.contextSnapshot?.selectedQuestionContext?.id || "")
+            }
+            type="button"
+          >
+            Practice This Question Again
+          </button>
+        )}
+        {currentSession.contextSnapshot?.selectedQuestionContext && onChooseAnotherQuestion && (
+          <button className="secondary" onClick={onChooseAnotherQuestion} type="button">
+            Choose Another Question
+          </button>
+        )}
         <button
           disabled={currentSession.transcript.length === 0}
           onClick={() => onDebrief(currentSession)}

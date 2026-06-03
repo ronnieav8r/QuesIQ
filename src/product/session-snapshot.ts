@@ -5,6 +5,7 @@ import type {
   SessionSetupSnapshot,
   IntroAudience,
   IntroLength,
+  SelectedQuestionContext,
 } from "@/product/interview-types";
 import { parseStoryOutline } from "@/product/story-lab";
 
@@ -126,6 +127,37 @@ function parseIntroductionContext(
   };
 }
 
+function parseSelectedQuestionContext(value: unknown): SelectedQuestionContext | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const candidate = value as Record<string, unknown>;
+
+  if (!isString(candidate.id)) {
+    return undefined;
+  }
+
+  return {
+    difficulty:
+      candidate.difficulty === "beginner" ||
+      candidate.difficulty === "advanced" ||
+      candidate.difficulty === "standard"
+        ? candidate.difficulty
+        : "standard",
+    id: candidate.id,
+    questionText: isString(candidate.questionText) ? candidate.questionText : "",
+    questionTypeKey: questionTypeKeys.includes(candidate.questionTypeKey as QuestionTypeKey)
+      ? (candidate.questionTypeKey as QuestionTypeKey)
+      : undefined,
+    roleFamily: isString(candidate.roleFamily) ? candidate.roleFamily : "",
+    source: candidate.source === "custom" ? "custom" : "official",
+    sourceLabel: isString(candidate.sourceLabel) ? candidate.sourceLabel : "",
+    suggestedUse: isString(candidate.suggestedUse) ? candidate.suggestedUse : "",
+    targetSkill: isString(candidate.targetSkill) ? candidate.targetSkill : "",
+  };
+}
+
 export function parseSessionSetupSnapshot(value: unknown): SessionSetupSnapshot | undefined {
   if (!value || typeof value !== "object") {
     return undefined;
@@ -184,6 +216,7 @@ export function parseSessionSetupSnapshot(value: unknown): SessionSetupSnapshot 
         : undefined,
     storyContext: parseStoryContext(candidate.storyContext),
     storyPracticeSpin: parseStoryPracticeSpin(candidate.storyPracticeSpin),
+    selectedQuestionContext: parseSelectedQuestionContext(candidate.selectedQuestionContext),
     styleKey: candidate.styleKey,
   };
 }

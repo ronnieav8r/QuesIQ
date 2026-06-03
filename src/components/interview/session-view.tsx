@@ -288,6 +288,12 @@ export function SessionView({
             <span>Saved</span>
           </div>
           <dl>
+            {snapshot.selectedQuestionContext && (
+              <div>
+                <dt>Selected question</dt>
+                <dd>{snapshot.selectedQuestionContext.questionText}</dd>
+              </div>
+            )}
             <div>
               <dt>Session</dt>
               <dd>{session.id}</dd>
