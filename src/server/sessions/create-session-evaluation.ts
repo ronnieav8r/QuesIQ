@@ -5,6 +5,7 @@ import {
   getTooShortReviewMessage,
   isArtifactTooShortToReview,
 } from "@/product/review-eligibility";
+import { getSpeechSummary } from "@/product/speech-metrics";
 import type {
   CoachingMemoryRecord,
   SessionEvaluationResult,
@@ -229,6 +230,8 @@ function buildEvaluationInput(
   storyLibrary: StoryLibraryContextItem[],
   memory?: CoachingMemoryRecord,
 ) {
+  const speechSummary = getSpeechSummary(artifact);
+
   return {
     coachingMemory: memory
       ? {
@@ -255,6 +258,7 @@ function buildEvaluationInput(
       targetCompany: snapshot.interviewContext.targetCompany || "Optional",
       targetRole: snapshot.interviewContext.targetRole || "General practice",
     },
+    speechSummary: speechSummary ?? "No reliable speech metrics available.",
     candidateContext: {
       jobDescription: snapshot.interviewContext.jobDescription || "Not provided",
       resumeExcerpt:
@@ -301,8 +305,12 @@ function buildEvaluationInput(
           }))
         : "No saved stories available.",
     transcript: artifact.transcript.map((turn) => ({
+      answerDurationSeconds: turn.answerDurationSeconds,
       speaker: turn.speaker,
       text: turn.text,
+      timingSource: turn.timingSource,
+      wordCount: turn.wordCount,
+      wordsPerMinute: turn.wordsPerMinute,
     })),
   };
 }

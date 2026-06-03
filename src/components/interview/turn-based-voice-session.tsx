@@ -31,6 +31,7 @@ type TurnBasedVoiceSessionProps = {
 
 type TurnPayload = {
   answerAudioBase64?: string;
+  answerDurationSeconds?: number;
   answerMimeType?: string;
   endAfterAnswer?: boolean;
   priorTurns: VoiceTranscriptTurn[];
@@ -46,6 +47,10 @@ type NextTurnResponse = {
   questionAudioBase64?: string;
   questionAudioMimeType?: string;
   transcript?: string;
+  transcriptMetrics?: Pick<
+    VoiceTranscriptTurn,
+    "answerDurationSeconds" | "timingSource" | "wordCount" | "wordsPerMinute"
+  >;
   turnId?: string;
 };
 
@@ -69,8 +74,13 @@ function transcriptTurn(
   speaker: VoiceTranscriptTurn["speaker"],
   role: VoiceTranscriptTurn["role"],
   text: string,
+  metrics?: Pick<
+    VoiceTranscriptTurn,
+    "answerDurationSeconds" | "timingSource" | "wordCount" | "wordsPerMinute"
+  >,
 ): VoiceTranscriptTurn {
   return {
+    ...metrics,
     createdAt: new Date().toISOString(),
     id: createRecordId(role),
     role,
@@ -405,7 +415,7 @@ export function TurnBasedVoiceSession({
 
       appendEvent("turn_based.next_turn.response");
       if (body.transcript?.trim()) {
-        appendTranscript(transcriptTurn("You", "user", body.transcript));
+        appendTranscript(transcriptTurn("You", "user", body.transcript, body.transcriptMetrics));
       }
       if (body.feedback?.trim()) {
         appendTranscript(transcriptTurn("Que", "assistant", body.feedback));
@@ -573,6 +583,9 @@ export function TurnBasedVoiceSession({
           return;
         }
         const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+        const answerDurationSeconds = recordingStartedAtMsRef.current
+          ? Math.max(0, Math.round((Date.now() - recordingStartedAtMsRef.current) / 1000))
+          : undefined;
         const answerMimeType = blob.type || "audio/webm";
         const answerAudioBase64 = await blobToBase64(blob);
         closeMedia();
@@ -581,6 +594,7 @@ export function TurnBasedVoiceSession({
         updateTurnCount(nextTurnIndex);
         await requestTurn({
           answerAudioBase64,
+          answerDurationSeconds,
           answerMimeType,
           endAfterAnswer: endingAfterAnswer,
           priorTurns: artifactDraftRef.current.transcript,

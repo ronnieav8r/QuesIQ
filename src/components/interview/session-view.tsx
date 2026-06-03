@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import { ReviewDetailSections } from "@/components/interview/review-detail-sections";
 import { ReviewScoreSummary } from "@/components/interview/review-score-summary";
+import { SessionSpeechMetrics } from "@/components/interview/speech-metrics-summary";
 import { TurnBasedVoiceSession } from "@/components/interview/turn-based-voice-session";
 import { buildInterviewFirstTurnInstructions } from "@/product/interview-first-turn";
 import {
@@ -410,6 +411,7 @@ export function SessionView({
           {evaluation ? (
             <div className="review-body">
               <p>{evaluation.summary}</p>
+              <SessionSpeechMetrics artifact={artifactDraft} />
               <ReviewScoreSummary evaluation={evaluation} />
               <div className="review-callout">
                 <h3>Coach Note</h3>

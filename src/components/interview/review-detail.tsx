@@ -2,6 +2,10 @@ import { useState } from "react";
 
 import { ReviewDetailSections } from "@/components/interview/review-detail-sections";
 import { ReviewScoreSummary } from "@/components/interview/review-score-summary";
+import {
+  SessionSpeechMetrics,
+  TurnSpeechMetric,
+} from "@/components/interview/speech-metrics-summary";
 import type {
   InterviewCatalog,
   SessionEvaluationResult,
@@ -246,6 +250,7 @@ export function ReviewDetail({
         {currentSession.evaluation ? (
           <div className="review-body">
             <p>{currentSession.evaluation.summary}</p>
+            <SessionSpeechMetrics artifact={currentSession} />
             <ReviewScoreSummary evaluation={currentSession.evaluation} />
             <div className="review-callout">
               <h3>Coach Note</h3>
@@ -289,6 +294,7 @@ export function ReviewDetail({
             {session.transcript.map((turn) => (
               <article key={turn.id}>
                 <strong>{turn.speaker}</strong>
+                <TurnSpeechMetric turn={turn} />
                 <p>{turn.text}</p>
               </article>
             ))}

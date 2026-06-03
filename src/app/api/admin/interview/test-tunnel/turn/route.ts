@@ -10,6 +10,7 @@ import { getOpenAiInterviewTestTunnelApiKey } from "@/server/openai/keys";
 export const runtime = "nodejs";
 
 type RequestBody = {
+  answerDurationSeconds?: number;
   answerTranscript?: string;
   endAfterAnswer?: boolean;
   priorTurns?: VoiceTranscriptTurn[];
@@ -75,6 +76,11 @@ export async function POST(request: Request) {
       apiKeyOverride: getOpenAiInterviewTestTunnelApiKey(),
       config,
       turnInput: {
+        answerDurationSeconds:
+          typeof body.answerDurationSeconds === "number" &&
+          Number.isFinite(body.answerDurationSeconds)
+            ? body.answerDurationSeconds
+            : undefined,
         answerTranscript,
         endAfterAnswer: body.endAfterAnswer === true,
         priorTurns: body.priorTurns ?? [],

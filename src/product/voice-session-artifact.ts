@@ -32,13 +32,28 @@ function isTranscriptTurn(value: unknown): value is VoiceTranscriptTurn {
   }
 
   const candidate = value as Partial<VoiceTranscriptTurn>;
+  const answerDurationSeconds = candidate.answerDurationSeconds;
+  const wordCount = candidate.wordCount;
+  const wordsPerMinute = candidate.wordsPerMinute;
 
   return (
+    (answerDurationSeconds === undefined ||
+      (typeof answerDurationSeconds === "number" &&
+        Number.isFinite(answerDurationSeconds) &&
+        answerDurationSeconds >= 0)) &&
     isString(candidate.createdAt) &&
     isString(candidate.id) &&
     Boolean(candidate.role && transcriptRoles.includes(candidate.role)) &&
     Boolean(candidate.speaker && transcriptSpeakers.includes(candidate.speaker)) &&
-    isString(candidate.text)
+    isString(candidate.text) &&
+    (candidate.timingSource === undefined ||
+      candidate.timingSource === "turn_based_recording_window") &&
+    (wordCount === undefined ||
+      (typeof wordCount === "number" && Number.isInteger(wordCount) && wordCount >= 0)) &&
+    (wordsPerMinute === undefined ||
+      (typeof wordsPerMinute === "number" &&
+        Number.isInteger(wordsPerMinute) &&
+        wordsPerMinute >= 0))
   );
 }
 

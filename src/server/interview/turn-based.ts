@@ -1,6 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 
-import type { SessionSetupSnapshot } from "@/product/interview-types";
+import type { SessionSetupSnapshot, VoiceTranscriptTurn } from "@/product/interview-types";
+import { getTurnSpeechMetrics } from "@/product/speech-metrics";
 import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
 import { getSessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
 import { getCoachingMemory } from "@/server/coaching-memory/coaching-memory";
@@ -29,6 +30,7 @@ type PriorTurn = {
 
 export type TurnBasedInput = {
   answerAudioBase64?: string;
+  answerDurationSeconds?: number;
   answerMimeType?: string;
   answerTranscript?: string;
   endAfterAnswer?: boolean;
@@ -47,6 +49,10 @@ export type TurnBasedResult = {
   routingReason?: string;
   targetSkill?: string;
   transcript?: string;
+  transcriptMetrics?: Pick<
+    VoiceTranscriptTurn,
+    "answerDurationSeconds" | "timingSource" | "wordCount" | "wordsPerMinute"
+  >;
   turnId?: string;
 };
 
@@ -679,6 +685,12 @@ export async function runTurnBasedInterviewTurn(input: {
         userId: input.userId,
       })
       : undefined;
+  const transcriptMetrics = latestTranscript
+    ? getTurnSpeechMetrics({
+        answerDurationSeconds: input.turnInput.answerDurationSeconds,
+        text: latestTranscript,
+      })
+    : undefined;
 
   const decision = await generateTurnDecision({
     apiKey,
@@ -742,6 +754,7 @@ export async function runTurnBasedInterviewTurn(input: {
     routingReason: decision.routingReason,
     targetSkill: decision.targetSkill,
     transcript: latestTranscript,
+    transcriptMetrics,
     turnId: turn.id,
   };
 }

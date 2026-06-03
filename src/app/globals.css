@@ -3281,6 +3281,32 @@ textarea::placeholder {
   margin-bottom: 0;
 }
 
+.speech-metrics-card {
+  background: linear-gradient(135deg, rgba(124, 92, 255, 0.16), rgba(49, 210, 242, 0.1));
+  border: 1px solid rgba(140, 109, 255, 0.45);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: var(--space-3);
+}
+
+.speech-metrics-card div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.speech-metrics-card span,
+.speech-turn-metric {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.speech-metrics-card strong {
+  color: var(--text);
+  font-size: 1.08rem;
+}
+
 .review-detail-list {
   color: var(--muted);
   display: grid;
@@ -4238,6 +4264,10 @@ textarea::placeholder {
   display: grid;
   gap: 0.35rem;
   padding: 0.85rem;
+}
+
+.speech-turn-metric {
+  display: block;
 }
 
 .transcript-review-list p {

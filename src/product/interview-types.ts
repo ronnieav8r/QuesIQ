@@ -529,11 +529,15 @@ export type VoiceSessionPhase =
   | "error";
 
 export type VoiceTranscriptTurn = {
+  answerDurationSeconds?: number;
   createdAt: string;
   id: string;
   role: "assistant" | "user";
   speaker: "Que" | "You";
   text: string;
+  timingSource?: "turn_based_recording_window";
+  wordCount?: number;
+  wordsPerMinute?: number;
 };
 
 export type VoiceSessionEvent = {
