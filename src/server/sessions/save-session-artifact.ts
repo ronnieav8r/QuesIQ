@@ -58,7 +58,11 @@ export async function saveSessionArtifact(
     });
 
   if (session) {
-    if (hasTranscript && existingSession.contextSnapshot.selectedQuestionContext?.id) {
+    if (
+      hasTranscript &&
+      (existingSession.contextSnapshot.selectedQuestionContext?.id ||
+        existingSession.contextSnapshot.selectedQuestionQueueContext?.length)
+    ) {
       const userTurns = artifact.transcript.filter(
         (turn) => turn.role === "user" || turn.speaker === "You",
       ).length;

@@ -386,7 +386,11 @@ export const interviewQuestionPracticeAttempts = pgTable(
       attempt.questionId,
       attempt.userId,
     ),
-    sessionIdx: uniqueIndex("interview_question_attempts_session_idx").on(attempt.sessionId),
+    sessionIdx: index("interview_question_attempts_session_idx").on(attempt.sessionId),
+    sessionQuestionIdx: uniqueIndex("interview_question_attempts_session_question_idx").on(
+      attempt.sessionId,
+      attempt.questionId,
+    ),
   }),
 );
 

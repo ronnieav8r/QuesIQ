@@ -25,6 +25,7 @@ import { useInterviewCatalog } from "@/components/interview/interview-catalog";
 import { MeView } from "@/components/interview/me-view";
 import { OnboardingView } from "@/components/interview/onboarding-view";
 import { PracticeSetup } from "@/components/interview/practice-setup";
+import { QuestionBankPicker } from "@/components/interview/question-bank-picker";
 import { QuiraSupportLauncher } from "@/components/interview/quira-support-launcher";
 import { ReviewDetail } from "@/components/interview/review-detail";
 import { SessionView } from "@/components/interview/session-view";
@@ -114,7 +115,11 @@ export default function Home() {
   const secondaryMeViews: AppView[] = [];
 
   function isPrimaryTabCurrent(tabKey: AppView) {
-    return activeView === tabKey || (tabKey === "me" && secondaryMeViews.includes(activeView));
+    return (
+      activeView === tabKey ||
+      (tabKey === "practice" && activeView === "question_queue") ||
+      (tabKey === "me" && secondaryMeViews.includes(activeView))
+    );
   }
 
   function openView(nextView: AppView) {
@@ -490,6 +495,26 @@ export default function Home() {
     setSelectedJobTarget(target);
   }
 
+  function getPracticeTargetContext(target = selectedJobTarget ?? activeJobTarget) {
+    return target
+      ? {
+          ...interviewContext,
+          jobDescription: target.jobDescription,
+          jobTargetId: target.id,
+          targetCompany: target.targetCompany,
+          targetRole: target.targetRole,
+        }
+      : { ...interviewContext, jobTargetId: undefined };
+  }
+
+  function openQuestionQueue() {
+    setAppMenuOpen(false);
+    setActiveView("question_queue");
+    setSessionLaunchError(undefined);
+    setSessionLaunchRecord(undefined);
+    setSelectedJobTarget((current) => current ?? activeJobTarget ?? jobTargets[0]);
+  }
+
   function chooseMode(mode: PracticeMode) {
     setSelectedModeKey(mode.key);
     setSelectedQuestionKey(undefined);
@@ -516,15 +541,7 @@ export default function Home() {
       return;
     }
 
-    const targetContext = selectedJobTarget
-      ? {
-          ...interviewContext,
-          jobDescription: selectedJobTarget.jobDescription,
-          jobTargetId: selectedJobTarget.id,
-          targetCompany: selectedJobTarget.targetCompany,
-          targetRole: selectedJobTarget.targetRole,
-        }
-      : { ...interviewContext, jobTargetId: undefined };
+    const targetContext = getPracticeTargetContext(selectedJobTarget);
     const snapshot: SessionSetupSnapshot = {
       interviewContext: targetContext,
       modeKey: selectedMode.key,
@@ -574,30 +591,98 @@ export default function Home() {
   }
 
   async function launchQuestionPractice(question: InterviewQuestionRecord) {
-    const targetContext = selectedJobTarget
-      ? {
-          ...interviewContext,
-          jobDescription: selectedJobTarget.jobDescription,
-          jobTargetId: selectedJobTarget.id,
-          targetCompany: selectedJobTarget.targetCompany,
-          targetRole: selectedJobTarget.targetRole,
-        }
-      : { ...interviewContext, jobTargetId: undefined };
+    await launchQuestionQueuePractice([question]);
+  }
+
+  async function launchQuestionQueuePractice(questions: InterviewQuestionRecord[]) {
+    const selectedQuestions = questions.slice(0, 10);
+
+    if (selectedQuestions.length === 0) {
+      return;
+    }
+
+    const targetContext = getPracticeTargetContext(selectedJobTarget ?? activeJobTarget);
     const snapshot: SessionSetupSnapshot = {
       interviewContext: targetContext,
       modeKey: "coaching",
-      questionTypeKey: question.questionTypeKey,
-      selectedQuestionContext: {
-        difficulty: question.difficulty,
-        id: question.id,
-        questionText: question.questionText,
-        questionTypeKey: question.questionTypeKey,
-        roleFamily: question.roleFamily,
-        source: question.source,
-        sourceLabel: question.sourceLabel,
-        suggestedUse: question.suggestedUse,
-        targetSkill: question.targetSkill,
-      },
+      questionTypeKey: selectedQuestions[0]?.questionTypeKey,
+      selectedQuestionContext:
+        selectedQuestions[0] &&
+        {
+          difficulty: selectedQuestions[0].difficulty,
+          id: selectedQuestions[0].id,
+          questionText: selectedQuestions[0].questionText,
+          questionTypeKey: selectedQuestions[0].questionTypeKey,
+          roleFamily: selectedQuestions[0].roleFamily,
+          source: selectedQuestions[0].source,
+          sourceLabel: selectedQuestions[0].sourceLabel,
+          suggestedUse: selectedQuestions[0].suggestedUse,
+          targetSkill: selectedQuestions[0].targetSkill,
+        },
+      selectedQuestionQueueContext: selectedQuestions.map((queuedQuestion) => ({
+        difficulty: queuedQuestion.difficulty,
+        id: queuedQuestion.id,
+        questionText: queuedQuestion.questionText,
+        questionTypeKey: queuedQuestion.questionTypeKey,
+        roleFamily: queuedQuestion.roleFamily,
+        source: queuedQuestion.source,
+        sourceLabel: queuedQuestion.sourceLabel,
+        suggestedUse: queuedQuestion.suggestedUse,
+        targetSkill: queuedQuestion.targetSkill,
+      })),
+      styleKey: "friendly",
+      turnBasedQuestionCount: selectedQuestions.length,
+    };
+
+    try {
+      setSessionLaunchError(undefined);
+      setSessionLaunchPending(true);
+      const response = await fetch("/api/sessions", {
+        body: JSON.stringify({ snapshot }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const body = (await response.json()) as {
+        detail?: string;
+        error?: string;
+        session?: SessionLaunchRecord;
+      };
+
+      if (!response.ok || !body.session) {
+        throw new Error(body.detail || body.error || "Question queue could not be created.");
+      }
+
+      setSelectedModeKey("coaching");
+      setSelectedQuestionKey(selectedQuestions[0]?.questionTypeKey);
+      setSelectedStyleKey("friendly");
+      setTurnBasedQuestionCount(selectedQuestions.length);
+      setSessionSnapshot(snapshot);
+      setSessionLaunchRecord(body.session);
+      if (selectedJobTarget ?? activeJobTarget) {
+        await refreshJobTargets();
+      }
+      setActiveView("session");
+    } catch (error) {
+      setSessionLaunchError(
+        error instanceof Error ? error.message : "Question queue could not be created.",
+      );
+    } finally {
+      setSessionLaunchPending(false);
+    }
+  }
+
+  async function launchQuickQuestionPractice() {
+    const targetContext = getPracticeTargetContext(activeJobTarget);
+    const availableQuestionTypes = questionTypes.map((questionType) => questionType.key);
+    const randomQuestionType =
+      availableQuestionTypes[Math.floor(Math.random() * availableQuestionTypes.length)] ??
+      "behavioral";
+    const snapshot: SessionSetupSnapshot = {
+      interviewContext: targetContext,
+      modeKey: "coaching",
+      questionTypeKey: randomQuestionType,
       styleKey: "friendly",
       turnBasedQuestionCount: 1,
     };
@@ -619,22 +704,22 @@ export default function Home() {
       };
 
       if (!response.ok || !body.session) {
-        throw new Error(body.detail || body.error || "Question practice could not be created.");
+        throw new Error(body.detail || body.error || "Quick question could not be created.");
       }
 
       setSelectedModeKey("coaching");
-      setSelectedQuestionKey(question.questionTypeKey);
+      setSelectedQuestionKey(randomQuestionType);
       setSelectedStyleKey("friendly");
       setTurnBasedQuestionCount(1);
       setSessionSnapshot(snapshot);
       setSessionLaunchRecord(body.session);
-      if (selectedJobTarget) {
+      if (activeJobTarget) {
         await refreshJobTargets();
       }
       setActiveView("session");
     } catch (error) {
       setSessionLaunchError(
-        error instanceof Error ? error.message : "Question practice could not be created.",
+        error instanceof Error ? error.message : "Quick question could not be created.",
       );
     } finally {
       setSessionLaunchPending(false);
@@ -866,6 +951,7 @@ export default function Home() {
               }}
               onOnboarding={() => setActiveView("me")}
               onPractice={openPractice}
+              onQuickQuestion={launchQuickQuestionPractice}
               onReview={(session) => {
                 setSelectedReview(session);
                 setReviewReturnView("home");
@@ -884,7 +970,7 @@ export default function Home() {
               onJobTarget={selectPracticeJobTarget}
               onLaunch={launchSession}
               onMode={chooseMode}
-              onQuestionBankPractice={launchQuestionPractice}
+              onQuestionQueue={openQuestionQueue}
               onQuestion={chooseQuestion}
               onTurnBasedQuestionCount={setTurnBasedQuestionCount}
               onStyle={chooseStyle}
@@ -896,6 +982,13 @@ export default function Home() {
               sessionLaunchPending={sessionLaunchPending}
               step={practiceStep}
               turnBasedQuestionCount={turnBasedQuestionCount}
+            />
+          )}
+          {signedIn && activeView === "question_queue" && (
+            <QuestionBankPicker
+              launchPending={sessionLaunchPending}
+              onBack={openPractice}
+              onPracticeQueue={launchQuestionQueuePractice}
             />
           )}
           {signedIn && activeView === "history" && (
@@ -940,8 +1033,12 @@ export default function Home() {
             <SessionView
               catalog={interviewCatalog.catalog}
               onBackToSetup={() => {
-                setActiveView("practice");
-                setPracticeStep("ready");
+                if (sessionSnapshot.selectedQuestionQueueContext?.length) {
+                  setActiveView("question_queue");
+                } else {
+                  setActiveView("practice");
+                  setPracticeStep("ready");
+                }
               }}
               onExit={() => setActiveView("home")}
               session={sessionLaunchRecord}
@@ -958,7 +1055,7 @@ export default function Home() {
               catalog={interviewCatalog.catalog}
               onBack={() => setActiveView(reviewReturnView)}
               onChooseAnotherQuestion={() => {
-                openPractice();
+                openQuestionQueue();
               }}
               onDebrief={(session) => {
                 setSelectedDebriefSession(session);

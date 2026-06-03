@@ -456,6 +456,13 @@
       "when": 1780599600000,
       "tag": "0065_add_interview_question_bank",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1780686000000,
+      "tag": "0066_allow_interview_question_queue_attempts",
+      "breakpoints": true
     }
   ]
 }

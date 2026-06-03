@@ -84,9 +84,13 @@ export function ReviewDetail({
           value: snapshot.interviewContext.targetCompany || "Optional",
         },
         {
-          label: "Selected question",
-          value: snapshot.selectedQuestionContext
-            ? `${snapshot.selectedQuestionContext.questionText} (${snapshot.selectedQuestionContext.sourceLabel})`
+          label: "Question Queue",
+          value: snapshot.selectedQuestionQueueContext?.length
+            ? snapshot.selectedQuestionQueueContext
+                .map((question, index) => `${index + 1}. ${question.questionText}`)
+                .join("\n")
+            : snapshot.selectedQuestionContext
+              ? `${snapshot.selectedQuestionContext.questionText} (${snapshot.selectedQuestionContext.sourceLabel})`
             : "Not used",
         },
         {
@@ -315,7 +319,9 @@ export function ReviewDetail({
       </details>
 
       <div className="inline-actions">
-        {currentSession.contextSnapshot?.selectedQuestionContext && onPracticeQuestion && (
+        {currentSession.contextSnapshot?.selectedQuestionContext &&
+          !currentSession.contextSnapshot?.selectedQuestionQueueContext?.length &&
+          onPracticeQuestion && (
           <button
             onClick={() =>
               onPracticeQuestion(currentSession.contextSnapshot?.selectedQuestionContext?.id || "")
@@ -327,7 +333,7 @@ export function ReviewDetail({
         )}
         {currentSession.contextSnapshot?.selectedQuestionContext && onChooseAnotherQuestion && (
           <button className="secondary" onClick={onChooseAnotherQuestion} type="button">
-            Choose Another Question
+            Open Question Queue
           </button>
         )}
         <button

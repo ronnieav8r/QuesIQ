@@ -520,6 +520,30 @@ export async function markQuestionAttemptStarted(input: {
     .onConflictDoNothing();
 }
 
+export async function markQuestionAttemptsStarted(input: {
+  questionIds: string[];
+  sessionId: string;
+  userId: string;
+}) {
+  const questionIds = Array.from(new Set(input.questionIds)).filter(Boolean);
+
+  if (questionIds.length === 0) {
+    return;
+  }
+
+  await getDb()
+    .insert(interviewQuestionPracticeAttempts)
+    .values(
+      questionIds.map((questionId) => ({
+        questionId,
+        sessionId: input.sessionId,
+        updatedAt: new Date(),
+        userId: input.userId,
+      })),
+    )
+    .onConflictDoNothing();
+}
+
 export async function markQuestionAttemptAnswered(input: {
   retryCount?: number;
   sessionId: string;

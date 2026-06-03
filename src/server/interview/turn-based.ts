@@ -692,20 +692,35 @@ export async function runTurnBasedInterviewTurn(input: {
       })
     : undefined;
 
-  const selectedQuestionContext = input.turnInput.snapshot.selectedQuestionContext;
-  const decision =
-    selectedQuestionContext && !latestTranscript && input.turnInput.turnIndex === 0
+  const selectedQuestionQueue =
+    input.turnInput.snapshot.selectedQuestionQueueContext?.length
+      ? input.turnInput.snapshot.selectedQuestionQueueContext
+      : input.turnInput.snapshot.selectedQuestionContext
+        ? [input.turnInput.snapshot.selectedQuestionContext]
+        : [];
+  const selectedQuestionContext = selectedQuestionQueue[0];
+  const queuedNextQuestion = latestTranscript
+    ? selectedQuestionQueue[input.turnInput.turnIndex]
+    : selectedQuestionContext;
+  const queuedSessionMustEnd =
+    selectedQuestionQueue.length > 0 &&
+    Boolean(latestTranscript) &&
+    (!queuedNextQuestion || input.turnInput.endAfterAnswer === true);
+  const generatedDecision =
+    selectedQuestionQueue.length > 0 &&
+    !latestTranscript &&
+    input.turnInput.turnIndex === 0
       ? {
           done: false,
           feedback: undefined,
           question: selectedQuestionContext.questionText,
-          routingReason: "Selected learner question used exactly from the Interview question bank.",
+          routingReason: "Selected learner question used exactly from the Interview question queue.",
           targetSkill: selectedQuestionContext.targetSkill || "selected question practice",
         }
       : await generateTurnDecision({
           apiKey,
           config: input.config,
-          endAfterAnswer: input.turnInput.endAfterAnswer,
+          endAfterAnswer: input.turnInput.endAfterAnswer || queuedSessionMustEnd,
           latestTranscript,
           priorTurns: input.turnInput.priorTurns,
           sessionId: input.turnInput.sessionId,
@@ -713,6 +728,22 @@ export async function runTurnBasedInterviewTurn(input: {
           turnIndex: input.turnInput.turnIndex,
           userId: input.userId,
         });
+  const decision =
+    selectedQuestionQueue.length > 0 &&
+    latestTranscript &&
+    queuedNextQuestion &&
+    input.turnInput.endAfterAnswer !== true
+      ? {
+          ...generatedDecision,
+          done: false,
+          question: queuedNextQuestion.questionText,
+          routingReason: `Question Queue item ${input.turnInput.turnIndex + 1} used exactly from the Interview question bank.`,
+          targetSkill:
+            queuedNextQuestion.targetSkill ||
+            generatedDecision.targetSkill ||
+            "selected question practice",
+        }
+      : generatedDecision;
 
   const speechText = [decision.feedback, decision.question].filter(Boolean).join(" ");
   const questionAudioBase64 = speechText

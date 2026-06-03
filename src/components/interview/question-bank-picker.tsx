@@ -6,7 +6,8 @@ import type { InterviewQuestionRecord, QuestionTypeKey } from "@/product/intervi
 
 type QuestionBankPickerProps = {
   launchPending: boolean;
-  onPracticeQuestion: (question: InterviewQuestionRecord) => void;
+  onBack: () => void;
+  onPracticeQueue: (questions: InterviewQuestionRecord[]) => void;
 };
 
 type QuestionBankResponse = {
@@ -22,9 +23,14 @@ const questionTypes: { key: "" | QuestionTypeKey; label: string }[] = [
   { key: "motivational", label: "Motivational" },
 ];
 
+function questionTypeLabel(type?: QuestionTypeKey) {
+  return questionTypes.find((questionType) => questionType.key === type)?.label || "General";
+}
+
 export function QuestionBankPicker({
   launchPending,
-  onPracticeQuestion,
+  onBack,
+  onPracticeQueue,
 }: QuestionBankPickerProps) {
   const [customQuestionText, setCustomQuestionText] = useState("");
   const [customTargetSkill, setCustomTargetSkill] = useState("");
@@ -32,6 +38,7 @@ export function QuestionBankPicker({
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<InterviewQuestionRecord[]>([]);
   const [recommendations, setRecommendations] = useState<InterviewQuestionRecord[]>([]);
+  const [queue, setQueue] = useState<InterviewQuestionRecord[]>([]);
   const [search, setSearch] = useState("");
   const [selectedType, setSelectedType] = useState<"" | QuestionTypeKey>("");
   const [savingCustom, setSavingCustom] = useState(false);
@@ -68,10 +75,28 @@ export function QuestionBankPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, selectedType]);
 
+  const queuedIds = useMemo(
+    () => new Set(queue.map((question) => question.id)),
+    [queue],
+  );
   const visibleRecommendations = useMemo(() => {
     const ids = new Set(questions.map((question) => question.id));
     return recommendations.filter((question) => ids.has(question.id));
   }, [questions, recommendations]);
+
+  function addToQueue(question: InterviewQuestionRecord) {
+    setQueue((current) => {
+      if (current.some((item) => item.id === question.id) || current.length >= 10) {
+        return current;
+      }
+
+      return [...current, question];
+    });
+  }
+
+  function removeFromQueue(questionId: string) {
+    setQueue((current) => current.filter((question) => question.id !== questionId));
+  }
 
   async function addCustomQuestion() {
     if (!customQuestionText.trim()) {
@@ -104,6 +129,7 @@ export function QuestionBankPicker({
       setCustomQuestionText("");
       setCustomTargetSkill("");
       setQuestions((current) => [body.question as InterviewQuestionRecord, ...current]);
+      addToQueue(body.question);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Question could not be saved.");
     } finally {
@@ -112,14 +138,58 @@ export function QuestionBankPicker({
   }
 
   return (
-    <section className="question-bank-picker" aria-labelledby="question-bank-title">
-      <div className="section-head">
+    <section className="screen question-queue-screen" aria-labelledby="question-bank-title">
+      <div className="screen-toolbar">
+        <button aria-label="Go back" className="back-button" onClick={onBack} type="button">
+          Back
+        </button>
         <div>
-          <p className="eyebrow">Choose a Question</p>
-          <h2 id="question-bank-title">Practice one exact question</h2>
+          <p className="eyebrow">Question Queue</p>
+          <h1 id="question-bank-title">Build a custom practice queue</h1>
         </div>
-        <span>{loading ? "Loading" : `${questions.length} available`}</span>
       </div>
+
+      <section className="question-queue-summary" aria-label="Queued questions">
+        <div>
+          <p className="eyebrow">Friendly Coaching</p>
+          <h2>{queue.length || "No"} queued {queue.length === 1 ? "question" : "questions"}</h2>
+          <p>
+            Que will ask these exact questions in order, then save the session for review.
+          </p>
+        </div>
+        <div className="stacked-actions">
+          <button
+            disabled={launchPending || queue.length === 0}
+            onClick={() => onPracticeQueue(queue)}
+            type="button"
+          >
+            {launchPending ? "Launching" : "Launch Queue"}
+          </button>
+          {queue.length > 0 && (
+            <button className="secondary" onClick={() => setQueue([])} type="button">
+              Clear Queue
+            </button>
+          )}
+        </div>
+      </section>
+
+      {queue.length > 0 && (
+        <ol className="queued-question-list" aria-label="Selected question order">
+          {queue.map((question, index) => (
+            <li key={question.id}>
+              <span>{index + 1}</span>
+              <p>{question.questionText}</p>
+              <button
+                className="secondary"
+                onClick={() => removeFromQueue(question.id)}
+                type="button"
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
 
       <div className="question-bank-controls">
         <label>
@@ -146,24 +216,27 @@ export function QuestionBankPicker({
       </div>
 
       {visibleRecommendations.length > 0 && (
-        <div className="question-bank-recommendations">
+        <section className="question-bank-recommendations" aria-label="Practice again">
           <strong>Practice again</strong>
-          {visibleRecommendations.slice(0, 3).map((question) => (
-            <button
-              disabled={launchPending}
-              key={question.id}
-              onClick={() => onPracticeQuestion(question)}
-              type="button"
-            >
-              {question.questionText}
-            </button>
-          ))}
-        </div>
+          <div className="question-row-list">
+            {visibleRecommendations.slice(0, 3).map((question) => (
+              <button
+                disabled={queuedIds.has(question.id)}
+                key={question.id}
+                onClick={() => addToQueue(question)}
+                type="button"
+              >
+                {question.questionText}
+              </button>
+            ))}
+          </div>
+        </section>
       )}
 
-      <div className="question-bank-add">
+      <details className="question-bank-add">
+        <summary>Add your own question</summary>
         <label>
-          <span>Add your own question</span>
+          <span>Question</span>
           <textarea
             placeholder="Paste or write a question you want to practice."
             value={customQuestionText}
@@ -179,40 +252,42 @@ export function QuestionBankPicker({
           />
         </label>
         <button disabled={savingCustom} onClick={addCustomQuestion} type="button">
-          {savingCustom ? "Saving" : "Add Question"}
+          {savingCustom ? "Saving" : "Add to Queue"}
         </button>
-      </div>
+      </details>
 
       {error && <p className="form-error">{error}</p>}
 
-      <div className="question-card-list">
-        {questions.map((question) => (
-          <article className="question-card" key={question.id}>
-            <div>
-              <strong>{question.questionText}</strong>
-              <p>{question.suggestedUse || question.targetSkill || "One-question coaching practice."}</p>
-            </div>
-            <dl>
+      <section className="question-row-list" aria-label="Available questions">
+        <div className="section-head">
+          <h2>Available Questions</h2>
+          <span>{loading ? "Loading" : `${questions.length} available`}</span>
+        </div>
+        {questions.map((question) => {
+          const queued = queuedIds.has(question.id);
+
+          return (
+            <article className="question-row" key={question.id}>
               <div>
-                <dt>Type</dt>
-                <dd>{question.questionTypeKey || "General"}</dd>
+                <strong>{question.questionText}</strong>
+                <p>
+                  {questionTypeLabel(question.questionTypeKey)} /{" "}
+                  {question.targetSkill || question.suggestedUse || "Open practice"}
+                </p>
               </div>
-              <div>
-                <dt>Source</dt>
-                <dd>{question.source === "official" ? question.sourceLabel : "Private"}</dd>
-              </div>
-              <div>
-                <dt>Skill</dt>
-                <dd>{question.targetSkill || "Open practice"}</dd>
-              </div>
-            </dl>
-            <button disabled={launchPending} onClick={() => onPracticeQuestion(question)} type="button">
-              {launchPending ? "Launching" : "Practice This Question"}
-            </button>
-          </article>
-        ))}
+              <span>{question.source === "official" ? question.sourceLabel : "Private"}</span>
+              <button
+                disabled={queued || queue.length >= 10}
+                onClick={() => addToQueue(question)}
+                type="button"
+              >
+                {queued ? "Queued" : "Add"}
+              </button>
+            </article>
+          );
+        })}
         {!loading && questions.length === 0 && <p>No matching questions found.</p>}
-      </div>
+      </section>
     </section>
   );
 }

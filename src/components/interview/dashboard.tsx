@@ -33,6 +33,7 @@ type DashboardProps = {
   onDebrief: (session: SessionHistoryItem) => void;
   onOnboarding: () => void;
   onPractice: () => void;
+  onQuickQuestion: () => void;
   onReview: (session: SessionHistoryItem) => void;
   onStories: () => void;
   selectedJobTarget?: JobTargetRecord;
@@ -213,6 +214,7 @@ export function Dashboard({
   onDebrief,
   onOnboarding,
   onPractice,
+  onQuickQuestion,
   onReview,
   onStories,
   selectedJobTarget,
@@ -517,6 +519,9 @@ export function Dashboard({
             <p>{recommendation.body}</p>
           </div>
           <div className="stacked-actions">
+            <button className="secondary" onClick={onQuickQuestion} type="button">
+              Quick Question
+            </button>
             <button onClick={runRecommendationAction} type="button">
               {recommendation.actionLabel}
             </button>

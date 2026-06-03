@@ -3,6 +3,7 @@ export type AppView =
   | "home"
   | "history"
   | "practice"
+  | "question_queue"
   | "review"
   | "stories"
   | "me"
@@ -267,6 +268,7 @@ export type SessionSetupSnapshot = {
   };
   storyPracticeSpin?: StorySpin;
   selectedQuestionContext?: SelectedQuestionContext;
+  selectedQuestionQueueContext?: SelectedQuestionContext[];
   styleKey: InterviewStyleKey;
 };
 

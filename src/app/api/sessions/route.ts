@@ -11,6 +11,10 @@ import { listOwnedSessions } from "@/server/sessions/list-owned-sessions";
 
 export const runtime = "nodejs";
 
+function uniqueQuestionIds(ids: Array<string | undefined>) {
+  return Array.from(new Set(ids.filter((id): id is string => Boolean(id)))).slice(0, 10);
+}
+
 export async function GET() {
   const appSession = await auth();
 
@@ -80,24 +84,40 @@ export async function POST(request: Request) {
 
   try {
     let snapshot = parsedSnapshot;
-    const selectedQuestionId = parsedSnapshot.selectedQuestionContext?.id;
-    if (selectedQuestionId) {
-      const question = await getAccessibleInterviewQuestion(selectedQuestionId, appSession.user.id);
-      if (!question) {
+    const selectedQuestionIds = uniqueQuestionIds([
+      ...(parsedSnapshot.selectedQuestionQueueContext?.map((question) => question.id) ?? []),
+      parsedSnapshot.selectedQuestionContext?.id,
+    ]);
+
+    if (selectedQuestionIds.length > 0) {
+      const questions = [];
+      for (const selectedQuestionId of selectedQuestionIds) {
+        const question = await getAccessibleInterviewQuestion(
+          selectedQuestionId,
+          appSession.user.id,
+        );
+        if (question) {
+          questions.push(question);
+        }
+      }
+
+      if (questions.length !== selectedQuestionIds.length || questions.length === 0) {
         return NextResponse.json(
-          { error: "Selected question was not found or is not available." },
+          { error: "One or more selected questions were not found or are not available." },
           { status: 404 },
         );
       }
 
+      const selectedQuestionQueueContext = questions.map(toSelectedQuestionContext);
       snapshot = {
         ...parsedSnapshot,
         modeKey: "coaching",
-        questionTypeKey: question.questionTypeKey ?? parsedSnapshot.questionTypeKey,
+        questionTypeKey: questions[0]?.questionTypeKey ?? parsedSnapshot.questionTypeKey,
         rapidFireQuestionCount: undefined,
-        selectedQuestionContext: toSelectedQuestionContext(question),
+        selectedQuestionContext: selectedQuestionQueueContext[0],
+        selectedQuestionQueueContext,
         styleKey: "friendly",
-        turnBasedQuestionCount: 1,
+        turnBasedQuestionCount: selectedQuestionQueueContext.length,
       };
     }
 

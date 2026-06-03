@@ -271,6 +271,18 @@ function buildEvaluationInput(
           targetSkill: snapshot.selectedQuestionContext.targetSkill,
         }
       : "No selected question context.",
+    selectedQuestionQueue:
+      snapshot.selectedQuestionQueueContext?.map((question, index) => ({
+        difficulty: question.difficulty,
+        index: index + 1,
+        questionText: question.questionText,
+        questionTypeKey: question.questionTypeKey,
+        roleFamily: question.roleFamily,
+        source: question.source,
+        sourceLabel: question.sourceLabel,
+        suggestedUse: question.suggestedUse,
+        targetSkill: question.targetSkill,
+      })) ?? "No selected question queue.",
     speechSummary: speechSummary ?? "No reliable speech metrics available.",
     candidateContext: {
       jobDescription: snapshot.interviewContext.jobDescription || "Not provided",
@@ -680,7 +692,10 @@ export async function createSessionEvaluation(
       updatedAt: now,
     })
     .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
-  if (session.contextSnapshot.selectedQuestionContext?.id) {
+  if (
+    session.contextSnapshot.selectedQuestionContext?.id ||
+    session.contextSnapshot.selectedQuestionQueueContext?.length
+  ) {
     await markQuestionAttemptReviewed(sessionId, userId);
   }
   await recordReviewProgression(userId, sessionId, result, session.voiceArtifact);

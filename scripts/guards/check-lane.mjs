@@ -28,6 +28,7 @@ const lanes = {
     "drizzle/0060_tune_interview_practice_story_quests.sql",
     "drizzle/0064_add_interview_wpm_evaluator_rubric.sql",
     "drizzle/0065_add_interview_question_bank.sql",
+    "drizzle/0066_allow_interview_question_queue_attempts.sql",
     "drizzle/meta/_journal.json",
     "docs/products/interview/",
     "scripts/guards/check-lane.mjs",

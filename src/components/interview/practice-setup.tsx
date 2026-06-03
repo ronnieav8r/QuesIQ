@@ -8,9 +8,7 @@ import type {
   QuestionTypeKey,
   InterviewStyleKey,
   JobTargetRecord,
-  InterviewQuestionRecord,
 } from "@/product/interview-types";
-import { QuestionBankPicker } from "@/components/interview/question-bank-picker";
 
 type PracticeSetupProps = {
   catalog: InterviewCatalog;
@@ -20,7 +18,7 @@ type PracticeSetupProps = {
   onJobTarget: (target?: JobTargetRecord) => void;
   onLaunch: () => void;
   onMode: (mode: PracticeMode) => void;
-  onQuestionBankPractice: (question: InterviewQuestionRecord) => void;
+  onQuestionQueue: () => void;
   onQuestion: (questionKey: QuestionTypeKey) => void;
   onTurnBasedQuestionCount: (count: number) => void;
   onStyle: (styleKey: InterviewStyleKey) => void;
@@ -58,7 +56,7 @@ export function PracticeSetup({
   onJobTarget,
   onLaunch,
   onMode,
-  onQuestionBankPractice,
+  onQuestionQueue,
   onQuestion,
   onTurnBasedQuestionCount,
   onStyle,
@@ -139,12 +137,13 @@ export function PracticeSetup({
               ))}
             </div>
           </section>
-          <QuestionBankPicker
-            launchPending={sessionLaunchPending}
-            onPracticeQuestion={onQuestionBankPractice}
-          />
           <h2 id="mode-title">Choose a practice mode</h2>
           <div className="mode-list">
+            <button className="choice-row" onClick={onQuestionQueue} type="button">
+              <strong>Question Queue</strong>
+              <span>Build a queue of exact questions you want to practice.</span>
+              <small>Friendly Coaching uses your selected order</small>
+            </button>
             {practiceModes.map((mode) => (
               <button
                 className="choice-row"

@@ -81,6 +81,12 @@ export function SessionView({
   const useTurnBasedSession = runtimeConfigLoaded && runtimeConfig.engine === "turn_based";
   const turnBasedQuestionCount =
     snapshot.turnBasedQuestionCount ?? snapshot.rapidFireQuestionCount ?? 4;
+  const selectedQuestionQueue =
+    snapshot.selectedQuestionQueueContext?.length
+      ? snapshot.selectedQuestionQueueContext
+      : snapshot.selectedQuestionContext
+        ? [snapshot.selectedQuestionContext]
+        : [];
   const turnBasedRuntimeConfig: RuntimeConfig =
     useTurnBasedSession && (snapshot.storyContext || snapshot.introductionContext)
       ? {
@@ -288,10 +294,16 @@ export function SessionView({
             <span>Saved</span>
           </div>
           <dl>
-            {snapshot.selectedQuestionContext && (
+            {selectedQuestionQueue.length === 1 && (
               <div>
                 <dt>Selected question</dt>
-                <dd>{snapshot.selectedQuestionContext.questionText}</dd>
+                <dd>{selectedQuestionQueue[0].questionText}</dd>
+              </div>
+            )}
+            {selectedQuestionQueue.length > 1 && (
+              <div>
+                <dt>Question Queue</dt>
+                <dd>{selectedQuestionQueue.length} selected questions</dd>
               </div>
             )}
             <div>

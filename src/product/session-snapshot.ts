@@ -158,6 +158,21 @@ function parseSelectedQuestionContext(value: unknown): SelectedQuestionContext |
   };
 }
 
+function parseSelectedQuestionQueueContext(
+  value: unknown,
+): SelectedQuestionContext[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const questions = value
+    .map(parseSelectedQuestionContext)
+    .filter((question): question is SelectedQuestionContext => Boolean(question))
+    .slice(0, 10);
+
+  return questions.length > 0 ? questions : undefined;
+}
+
 export function parseSessionSetupSnapshot(value: unknown): SessionSetupSnapshot | undefined {
   if (!value || typeof value !== "object") {
     return undefined;
@@ -217,6 +232,9 @@ export function parseSessionSetupSnapshot(value: unknown): SessionSetupSnapshot 
     storyContext: parseStoryContext(candidate.storyContext),
     storyPracticeSpin: parseStoryPracticeSpin(candidate.storyPracticeSpin),
     selectedQuestionContext: parseSelectedQuestionContext(candidate.selectedQuestionContext),
+    selectedQuestionQueueContext: parseSelectedQuestionQueueContext(
+      candidate.selectedQuestionQueueContext,
+    ),
     styleKey: candidate.styleKey,
   };
 }
