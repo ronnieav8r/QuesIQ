@@ -18,7 +18,13 @@ import {
   saveCoachingMemory,
 } from "@/server/coaching-memory/coaching-memory";
 import { getDb } from "@/server/db/client";
-import { evaluations, sessions } from "@/server/db/schema";
+import {
+  evaluations,
+  interviewQuestionArchetypes,
+  interviewTurnBasedTurns,
+  interviewUserArchetypePerformance,
+  sessions,
+} from "@/server/db/schema";
 import type { SessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
 import { getSessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
 import {
@@ -40,6 +46,17 @@ type SessionEvaluationRecord = {
   id: string;
   model: string;
   result: SessionEvaluationResult;
+};
+
+type TurnArchetypeContext = {
+  answerTranscript?: string;
+  archetypeId?: string;
+  feedback?: string;
+  question: string;
+  routingReason: string;
+  targetSkill: string;
+  title?: string;
+  turnIndex: number;
 };
 
 type ResponsesApiBody = {
@@ -64,6 +81,42 @@ type ResponsesApiBody = {
 const evaluationSchema = {
   additionalProperties: false,
   properties: {
+    archetypePerformance: {
+      items: {
+        additionalProperties: false,
+        properties: {
+          archetypeId: { type: "string" },
+          evidence: { type: "string" },
+          gap: { type: "string" },
+          nextAction: { type: "string" },
+          score: {
+            maximum: 5,
+            minimum: 1,
+            type: "number",
+          },
+          strength: { type: "string" },
+          targetSkill: { type: "string" },
+          title: { type: "string" },
+          turnCount: {
+            minimum: 0,
+            type: "integer",
+          },
+        },
+        required: [
+          "archetypeId",
+          "title",
+          "targetSkill",
+          "turnCount",
+          "score",
+          "strength",
+          "gap",
+          "nextAction",
+          "evidence",
+        ],
+        type: "object",
+      },
+      type: "array",
+    },
     coachingMemory: {
       additionalProperties: false,
       properties: {
@@ -185,6 +238,7 @@ const evaluationSchema = {
     "scores",
     "reviewDetail",
     "coachingMemory",
+    "archetypePerformance",
   ],
   type: "object",
 };
@@ -224,11 +278,44 @@ function getModeSpecificEvaluationInstructions(snapshot: SessionSetupSnapshot) {
   return undefined;
 }
 
+async function listTurnArchetypeContext(sessionId: string): Promise<TurnArchetypeContext[]> {
+  const rows = await getDb()
+    .select({
+      answerTranscript: interviewTurnBasedTurns.answerTranscript,
+      archetypeId: interviewTurnBasedTurns.archetypeId,
+      feedback: interviewTurnBasedTurns.feedback,
+      question: interviewTurnBasedTurns.question,
+      routingReason: interviewTurnBasedTurns.routingReason,
+      targetSkill: interviewTurnBasedTurns.targetSkill,
+      title: interviewQuestionArchetypes.title,
+      turnIndex: interviewTurnBasedTurns.turnIndex,
+    })
+    .from(interviewTurnBasedTurns)
+    .leftJoin(
+      interviewQuestionArchetypes,
+      eq(interviewQuestionArchetypes.id, interviewTurnBasedTurns.archetypeId),
+    )
+    .where(eq(interviewTurnBasedTurns.sessionId, sessionId))
+    .orderBy(interviewTurnBasedTurns.turnIndex);
+
+  return rows.map((row) => ({
+    answerTranscript: row.answerTranscript ?? undefined,
+    archetypeId: row.archetypeId ?? undefined,
+    feedback: row.feedback ?? undefined,
+    question: row.question,
+    routingReason: row.routingReason,
+    targetSkill: row.targetSkill,
+    title: row.title ?? undefined,
+    turnIndex: row.turnIndex,
+  }));
+}
+
 function buildEvaluationInput(
   snapshot: SessionSetupSnapshot,
   artifact: VoiceSessionArtifactDraft,
   promptComponents: SessionPromptComponents,
   storyLibrary: StoryLibraryContextItem[],
+  turnArchetypes: TurnArchetypeContext[],
   memory?: CoachingMemoryRecord,
 ) {
   const speechSummary = getSpeechSummary(artifact);
@@ -284,6 +371,19 @@ function buildEvaluationInput(
         targetSkill: question.targetSkill,
       })) ?? "No selected question queue.",
     speechSummary: speechSummary ?? "No reliable speech metrics available.",
+    turnArchetypes:
+      turnArchetypes.length > 0
+        ? turnArchetypes.map((turn) => ({
+            answerTranscript: turn.answerTranscript,
+            archetypeId: turn.archetypeId,
+            feedback: turn.feedback,
+            question: turn.question,
+            routingReason: turn.routingReason,
+            targetSkill: turn.targetSkill,
+            title: turn.title || turn.targetSkill || "Unknown archetype",
+            turnIndex: turn.turnIndex,
+          }))
+        : "No turn archetype metadata was recorded for this session.",
     candidateContext: {
       jobDescription: snapshot.interviewContext.jobDescription || "Not provided",
       resumeExcerpt:
@@ -347,6 +447,7 @@ async function requestEvaluation(
   instructions: string,
   model: string,
   storyLibrary: StoryLibraryContextItem[],
+  turnArchetypes: TurnArchetypeContext[],
   memory?: CoachingMemoryRecord,
   apiKeyOverride?: string,
 ) {
@@ -370,6 +471,7 @@ async function requestEvaluation(
               artifact,
               promptComponents,
               storyLibrary,
+              turnArchetypes,
               memory,
             ),
           ),
@@ -441,6 +543,74 @@ function getProviderRequestId(error: unknown): string | undefined {
   }
 
   return (error as { providerRequestId?: string }).providerRequestId;
+}
+
+async function saveArchetypePerformanceResults(
+  userId: string,
+  sessionId: string,
+  result: SessionEvaluationResult,
+) {
+  const entries = result.archetypePerformance?.filter((entry) => entry.archetypeId) ?? [];
+
+  for (const entry of entries) {
+    const archetypeId = entry.archetypeId;
+
+    if (!archetypeId) {
+      continue;
+    }
+
+    const now = new Date();
+    const [existing] = await getDb()
+      .select({
+        attemptCount: interviewUserArchetypePerformance.attemptCount,
+        averageScore: interviewUserArchetypePerformance.averageScore,
+      })
+      .from(interviewUserArchetypePerformance)
+      .where(
+        and(
+          eq(interviewUserArchetypePerformance.userId, userId),
+          eq(interviewUserArchetypePerformance.archetypeId, archetypeId),
+        ),
+      )
+      .limit(1);
+    const nextAttemptCount = (existing?.attemptCount ?? 0) + 1;
+    const nextAverageScore = existing
+      ? (existing.averageScore * existing.attemptCount + entry.score) / nextAttemptCount
+      : entry.score;
+
+    await getDb()
+      .insert(interviewUserArchetypePerformance)
+      .values({
+        archetypeId,
+        attemptCount: nextAttemptCount,
+        averageScore: nextAverageScore,
+        growthAreas: [entry.gap].filter(Boolean),
+        lastPracticedAt: now,
+        lastScore: entry.score,
+        lastSessionId: sessionId,
+        latestRecommendation: entry.nextAction,
+        strengths: [entry.strength].filter(Boolean),
+        updatedAt: now,
+        userId,
+      })
+      .onConflictDoUpdate({
+        set: {
+          attemptCount: nextAttemptCount,
+          averageScore: nextAverageScore,
+          growthAreas: [entry.gap].filter(Boolean),
+          lastPracticedAt: now,
+          lastScore: entry.score,
+          lastSessionId: sessionId,
+          latestRecommendation: entry.nextAction,
+          strengths: [entry.strength].filter(Boolean),
+          updatedAt: now,
+        },
+        target: [
+          interviewUserArchetypePerformance.userId,
+          interviewUserArchetypePerformance.archetypeId,
+        ],
+      });
+  }
 }
 
 export async function createSessionEvaluation(
@@ -557,6 +727,7 @@ export async function createSessionEvaluation(
     getCoachingMemory(userId),
     listStoryLibraryContext(userId),
   ]);
+  const turnArchetypes = await listTurnArchetypeContext(sessionId);
   const model = promptConfig.model;
   await getDb()
     .update(sessions)
@@ -594,6 +765,7 @@ export async function createSessionEvaluation(
       promptConfig.instructions,
       model,
       storyLibrary,
+      turnArchetypes,
       memory,
       options.apiKeyOverride,
     );
@@ -605,6 +777,7 @@ export async function createSessionEvaluation(
         userId,
       });
     }
+    await saveArchetypePerformanceResults(userId, sessionId, result);
     await completeAiRun(aiRun.id, {
       costSource: "exact",
       estimatedCostMicroUsd: estimateTokenCostMicroUsd(

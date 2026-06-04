@@ -1,7 +1,11 @@
 import { and, asc, eq } from "drizzle-orm";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
-import type { SessionSetupSnapshot, VoiceTranscriptTurn } from "@/product/interview-types";
+import type {
+  CoachingTurnState,
+  SessionSetupSnapshot,
+  VoiceTranscriptTurn,
+} from "@/product/interview-types";
 import { getTurnSpeechMetrics } from "@/product/speech-metrics";
 import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
 import { getSessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
@@ -11,6 +15,8 @@ import {
   interviewQuestionArchetypes,
   interviewQuestions,
   interviewTurnBasedTurns,
+  interviewTurnPrefetches,
+  interviewUserArchetypePerformance,
   sessions,
 } from "@/server/db/schema";
 import { isInterviewStorageConfigured, uploadInterviewAudio } from "@/server/interview/storage";
@@ -44,6 +50,8 @@ export type TurnBasedInput = {
 };
 
 export type TurnBasedResult = {
+  archetypeId?: string;
+  detectedUserIntent?: CoachingTurnState;
   done: boolean;
   feedback?: string;
   feedbackAudioBase64?: string;
@@ -53,6 +61,7 @@ export type TurnBasedResult = {
   questionAudioCacheStatus?: "hit" | "miss" | "stored";
   questionAudioMimeType?: string;
   routingReason?: string;
+  state?: CoachingTurnState;
   targetSkill?: string;
   transcript?: string;
   transcriptMetrics?: Pick<
@@ -64,11 +73,21 @@ export type TurnBasedResult = {
 
 type TurnDecision = {
   archetypeId?: string;
+  detectedUserIntent?: CoachingTurnState;
   done?: boolean;
   feedback?: string;
   question?: string;
   routingReason: string;
+  state: CoachingTurnState;
   targetSkill: string;
+};
+
+type TurnPrefetchKind = "move_on_question" | "opening_question";
+
+export type TurnPrefetchResult = {
+  id: string;
+  payload: TurnBasedResult;
+  status: "ready";
 };
 
 type SpeechResult = {
@@ -118,6 +137,39 @@ function cleanUuid(value: unknown) {
   )
     ? text
     : undefined;
+}
+
+function cleanTurnState(value: unknown, fallback: CoachingTurnState): CoachingTurnState {
+  const text = cleanText(value);
+  return (
+    [
+      "opening_question",
+      "awaiting_answer",
+      "brief_feedback_choice",
+      "more_feedback",
+      "retry_answer",
+      "move_on",
+      "wrap_up",
+    ] satisfies CoachingTurnState[]
+  ).includes(text as CoachingTurnState)
+    ? (text as CoachingTurnState)
+    : fallback;
+}
+
+function defaultTurnState(input: {
+  hasLatestAnswer?: boolean;
+  modeKey: SessionSetupSnapshot["modeKey"];
+  mustEnd: boolean;
+}): CoachingTurnState {
+  if (input.mustEnd) {
+    return "wrap_up";
+  }
+
+  if (!input.hasLatestAnswer) {
+    return "opening_question";
+  }
+
+  return input.modeKey === "coaching" ? "brief_feedback_choice" : "move_on";
 }
 
 function turnLimit(snapshot: SessionSetupSnapshot, fallback: number) {
@@ -180,22 +232,30 @@ function latestAssistantPromptWasRetry(priorTurns: PriorTurn[]) {
 
 function parseDecision(
   raw: string,
-  input: { mustEnd: boolean; modeKey: SessionSetupSnapshot["modeKey"] },
+  input: {
+    hasLatestAnswer?: boolean;
+    mustEnd: boolean;
+    modeKey: SessionSetupSnapshot["modeKey"];
+  },
 ): TurnDecision {
   const allowFeedback = input.mustEnd || input.modeKey === "coaching";
+  const fallbackState = defaultTurnState(input);
   try {
     const parsed = JSON.parse(raw) as Partial<TurnDecision>;
     return {
       archetypeId: cleanUuid(parsed.archetypeId),
+      detectedUserIntent: cleanTurnState(parsed.detectedUserIntent, fallbackState),
       done: input.mustEnd || parsed.done === true,
       feedback: allowFeedback ? cleanText(parsed.feedback) || undefined : undefined,
       question: input.mustEnd ? undefined : cleanText(parsed.question) || undefined,
       routingReason: cleanText(parsed.routingReason, fallbackRoutingReason(input.modeKey)),
+      state: cleanTurnState(parsed.state, fallbackState),
       targetSkill: cleanText(parsed.targetSkill, fallbackTargetSkill(input.modeKey)),
     };
   } catch {
     return {
       done: input.mustEnd,
+      detectedUserIntent: fallbackState,
       feedback: input.mustEnd
         ? `${modeLabel(input.modeKey)} complete. End the session for your review.`
         : input.modeKey === "coaching"
@@ -203,6 +263,7 @@ function parseDecision(
           : undefined,
       question: input.mustEnd ? undefined : fallbackQuestion(input.modeKey),
       routingReason: fallbackRoutingReason(input.modeKey),
+      state: fallbackState,
       targetSkill: fallbackTargetSkill(input.modeKey),
     };
   }
@@ -441,6 +502,29 @@ async function generateSpeech(input: {
   };
 }
 
+async function listUserArchetypePerformance(userId: string) {
+  return getDb()
+    .select({
+      attemptCount: interviewUserArchetypePerformance.attemptCount,
+      averageScore: interviewUserArchetypePerformance.averageScore,
+      growthAreas: interviewUserArchetypePerformance.growthAreas,
+      lastPracticedAt: interviewUserArchetypePerformance.lastPracticedAt,
+      lastScore: interviewUserArchetypePerformance.lastScore,
+      latestRecommendation: interviewUserArchetypePerformance.latestRecommendation,
+      strengths: interviewUserArchetypePerformance.strengths,
+      targetSkill: interviewQuestionArchetypes.targetSkill,
+      title: interviewQuestionArchetypes.title,
+      archetypeId: interviewUserArchetypePerformance.archetypeId,
+    })
+    .from(interviewUserArchetypePerformance)
+    .innerJoin(
+      interviewQuestionArchetypes,
+      eq(interviewQuestionArchetypes.id, interviewUserArchetypePerformance.archetypeId),
+    )
+    .where(eq(interviewUserArchetypePerformance.userId, userId))
+    .orderBy(asc(interviewQuestionArchetypes.displayOrder));
+}
+
 export function buildTurnTaskInstruction(
   snapshot: SessionSetupSnapshot,
   mustEnd: boolean,
@@ -493,7 +577,7 @@ export function buildTurnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) 
   if (modeKey === "first_impression") {
     return [
       "You route QuesIQ Interview Intro Practice turns.",
-      "Return only compact JSON with keys: archetypeId, question, feedback, routingReason, targetSkill, done.",
+      "Return only compact JSON with keys: state, detectedUserIntent, archetypeId, question, feedback, routingReason, targetSkill, done.",
       universalRules,
       "Intro Practice is a one-question saved-introduction rehearsal.",
       "For the opening turn, ask one natural tell-me-about-yourself style question based on the saved introduction context.",
@@ -506,7 +590,7 @@ export function buildTurnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) 
   if (modeKey === "coaching") {
     return [
       "You route QuesIQ Interview Coaching turns.",
-      "Return only compact JSON with keys: archetypeId, question, feedback, routingReason, targetSkill, done.",
+      "Return only compact JSON with keys: state, detectedUserIntent, archetypeId, question, feedback, routingReason, targetSkill, done.",
       universalRules,
       "Coaching is a question-answer-coach-next-question loop.",
       "After each user answer, write one brief, specific feedback sentence tied to what the user actually said.",
@@ -525,7 +609,7 @@ export function buildTurnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) 
 
   return [
     "You route QuesIQ Interview Rapid Fire turns.",
-    "Return only compact JSON with keys: archetypeId, question, feedback, routingReason, targetSkill, done.",
+    "Return only compact JSON with keys: state, detectedUserIntent, archetypeId, question, feedback, routingReason, targetSkill, done.",
     universalRules,
     "Rapid Fire is not coaching: after each answer, do not ask a follow-up about that answer, do not reference the previous answer, and do not provide between-question feedback.",
     "Generate a fresh, unrelated one-sentence interview question within the selected focus.",
@@ -545,11 +629,12 @@ async function generateTurnDecision(input: {
   priorTurns: PriorTurn[];
 }) {
   const promptComponents = await getSessionPromptComponents(input.snapshot);
-  const [memory, storyLibrary] = await Promise.all([
+  const [memory, storyLibrary, archetypePerformance] = await Promise.all([
     getCoachingMemory(input.userId),
     input.snapshot.modeKey === "coaching" && !input.snapshot.storyContext
       ? listStoryLibraryContext(input.userId)
       : Promise.resolve([]),
+    listUserArchetypePerformance(input.userId),
   ]);
   const archetypes = await getDb()
     .select()
@@ -652,8 +737,23 @@ async function generateTurnDecision(input: {
           recurringPatterns: memory.recurringPatterns,
           strengths: memory.strengths,
           summary: memory.summary,
-        }
+      }
       : "No prior coaching memory.",
+    userArchetypePerformance:
+      archetypePerformance.length > 0
+        ? archetypePerformance.map((performance) => ({
+            archetypeId: performance.archetypeId,
+            attempts: performance.attemptCount,
+            averageScore: performance.averageScore,
+            growthAreas: performance.growthAreas,
+            lastPracticedAt: performance.lastPracticedAt?.toISOString(),
+            lastScore: performance.lastScore,
+            latestRecommendation: performance.latestRecommendation,
+            strengths: performance.strengths,
+            targetSkill: performance.targetSkill,
+            title: performance.title,
+          }))
+        : "No prior archetype performance.",
     latestAnswerTranscript: input.latestTranscript || "No answer yet. Generate the opening question.",
     priorTurns: input.priorTurns.slice(-6),
     archetypes: matchingArchetypes.map((archetype) => ({
@@ -688,18 +788,44 @@ async function generateTurnDecision(input: {
               additionalProperties: false,
               properties: {
                 archetypeId: { type: "string" },
+                detectedUserIntent: {
+                  enum: [
+                    "opening_question",
+                    "awaiting_answer",
+                    "brief_feedback_choice",
+                    "more_feedback",
+                    "retry_answer",
+                    "move_on",
+                    "wrap_up",
+                  ],
+                  type: "string",
+                },
                 done: { type: "boolean" },
                 feedback: { type: "string" },
                 question: { type: "string" },
                 routingReason: { type: "string" },
+                state: {
+                  enum: [
+                    "opening_question",
+                    "awaiting_answer",
+                    "brief_feedback_choice",
+                    "more_feedback",
+                    "retry_answer",
+                    "move_on",
+                    "wrap_up",
+                  ],
+                  type: "string",
+                },
                 targetSkill: { type: "string" },
               },
               required: [
                 "archetypeId",
+                "detectedUserIntent",
                 "done",
                 "feedback",
                 "question",
                 "routingReason",
+                "state",
                 "targetSkill",
               ],
               type: "object",
@@ -749,7 +875,11 @@ async function generateTurnDecision(input: {
       totalTokens: body.usage?.total_tokens,
     });
 
-    const decision = parseDecision(outputText, { modeKey: input.snapshot.modeKey, mustEnd });
+    const decision = parseDecision(outputText, {
+      hasLatestAnswer: Boolean(input.latestTranscript),
+      modeKey: input.snapshot.modeKey,
+      mustEnd,
+    });
     if (
       retryAlreadyOffered &&
       decision.question &&
@@ -771,6 +901,411 @@ async function generateTurnDecision(input: {
     });
     throw error;
   }
+}
+
+function turnPrefetchRequestHash(input: {
+  modeKey: SessionSetupSnapshot["modeKey"];
+  prefetchKind: TurnPrefetchKind;
+  priorTurns: PriorTurn[];
+  sessionId: string;
+  snapshot: SessionSetupSnapshot;
+  stateKey: CoachingTurnState;
+  turnIndex: number;
+  userId: string;
+}) {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        modeKey: input.modeKey,
+        prefetchKind: input.prefetchKind,
+        priorTurns: input.priorTurns.slice(-6),
+        sessionId: input.sessionId,
+        snapshot: input.snapshot,
+        stateKey: input.stateKey,
+        turnIndex: input.turnIndex,
+        userId: input.userId,
+      }),
+    )
+    .digest("hex");
+}
+
+async function createTurnPayload(input: {
+  apiKey: string;
+  config: InterviewRuntimeConfigRecord;
+  endAfterAnswer?: boolean;
+  latestTranscript?: string;
+  priorTurns: PriorTurn[];
+  sessionId: string;
+  snapshot: SessionSetupSnapshot;
+  turnIndex: number;
+  userId: string;
+}) {
+  const selectedQuestionQueue =
+    input.snapshot.selectedQuestionQueueContext?.length
+      ? input.snapshot.selectedQuestionQueueContext
+      : input.snapshot.selectedQuestionContext
+        ? [input.snapshot.selectedQuestionContext]
+        : [];
+  const selectedQuestionContext = selectedQuestionQueue[0];
+  const queuedNextQuestion = input.latestTranscript
+    ? selectedQuestionQueue[input.turnIndex]
+    : selectedQuestionContext;
+  const queuedSessionMustEnd =
+    selectedQuestionQueue.length > 0 &&
+    Boolean(input.latestTranscript) &&
+    (!queuedNextQuestion || input.endAfterAnswer === true);
+  const generatedDecision =
+    selectedQuestionQueue.length > 0 &&
+    !input.latestTranscript &&
+    input.turnIndex === 0
+      ? {
+          detectedUserIntent: "opening_question" as const,
+          done: false,
+          feedback: undefined,
+          question: selectedQuestionContext.questionText,
+          routingReason: "Selected learner question used exactly from the Interview question queue.",
+          state: "opening_question" as const,
+          targetSkill: selectedQuestionContext.targetSkill || "selected question practice",
+        }
+      : await generateTurnDecision({
+          apiKey: input.apiKey,
+          config: input.config,
+          endAfterAnswer: input.endAfterAnswer || queuedSessionMustEnd,
+          latestTranscript: input.latestTranscript,
+          priorTurns: input.priorTurns,
+          sessionId: input.sessionId,
+          snapshot: input.snapshot,
+          turnIndex: input.turnIndex,
+          userId: input.userId,
+        });
+  const decision =
+    selectedQuestionQueue.length > 0 &&
+    input.latestTranscript &&
+    queuedNextQuestion &&
+    input.endAfterAnswer !== true
+      ? {
+          ...generatedDecision,
+          done: false,
+          question: queuedNextQuestion.questionText,
+          routingReason: `Question Queue item ${input.turnIndex + 1} used exactly from the Interview question bank.`,
+          state: "move_on" as const,
+          targetSkill:
+            queuedNextQuestion.targetSkill ||
+            generatedDecision.targetSkill ||
+            "selected question practice",
+        }
+      : generatedDecision;
+  const reusableQuestion =
+    queuedNextQuestion && decision.question === queuedNextQuestion.questionText
+      ? queuedNextQuestion
+      : undefined;
+  const shouldSplitFeedbackAudio = Boolean(reusableQuestion) || !decision.question;
+  const feedbackAudio = decision.feedback && shouldSplitFeedbackAudio
+    ? await generateSpeech({
+        apiKey: input.apiKey,
+        model: input.config.ttsModel,
+        question: decision.feedback,
+        sessionId: input.sessionId,
+        userId: input.userId,
+        voice: input.config.ttsVoice,
+      })
+    : undefined;
+  const questionAudio = reusableQuestion
+    ? await getSelectedQuestionSpeech({
+        apiKey: input.apiKey,
+        model: input.config.ttsModel,
+        question: reusableQuestion.questionText,
+        questionId: reusableQuestion.id,
+        sessionId: input.sessionId,
+        userId: input.userId,
+        voice: input.config.ttsVoice,
+      })
+    : decision.question
+      ? await generateSpeech({
+          apiKey: input.apiKey,
+          model: input.config.ttsModel,
+          question:
+            decision.feedback && !shouldSplitFeedbackAudio
+              ? [decision.feedback, decision.question].filter(Boolean).join(" ")
+              : decision.question,
+          sessionId: input.sessionId,
+          userId: input.userId,
+          voice: input.config.ttsVoice,
+        })
+      : undefined;
+
+  return {
+    decision,
+    feedbackAudio,
+    questionAudio,
+  };
+}
+
+function decisionPayload(input: {
+  decision: TurnDecision;
+  feedbackAudio?: SpeechResult;
+  questionAudio?: SpeechResult;
+  transcript?: string;
+  transcriptMetrics?: TurnBasedResult["transcriptMetrics"];
+  turnId?: string;
+}): TurnBasedResult {
+  return {
+    archetypeId: input.decision.archetypeId,
+    detectedUserIntent: input.decision.detectedUserIntent,
+    done: input.decision.done === true,
+    feedback: input.decision.feedback,
+    feedbackAudioBase64: input.feedbackAudio?.audioBase64,
+    feedbackAudioMimeType: input.feedbackAudio ? "audio/mpeg" : undefined,
+    question: input.decision.question,
+    questionAudioBase64: input.questionAudio?.audioBase64,
+    questionAudioCacheStatus: input.questionAudio?.cacheStatus,
+    questionAudioMimeType: input.questionAudio ? "audio/mpeg" : undefined,
+    routingReason: input.decision.routingReason,
+    state: input.decision.state,
+    targetSkill: input.decision.targetSkill,
+    transcript: input.transcript,
+    transcriptMetrics: input.transcriptMetrics,
+    turnId: input.turnId,
+  };
+}
+
+async function payloadFromPrefetchRow(row: typeof interviewTurnPrefetches.$inferSelect) {
+  const decision = row.decision as TurnBasedResult;
+  let questionAudioBase64: string | undefined;
+
+  if (row.questionAudioUrl) {
+    try {
+      const audioBuffer = await fetchCachedAudio(row.questionAudioUrl);
+      questionAudioBase64 = audioBuffer?.toString("base64");
+    } catch {
+      questionAudioBase64 = undefined;
+    }
+  }
+
+  return {
+    ...decision,
+    questionAudioBase64: questionAudioBase64 ?? decision.questionAudioBase64,
+    questionAudioMimeType: row.questionAudioMimeType ?? decision.questionAudioMimeType,
+  };
+}
+
+export async function prefetchTurnBasedInterviewTurn(input: {
+  config: InterviewRuntimeConfigRecord;
+  prefetchKind: TurnPrefetchKind;
+  priorTurns: PriorTurn[];
+  sessionId: string;
+  snapshot: SessionSetupSnapshot;
+  stateKey: CoachingTurnState;
+  turnIndex: number;
+  userId: string;
+}): Promise<TurnPrefetchResult | undefined> {
+  const [session] = await getDb()
+    .select({
+      id: sessions.id,
+      modeKey: sessions.modeKey,
+      userId: sessions.userId,
+    })
+    .from(sessions)
+    .where(and(eq(sessions.id, input.sessionId), eq(sessions.userId, input.userId)))
+    .limit(1);
+
+  if (!session) {
+    return undefined;
+  }
+
+  const requestHash = turnPrefetchRequestHash({
+    modeKey: input.snapshot.modeKey,
+    prefetchKind: input.prefetchKind,
+    priorTurns: input.priorTurns,
+    sessionId: input.sessionId,
+    snapshot: input.snapshot,
+    stateKey: input.stateKey,
+    turnIndex: input.turnIndex,
+    userId: input.userId,
+  });
+  const [existing] = await getDb()
+    .select()
+    .from(interviewTurnPrefetches)
+    .where(eq(interviewTurnPrefetches.requestHash, requestHash))
+    .limit(1);
+
+  if (existing?.status === "ready") {
+    return {
+      id: existing.id,
+      payload: await payloadFromPrefetchRow(existing),
+      status: "ready",
+    };
+  }
+
+  const apiKey = getOpenAiApiKey("interview");
+  if (!apiKey) {
+    throw new Error("Interview OpenAI key is not configured.");
+  }
+
+  const prefetchId = randomUUID();
+
+  try {
+    const { decision, feedbackAudio, questionAudio } = await createTurnPayload({
+      apiKey,
+      config: input.config,
+      priorTurns: input.priorTurns,
+      sessionId: input.sessionId,
+      snapshot: input.snapshot,
+      turnIndex: input.turnIndex,
+      userId: input.userId,
+    });
+    const payload = decisionPayload({ decision, feedbackAudio, questionAudio });
+    let questionAudioUrl: string | undefined;
+
+    if (questionAudio?.audioBase64 && isInterviewStorageConfigured()) {
+      const audioBuffer = Buffer.from(questionAudio.audioBase64, "base64");
+      questionAudioUrl = await uploadInterviewAudio(
+        `interview/turn-prefetches/${prefetchId}.mp3`,
+        audioBuffer,
+      );
+    }
+
+    const [prefetch] = await getDb()
+      .insert(interviewTurnPrefetches)
+      .values({
+        decision: {
+          ...payload,
+          questionAudioBase64: questionAudioUrl ? undefined : payload.questionAudioBase64,
+        },
+        id: prefetchId,
+        modeKey: session.modeKey,
+        prefetchKind: input.prefetchKind,
+        questionAudioMimeType: questionAudio ? "audio/mpeg" : undefined,
+        questionAudioUrl,
+        requestHash,
+        sessionId: input.sessionId,
+        stateKey: input.stateKey,
+        status: "ready",
+        turnIndex: input.turnIndex,
+        updatedAt: new Date(),
+        userId: input.userId,
+      })
+      .onConflictDoUpdate({
+        set: {
+          decision: {
+            ...payload,
+            questionAudioBase64: questionAudioUrl ? undefined : payload.questionAudioBase64,
+          },
+          errorMessage: null,
+          questionAudioMimeType: questionAudio ? "audio/mpeg" : undefined,
+          questionAudioUrl,
+          status: "ready",
+          updatedAt: new Date(),
+        },
+        target: interviewTurnPrefetches.requestHash,
+      })
+      .returning();
+
+    return {
+      id: prefetch.id,
+      payload,
+      status: "ready",
+    };
+  } catch (error) {
+    await getDb()
+      .insert(interviewTurnPrefetches)
+      .values({
+        decision: {},
+        errorMessage: error instanceof Error ? error.message : "Prefetch failed.",
+        id: prefetchId,
+        modeKey: session.modeKey,
+        prefetchKind: input.prefetchKind,
+        requestHash,
+        sessionId: input.sessionId,
+        stateKey: input.stateKey,
+        status: "failed",
+        turnIndex: input.turnIndex,
+        updatedAt: new Date(),
+        userId: input.userId,
+      })
+      .onConflictDoUpdate({
+        set: {
+          errorMessage: error instanceof Error ? error.message : "Prefetch failed.",
+          status: "failed",
+          updatedAt: new Date(),
+        },
+        target: interviewTurnPrefetches.requestHash,
+      });
+    throw error;
+  }
+}
+
+export async function consumeTurnBasedInterviewPrefetch(input: {
+  id: string;
+  sessionId: string;
+  userId: string;
+}): Promise<TurnPrefetchResult | undefined> {
+  const [prefetch] = await getDb()
+    .select()
+    .from(interviewTurnPrefetches)
+    .where(
+      and(
+        eq(interviewTurnPrefetches.id, input.id),
+        eq(interviewTurnPrefetches.sessionId, input.sessionId),
+        eq(interviewTurnPrefetches.userId, input.userId),
+        eq(interviewTurnPrefetches.status, "ready"),
+      ),
+    )
+    .limit(1);
+
+  if (!prefetch) {
+    return undefined;
+  }
+
+  const payload = await payloadFromPrefetchRow(prefetch);
+  const prefetchModeKey = prefetch.modeKey as SessionSetupSnapshot["modeKey"];
+  const [turn] = await getDb()
+    .insert(interviewTurnBasedTurns)
+    .values({
+      archetypeId: payload.archetypeId,
+      feedback: payload.feedback,
+      modeKey: prefetch.modeKey,
+      question:
+        payload.question ||
+        `${modeLabel(prefetchModeKey)} complete.`,
+      routingReason: payload.routingReason || fallbackRoutingReason(prefetchModeKey),
+      sessionId: input.sessionId,
+      targetSkill: payload.targetSkill || fallbackTargetSkill(prefetchModeKey),
+      turnIndex: prefetch.turnIndex,
+      updatedAt: new Date(),
+      userId: input.userId,
+    })
+    .onConflictDoUpdate({
+      set: {
+        archetypeId: payload.archetypeId,
+        feedback: payload.feedback,
+        question:
+          payload.question ||
+          `${modeLabel(prefetchModeKey)} complete.`,
+        routingReason: payload.routingReason || fallbackRoutingReason(prefetchModeKey),
+        targetSkill: payload.targetSkill || fallbackTargetSkill(prefetchModeKey),
+        updatedAt: new Date(),
+      },
+      target: [interviewTurnBasedTurns.sessionId, interviewTurnBasedTurns.turnIndex],
+    })
+    .returning({ id: interviewTurnBasedTurns.id });
+  await getDb()
+    .update(interviewTurnPrefetches)
+    .set({
+      consumedAt: new Date(),
+      status: "consumed",
+      updatedAt: new Date(),
+    })
+    .where(eq(interviewTurnPrefetches.id, prefetch.id));
+
+  return {
+    id: prefetch.id,
+    payload: {
+      ...payload,
+      turnId: turn.id,
+    },
+    status: "ready",
+  };
 }
 
 export async function runTurnBasedInterviewTurn(input: {
@@ -836,10 +1371,12 @@ export async function runTurnBasedInterviewTurn(input: {
     !latestTranscript &&
     input.turnInput.turnIndex === 0
       ? {
+          detectedUserIntent: "opening_question" as const,
           done: false,
           feedback: undefined,
           question: selectedQuestionContext.questionText,
           routingReason: "Selected learner question used exactly from the Interview question queue.",
+          state: "opening_question" as const,
           targetSkill: selectedQuestionContext.targetSkill || "selected question practice",
         }
       : await generateTurnDecision({
@@ -938,6 +1475,8 @@ export async function runTurnBasedInterviewTurn(input: {
     .returning({ id: interviewTurnBasedTurns.id });
 
   return {
+    archetypeId: decision.archetypeId,
+    detectedUserIntent: decision.detectedUserIntent,
     done: decision.done === true,
     feedback: decision.feedback,
     feedbackAudioBase64: feedbackAudio?.audioBase64,
@@ -947,6 +1486,7 @@ export async function runTurnBasedInterviewTurn(input: {
     questionAudioCacheStatus: questionAudio?.cacheStatus,
     questionAudioMimeType: questionAudio ? "audio/mpeg" : undefined,
     routingReason: decision.routingReason,
+    state: decision.state,
     targetSkill: decision.targetSkill,
     transcript: latestTranscript,
     transcriptMetrics,

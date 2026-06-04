@@ -1,4 +1,5 @@
 import type {
+  ArchetypePerformanceResult,
   CoachingMemorySnapshot,
   EvaluationScore,
   EvaluationScoreKey,
@@ -82,6 +83,30 @@ function isSessionReviewDetail(value: unknown): value is SessionReviewDetail {
   );
 }
 
+function isArchetypePerformanceResult(value: unknown): value is ArchetypePerformanceResult {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<ArchetypePerformanceResult>;
+
+  return (
+    (candidate.archetypeId === undefined || isString(candidate.archetypeId)) &&
+    isString(candidate.title) &&
+    isString(candidate.targetSkill) &&
+    typeof candidate.turnCount === "number" &&
+    Number.isInteger(candidate.turnCount) &&
+    candidate.turnCount >= 0 &&
+    typeof candidate.score === "number" &&
+    candidate.score >= 1 &&
+    candidate.score <= 5 &&
+    isString(candidate.strength) &&
+    isString(candidate.gap) &&
+    isString(candidate.nextAction) &&
+    isString(candidate.evidence)
+  );
+}
+
 export function parseSessionEvaluation(
   value: unknown,
 ): SessionEvaluationResult | undefined {
@@ -110,6 +135,10 @@ export function parseSessionEvaluation(
   }
 
   return {
+    archetypePerformance: Array.isArray(candidate.archetypePerformance) &&
+      candidate.archetypePerformance.every(isArchetypePerformanceResult)
+      ? candidate.archetypePerformance
+      : undefined,
     coachingMemory: candidate.coachingMemory,
     coachingInsight: candidate.coachingInsight,
     reviewDetail: isSessionReviewDetail(candidate.reviewDetail)

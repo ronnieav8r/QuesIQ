@@ -41,6 +41,8 @@ type TurnPayload = {
 };
 
 type NextTurnResponse = {
+  archetypeId?: string;
+  detectedUserIntent?: string;
   done?: boolean;
   feedback?: string;
   feedbackAudioBase64?: string;
@@ -49,6 +51,9 @@ type NextTurnResponse = {
   questionAudioBase64?: string;
   questionAudioCacheStatus?: "hit" | "miss" | "stored";
   questionAudioMimeType?: string;
+  routingReason?: string;
+  state?: string;
+  targetSkill?: string;
   transcript?: string;
   transcriptMetrics?: Pick<
     VoiceTranscriptTurn,
@@ -58,6 +63,10 @@ type NextTurnResponse = {
 };
 
 type TurnBasedPhase = "connecting" | "ended" | "error" | "live" | "ready";
+
+type PrefetchState =
+  | { status: "failed" | "idle" | "loading" }
+  | { id: string; payload: NextTurnResponse; status: "ready" };
 
 const emptyArtifactDraft: VoiceSessionArtifactDraft = { events: [], transcript: [] };
 
@@ -151,6 +160,7 @@ export function TurnBasedVoiceSession({
   const [done, setDone] = useState(false);
   const [turnCount, setTurnCount] = useState(0);
   const [requesting, setRequesting] = useState(false);
+  const [openingPrefetch, setOpeningPrefetch] = useState<PrefetchState>({ status: "idle" });
 
   const latestEvents = useMemo(() => artifactDraft.events.slice(-6).reverse(), [artifactDraft.events]);
   const maxAnswerSeconds = config.maxAnswerSeconds ?? 60;
@@ -161,6 +171,7 @@ export function TurnBasedVoiceSession({
   const showAnswerCountdown = recording && answerSecondsRemaining <= 10;
   const showSessionCountdown =
     canShowSessionCountdown(phase) && sessionSecondsRemaining <= 60 && sessionSecondsRemaining > 0;
+  const openingPrefetchReady = openingPrefetch.status === "ready";
 
   function updatePhase(nextPhase: TurnBasedPhase) {
     phaseRef.current = nextPhase;
@@ -199,6 +210,56 @@ export function TurnBasedVoiceSession({
     artifactDraftRef.current = artifactDraft;
     onArtifactChange?.(artifactDraft);
   }, [artifactDraft, onArtifactChange]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function prefetchOpeningQuestion() {
+      try {
+        setOpeningPrefetch({ status: "loading" });
+        const response = await fetch("/api/interview/turn-based/prefetch", {
+          body: JSON.stringify({
+            prefetchKind: "opening_question",
+            priorTurns: [],
+            sessionId,
+            snapshot,
+            stateKey: "opening_question",
+            turnIndex: 0,
+          }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+        const body = (await response.json()) as {
+          id?: string;
+          payload?: NextTurnResponse;
+        };
+
+        if (cancelled) {
+          return;
+        }
+
+        if (!response.ok || !body.id || !body.payload) {
+          setOpeningPrefetch({ status: "failed" });
+          return;
+        }
+
+        setOpeningPrefetch({ id: body.id, payload: body.payload, status: "ready" });
+        appendEvent("turn_based.prefetch.opening.ready");
+      } catch {
+        if (!cancelled) {
+          setOpeningPrefetch({ status: "failed" });
+        }
+      }
+    }
+
+    void prefetchOpeningQuestion();
+
+    return () => {
+      cancelled = true;
+    };
+  // Opening prefetch should run once for this session component instance.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
 
   useEffect(() => {
     if (phase !== "connecting" && phase !== "live") return;
@@ -396,6 +457,122 @@ export function TurnBasedVoiceSession({
     await playAudioClip(response.questionAudioBase64, response.questionAudioMimeType, runId);
   }
 
+  async function applyTurnResponse(body: NextTurnResponse, runId: number) {
+    if (!isSessionActive(runId)) {
+      return;
+    }
+
+    if (body.transcript?.trim()) {
+      appendTranscript(transcriptTurn("You", "user", body.transcript, body.transcriptMetrics));
+    }
+    if (body.feedback?.trim()) {
+      appendTranscript(transcriptTurn("Que", "assistant", body.feedback));
+    }
+    if (endingRequestedRef.current) {
+      completeFinalization(pendingEndReasonRef.current || "user_ended");
+      return;
+    }
+    if (body.question?.trim()) {
+      setCurrentQuestion(body.question.trim());
+      appendTranscript(transcriptTurn("Que", "assistant", body.question));
+    }
+    updateRequesting(false);
+    await playQuestionAudio(body, runId);
+    if (body.question?.trim() && !body.done && isSessionActive(runId)) {
+      void startRecording(runId);
+    }
+    if (
+      snapshot.modeKey === "coaching" &&
+      body.state === "brief_feedback_choice" &&
+      body.feedback?.trim() &&
+      !body.question?.trim() &&
+      !body.done
+    ) {
+      void prefetchMoveOnQuestion(runId);
+    }
+    if (body.done && isSessionActive(runId)) {
+      appendEvent("turn_based.session.auto_complete");
+      completeFinalization("user_ended");
+    }
+  }
+
+  async function consumeOpeningPrefetch(runId: number) {
+    if (openingPrefetch.status !== "ready") {
+      return false;
+    }
+
+    try {
+      updateRequesting(true);
+      appendEvent("turn_based.prefetch.opening.consume_request");
+      const response = await fetch(
+        `/api/interview/turn-based/prefetch/${openingPrefetch.id}/consume`,
+        {
+          body: JSON.stringify({ sessionId }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        },
+      );
+      const body = (await response.json()) as {
+        payload?: NextTurnResponse;
+      };
+
+      if (!response.ok || !body.payload) {
+        appendEvent("turn_based.prefetch.opening.consume_miss");
+        updateRequesting(false);
+        return false;
+      }
+
+      appendEvent("turn_based.prefetch.opening.consumed");
+      setOpeningPrefetch({ status: "idle" });
+      await applyTurnResponse(
+        {
+          ...openingPrefetch.payload,
+          ...body.payload,
+          questionAudioBase64:
+            body.payload.questionAudioBase64 ?? openingPrefetch.payload.questionAudioBase64,
+          questionAudioMimeType:
+            body.payload.questionAudioMimeType ?? openingPrefetch.payload.questionAudioMimeType,
+        },
+        runId,
+      );
+      return true;
+    } catch {
+      appendEvent("turn_based.prefetch.opening.consume_error");
+      updateRequesting(false);
+      return false;
+    }
+  }
+
+  async function prefetchMoveOnQuestion(runId: number) {
+    if (!isSessionActive(runId) || snapshot.modeKey !== "coaching") {
+      return;
+    }
+
+    try {
+      appendEvent("turn_based.prefetch.move_on.request");
+      const response = await fetch("/api/interview/turn-based/prefetch", {
+        body: JSON.stringify({
+          prefetchKind: "move_on_question",
+          priorTurns: artifactDraftRef.current.transcript,
+          sessionId,
+          snapshot,
+          stateKey: "move_on",
+          turnIndex: turnCountRef.current + 1,
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+
+      appendEvent(
+        response.ok
+          ? "turn_based.prefetch.move_on.ready"
+          : "turn_based.prefetch.move_on.failed",
+      );
+    } catch {
+      appendEvent("turn_based.prefetch.move_on.failed");
+    }
+  }
+
   async function requestTurn(payload: TurnPayload) {
     const runId = sessionRunIdRef.current;
     const abortController = new AbortController();
@@ -416,34 +593,8 @@ export function TurnBasedVoiceSession({
         throw new Error(body.detail || body.error || "Rapid Fire turn request failed.");
       }
 
-      if (!isSessionActive(runId)) {
-        return;
-      }
-
       appendEvent("turn_based.next_turn.response");
-      if (body.transcript?.trim()) {
-        appendTranscript(transcriptTurn("You", "user", body.transcript, body.transcriptMetrics));
-      }
-      if (body.feedback?.trim()) {
-        appendTranscript(transcriptTurn("Que", "assistant", body.feedback));
-      }
-      if (endingRequestedRef.current) {
-        completeFinalization(pendingEndReasonRef.current || "user_ended");
-        return;
-      }
-      if (body.question?.trim()) {
-        setCurrentQuestion(body.question.trim());
-        appendTranscript(transcriptTurn("Que", "assistant", body.question));
-      }
-      updateRequesting(false);
-      await playQuestionAudio(body, runId);
-      if (body.question?.trim() && !body.done && isSessionActive(runId)) {
-        void startRecording(runId);
-      }
-      if (body.done && isSessionActive(runId)) {
-        appendEvent("turn_based.session.auto_complete");
-        completeFinalization("user_ended");
-      }
+      await applyTurnResponse(body, runId);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         return;
@@ -546,12 +697,15 @@ export function TurnBasedVoiceSession({
         return;
       }
       updatePhase("live");
-      await requestTurn({
-        priorTurns: [],
-        sessionId,
-        snapshot,
-        turnIndex: 0,
-      });
+      const usedPrefetch = await consumeOpeningPrefetch(runId);
+      if (!usedPrefetch) {
+        await requestTurn({
+          priorTurns: [],
+          sessionId,
+          snapshot,
+          turnIndex: 0,
+        });
+      }
     } catch (error) {
       setErrorMessage(toErrorMessage(error));
       sessionActiveRef.current = false;
@@ -640,6 +794,14 @@ export function TurnBasedVoiceSession({
 
   const canStart = phase === "ready" || phase === "ended" || phase === "error";
   const canEnd = phase === "connecting" || phase === "live";
+  const startLabel =
+    phase === "ended" || phase === "error"
+      ? "Start Again"
+      : openingPrefetch.status === "loading"
+        ? "Preparing Que..."
+        : openingPrefetchReady
+          ? startButtonLabel
+          : startButtonLabel;
   const displayedDuration = artifactDraft.durationSeconds ?? elapsedSeconds;
   const minutes = Math.floor(displayedDuration / 60).toString().padStart(2, "0");
   const seconds = (displayedDuration % 60).toString().padStart(2, "0");
@@ -688,7 +850,7 @@ export function TurnBasedVoiceSession({
       <audio autoPlay ref={audioRef} />
       <div className="inline-actions">
         <button disabled={!canStart || requesting} onClick={startSession} type="button">
-          {phase === "ended" || phase === "error" ? "Start Again" : startButtonLabel}
+          {startLabel}
         </button>
         <button className="secondary" disabled={!canEnd} onClick={() => void finalizeSession("user_ended")} type="button">
           End Session

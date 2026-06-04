@@ -1,27 +1,43 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import type { CoachingTurnState } from "@/product/interview-types";
 import { parseSessionSetupSnapshot } from "@/product/session-snapshot";
 import { getInterviewRuntimeConfig } from "@/server/interview/runtime-configs";
-import { runTurnBasedInterviewTurn } from "@/server/interview/turn-based";
+import { prefetchTurnBasedInterviewTurn } from "@/server/interview/turn-based";
 
 export const runtime = "nodejs";
 
 type RequestBody = {
-  answerAudioBase64?: string;
-  answerDurationSeconds?: number;
-  answerMimeType?: string;
-  answerTranscript?: string;
-  endAfterAnswer?: boolean;
+  prefetchKind?: "move_on_question" | "opening_question";
   priorTurns?: Array<{
     feedback?: string;
     question?: string;
+    role?: string;
+    speaker?: string;
+    text?: string;
     transcript?: string;
   }>;
   sessionId?: string;
   snapshot?: unknown;
+  stateKey?: CoachingTurnState;
   turnIndex?: number;
 };
+
+function isValidState(value: unknown): value is CoachingTurnState {
+  return (
+    typeof value === "string" &&
+    [
+      "opening_question",
+      "awaiting_answer",
+      "brief_feedback_choice",
+      "more_feedback",
+      "retry_answer",
+      "move_on",
+      "wrap_up",
+    ].includes(value)
+  );
+}
 
 export async function POST(request: Request) {
   const appSession = await auth();
@@ -41,16 +57,18 @@ export async function POST(request: Request) {
   const snapshot = parseSessionSetupSnapshot(body.snapshot);
   const sessionId = body.sessionId?.trim();
   const turnIndex = Number(body.turnIndex);
+  const prefetchKind = body.prefetchKind;
 
   if (
     !sessionId ||
     !snapshot ||
     (snapshot.modeKey !== "rapid_fire" &&
       snapshot.modeKey !== "coaching" &&
-      snapshot.modeKey !== "first_impression")
+      snapshot.modeKey !== "first_impression") ||
+    (prefetchKind !== "opening_question" && prefetchKind !== "move_on_question")
   ) {
     return NextResponse.json(
-      { error: "Turn-based Interview payload is invalid." },
+      { error: "Turn-based prefetch payload is invalid." },
       { status: 400 },
     );
   }
@@ -58,6 +76,12 @@ export async function POST(request: Request) {
   if (!Number.isInteger(turnIndex) || turnIndex < 0 || turnIndex > 50) {
     return NextResponse.json({ error: "Turn index is invalid." }, { status: 400 });
   }
+
+  const stateKey = isValidState(body.stateKey)
+    ? body.stateKey
+    : prefetchKind === "opening_question"
+      ? "opening_question"
+      : "move_on";
 
   try {
     const config = await getInterviewRuntimeConfig(snapshot.modeKey);
@@ -69,24 +93,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await runTurnBasedInterviewTurn({
+    const result = await prefetchTurnBasedInterviewTurn({
       config,
-      turnInput: {
-        answerAudioBase64: body.answerAudioBase64,
-        answerDurationSeconds:
-          typeof body.answerDurationSeconds === "number" &&
-          Number.isFinite(body.answerDurationSeconds)
-            ? body.answerDurationSeconds
-            : undefined,
-        answerMimeType: body.answerMimeType,
-        answerTranscript:
-          typeof body.answerTranscript === "string" ? body.answerTranscript : undefined,
-        endAfterAnswer: body.endAfterAnswer === true,
-        priorTurns: body.priorTurns ?? [],
-        sessionId,
-        snapshot,
-        turnIndex,
-      },
+      prefetchKind,
+      priorTurns: body.priorTurns ?? [],
+      sessionId,
+      snapshot,
+      stateKey,
+      turnIndex,
       userId: appSession.user.id,
     });
 
@@ -96,11 +110,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Turn-based Interview turn failed.", error);
+    console.error("Turn-based Interview prefetch failed.", error);
     return NextResponse.json(
       {
-        detail: error instanceof Error ? error.message : "Turn-based Interview turn failed.",
-        error: "Turn-based Interview turn could not be created.",
+        detail:
+          error instanceof Error ? error.message : "Turn-based Interview prefetch failed.",
+        error: "Turn-based Interview prefetch could not be created.",
       },
       { status: 503 },
     );

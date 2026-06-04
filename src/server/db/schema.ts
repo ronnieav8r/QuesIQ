@@ -24,6 +24,7 @@ import type {
   XpRuleEventType,
   QuestCheckType,
   CoachingMemorySnapshot,
+  CoachingTurnState,
   StoryPracticeCoachingEntry,
   StoryCategory,
   StoryOutline,
@@ -383,7 +384,9 @@ export const interviewQuestionPracticeAttempts = pgTable(
       .default("started")
       .notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
   },
   (attempt) => ({
     questionUserIdx: index("interview_question_attempts_question_user_idx").on(
@@ -426,6 +429,83 @@ export const interviewTurnBasedTurns = pgTable(
       turn.turnIndex,
     ),
     userIdx: index("interview_turn_based_turns_user_idx").on(turn.userId),
+  }),
+);
+
+export const interviewTurnPrefetches = pgTable(
+  "interview_turn_prefetches",
+  {
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    decision: jsonb("decision").$type<Record<string, unknown>>().default({}).notNull(),
+    errorMessage: text("error_message"),
+    id: uuid("id").defaultRandom().primaryKey(),
+    modeKey: text("mode_key").notNull(),
+    prefetchKind: text("prefetch_kind")
+      .$type<"move_on_question" | "opening_question">()
+      .notNull(),
+    questionAudioMimeType: text("question_audio_mime_type"),
+    questionAudioUrl: text("question_audio_url"),
+    requestHash: text("request_hash").notNull(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    stateKey: text("state_key").$type<CoachingTurnState>().notNull(),
+    status: text("status")
+      .$type<"consumed" | "discarded" | "failed" | "ready">()
+      .default("ready")
+      .notNull(),
+    turnIndex: integer("turn_index").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+  },
+  (prefetch) => ({
+    requestHashIdx: uniqueIndex("interview_turn_prefetches_request_hash_idx").on(
+      prefetch.requestHash,
+    ),
+    sessionTurnIdx: index("interview_turn_prefetches_session_turn_idx").on(
+      prefetch.sessionId,
+      prefetch.turnIndex,
+      prefetch.prefetchKind,
+      prefetch.status,
+    ),
+    userIdx: index("interview_turn_prefetches_user_idx").on(prefetch.userId),
+  }),
+);
+
+export const interviewUserArchetypePerformance = pgTable(
+  "interview_user_archetype_performance",
+  {
+    attemptCount: integer("attempt_count").default(0).notNull(),
+    averageScore: real("average_score").default(0).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    growthAreas: jsonb("growth_areas").$type<string[]>().default([]).notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    lastPracticedAt: timestamp("last_practiced_at", { withTimezone: true }),
+    lastScore: real("last_score").default(0).notNull(),
+    lastSessionId: uuid("last_session_id").references(() => sessions.id, {
+      onDelete: "set null",
+    }),
+    latestRecommendation: text("latest_recommendation").default("").notNull(),
+    strengths: jsonb("strengths").$type<string[]>().default([]).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    archetypeId: uuid("archetype_id")
+      .notNull()
+      .references(() => interviewQuestionArchetypes.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (performance) => ({
+    archetypeIdx: index("interview_user_archetype_performance_archetype_idx").on(
+      performance.archetypeId,
+    ),
+    userArchetypeIdx: uniqueIndex(
+      "interview_user_archetype_performance_user_archetype_idx",
+    ).on(performance.userId, performance.archetypeId),
+    userIdx: index("interview_user_archetype_performance_user_idx").on(
+      performance.userId,
+    ),
   }),
 );
 
@@ -663,7 +743,7 @@ export const promptConfigs = pgTable(
     model: text("model").notNull(),
     name: text("name").notNull(),
     target: text("target")
-      .$type<"debrief" | "evaluation" | "realtime" | "story" | "support">()
+      .$type<"debrief" | "evaluation" | "realtime" | "story" | "support" | "turn_based">()
       .notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     version: integer("version").notNull(),

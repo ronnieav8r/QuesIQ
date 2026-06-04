@@ -45,6 +45,7 @@ export const sessionEvaluationInstructions =
     "The reviewDetail section should replace any written debrief: include what worked, what to sharpen, a short practice plan, good follow-up questions the candidate could ask or rehearse, and transcript-backed evidence. Keep these sections distinct from the score summaries.",
     "When saved story library context is provided, use it quietly. If a saved story appears better suited to the question than the candidate's chosen answer, mention that in coachingInsight, nextAction, or reviewDetail as a practical alternative, by title. Do not force a story recommendation when none clearly fits.",
     "Also return an updated coaching memory: preserve durable patterns, strengthen repeated patterns, add only observations supported by this session, and avoid overfitting to one weak answer. Keep memory concise and do not store sensitive raw transcript details.",
+    "If turn archetype metadata is provided, return archetypePerformance entries summarizing performance by archetype using only transcript-backed evidence. If no archetype metadata is available, return an empty archetypePerformance array.",
   ].join("\n");
 
 export const sessionDebriefInstructions = [
@@ -110,6 +111,19 @@ export const storyPracticeEvaluationInstructions =
     "Explicitly evaluate whether the saved story fit the question, whether the candidate adapted the story to the question, whether the personal Action was clear, whether the Result was clear, and what to change before practicing this same story again.",
     "If another saved story from the story library would fit the practiced question better, briefly name that story as an alternative. Do not force a story recommendation when none clearly fits.",
   ].join(" ");
+
+export const turnQuestionPlannerInstructions = [
+  "Scaffold placeholder for the future turn-based question planner.",
+  "Purpose: choose archetype, target skill, question goal, and next question for Coaching, Rapid Fire, Story Practice, and Introduction Practice.",
+  "This prompt slot is intentionally inactive until final planner prompt wording is approved.",
+].join("\n");
+
+export const turnCoachingResponderInstructions = [
+  "Scaffold placeholder for the future turn-based coaching responder.",
+  "Purpose: interpret user intent, choose the next coaching turn state, and produce brief feedback or the next response.",
+  "States include brief_feedback, more_feedback, retry_answer, move_on, and wrap_up.",
+  "This prompt slot is intentionally inactive until final responder prompt wording is approved.",
+].join("\n");
 
 export const quiraSupportChatInstructions = [
   "You are Quira, QuesIQ's signed-in customer support and troubleshooting assistant.",
@@ -216,6 +230,24 @@ export const promptConfigFallbacks = {
     version: 0,
     voice: process.env.OPENAI_REALTIME_VOICE || "marin",
   },
+  turn_coaching_responder: {
+    active: false,
+    instructions: turnCoachingResponderInstructions,
+    key: "turn_coaching_responder",
+    model: process.env.OPENAI_INTERVIEW_TURN_MODEL || "gpt-5.4-mini",
+    name: "Turn Coaching Responder",
+    target: "turn_based",
+    version: 0,
+  },
+  turn_question_planner: {
+    active: false,
+    instructions: turnQuestionPlannerInstructions,
+    key: "turn_question_planner",
+    model: process.env.OPENAI_INTERVIEW_TURN_MODEL || "gpt-5.4-mini",
+    name: "Turn Question Planner",
+    target: "turn_based",
+    version: 0,
+  },
 } satisfies Record<PromptConfigKey, PromptConfigFallback>;
 
 export function isPromptConfigKey(value: unknown): value is PromptConfigKey {
@@ -229,6 +261,8 @@ export function isPromptConfigKey(value: unknown): value is PromptConfigKey {
     value === "story_follow_up" ||
     value === "story_outline" ||
     value === "story_practice_evaluation" ||
-    value === "story_practice_realtime"
+    value === "story_practice_realtime" ||
+    value === "turn_coaching_responder" ||
+    value === "turn_question_planner"
   );
 }

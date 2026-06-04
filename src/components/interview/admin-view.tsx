@@ -340,6 +340,8 @@ const promptLabels: Record<PromptConfigKey, string> = {
   story_outline: "Story Lab Outline",
   story_practice_evaluation: "Story Practice Evaluation",
   story_practice_realtime: "Story Practice Realtime",
+  turn_coaching_responder: "Turn Coaching Responder",
+  turn_question_planner: "Turn Question Planner",
 };
 
 const promptPlaybooks: PromptPlaybook[] = [
@@ -486,6 +488,12 @@ const runtimeContextByTarget = {
     "Published Quira knowledge articles from the Admin support knowledge base",
     "Safe session status snapshot when the user provides a session id",
     "Conversation history, support-case creation tools, and bug-report tools",
+  ],
+  turn_based: [
+    "Session: mode, question focus, style, turn index, selected question count, and prior turns",
+    "Candidate context: target role/company, job description, capped resume excerpt, saved Story or Introduction context when present",
+    "Planner context: available archetypes, used turns, coaching memory, saved story library, and user archetype performance rollup",
+    "Fallback behavior still comes from generated turn-based system/task instructions until these prompt slots are activated",
   ],
 };
 

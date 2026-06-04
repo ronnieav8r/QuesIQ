@@ -492,6 +492,18 @@ export type EvaluationScore = {
   summary: string;
 };
 
+export type ArchetypePerformanceResult = {
+  archetypeId?: string;
+  evidence: string;
+  gap: string;
+  nextAction: string;
+  score: number;
+  strength: string;
+  targetSkill: string;
+  title: string;
+  turnCount: number;
+};
+
 export type SessionReviewDetail = {
   evidence: string[];
   focusAreas: string[];
@@ -501,6 +513,7 @@ export type SessionReviewDetail = {
 };
 
 export type SessionEvaluationResult = {
+  archetypePerformance?: ArchetypePerformanceResult[];
   coachingMemory?: CoachingMemorySnapshot;
   coachingInsight: string;
   reviewDetail?: SessionReviewDetail;
@@ -612,14 +625,26 @@ export type PromptConfigKey =
   | "story_follow_up"
   | "story_outline"
   | "story_practice_evaluation"
-  | "story_practice_realtime";
+  | "story_practice_realtime"
+  | "turn_coaching_responder"
+  | "turn_question_planner";
 
 export type PromptConfigTarget =
   | "debrief"
   | "evaluation"
   | "realtime"
   | "story"
-  | "support";
+  | "support"
+  | "turn_based";
+
+export type CoachingTurnState =
+  | "opening_question"
+  | "awaiting_answer"
+  | "brief_feedback_choice"
+  | "more_feedback"
+  | "retry_answer"
+  | "move_on"
+  | "wrap_up";
 
 export type PromptConfigRecord = {
   active: boolean;

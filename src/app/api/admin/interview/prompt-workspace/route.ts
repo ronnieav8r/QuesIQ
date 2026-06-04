@@ -60,7 +60,7 @@ const actionDefinitions: Array<{
   title: string;
 }> = [
   {
-    basePromptKeys: ["session_evaluation"],
+    basePromptKeys: ["turn_question_planner", "turn_coaching_responder", "session_evaluation"],
     description: "Turn-based coaching next-turn prompts, role context, story memory context, and review prompts.",
     key: "coaching",
     modeKey: "coaching",
@@ -70,7 +70,7 @@ const actionDefinitions: Array<{
     title: "Coaching",
   },
   {
-    basePromptKeys: ["session_evaluation"],
+    basePromptKeys: ["turn_question_planner", "turn_coaching_responder", "session_evaluation"],
     description: "Turn-based rapid-fire next-turn prompts, archetype routing, and final review prompts.",
     key: "rapid_fire",
     modeKey: "rapid_fire",
@@ -95,6 +95,8 @@ const actionDefinitions: Array<{
       "story_follow_up",
       "story_outline",
       "story_practice_realtime",
+      "turn_question_planner",
+      "turn_coaching_responder",
       "story_practice_evaluation",
     ],
     description: "Story Lab capture, follow-up, outline, practice, and story-specific evaluation prompts.",
@@ -109,6 +111,8 @@ const actionDefinitions: Array<{
     basePromptKeys: [
       "story_conversation_realtime",
       "introduction_draft",
+      "turn_question_planner",
+      "turn_coaching_responder",
       "session_evaluation",
     ],
     description: "Introduction capture, draft generation, saved-introduction practice, and evaluation prompts.",
@@ -123,6 +127,8 @@ const actionDefinitions: Array<{
       "story_conversation_realtime",
       "story_follow_up",
       "story_outline",
+      "turn_question_planner",
+      "turn_coaching_responder",
       "story_practice_evaluation",
     ],
     description: "Tell Me About a Time capture, follow-up, outline, practice context, and story evaluation prompts.",
@@ -293,7 +299,7 @@ function generatedBlocks(definition: (typeof actionDefinitions)[number]): Worksp
   if (definition.key === "evaluation") {
     blocks.push({
       body: [
-        "API structured output schema requires summary, coachingInsight, nextAction, five score objects, reviewDetail, and coachingMemory.",
+        "API structured output schema requires summary, coachingInsight, nextAction, five score objects, reviewDetail, coachingMemory, and optional archetypePerformance output.",
         "Current score keys: confidence, clarity, relevance, impact, authenticity.",
         "Mode-specific evaluation instructions are added for Rapid Fire, Coaching, Story Practice, and Introduction Practice when context is present.",
       ].join("\n"),
