@@ -4168,6 +4168,64 @@ textarea::placeholder {
   border-bottom: 0;
 }
 
+.database-visibility-toolbar {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.database-visibility-toolbar label {
+  max-width: 34rem;
+}
+
+.database-visibility-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.database-visibility-meta,
+.database-visibility-pagination {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: space-between;
+}
+
+.database-visibility-meta span,
+.database-visibility-pagination span {
+  color: var(--muted);
+}
+
+.database-visibility-table-wrap {
+  max-height: 42rem;
+}
+
+.database-visibility-table {
+  min-width: max-content;
+}
+
+.database-visibility-table th span {
+  color: var(--muted);
+  display: block;
+  font-size: 0.68rem;
+  margin-top: 0.2rem;
+  text-transform: none;
+}
+
+.database-visibility-table td {
+  max-width: 28rem;
+  min-width: 12rem;
+}
+
+.database-visibility-table td pre {
+  color: var(--text);
+  font: inherit;
+  margin: 0;
+  max-height: 12rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .stacked-cell {
   display: grid;
   gap: var(--space-1);

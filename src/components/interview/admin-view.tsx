@@ -233,7 +233,38 @@ type TestTunnelTurnResponse = {
   transcript?: string;
 };
 
-type AdminPanelMode = "legacy" | "prompt_workspace";
+type AdminPanelMode = "legacy" | "new_panel";
+type NewPanelSection = "database_visibility" | "prompt_workspace";
+
+type DatabaseVisibilityColumn = {
+  columnName: string;
+  dataType: string;
+  isNullable: boolean;
+  ordinalPosition: number;
+};
+
+type DatabaseVisibilityTable = {
+  columnCount: number;
+  estimatedRowCount: number;
+  schemaName: string;
+  tableName: string;
+};
+
+type DatabaseVisibilitySelected = {
+  columns: DatabaseVisibilityColumn[];
+  exactRowCount: number;
+  orderBy: string;
+  page: number;
+  pageSize: number;
+  rows: Record<string, unknown>[];
+  schemaName: string;
+  tableName: string;
+};
+
+type DatabaseVisibilityResponse = {
+  selected?: DatabaseVisibilitySelected;
+  tables: DatabaseVisibilityTable[];
+};
 
 type PromptWorkspaceActionKey =
   | "coaching"
@@ -583,6 +614,26 @@ function compactValue(value?: number | string) {
   return String(value);
 }
 
+function databaseCellValue(value: unknown) {
+  if (value === undefined || value === null) {
+    return "NULL";
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  }
+
+  return String(value);
+}
+
 function ExpandableCell({
   children,
   className,
@@ -916,7 +967,16 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
   const [draft, setDraft] = useState<PromptDraft>(emptyDraft);
   const [error, setError] = useState<string>();
   const [adminPanelMode, setAdminPanelMode] =
-    useState<AdminPanelMode>("prompt_workspace");
+    useState<AdminPanelMode>("new_panel");
+  const [newPanelSection, setNewPanelSection] =
+    useState<NewPanelSection>("prompt_workspace");
+  const [databaseVisibility, setDatabaseVisibility] =
+    useState<DatabaseVisibilityResponse>();
+  const [databaseVisibilityError, setDatabaseVisibilityError] = useState<string>();
+  const [databaseVisibilityPage, setDatabaseVisibilityPage] = useState(1);
+  const [databaseVisibilityStatus, setDatabaseVisibilityStatus] =
+    useState<"idle" | "loaded" | "loading">("idle");
+  const [selectedDatabaseTableKey, setSelectedDatabaseTableKey] = useState<string>();
   const [promptWorkspaceActions, setPromptWorkspaceActions] = useState<
     PromptWorkspaceAction[]
   >([]);
@@ -1380,6 +1440,55 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     }
   }
 
+  async function loadDatabaseVisibility(tableKey?: string, page = databaseVisibilityPage) {
+    try {
+      setDatabaseVisibilityError(undefined);
+      setDatabaseVisibilityStatus("loading");
+
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: "50",
+      });
+
+      if (tableKey) {
+        params.set("table", tableKey);
+      }
+
+      const response = await fetch(
+        `/api/admin/interview/database-visibility?${params.toString()}`,
+      );
+      const body = (await response.json()) as DatabaseVisibilityResponse & {
+        detail?: string;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(
+          body.detail || body.error || "Database visibility could not be loaded.",
+        );
+      }
+
+      setDatabaseVisibility({
+        selected: body.selected,
+        tables: body.tables ?? [],
+      });
+      setSelectedDatabaseTableKey(
+        body.selected
+          ? `${body.selected.schemaName}.${body.selected.tableName}`
+          : undefined,
+      );
+      setDatabaseVisibilityPage(body.selected?.page ?? page);
+    } catch (loadError) {
+      setDatabaseVisibilityError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Database visibility could not be loaded.",
+      );
+    } finally {
+      setDatabaseVisibilityStatus("loaded");
+    }
+  }
+
   async function loadProgression() {
     try {
       setError(undefined);
@@ -1824,6 +1933,24 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
   }, [adminSection, dataStatus]);
 
   useEffect(() => {
+    if (
+      adminPanelMode !== "new_panel" ||
+      newPanelSection !== "database_visibility" ||
+      databaseVisibilityStatus !== "idle"
+    ) {
+      return;
+    }
+
+    const loadTimer = window.setTimeout(() => {
+      void loadDatabaseVisibility();
+    }, 0);
+
+    return () => window.clearTimeout(loadTimer);
+  // Database visibility is intentionally lazy-loaded once when the tab is opened.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminPanelMode, newPanelSection, databaseVisibilityStatus]);
+
+  useEffect(() => {
     if (adminSection !== "support") {
       return;
     }
@@ -1987,10 +2114,14 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
   }
 
   function refreshAdminSection() {
-    if (adminPanelMode === "prompt_workspace") {
-      void loadPromptWorkspace();
-      void loadConfigs();
-      void loadComponents();
+    if (adminPanelMode === "new_panel") {
+      if (newPanelSection === "database_visibility") {
+        void loadDatabaseVisibility(selectedDatabaseTableKey, databaseVisibilityPage);
+      } else {
+        void loadPromptWorkspace();
+        void loadConfigs();
+        void loadComponents();
+      }
       return;
     }
 
@@ -2514,6 +2645,172 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     );
   }
 
+  function renderDatabaseVisibility() {
+    const selected = databaseVisibility?.selected;
+    const pageSize = selected?.pageSize ?? 50;
+    const maxPage = selected
+      ? Math.max(1, Math.ceil(selected.exactRowCount / pageSize))
+      : 1;
+
+    return (
+      <section className="ai-runs-panel" aria-labelledby="database-visibility-title">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">Admin-only read view</p>
+            <h2 id="database-visibility-title">Database Visibility</h2>
+            <p>
+              Browse every database table visible to the app connection. This is
+              read-only and validates schema/table names before loading rows.
+            </p>
+          </div>
+          <span>
+            {databaseVisibilityStatus === "loading"
+              ? "Loading"
+              : `${databaseVisibility?.tables.length ?? 0} tables`}
+          </span>
+        </div>
+
+        {databaseVisibilityError && (
+          <p className="form-error">{databaseVisibilityError}</p>
+        )}
+
+        <div className="database-visibility-toolbar">
+          <label>
+            <span>Table</span>
+            <select
+              disabled={databaseVisibilityStatus === "loading"}
+              onChange={(event) => {
+                const nextKey = event.target.value;
+                setSelectedDatabaseTableKey(nextKey);
+                setDatabaseVisibilityPage(1);
+                void loadDatabaseVisibility(nextKey, 1);
+              }}
+              value={selectedDatabaseTableKey ?? ""}
+            >
+              {(databaseVisibility?.tables ?? []).map((table) => {
+                const tableKey = `${table.schemaName}.${table.tableName}`;
+
+                return (
+                  <option key={tableKey} value={tableKey}>
+                    {tableKey}
+                  </option>
+                );
+              })}
+            </select>
+          </label>
+          {selected && (
+            <div className="study-stat-strip database-visibility-stats">
+              <div className="study-stat-chip">
+                <strong>{selected.exactRowCount}</strong>
+                <span>Rows</span>
+              </div>
+              <div className="study-stat-chip">
+                <strong>{selected.columns.length}</strong>
+                <span>Columns</span>
+              </div>
+              <div className="study-stat-chip">
+                <strong>
+                  {selected.page} / {maxPage}
+                </strong>
+                <span>Page</span>
+              </div>
+              <div className="study-stat-chip">
+                <strong>{selected.orderBy}</strong>
+                <span>Sort</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {databaseVisibilityStatus === "loading" && !selected ? (
+          <p>Loading database visibility.</p>
+        ) : selected ? (
+          <>
+            <div className="database-visibility-meta">
+              <strong>
+                {selected.schemaName}.{selected.tableName}
+              </strong>
+              <span>
+                Showing up to {selected.pageSize} rows. All columns are included.
+              </span>
+            </div>
+
+            <div className="usage-table-wrap database-visibility-table-wrap">
+              <table className="usage-table database-visibility-table">
+                <thead>
+                  <tr>
+                    {selected.columns.map((column) => (
+                      <th key={column.columnName}>
+                        {column.columnName}
+                        <span>
+                          {column.dataType}
+                          {column.isNullable ? "" : " not null"}
+                        </span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {selected.rows.length > 0 ? (
+                    selected.rows.map((row, rowIndex) => (
+                      <tr key={`${selected.tableName}:${selected.page}:${rowIndex}`}>
+                        {selected.columns.map((column) => (
+                          <td key={column.columnName}>
+                            <pre>{databaseCellValue(row[column.columnName])}</pre>
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={Math.max(1, selected.columns.length)}>
+                        No rows are stored in this table.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="database-visibility-pagination">
+              <button
+                className="secondary"
+                disabled={selected.page <= 1 || databaseVisibilityStatus === "loading"}
+                onClick={() => {
+                  const nextPage = Math.max(1, selected.page - 1);
+                  setDatabaseVisibilityPage(nextPage);
+                  void loadDatabaseVisibility(selectedDatabaseTableKey, nextPage);
+                }}
+                type="button"
+              >
+                Previous
+              </button>
+              <span>
+                Page {selected.page} of {maxPage}
+              </span>
+              <button
+                className="secondary"
+                disabled={
+                  selected.page >= maxPage || databaseVisibilityStatus === "loading"
+                }
+                onClick={() => {
+                  const nextPage = Math.min(maxPage, selected.page + 1);
+                  setDatabaseVisibilityPage(nextPage);
+                  void loadDatabaseVisibility(selectedDatabaseTableKey, nextPage);
+                }}
+                type="button"
+              >
+                Next
+              </button>
+            </div>
+          </>
+        ) : (
+          <p>No database tables are visible to the app connection.</p>
+        )}
+      </section>
+    );
+  }
+
   function renderPromptWorkspace() {
     const action = selectedPromptWorkspaceAction;
 
@@ -2903,11 +3200,11 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
 
       <div className="admin-tabs" aria-label="Interview admin panel">
         <button
-          className={adminPanelMode === "prompt_workspace" ? "active" : ""}
-          onClick={() => setAdminPanelMode("prompt_workspace")}
+          className={adminPanelMode === "new_panel" ? "active" : ""}
+          onClick={() => setAdminPanelMode("new_panel")}
           type="button"
         >
-          Prompt Workspace
+          New Panel
         </button>
         <button
           className={adminPanelMode === "legacy" ? "active" : ""}
@@ -2920,8 +3217,28 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
 
       {status === "loading" ? (
         <p>Loading prompt configs.</p>
-      ) : adminPanelMode === "prompt_workspace" ? (
-        renderPromptWorkspace()
+      ) : adminPanelMode === "new_panel" ? (
+        <>
+          <div className="admin-tabs" aria-label="New admin panel sections">
+            <button
+              className={newPanelSection === "prompt_workspace" ? "active" : ""}
+              onClick={() => setNewPanelSection("prompt_workspace")}
+              type="button"
+            >
+              Prompt Workspace
+            </button>
+            <button
+              className={newPanelSection === "database_visibility" ? "active" : ""}
+              onClick={() => setNewPanelSection("database_visibility")}
+              type="button"
+            >
+              Database Visibility
+            </button>
+          </div>
+          {newPanelSection === "database_visibility"
+            ? renderDatabaseVisibility()
+            : renderPromptWorkspace()}
+        </>
       ) : (
         <>
           <div className="admin-tabs" aria-label="Admin sections">
