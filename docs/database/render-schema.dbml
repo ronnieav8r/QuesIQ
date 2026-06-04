@@ -1,0 +1,1493 @@
+// QuesIQ Render production database schema
+// Generated 2026-06-03T11:59:25.696Z
+// Import this file into https://dbdiagram.io/
+
+Project QuesIQ_Render_DB {
+  database_type: "PostgreSQL"
+  Note: "Generated from Render Postgres information_schema and pg_catalog."
+}
+
+Table "account" {
+  "access_token" text
+  "expires_at" integer
+  "id_token" text
+  "provider" text [pk, not null]
+  "providerAccountId" text [pk, not null]
+  "refresh_token" text
+  "scope" text
+  "session_state" text
+  "token_type" text
+  "type" text [not null]
+  "userId" text [not null]
+}
+
+Table "account_password_credentials" {
+  "user_id" text [pk, not null]
+  "email" text [not null]
+  "password_hash" text [not null]
+  "password_updated_at" timestamp [not null, default: `now()`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "email" [unique, name: "account_password_credentials_email_idx"]
+  }
+}
+
+Table "account_password_reset_tokens" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "email" text [not null]
+  "user_id" text [not null]
+  "token_hash" text [not null]
+  "expires_at" timestamp [not null]
+  "used_at" timestamp
+  "created_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "email" [name: "account_password_reset_tokens_email_idx"]
+    "token_hash" [unique, name: "account_password_reset_tokens_token_hash_idx"]
+    "user_id" [name: "account_password_reset_tokens_user_idx"]
+  }
+}
+
+Table "ai_pricing" {
+  "active" boolean [not null, default: `true`]
+  "cached_input_micro_usd_per_million" integer
+  "created_at" timestamp [not null, default: `now()`]
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "input_micro_usd_per_million" integer [not null]
+  "model" text [not null]
+  "modality" text [not null]
+  "output_micro_usd_per_million" integer
+  "provider" text [not null, default: `'openai'`]
+  "source_url" text [not null]
+  "unit" text [not null, default: `'per_1m_tokens'`]
+  "updated_at" timestamp [not null, default: `now()`]
+  "version" text [not null]
+
+  Indexes {
+    ("provider", "model", "modality", "active") [name: "ai_pricing_active_idx"]
+  }
+}
+
+Table "ai_runs" {
+  "completed_at" timestamp
+  "cost_source" text [not null, default: `'unavailable'`]
+  "created_at" timestamp [not null, default: `now()`]
+  "duration_ms" integer
+  "error_message" text
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "input_audio_tokens" integer
+  "input_tokens" integer
+  "model" text [not null]
+  "output_audio_tokens" integer
+  "output_tokens" integer
+  "prompt_config_key" text
+  "prompt_config_version" integer
+  "provider" text [not null, default: `'openai'`]
+  "provider_request_id" text
+  "run_type" text [not null]
+  "session_id" uuid
+  "started_at" timestamp [not null, default: `now()`]
+  "status" text [not null]
+  "total_tokens" integer
+  "updated_at" timestamp [not null, default: `now()`]
+  "user_id" text
+  "estimated_cost_micro_usd" integer
+  "prompt_config_id" uuid
+  "prompt_snapshot" text
+  "raw_json" jsonb
+
+  Indexes {
+    "created_at" [name: "ai_runs_created_at_idx"]
+    "prompt_config_id" [name: "ai_runs_prompt_config_idx"]
+    "session_id" [name: "ai_runs_session_idx"]
+    "status" [name: "ai_runs_status_idx"]
+    "run_type" [name: "ai_runs_type_idx"]
+  }
+}
+
+Table "coaching_memory" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text [not null]
+  "summary" text [not null, default: `''`]
+  "strengths" jsonb [not null, default: `'[]'`]
+  "growth_areas" jsonb [not null, default: `'[]'`]
+  "recurring_patterns" jsonb [not null, default: `'[]'`]
+  "latest_recommendation" text [not null, default: `''`]
+  "evidence_count" integer [not null, default: `0`]
+  "memory" jsonb
+  "last_session_id" uuid
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "user_id" [unique, name: "coaching_memory_user_id_idx"]
+  }
+}
+
+Table "content_studio_runs" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "pipeline_key" text [not null]
+  "template_key" text [not null]
+  "source_text_snapshot" text
+  "source_metadata" jsonb [not null, default: `'{}'`]
+  "custom_instructions" text
+  "draft_payload" jsonb [not null, default: `'{}'`]
+  "confidence" float4
+  "warnings" jsonb [not null, default: `'[]'`]
+  "missing_fields" jsonb [not null, default: `'[]'`]
+  "reviewer_checklist" jsonb
+  "reviewer_summary" jsonb
+  "stage" text [not null, default: `'review'`]
+  "status" text [not null, default: `'draft_ready'`]
+  "reviewer_notes" text
+  "admin_user_id" text
+  "ai_run_id" uuid
+  "completed_at" timestamp
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "admin_user_id" [name: "content_studio_runs_admin_user_idx"]
+    "ai_run_id" [name: "content_studio_runs_ai_run_idx"]
+    "created_at" [name: "content_studio_runs_created_at_idx"]
+    "pipeline_key" [name: "content_studio_runs_pipeline_idx"]
+    "status" [name: "content_studio_runs_status_idx"]
+  }
+}
+
+Table "debriefs" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text
+  "session_id" uuid [not null]
+  "user_note" text [not null, default: `''`]
+  "result" jsonb [not null]
+  "model" text [not null]
+  "prompt_config_key" text
+  "prompt_config_version" integer
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "created_at" [name: "debriefs_created_at_idx"]
+    "session_id" [name: "debriefs_session_idx"]
+    "user_id" [name: "debriefs_user_idx"]
+  }
+}
+
+Table "diagnostic_events" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text
+  "session_id" uuid
+  "severity" text [not null]
+  "source" text [not null]
+  "event_type" text [not null]
+  "message" text
+  "screen" text
+  "route" text
+  "endpoint" text
+  "method" text
+  "status_code" integer
+  "duration_ms" integer
+  "metadata" jsonb
+  "user_agent" text
+  "viewport" text
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "created_at" [name: "diagnostic_events_created_at_idx"]
+    "event_type" [name: "diagnostic_events_event_type_idx"]
+    "session_id" [name: "diagnostic_events_session_idx"]
+    "severity" [name: "diagnostic_events_severity_idx"]
+    "source" [name: "diagnostic_events_source_idx"]
+    "user_id" [name: "diagnostic_events_user_idx"]
+  }
+}
+
+Table "dpe_certificate_types" {
+  "id" text [pk, not null]
+  "code" text [not null]
+  "title" text [not null]
+  "category" text
+  "aircraft_class" text
+  "active" boolean [not null, default: `true`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "code" [unique, name: "dpe_certificate_types_code_key"]
+  }
+}
+
+Table "dpe_checkride_targets" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text [not null]
+  "certificate" text [not null]
+  "aircraft_category" text [not null]
+  "aircraft_class" text [not null]
+  "checkride_date" timestamp
+  "known_dpe_name" text
+  "aircraft" text
+  "school_context" text
+  "active" boolean [not null, default: `true`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "user_id" [name: "dpe_checkride_targets_user_idx"]
+  }
+}
+
+Table "dpe_content_versions" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "certificate_type_id" text [not null]
+  "version" integer [not null]
+  "status" text [not null]
+  "title" text [not null]
+  "notes" text
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    ("certificate_type_id", "version") [unique, name: "dpe_content_versions_certificate_version_idx"]
+    "status" [name: "dpe_content_versions_status_idx"]
+  }
+}
+
+Table "dpe_diagnostic_events" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "session_id" uuid
+  "surface" text [not null]
+  "severity" text [not null]
+  "code" text
+  "message" text [not null]
+  "metadata" jsonb
+  "created_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    ("surface", "created_at") [name: "dpe_diagnostic_events_surface_created_idx"]
+  }
+}
+
+Table "dpe_oral_questions" {
+  "id" text [pk, not null]
+  "certificate_type_id" text
+  "content_version_id" uuid
+  "acs_title" text [not null]
+  "acs_area" text [not null]
+  "acs_task" text [not null]
+  "acs_element_type" text [not null]
+  "acs_element_reference" text [not null]
+  "question_mode" text [not null]
+  "question_text" text [not null]
+  "difficulty" text
+  "keywords" text
+  "primary_subject" text
+  "ai_context" text
+  "visual_image" text
+  "active" boolean [not null, default: `true`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    ("acs_title", "acs_area", "acs_task") [name: "dpe_oral_questions_acs_idx"]
+    ("certificate_type_id", "acs_area", "acs_task") [name: "dpe_oral_questions_certificate_acs_idx"]
+    "acs_element_reference" [name: "dpe_oral_questions_element_idx"]
+  }
+}
+
+Table "dpe_practice_sessions" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text [not null]
+  "checkride_target_id" uuid
+  "mode" text [not null]
+  "status" text [not null]
+  "acs_title" text [not null]
+  "acs_area" text
+  "acs_task" text
+  "prompt_config_key" text
+  "prompt_config_version" integer
+  "transcript_json" jsonb
+  "review_json" jsonb
+  "started_at" timestamp
+  "ended_at" timestamp
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    ("acs_title", "acs_area", "acs_task") [name: "dpe_practice_sessions_acs_idx"]
+    ("user_id", "created_at") [name: "dpe_practice_sessions_user_created_idx"]
+  }
+}
+
+Table "dpe_profiles" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text [not null]
+  "preferred_name" text
+  "aircraft" text
+  "flight_school" text
+  "instructor" text
+  "known_dpe_name" text
+  "personal_notes" text
+  "weak_area_notes" text
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "user_id" [unique, name: "dpe_profiles_user_idx"]
+  }
+}
+
+Table "dpe_progression_events" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text [not null]
+  "dpe_session_id" uuid
+  "event_type" text [not null]
+  "xp" integer [not null, default: `0`]
+  "metadata" jsonb
+  "occurred_at" timestamp [not null, default: `now()`]
+  "created_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "occurred_at" [name: "dpe_progression_events_occurred_at_idx"]
+    ("dpe_session_id", "event_type") [name: "dpe_progression_events_session_event_idx"]
+    "user_id" [name: "dpe_progression_events_user_idx"]
+  }
+}
+
+Table "dpe_question_answer_keys" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "question_id" text [not null]
+  "status" text [not null]
+  "correct_answer_elements" jsonb [not null]
+  "acceptable_variations" jsonb
+  "common_misses" jsonb
+  "source_references" jsonb
+  "notes" text
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "question_id" [unique, name: "dpe_question_answer_keys_question_id_key"]
+  }
+}
+
+Table "dpe_question_rubrics" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "question_id" text [not null]
+  "status" text [not null]
+  "knowledge" text [not null]
+  "risk_management" text [not null]
+  "scenario_judgment" text [not null]
+  "communication" text [not null]
+  "checkride_readiness" text [not null]
+  "scoring_notes" text
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "question_id" [unique, name: "dpe_question_rubrics_question_id_key"]
+  }
+}
+
+Table "dpe_quests" {
+  "key" text [pk, not null]
+  "title" text [not null]
+  "description" text [not null]
+  "check_type" text [not null]
+  "check_threshold" integer [not null]
+  "check_dimension" text
+  "xp_reward" integer [not null, default: `0`]
+  "category" text [not null, default: `'milestone'`]
+  "display_order" integer [not null, default: `0`]
+  "enabled" boolean [not null, default: `true`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+}
+
+Table "dpe_session_questions" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "session_id" uuid [not null]
+  "question_id" text [not null]
+  "sort_order" integer [not null]
+  "response" text
+
+  Indexes {
+    ("session_id", "question_id") [unique, name: "dpe_session_questions_session_question_idx"]
+  }
+}
+
+Table "dpe_user_progression" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text [not null]
+  "total_xp" integer [not null, default: `0`]
+  "level" integer [not null, default: `1`]
+  "current_level_xp" integer [not null, default: `0`]
+  "next_level_xp" integer [not null, default: `250`]
+  "streak_days" integer [not null, default: `0`]
+  "longest_streak_days" integer [not null, default: `0`]
+  "last_practiced_at" timestamp
+  "last_practice_date" text
+  "completed_sessions" integer [not null, default: `0`]
+  "reviewed_sessions" integer [not null, default: `0`]
+  "answered_prompts" integer [not null, default: `0`]
+  "unique_area_tasks" integer [not null, default: `0`]
+  "readiness_score_bps" integer [not null, default: `0`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "user_id" [unique, name: "dpe_user_progression_user_id_idx"]
+  }
+}
+
+Table "dpe_user_quests" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text [not null]
+  "quest_key" text [not null]
+  "progress" integer [not null, default: `0`]
+  "status" text [not null, default: `'open'`]
+  "completed_at" timestamp
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "quest_key" [name: "dpe_user_quests_quest_idx"]
+    ("user_id", "quest_key") [unique, name: "dpe_user_quests_user_quest_idx"]
+  }
+}
+
+Table "dpe_xp_rules" {
+  "key" text [pk, not null]
+  "label" text [not null]
+  "description" text [not null]
+  "event_type" text [not null]
+  "condition_type" text [not null]
+  "condition_value" integer [not null, default: `0`]
+  "group_key" text [not null, default: `'general'`]
+  "award_mode" text [not null, default: `'stack'`]
+  "xp" integer [not null, default: `0`]
+  "display_order" integer [not null, default: `0`]
+  "active" boolean [not null, default: `true`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+}
+
+Table "evaluations" {
+  "created_at" timestamp [not null, default: `now()`]
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "model" text [not null]
+  "result" jsonb [not null]
+  "session_id" uuid [not null]
+  "status" text [not null, default: `'completed'`]
+  "updated_at" timestamp [not null, default: `now()`]
+  "user_id" text
+  "prompt_config_key" text
+  "prompt_config_version" integer
+
+  Indexes {
+    "session_id" [unique, name: "evaluations_session_id_idx"]
+  }
+}
+
+Table "interview_question_archetypes" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "mode_key" text [not null]
+  "question_type_key" text
+  "title" text [not null]
+  "target_skill" text [not null]
+  "difficulty" text [not null, default: `'standard'`]
+  "routing_purpose" text [not null, default: `''`]
+  "prompt_instructions" text [not null, default: `''`]
+  "examples" jsonb [not null, default: `'[]'`]
+  "scoring_hints" jsonb [not null, default: `'[]'`]
+  "display_order" integer [not null, default: `0`]
+  "enabled" boolean [not null, default: `true`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    ("mode_key", "enabled") [name: "interview_question_archetypes_mode_idx"]
+  }
+}
+
+Table "interview_question_imports" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "source_label" text [not null, default: `'QuesIQ'`]
+  "row_count" integer [not null, default: `0`]
+  "created_count" integer [not null, default: `0`]
+  "updated_count" integer [not null, default: `0`]
+  "error_count" integer [not null, default: `0`]
+  "status" text [not null, default: `'previewed'`]
+  "user_id" text
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "created_at" [name: "interview_question_imports_created_at_idx"]
+  }
+}
+
+Table "interview_question_practice_attempts" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "question_id" uuid [not null]
+  "session_id" uuid [not null]
+  "user_id" text
+  "status" text [not null, default: `'started'`]
+  "retry_count" integer [not null, default: `0`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    ("question_id", "user_id") [name: "interview_question_attempts_question_user_idx"]
+    "session_id" [name: "interview_question_attempts_session_idx"]
+    ("session_id", "question_id") [unique, name: "interview_question_attempts_session_question_idx"]
+  }
+}
+
+Table "interview_questions" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "source" text [not null, default: `'official'`]
+  "owner_user_id" text
+  "question_text" text [not null]
+  "question_type_key" text
+  "target_skill" text [not null, default: `''`]
+  "difficulty" text [not null, default: `'standard'`]
+  "role_family" text [not null, default: `''`]
+  "tags" jsonb [not null, default: `'[]'`]
+  "compatible_modes" jsonb [not null, default: `'[]'`]
+  "suggested_use" text [not null, default: `''`]
+  "scoring_hints" text [not null, default: `''`]
+  "external_id" text
+  "source_label" text [not null, default: `'QuesIQ'`]
+  "display_order" integer [not null, default: `0`]
+  "enabled" boolean [not null, default: `true`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+  "question_audio_url" text
+  "question_audio_model" text
+  "question_audio_voice" text
+  "question_audio_text_hash" text
+
+  Indexes {
+    "external_id" [unique, name: "interview_questions_external_id_idx"]
+    ("owner_user_id", "enabled") [name: "interview_questions_owner_idx"]
+    ("source", "enabled") [name: "interview_questions_source_idx"]
+    ("question_type_key", "enabled") [name: "interview_questions_type_idx"]
+  }
+}
+
+Table "interview_runtime_configs" {
+  "mode_key" text [pk, not null]
+  "engine" text [not null, default: `'realtime'`]
+  "enabled" boolean [not null, default: `true`]
+  "text_model" text [not null, default: `'gpt-5.4-mini'`]
+  "transcription_model" text [not null, default: `'gpt-4o-mini-transcribe'`]
+  "tts_model" text [not null, default: `'tts-1'`]
+  "tts_voice" text [not null, default: `'alloy'`]
+  "max_turns" integer [not null, default: `10`]
+  "max_duration_seconds" integer [not null, default: `900`]
+  "max_answer_seconds" integer [not null, default: `60`]
+  "feedback_depth" text [not null, default: `'brief'`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "engine" [name: "interview_runtime_configs_engine_idx"]
+  }
+}
+
+Table "interview_styles" {
+  "created_at" timestamp [not null, default: `now()`]
+  "description" text [not null]
+  "display_order" integer [not null, default: `0`]
+  "enabled" boolean [not null, default: `true`]
+  "key" text [pk, not null]
+  "label" text [not null]
+  "updated_at" timestamp [not null, default: `now()`]
+  "prompt_instructions" text [not null, default: `''`]
+}
+
+Table "interview_turn_based_turns" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "session_id" uuid [not null]
+  "user_id" text
+  "mode_key" text [not null]
+  "turn_index" integer [not null]
+  "archetype_id" uuid
+  "question" text [not null]
+  "answer_transcript" text
+  "feedback" text
+  "routing_reason" text [not null, default: `''`]
+  "target_skill" text [not null, default: `''`]
+  "status" text [not null, default: `'succeeded'`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    ("session_id", "turn_index") [unique, name: "interview_turn_based_turns_session_turn_idx"]
+    "user_id" [name: "interview_turn_based_turns_user_idx"]
+  }
+}
+
+Table "introductions" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text [not null]
+  "title" text [not null]
+  "audience" text [not null, default: `'virtual'`]
+  "length" text [not null, default: `'medium'`]
+  "background" text [not null, default: `''`]
+  "strength" text [not null, default: `''`]
+  "proof_point" text [not null, default: `''`]
+  "role_interest" text [not null, default: `''`]
+  "transition" text [not null, default: `''`]
+  "script" text [not null, default: `''`]
+  "raw_notes" text [not null, default: `''`]
+  "practice_count" integer [not null, default: `0`]
+  "last_practiced_at" timestamp
+  "practice_coaching" jsonb [not null, default: `'[]'`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "updated_at" [name: "introductions_updated_at_idx"]
+    "user_id" [name: "introductions_user_idx"]
+  }
+}
+
+Table "job_targets" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text [not null]
+  "label" text [not null, default: `''`]
+  "target_role" text [not null, default: `''`]
+  "target_company" text [not null, default: `''`]
+  "job_description" text [not null, default: `''`]
+  "last_used_at" timestamp
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    ("user_id", "last_used_at") [name: "job_targets_last_used_idx"]
+    "user_id" [name: "job_targets_user_idx"]
+    ("user_id", "target_role", "target_company") [unique, name: "job_targets_user_role_company_idx"]
+  }
+}
+
+Table "platform_product_usage" {
+  "user_id" text [pk, not null]
+  "product_key" text [pk, not null]
+  "first_used_at" timestamp [not null, default: `now()`]
+  "last_used_at" timestamp [not null, default: `now()`]
+  "total_active_seconds" integer [not null, default: `0`]
+  "session_count" integer [not null, default: `0`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    ("product_key", "last_used_at") [name: "platform_product_usage_product_last_used_idx"]
+  }
+}
+
+Table "platform_usage_events" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text [not null]
+  "product_key" text [not null]
+  "event_type" text [not null, default: `'heartbeat'`]
+  "active_seconds" integer [not null, default: `0`]
+  "browser_context" jsonb [not null, default: `'{}'`]
+  "created_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "created_at" [name: "platform_usage_events_created_at_idx"]
+    "product_key" [name: "platform_usage_events_product_idx"]
+    "user_id" [name: "platform_usage_events_user_idx"]
+  }
+}
+
+Table "platform_user_profiles" {
+  "user_id" text [pk, not null]
+  "first_name" text [not null, default: `''`]
+  "last_name" text [not null, default: `''`]
+  "preferred_name" text [not null, default: `''`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+}
+
+Table "practice_modes" {
+  "created_at" timestamp [not null, default: `now()`]
+  "description" text [not null]
+  "display_order" integer [not null, default: `0`]
+  "enabled" boolean [not null, default: `true`]
+  "key" text [pk, not null]
+  "name" text [not null]
+  "question_type_required" boolean [not null, default: `false`]
+  "updated_at" timestamp [not null, default: `now()`]
+  "use" text [not null]
+  "prompt_instructions" text [not null, default: `''`]
+}
+
+Table "pricing_checks" {
+  "checked_at" timestamp [not null, default: `now()`]
+  "detected_change" boolean [not null, default: `false`]
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "source_hash" text
+  "source_url" text [not null]
+  "status" text [not null]
+  "summary" text [not null]
+
+  Indexes {
+    "checked_at" [name: "pricing_checks_checked_at_idx"]
+  }
+}
+
+Table "pricing_reviews" {
+  "completed_at" timestamp
+  "created_at" timestamp [not null, default: `now()`]
+  "error_message" text
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "model" text [not null]
+  "provider_request_id" text
+  "result" jsonb
+  "status" text [not null]
+  "updated_at" timestamp [not null, default: `now()`]
+  "accepted_at" timestamp
+  "applied_pricing_updates" integer [not null, default: `0`]
+
+  Indexes {
+    "created_at" [name: "pricing_reviews_created_at_idx"]
+  }
+}
+
+Table "profiles" {
+  "created_at" timestamp [not null, default: `now()`]
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "job_description" text [not null, default: `''`]
+  "preferred_name" text [not null, default: `''`]
+  "resume_name" text
+  "target_company" text [not null, default: `''`]
+  "target_role" text [not null, default: `''`]
+  "updated_at" timestamp [not null, default: `now()`]
+  "user_id" text [not null]
+  "resume_mime_type" text
+  "resume_parsed_at" timestamp
+  "resume_size" integer
+  "resume_text" text
+  "active_job_target_id" uuid
+
+  Indexes {
+    "active_job_target_id" [name: "profiles_active_job_target_idx"]
+    "user_id" [unique, name: "profiles_user_id_idx"]
+  }
+}
+
+Table "progression_events" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text [not null]
+  "session_id" uuid
+  "event_type" text [not null]
+  "xp" integer [not null, default: `0`]
+  "metadata" jsonb
+  "occurred_at" timestamp [not null, default: `now()`]
+  "created_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "occurred_at" [name: "progression_events_occurred_at_idx"]
+    ("session_id", "event_type") [name: "progression_events_session_event_idx"]
+    "user_id" [name: "progression_events_user_idx"]
+  }
+}
+
+Table "progression_level_thresholds" {
+  "level" integer [pk, not null]
+  "name" text [not null]
+  "min_total_xp" integer [not null]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+}
+
+Table "progression_quests" {
+  "key" text [pk, not null]
+  "title" text [not null]
+  "description" text [not null]
+  "category" text [not null, default: `'milestone'`]
+  "check_type" text [not null]
+  "check_dimension" text
+  "check_threshold" integer [not null]
+  "xp_reward" integer [not null, default: `0`]
+  "display_order" integer [not null, default: `0`]
+  "enabled" boolean [not null, default: `true`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+}
+
+Table "progression_xp_rules" {
+  "key" text [pk, not null]
+  "label" text [not null]
+  "description" text [not null]
+  "event_type" text [not null]
+  "condition_type" text [not null]
+  "condition_value" integer [not null, default: `0`]
+  "group_key" text [not null, default: `'general'`]
+  "award_mode" text [not null, default: `'stack'`]
+  "xp" integer [not null, default: `0`]
+  "display_order" integer [not null, default: `0`]
+  "active" boolean [not null, default: `true`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+}
+
+Table "prompt_configs" {
+  "active" boolean [not null, default: `false`]
+  "created_at" timestamp [not null, default: `now()`]
+  "created_by_user_id" text
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "instructions" text [not null]
+  "key" text [not null]
+  "model" text [not null]
+  "name" text [not null]
+  "target" text [not null]
+  "updated_at" timestamp [not null, default: `now()`]
+  "version" integer [not null]
+  "voice" text
+
+  Indexes {
+    ("key", "active") [name: "prompt_configs_active_idx"]
+    ("key", "version") [unique, name: "prompt_configs_key_version_idx"]
+  }
+}
+
+Table "question_types" {
+  "created_at" timestamp [not null, default: `now()`]
+  "display_order" integer [not null, default: `0`]
+  "enabled" boolean [not null, default: `true`]
+  "key" text [pk, not null]
+  "label" text [not null]
+  "updated_at" timestamp [not null, default: `now()`]
+  "prompt_instructions" text [not null, default: `''`]
+}
+
+Table "quira_conversations" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text
+  "source" text [not null, default: `'signed_in'`]
+  "product" text [not null, default: `'shared'`]
+  "screen" text [not null, default: `'unknown'`]
+  "session_id" uuid
+  "title" text [not null, default: `'Support chat'`]
+  "status" text [not null, default: `'open'`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "created_at" [name: "quira_conversations_created_at_idx"]
+    "session_id" [name: "quira_conversations_session_idx"]
+    "status" [name: "quira_conversations_status_idx"]
+    "user_id" [name: "quira_conversations_user_idx"]
+  }
+}
+
+Table "quira_knowledge_articles" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "slug" text [not null]
+  "title" text [not null]
+  "product" text [not null, default: `'shared'`]
+  "category" text [not null, default: `'general'`]
+  "content" text [not null]
+  "tags" jsonb [not null, default: `'[]'`]
+  "published" boolean [not null, default: `false`]
+  "display_order" integer [not null, default: `0`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "product" [name: "quira_knowledge_articles_product_idx"]
+    "published" [name: "quira_knowledge_articles_published_idx"]
+    "slug" [unique, name: "quira_knowledge_articles_slug_idx"]
+  }
+}
+
+Table "quira_messages" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "conversation_id" uuid [not null]
+  "user_id" text
+  "role" text [not null]
+  "content" text [not null]
+  "metadata" jsonb [not null, default: `'{}'`]
+  "created_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    ("conversation_id", "created_at") [name: "quira_messages_conversation_idx"]
+    "user_id" [name: "quira_messages_user_idx"]
+  }
+}
+
+Table "quira_support_cases" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "conversation_id" uuid
+  "user_id" text
+  "kind" text [not null, default: `'support'`]
+  "status" text [not null, default: `'new'`]
+  "urgency" text [not null, default: `'normal'`]
+  "product" text [not null, default: `'shared'`]
+  "screen" text [not null, default: `'unknown'`]
+  "session_id" uuid
+  "title" text [not null]
+  "summary" text [not null]
+  "details" jsonb [not null, default: `'{}'`]
+  "resolved_at" timestamp
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "conversation_id" [name: "quira_support_cases_conversation_idx"]
+    "created_at" [name: "quira_support_cases_created_at_idx"]
+    "status" [name: "quira_support_cases_status_idx"]
+    "user_id" [name: "quira_support_cases_user_idx"]
+  }
+}
+
+Table "quira_tool_events" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "conversation_id" uuid [not null]
+  "message_id" uuid
+  "tool_name" text [not null]
+  "status" text [not null]
+  "input" jsonb [not null, default: `'{}'`]
+  "output" jsonb [not null, default: `'{}'`]
+  "error_message" text
+  "created_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "conversation_id" [name: "quira_tool_events_conversation_idx"]
+    "message_id" [name: "quira_tool_events_message_idx"]
+    "tool_name" [name: "quira_tool_events_tool_idx"]
+  }
+}
+
+Table "realtime_session_usage" {
+  "assistant_transcript_characters" integer [not null, default: `0`]
+  "created_at" timestamp [not null, default: `now()`]
+  "duration_seconds" integer [not null, default: `0`]
+  "ended_at" timestamp
+  "estimated_audio_input_tokens" integer [not null, default: `0`]
+  "estimated_audio_output_tokens" integer [not null, default: `0`]
+  "estimated_cost_micro_usd" integer [not null, default: `0`]
+  "estimation_method" text [not null]
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "model" text [not null]
+  "pricing_version" text [not null]
+  "prompt_config_key" text
+  "prompt_config_version" integer
+  "realtime_call_id" text
+  "session_id" uuid [not null]
+  "started_at" timestamp
+  "transcript_turns" integer [not null, default: `0`]
+  "updated_at" timestamp [not null, default: `now()`]
+  "user_id" text
+  "user_transcript_characters" integer [not null, default: `0`]
+  "voice" text
+
+  Indexes {
+    "session_id" [unique, name: "realtime_session_usage_session_idx"]
+    "user_id" [name: "realtime_session_usage_user_idx"]
+  }
+}
+
+Table "session" {
+  "expires" timestamp [not null]
+  "sessionToken" text [pk, not null]
+  "userId" text [not null]
+}
+
+Table "sessions" {
+  "context_snapshot" jsonb [not null]
+  "created_at" timestamp [not null, default: `now()`]
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "mode_key" text [not null]
+  "question_type_key" text
+  "status" text [not null, default: `'created'`]
+  "style_key" text [not null]
+  "updated_at" timestamp [not null, default: `now()`]
+  "ended_at" timestamp
+  "realtime_call_id" text
+  "started_at" timestamp
+  "voice_artifact" jsonb
+  "user_id" text
+  "evaluation_error" text
+  "evaluation_status" text [not null, default: `'not_started'`]
+  "realtime_prompt_config_key" text
+  "realtime_prompt_config_version" integer
+  "realtime_model" text
+  "realtime_voice" text
+  "selected_question_id" uuid
+}
+
+Table "stories" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text [not null]
+  "title" text [not null]
+  "summary" text [not null, default: `''`]
+  "situation" text [not null, default: `''`]
+  "task" text [not null, default: `''`]
+  "actions" jsonb [not null, default: `'[]'`]
+  "result" text [not null, default: `''`]
+  "practice_prompt" text [not null, default: `''`]
+  "categories" jsonb [not null, default: `'[]'`]
+  "alternate_spins" jsonb [not null, default: `'[]'`]
+  "coach_notes" jsonb [not null, default: `'[]'`]
+  "raw_notes" text [not null, default: `''`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+  "last_practiced_at" timestamp
+  "practice_count" integer [not null, default: `0`]
+  "practice_coaching" jsonb [not null, default: `'[]'`]
+
+  Indexes {
+    "updated_at" [name: "stories_updated_at_idx"]
+    "user_id" [name: "stories_user_idx"]
+  }
+}
+
+Table "study_audience_tags" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "label" text [not null]
+  "slug" text [not null]
+  "sort_order" integer [not null, default: `0`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "slug" [unique, name: "study_audience_tags_slug_key"]
+  }
+}
+
+Table "study_card_attempts" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "study_session_id" uuid [not null]
+  "card_id" uuid
+  "verdict" text
+  "user_response" text
+  "ai_feedback" text
+  "feedback_audio_url" text
+  "score" float4
+  "is_correct" boolean
+  "attempted_at" timestamp [not null, default: `now()`]
+}
+
+Table "study_card_sources" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "card_id" uuid [not null]
+  "source_type" text [not null, default: `'unknown'`]
+  "source_label" text
+  "source_url" text
+  "trusted_source_id" uuid
+  "created_at" timestamp [not null, default: `now()`]
+  "source_metadata" jsonb
+}
+
+Table "study_cards" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "deck_id" uuid [not null]
+  "question" text [not null]
+  "answer" text [not null]
+  "hint" text
+  "question_audio_url" text
+  "quiz_mc_audio_url" text
+  "tf_true_audio_url" text
+  "tf_false_audio_url" text
+  "tf_foil_card_id" uuid
+  "position" integer [not null, default: `0`]
+  "due_at" timestamp
+  "interval" integer [not null, default: `1`]
+  "ease_factor" float4 [not null, default: `2.5`]
+  "lapses" integer [not null, default: `0`]
+  "is_verified" boolean [not null, default: `false`]
+  "verified_at" timestamp
+  "verified_by" text
+  "level" text
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+}
+
+Table "study_deck_audience_tags" {
+  "deck_id" uuid [pk, not null]
+  "audience_tag_id" uuid [pk, not null]
+}
+
+Table "study_deck_imports" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "deck_id" uuid [not null]
+  "user_id" text
+  "import_type" text [not null]
+  "source_summary" text
+  "source_count" integer [not null, default: `0`]
+  "failed_urls" _text
+  "created_at" timestamp [not null, default: `now()`]
+}
+
+Table "study_decks" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text
+  "folder_id" uuid
+  "title" text [not null]
+  "description" text
+  "subject" text
+  "tags" _text
+  "is_public" boolean [not null, default: `false`]
+  "is_official" boolean [not null, default: `false`]
+  "card_count" integer [not null, default: `0`]
+  "verified_card_count" integer [not null, default: `0`]
+  "exam_name" text
+  "exam_date" timestamp
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+}
+
+Table "study_folders" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text [not null]
+  "name" text [not null]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+}
+
+Table "study_progression_events" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text [not null]
+  "study_session_id" uuid
+  "study_card_attempt_id" uuid
+  "event_type" text [not null]
+  "xp" integer [not null, default: `0`]
+  "metadata" jsonb
+  "occurred_at" timestamp [not null, default: `now()`]
+  "created_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    ("study_card_attempt_id", "event_type") [name: "study_progression_events_attempt_event_idx"]
+    "occurred_at" [name: "study_progression_events_occurred_at_idx"]
+    ("study_session_id", "event_type") [name: "study_progression_events_session_event_idx"]
+    "user_id" [name: "study_progression_events_user_idx"]
+  }
+}
+
+Table "study_quests" {
+  "key" text [pk, not null]
+  "title" text [not null]
+  "description" text [not null]
+  "check_type" text [not null]
+  "check_threshold" integer [not null]
+  "check_dimension" text
+  "xp_reward" integer [not null, default: `0`]
+  "category" text [not null, default: `'milestone'`]
+  "display_order" integer [not null, default: `0`]
+  "enabled" boolean [not null, default: `true`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+}
+
+Table "study_sessions" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text
+  "deck_id" uuid
+  "mode" text [not null]
+  "started_at" timestamp [not null, default: `now()`]
+  "ended_at" timestamp
+  "cards_studied" integer [not null, default: `0`]
+  "correct_count" integer [not null, default: `0`]
+  "created_at" timestamp [not null, default: `now()`]
+}
+
+Table "study_subjects" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "name" text [not null]
+  "slug" text [not null]
+  "parent_id" uuid
+  "sort_order" integer [not null, default: `0`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "slug" [unique, name: "study_subjects_slug_key"]
+  }
+}
+
+Table "study_trusted_sources" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "name" text [not null]
+  "domain" text
+  "kind" text [not null, default: `'general'`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+}
+
+Table "study_user_progression" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text [not null]
+  "total_xp" integer [not null, default: `0`]
+  "level" integer [not null, default: `1`]
+  "current_level_xp" integer [not null, default: `0`]
+  "next_level_xp" integer [not null, default: `200`]
+  "streak_days" integer [not null, default: `0`]
+  "longest_streak_days" integer [not null, default: `0`]
+  "last_practiced_at" timestamp
+  "last_practice_date" text
+  "total_attempts" integer [not null, default: `0`]
+  "correct_attempts" integer [not null, default: `0`]
+  "accuracy_bps" integer [not null, default: `0`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "user_id" [unique, name: "study_user_progression_user_id_idx"]
+  }
+}
+
+Table "study_user_quests" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text [not null]
+  "quest_key" text [not null]
+  "progress" integer [not null, default: `0`]
+  "status" text [not null, default: `'open'`]
+  "completed_at" timestamp
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "quest_key" [name: "study_user_quests_quest_idx"]
+    ("user_id", "quest_key") [unique, name: "study_user_quests_user_quest_idx"]
+  }
+}
+
+Table "study_verifications" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "card_id" uuid [not null]
+  "verified_by_user_id" text
+  "confidence" float4
+  "note" text
+  "created_at" timestamp [not null, default: `now()`]
+  "verification_status" text
+  "evidence" jsonb
+  "verifier" text
+}
+
+Table "study_xp_rules" {
+  "key" text [pk, not null]
+  "label" text [not null]
+  "description" text [not null]
+  "event_type" text [not null]
+  "condition_type" text [not null]
+  "condition_value" integer [not null, default: `0`]
+  "group_key" text [not null, default: `'general'`]
+  "award_mode" text [not null, default: `'stack'`]
+  "xp" integer [not null, default: `0`]
+  "display_order" integer [not null, default: `0`]
+  "active" boolean [not null, default: `true`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+}
+
+Table "user" {
+  "email" text
+  "emailVerified" timestamp
+  "id" text [pk, not null]
+  "image" text
+  "name" text
+
+  Indexes {
+    "email" [unique, name: "user_email_unique"]
+  }
+}
+
+Table "user_feedback" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text
+  "session_id" uuid
+  "kind" text [not null]
+  "rating" integer
+  "message" text
+  "screen" text [not null]
+  "user_agent" text
+  "browser_language" text
+  "viewport" text
+  "status" text [not null, default: `'new'`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+  "rating_prompt" text
+  "screenshot_data_url" text
+  "screenshot_mime_type" text
+  "screenshot_name" text
+  "screenshot_size" integer
+
+  Indexes {
+    "created_at" [name: "user_feedback_created_at_idx"]
+    "session_id" [name: "user_feedback_session_idx"]
+    "status" [name: "user_feedback_status_idx"]
+    "user_id" [name: "user_feedback_user_idx"]
+  }
+}
+
+Table "user_progression" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text [not null]
+  "total_xp" integer [not null, default: `0`]
+  "level" integer [not null, default: `1`]
+  "current_level_xp" integer [not null, default: `0`]
+  "next_level_xp" integer [not null, default: `300`]
+  "streak_days" integer [not null, default: `0`]
+  "longest_streak_days" integer [not null, default: `0`]
+  "last_practiced_at" timestamp
+  "last_practice_date" text
+  "completed_reviews" integer [not null, default: `0`]
+  "weakest_score_key" text
+  "weakest_score_label" text
+  "weakest_score_average_tenths" integer
+  "latest_next_action" text
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "user_id" [unique, name: "user_progression_user_id_idx"]
+  }
+}
+
+Table "user_quests" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text [not null]
+  "quest_key" text [not null]
+  "status" text [not null, default: `'open'`]
+  "progress" integer [not null, default: `0`]
+  "completed_at" timestamp
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "quest_key" [name: "user_quests_quest_idx"]
+    ("user_id", "quest_key") [unique, name: "user_quests_user_quest_idx"]
+  }
+}
+
+Table "verificationToken" {
+  "expires" timestamp [not null]
+  "identifier" text [pk, not null]
+  "token" text [pk, not null]
+}
+
+Table "voice_debriefs" {
+  "id" uuid [pk, not null, default: `gen_random_uuid()`]
+  "user_id" text
+  "session_id" uuid [not null]
+  "status" text [not null, default: `'completed'`]
+  "artifact" jsonb [not null]
+  "transcript" jsonb [not null, default: `'[]'`]
+  "model" text [not null]
+  "voice" text
+  "prompt_config_key" text
+  "prompt_config_version" integer
+  "started_at" timestamp
+  "ended_at" timestamp
+  "duration_seconds" integer [not null, default: `0`]
+  "created_at" timestamp [not null, default: `now()`]
+  "updated_at" timestamp [not null, default: `now()`]
+
+  Indexes {
+    "created_at" [name: "voice_debriefs_created_at_idx"]
+    "session_id" [unique, name: "voice_debriefs_session_idx"]
+    "user_id" [name: "voice_debriefs_user_idx"]
+  }
+}
+
+Ref: "account"."userId" > "user"."id" [name: "account_userId_user_id_fk", delete: cascade]
+Ref: "account_password_credentials"."user_id" > "user"."id" [name: "account_password_credentials_user_id_fkey", delete: cascade]
+Ref: "account_password_reset_tokens"."user_id" > "user"."id" [name: "account_password_reset_tokens_user_id_fkey", delete: cascade]
+Ref: "ai_runs"."prompt_config_id" > "prompt_configs"."id" [name: "ai_runs_prompt_config_id_prompt_configs_id_fk", delete: set null]
+Ref: "ai_runs"."session_id" > "sessions"."id" [name: "ai_runs_session_id_sessions_id_fk", delete: set null]
+Ref: "ai_runs"."user_id" > "user"."id" [name: "ai_runs_user_id_user_id_fk", delete: set null]
+Ref: "coaching_memory"."last_session_id" > "sessions"."id" [name: "coaching_memory_last_session_id_sessions_id_fk", delete: set null]
+Ref: "coaching_memory"."user_id" > "user"."id" [name: "coaching_memory_user_id_user_id_fk", delete: cascade]
+Ref: "content_studio_runs"."admin_user_id" > "user"."id" [name: "content_studio_runs_admin_user_id_fkey", delete: set null]
+Ref: "content_studio_runs"."ai_run_id" > "ai_runs"."id" [name: "content_studio_runs_ai_run_id_fkey", delete: set null]
+Ref: "debriefs"."session_id" > "sessions"."id" [name: "debriefs_session_id_sessions_id_fk", delete: cascade]
+Ref: "debriefs"."user_id" > "user"."id" [name: "debriefs_user_id_user_id_fk", delete: set null]
+Ref: "diagnostic_events"."session_id" > "sessions"."id" [name: "diagnostic_events_session_id_sessions_id_fk", delete: set null]
+Ref: "diagnostic_events"."user_id" > "user"."id" [name: "diagnostic_events_user_id_user_id_fk", delete: set null]
+Ref: "dpe_checkride_targets"."user_id" > "user"."id" [name: "dpe_checkride_targets_user_id_fkey", delete: cascade]
+Ref: "dpe_content_versions"."certificate_type_id" > "dpe_certificate_types"."id" [name: "dpe_content_versions_certificate_type_id_fkey", delete: cascade]
+Ref: "dpe_diagnostic_events"."session_id" > "dpe_practice_sessions"."id" [name: "dpe_diagnostic_events_session_id_fkey", delete: set null]
+Ref: "dpe_oral_questions"."certificate_type_id" > "dpe_certificate_types"."id" [name: "dpe_oral_questions_certificate_type_id_fkey", delete: set null]
+Ref: "dpe_oral_questions"."content_version_id" > "dpe_content_versions"."id" [name: "dpe_oral_questions_content_version_id_fkey", delete: set null]
+Ref: "dpe_practice_sessions"."checkride_target_id" > "dpe_checkride_targets"."id" [name: "dpe_practice_sessions_checkride_target_id_fkey", delete: set null]
+Ref: "dpe_practice_sessions"."user_id" > "user"."id" [name: "dpe_practice_sessions_user_id_fkey", delete: cascade]
+Ref: "dpe_profiles"."user_id" > "user"."id" [name: "dpe_profiles_user_id_fkey", delete: cascade]
+Ref: "dpe_progression_events"."dpe_session_id" > "dpe_practice_sessions"."id" [name: "dpe_progression_events_dpe_session_id_dpe_practice_sessions_id_", delete: set null]
+Ref: "dpe_progression_events"."user_id" > "user"."id" [name: "dpe_progression_events_user_id_user_id_fk", delete: cascade]
+Ref: "dpe_question_answer_keys"."question_id" > "dpe_oral_questions"."id" [name: "dpe_question_answer_keys_question_id_fkey", delete: cascade]
+Ref: "dpe_question_rubrics"."question_id" > "dpe_oral_questions"."id" [name: "dpe_question_rubrics_question_id_fkey", delete: cascade]
+Ref: "dpe_session_questions"."question_id" > "dpe_oral_questions"."id" [name: "dpe_session_questions_question_id_fkey", delete: restrict]
+Ref: "dpe_session_questions"."session_id" > "dpe_practice_sessions"."id" [name: "dpe_session_questions_session_id_fkey", delete: cascade]
+Ref: "dpe_user_progression"."user_id" > "user"."id" [name: "dpe_user_progression_user_id_user_id_fk", delete: cascade]
+Ref: "dpe_user_quests"."quest_key" > "dpe_quests"."key" [name: "dpe_user_quests_quest_key_dpe_quests_key_fk", delete: cascade]
+Ref: "dpe_user_quests"."user_id" > "user"."id" [name: "dpe_user_quests_user_id_user_id_fk", delete: cascade]
+Ref: "evaluations"."session_id" > "sessions"."id" [name: "evaluations_session_id_sessions_id_fk", delete: cascade]
+Ref: "evaluations"."user_id" > "user"."id" [name: "evaluations_user_id_user_id_fk", delete: set null]
+Ref: "interview_question_imports"."user_id" > "user"."id" [name: "interview_question_imports_user_id_fkey", delete: set null]
+Ref: "interview_question_practice_attempts"."question_id" > "interview_questions"."id" [name: "interview_question_practice_attempts_question_id_fkey", delete: cascade]
+Ref: "interview_question_practice_attempts"."session_id" > "sessions"."id" [name: "interview_question_practice_attempts_session_id_fkey", delete: cascade]
+Ref: "interview_question_practice_attempts"."user_id" > "user"."id" [name: "interview_question_practice_attempts_user_id_fkey", delete: cascade]
+Ref: "interview_questions"."owner_user_id" > "user"."id" [name: "interview_questions_owner_user_id_fkey", delete: cascade]
+Ref: "interview_turn_based_turns"."archetype_id" > "interview_question_archetypes"."id" [name: "interview_turn_based_turns_archetype_id_fkey", delete: set null]
+Ref: "interview_turn_based_turns"."session_id" > "sessions"."id" [name: "interview_turn_based_turns_session_id_fkey", delete: cascade]
+Ref: "interview_turn_based_turns"."user_id" > "user"."id" [name: "interview_turn_based_turns_user_id_fkey", delete: set null]
+Ref: "introductions"."user_id" > "user"."id" [name: "introductions_user_id_user_id_fk", delete: cascade]
+Ref: "job_targets"."user_id" > "user"."id" [name: "job_targets_user_id_user_id_fk", delete: cascade]
+Ref: "platform_product_usage"."user_id" > "user"."id" [name: "platform_product_usage_user_id_fkey", delete: cascade]
+Ref: "platform_usage_events"."user_id" > "user"."id" [name: "platform_usage_events_user_id_fkey", delete: cascade]
+Ref: "platform_user_profiles"."user_id" > "user"."id" [name: "platform_user_profiles_user_id_fkey", delete: cascade]
+Ref: "profiles"."active_job_target_id" > "job_targets"."id" [name: "profiles_active_job_target_id_job_targets_id_fk", delete: set null]
+Ref: "profiles"."user_id" > "user"."id" [name: "profiles_user_id_user_id_fk", delete: cascade]
+Ref: "progression_events"."session_id" > "sessions"."id" [name: "progression_events_session_id_sessions_id_fk", delete: set null]
+Ref: "progression_events"."user_id" > "user"."id" [name: "progression_events_user_id_user_id_fk", delete: cascade]
+Ref: "prompt_configs"."created_by_user_id" > "user"."id" [name: "prompt_configs_created_by_user_id_user_id_fk", delete: set null]
+Ref: "quira_conversations"."session_id" > "sessions"."id" [name: "quira_conversations_session_id_fkey", delete: set null]
+Ref: "quira_conversations"."user_id" > "user"."id" [name: "quira_conversations_user_id_fkey", delete: set null]
+Ref: "quira_messages"."conversation_id" > "quira_conversations"."id" [name: "quira_messages_conversation_id_fkey", delete: cascade]
+Ref: "quira_messages"."user_id" > "user"."id" [name: "quira_messages_user_id_fkey", delete: set null]
+Ref: "quira_support_cases"."conversation_id" > "quira_conversations"."id" [name: "quira_support_cases_conversation_id_fkey", delete: set null]
+Ref: "quira_support_cases"."session_id" > "sessions"."id" [name: "quira_support_cases_session_id_fkey", delete: set null]
+Ref: "quira_support_cases"."user_id" > "user"."id" [name: "quira_support_cases_user_id_fkey", delete: set null]
+Ref: "quira_tool_events"."conversation_id" > "quira_conversations"."id" [name: "quira_tool_events_conversation_id_fkey", delete: cascade]
+Ref: "quira_tool_events"."message_id" > "quira_messages"."id" [name: "quira_tool_events_message_id_fkey", delete: set null]
+Ref: "realtime_session_usage"."session_id" > "sessions"."id" [name: "realtime_session_usage_session_id_sessions_id_fk", delete: cascade]
+Ref: "realtime_session_usage"."user_id" > "user"."id" [name: "realtime_session_usage_user_id_user_id_fk", delete: set null]
+Ref: "session"."userId" > "user"."id" [name: "session_userId_user_id_fk", delete: cascade]
+Ref: "sessions"."selected_question_id" > "interview_questions"."id" [name: "sessions_selected_question_id_interview_questions_id_fk", delete: set null]
+Ref: "sessions"."user_id" > "user"."id" [name: "sessions_user_id_user_id_fk", delete: set null]
+Ref: "stories"."user_id" > "user"."id" [name: "stories_user_id_user_id_fk", delete: cascade]
+Ref: "study_card_attempts"."card_id" > "study_cards"."id" [name: "study_card_attempts_card_id_fkey", delete: set null]
+Ref: "study_card_attempts"."study_session_id" > "study_sessions"."id" [name: "study_card_attempts_study_session_id_fkey", delete: cascade]
+Ref: "study_card_sources"."card_id" > "study_cards"."id" [name: "study_card_sources_card_id_fkey", delete: cascade]
+Ref: "study_card_sources"."trusted_source_id" > "study_trusted_sources"."id" [name: "study_card_sources_trusted_source_id_fkey", delete: set null]
+Ref: "study_cards"."deck_id" > "study_decks"."id" [name: "study_cards_deck_id_fkey", delete: cascade]
+Ref: "study_cards"."tf_foil_card_id" > "study_cards"."id" [name: "study_cards_tf_foil_card_id_study_cards_id_fk", delete: set null]
+Ref: "study_deck_audience_tags"."audience_tag_id" > "study_audience_tags"."id" [name: "study_deck_audience_tags_audience_tag_id_fkey", delete: cascade]
+Ref: "study_deck_audience_tags"."deck_id" > "study_decks"."id" [name: "study_deck_audience_tags_deck_id_fkey", delete: cascade]
+Ref: "study_deck_imports"."deck_id" > "study_decks"."id" [name: "study_deck_imports_deck_id_fkey", delete: cascade]
+Ref: "study_deck_imports"."user_id" > "user"."id" [name: "study_deck_imports_user_id_fkey", delete: set null]
+Ref: "study_decks"."folder_id" > "study_folders"."id" [name: "study_decks_folder_id_fkey", delete: set null]
+Ref: "study_decks"."user_id" > "user"."id" [name: "study_decks_user_id_fkey", delete: set null]
+Ref: "study_folders"."user_id" > "user"."id" [name: "study_folders_user_id_fkey", delete: cascade]
+Ref: "study_progression_events"."study_card_attempt_id" > "study_card_attempts"."id" [name: "study_progression_events_study_card_attempt_id_study_card_attem", delete: set null]
+Ref: "study_progression_events"."study_session_id" > "study_sessions"."id" [name: "study_progression_events_study_session_id_study_sessions_id_fk", delete: set null]
+Ref: "study_progression_events"."user_id" > "user"."id" [name: "study_progression_events_user_id_user_id_fk", delete: cascade]
+Ref: "study_sessions"."deck_id" > "study_decks"."id" [name: "study_sessions_deck_id_fkey", delete: set null]
+Ref: "study_sessions"."user_id" > "user"."id" [name: "study_sessions_user_id_fkey", delete: set null]
+Ref: "study_subjects"."parent_id" > "study_subjects"."id" [name: "study_subjects_parent_id_study_subjects_id_fk", delete: set null]
+Ref: "study_user_progression"."user_id" > "user"."id" [name: "study_user_progression_user_id_user_id_fk", delete: cascade]
+Ref: "study_user_quests"."quest_key" > "study_quests"."key" [name: "study_user_quests_quest_key_study_quests_key_fk", delete: cascade]
+Ref: "study_user_quests"."user_id" > "user"."id" [name: "study_user_quests_user_id_user_id_fk", delete: cascade]
+Ref: "study_verifications"."card_id" > "study_cards"."id" [name: "study_verifications_card_id_fkey", delete: cascade]
+Ref: "study_verifications"."verified_by_user_id" > "user"."id" [name: "study_verifications_verified_by_user_id_fkey", delete: set null]
+Ref: "user_feedback"."session_id" > "sessions"."id" [name: "user_feedback_session_id_sessions_id_fk", delete: set null]
+Ref: "user_feedback"."user_id" > "user"."id" [name: "user_feedback_user_id_user_id_fk", delete: set null]
+Ref: "user_progression"."user_id" > "user"."id" [name: "user_progression_user_id_user_id_fk", delete: cascade]
+Ref: "user_quests"."quest_key" > "progression_quests"."key" [name: "user_quests_quest_key_progression_quests_key_fk", delete: cascade]
+Ref: "user_quests"."user_id" > "user"."id" [name: "user_quests_user_id_user_id_fk", delete: cascade]
+Ref: "voice_debriefs"."session_id" > "sessions"."id" [name: "voice_debriefs_session_id_sessions_id_fk", delete: cascade]
+Ref: "voice_debriefs"."user_id" > "user"."id" [name: "voice_debriefs_user_id_user_id_fk", delete: set null]
