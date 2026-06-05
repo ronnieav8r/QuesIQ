@@ -1,10 +1,13 @@
-import { and, desc, eq } from "drizzle-orm";
+import { createHash } from "node:crypto";
+
+import { and, desc, eq, isNull } from "drizzle-orm";
 
 import type { PromptConfigRecord } from "@/product/interview-types";
 import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
 import { getDb } from "@/server/db/client";
 import {
   evaluations,
+  quiraLeads,
   quiraConversations,
   quiraKnowledgeArticles,
   quiraMessages,
@@ -28,6 +31,7 @@ type QuiraChatInput = {
   product?: string;
   screen?: string;
   sessionId?: string;
+  source?: "public" | "signed_in";
 };
 
 type QuiraSupportReportInput = {
@@ -48,11 +52,13 @@ type QuiraSupportReportInput = {
 
 type QuiraChatUser = {
   email?: string | null;
-  id: string;
+  id?: string;
   name?: string | null;
+  source: "public" | "signed_in";
 };
 
 type KnowledgeArticleRecord = {
+  audience: "public" | "signed_in";
   category: string;
   content: string;
   id: string;
@@ -131,6 +137,10 @@ function cleanUuid(value: unknown) {
     : undefined;
 }
 
+function cleanConversationSource(value: unknown): "public" | "signed_in" {
+  return value === "public" ? "public" : "signed_in";
+}
+
 function cleanBrowserContext(value: unknown) {
   if (!value || typeof value !== "object") {
     return {};
@@ -165,6 +175,7 @@ export function parseQuiraChatInput(body: unknown): QuiraChatInput | undefined {
     product: cleanProduct(candidate.product),
     screen: cleanText(candidate.screen, MAX_SCREEN_LENGTH) ?? "unknown",
     sessionId: cleanUuid(candidate.sessionId),
+    source: cleanConversationSource(candidate.source),
   };
 }
 
@@ -249,17 +260,20 @@ function titleFromMessage(message: string) {
 
 async function getOrCreateConversation(input: QuiraChatInput, user: QuiraChatUser) {
   const now = new Date();
+  const source = user.source === "public" ? "public" : "signed_in";
 
   if (input.conversationId) {
+    const ownershipFilter = user.id
+      ? and(eq(quiraConversations.id, input.conversationId), eq(quiraConversations.userId, user.id))
+      : and(
+          eq(quiraConversations.id, input.conversationId),
+          eq(quiraConversations.source, "public"),
+          isNull(quiraConversations.userId),
+        );
     const [existing] = await getDb()
       .select()
       .from(quiraConversations)
-      .where(
-        and(
-          eq(quiraConversations.id, input.conversationId),
-          eq(quiraConversations.userId, user.id),
-        ),
-      )
+      .where(ownershipFilter)
       .limit(1);
 
     if (existing) {
@@ -283,7 +297,7 @@ async function getOrCreateConversation(input: QuiraChatInput, user: QuiraChatUse
       product: input.product ?? "shared",
       screen: input.screen ?? "unknown",
       sessionId: input.sessionId,
-      source: "signed_in",
+      source,
       title: titleFromMessage(input.message),
       userId: user.id,
     })
@@ -348,11 +362,14 @@ function articleScore(article: KnowledgeArticleRecord, query: string, product: s
 export async function searchQuiraKnowledge(input: {
   product?: string;
   query: string;
+  source?: "public" | "signed_in";
 }) {
   const product = cleanProduct(input.product);
   const query = cleanText(input.query, 400) ?? "";
+  const source = input.source ?? "signed_in";
   const rows = await getDb()
     .select({
+      audience: quiraKnowledgeArticles.audience,
       category: quiraKnowledgeArticles.category,
       content: quiraKnowledgeArticles.content,
       id: quiraKnowledgeArticles.id,
@@ -365,6 +382,7 @@ export async function searchQuiraKnowledge(input: {
     .where(eq(quiraKnowledgeArticles.published, true));
 
   return rows
+    .filter((row) => source === "signed_in" || row.audience === "public")
     .map((row) => ({
       ...row,
       score: articleScore(row, query, product),
@@ -373,6 +391,7 @@ export async function searchQuiraKnowledge(input: {
     .sort((left, right) => right.score - left.score)
     .slice(0, 5)
     .map((article) => ({
+      audience: article.audience,
       category: article.category,
       content: article.content,
       id: article.id,
@@ -393,7 +412,7 @@ async function createSupportCase(input: {
   summary: string;
   title?: string;
   urgency?: SupportCaseUrgency;
-  userId: string;
+  userId?: string;
 }) {
   const title = cleanText(input.title, 160) ?? "Support request";
   const summary = cleanText(input.summary, 2000) ?? title;
@@ -421,6 +440,41 @@ async function createSupportCase(input: {
     .where(eq(quiraConversations.id, input.conversationId));
 
   return supportCase;
+}
+
+async function createLead(input: {
+  conversationId: string;
+  details?: Record<string, unknown>;
+  email?: string;
+  name?: string;
+  productInterest?: string;
+  source: "public_chat" | "signed_in_chat";
+  summary: string;
+  userId?: string;
+}) {
+  const now = new Date();
+  const summary = cleanText(input.summary, 2000) ?? "Quira lead created from chat.";
+  const [lead] = await getDb()
+    .insert(quiraLeads)
+    .values({
+      conversationId: input.conversationId,
+      details: input.details ?? {},
+      email: cleanText(input.email, 240),
+      name: cleanText(input.name, 180),
+      productInterest: cleanProduct(input.productInterest),
+      source: input.source,
+      summary,
+      updatedAt: now,
+      userId: input.userId,
+    })
+    .returning();
+
+  await getDb()
+    .update(quiraConversations)
+    .set({ updatedAt: now })
+    .where(eq(quiraConversations.id, input.conversationId));
+
+  return lead;
 }
 
 export function parseQuiraSupportCaseStatus(value: unknown): SupportCaseStatus | undefined {
@@ -500,8 +554,15 @@ export async function updateQuiraSupportCaseStatus(input: {
 async function getSessionSupportSnapshot(input: {
   product?: string;
   sessionId?: string;
-  userId: string;
+  userId?: string;
 }) {
+  if (!input.userId) {
+    return {
+      available: false,
+      reason: "Sign in is required before Quira can inspect private session status.",
+    };
+  }
+
   if (cleanProduct(input.product) !== "interview" || !input.sessionId) {
     return {
       available: false,
@@ -571,8 +632,14 @@ function supportContext(input: {
   sessionSnapshot?: Record<string, unknown>;
   user: QuiraChatUser;
 }) {
+  const userLabel =
+    input.user.source === "signed_in"
+      ? input.user.email ?? input.user.name ?? input.user.id ?? "signed-in user"
+      : "public visitor";
+
   return [
-    `Signed-in user: ${input.user.email ?? input.user.name ?? input.user.id}`,
+    `Visitor context: ${userLabel}`,
+    `Access level: ${input.user.source}`,
     `Current product: ${input.product}`,
     `Current screen: ${input.screen}`,
     `Browser context: ${JSON.stringify(input.browserContext ?? {})}`,
@@ -611,7 +678,7 @@ function functionCalls(response: ResponsesApiResponse) {
 }
 
 function toolDefinitions() {
-  return [
+  const tools: Record<string, unknown>[] = [
     {
       description: "Search published Quira support knowledge articles.",
       name: "search_quira_knowledge",
@@ -622,6 +689,23 @@ function toolDefinitions() {
           query: { type: "string" },
         },
         required: ["query"],
+        type: "object",
+      },
+      type: "function",
+    },
+    {
+      description:
+        "Create a lead for public or signed-in follow-up about beta access, pricing, signup, product fit, or human contact.",
+      name: "create_lead",
+      parameters: {
+        additionalProperties: false,
+        properties: {
+          email: { type: "string" },
+          name: { type: "string" },
+          productInterest: { type: "string" },
+          summary: { type: "string" },
+        },
+        required: ["summary"],
         type: "object",
       },
       type: "function",
@@ -670,6 +754,16 @@ function toolDefinitions() {
       type: "function",
     },
   ];
+
+  if (process.env.OPENAI_QUIRA_VECTOR_STORE_ID) {
+    tools.push({
+      max_num_results: 5,
+      type: "file_search",
+      vector_store_ids: [process.env.OPENAI_QUIRA_VECTOR_STORE_ID],
+    });
+  }
+
+  return tools;
 }
 
 async function callResponsesApi(input: {
@@ -714,15 +808,31 @@ async function runTool(input: {
   product: string;
   screen: string;
   sessionId?: string;
-  userId: string;
+  userId?: string;
 }) {
   if (input.name === "search_quira_knowledge") {
     const matches = await searchQuiraKnowledge({
       product: cleanText(input.args.product, MAX_PRODUCT_LENGTH) ?? input.product,
       query: cleanText(input.args.query, 400) ?? "",
+      source: input.userId ? "signed_in" : "public",
     });
 
     return { matches };
+  }
+
+  if (input.name === "create_lead") {
+    const lead = await createLead({
+      conversationId: input.conversationId,
+      details: { tool: input.name },
+      email: cleanText(input.args.email, 240),
+      name: cleanText(input.args.name, 180),
+      productInterest: cleanText(input.args.productInterest, MAX_PRODUCT_LENGTH) ?? input.product,
+      source: input.userId ? "signed_in_chat" : "public_chat",
+      summary: cleanText(input.args.summary, 2000) ?? "Lead created from Quira chat.",
+      userId: input.userId,
+    });
+
+    return { leadId: lead.id, status: lead.status };
   }
 
   if (input.name === "create_support_case" || input.name === "record_bug_report") {
@@ -793,6 +903,7 @@ async function runQuiraModel(input: {
   const knowledge = await searchQuiraKnowledge({
     product: input.product,
     query: input.message,
+    source: input.user.source,
   });
   const sessionSnapshot = await getSessionSupportSnapshot({
     product: input.product,
@@ -1065,7 +1176,7 @@ export async function createQuiraSupportReport(
 }
 
 export async function listQuiraAdminSupportData(limit = 100) {
-  const [cases, conversations, articles, messages] = await Promise.all([
+  const [cases, conversations, articles, messages, leads, toolEvents] = await Promise.all([
     getDb()
       .select({
         conversationId: quiraSupportCases.conversationId,
@@ -1106,6 +1217,7 @@ export async function listQuiraAdminSupportData(limit = 100) {
       .limit(limit),
     getDb()
       .select({
+        audience: quiraKnowledgeArticles.audience,
         category: quiraKnowledgeArticles.category,
         content: quiraKnowledgeArticles.content,
         displayOrder: quiraKnowledgeArticles.displayOrder,
@@ -1113,9 +1225,16 @@ export async function listQuiraAdminSupportData(limit = 100) {
         product: quiraKnowledgeArticles.product,
         published: quiraKnowledgeArticles.published,
         slug: quiraKnowledgeArticles.slug,
+        sourceHash: quiraKnowledgeArticles.sourceHash,
+        sourcePath: quiraKnowledgeArticles.sourcePath,
+        sourceType: quiraKnowledgeArticles.sourceType,
         tags: quiraKnowledgeArticles.tags,
         title: quiraKnowledgeArticles.title,
         updatedAt: quiraKnowledgeArticles.updatedAt,
+        vectorFileId: quiraKnowledgeArticles.vectorFileId,
+        vectorSyncError: quiraKnowledgeArticles.vectorSyncError,
+        vectorSyncStatus: quiraKnowledgeArticles.vectorSyncStatus,
+        vectorSyncedAt: quiraKnowledgeArticles.vectorSyncedAt,
       })
       .from(quiraKnowledgeArticles)
       .orderBy(desc(quiraKnowledgeArticles.updatedAt))
@@ -1135,12 +1254,47 @@ export async function listQuiraAdminSupportData(limit = 100) {
       .leftJoin(users, eq(users.id, quiraMessages.userId))
       .orderBy(desc(quiraMessages.createdAt))
       .limit(limit * 4),
+    getDb()
+      .select({
+        conversationId: quiraLeads.conversationId,
+        createdAt: quiraLeads.createdAt,
+        details: quiraLeads.details,
+        email: quiraLeads.email,
+        id: quiraLeads.id,
+        name: quiraLeads.name,
+        productInterest: quiraLeads.productInterest,
+        source: quiraLeads.source,
+        status: quiraLeads.status,
+        summary: quiraLeads.summary,
+        updatedAt: quiraLeads.updatedAt,
+        userEmail: users.email,
+        userId: quiraLeads.userId,
+      })
+      .from(quiraLeads)
+      .leftJoin(users, eq(users.id, quiraLeads.userId))
+      .orderBy(desc(quiraLeads.createdAt))
+      .limit(limit),
+    getDb()
+      .select({
+        conversationId: quiraToolEvents.conversationId,
+        createdAt: quiraToolEvents.createdAt,
+        errorMessage: quiraToolEvents.errorMessage,
+        id: quiraToolEvents.id,
+        input: quiraToolEvents.input,
+        output: quiraToolEvents.output,
+        status: quiraToolEvents.status,
+        toolName: quiraToolEvents.toolName,
+      })
+      .from(quiraToolEvents)
+      .orderBy(desc(quiraToolEvents.createdAt))
+      .limit(limit * 2),
   ]);
 
   return {
     articles: articles.map((article) => ({
       ...article,
       updatedAt: article.updatedAt.toISOString(),
+      vectorSyncedAt: article.vectorSyncedAt?.toISOString(),
     })),
     cases: cases.map((supportCase) => ({
       ...supportCase,
@@ -1156,5 +1310,243 @@ export async function listQuiraAdminSupportData(limit = 100) {
       ...message,
       createdAt: message.createdAt.toISOString(),
     })),
+    leads: leads.map((lead) => ({
+      ...lead,
+      createdAt: lead.createdAt.toISOString(),
+      updatedAt: lead.updatedAt.toISOString(),
+    })),
+    toolEvents: toolEvents.map((event) => ({
+      ...event,
+      createdAt: event.createdAt.toISOString(),
+    })),
   };
+}
+
+function quiraArticleVectorDocument(article: {
+  audience: string;
+  category: string;
+  content: string;
+  product: string;
+  slug: string;
+  sourcePath?: string | null;
+  tags: string[];
+  title: string;
+}) {
+  return [
+    `# ${article.title}`,
+    "",
+    `Slug: ${article.slug}`,
+    `Product: ${article.product}`,
+    `Category: ${article.category}`,
+    `Audience: ${article.audience}`,
+    article.sourcePath ? `Source: ${article.sourcePath}` : undefined,
+    article.tags.length ? `Tags: ${article.tags.join(", ")}` : undefined,
+    "",
+    article.content,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function hashQuiraArticle(content: string) {
+  return createHash("sha256").update(content).digest("hex");
+}
+
+async function openAiJson(input: {
+  apiKey: string;
+  body?: BodyInit;
+  headers?: Record<string, string>;
+  method?: string;
+  url: string;
+}) {
+  const response = await fetch(input.url, {
+    body: input.body,
+    headers: {
+      Authorization: `Bearer ${input.apiKey}`,
+      ...input.headers,
+    },
+    method: input.method ?? "GET",
+  });
+  const text = await response.text();
+  const json = text ? (JSON.parse(text) as Record<string, unknown>) : {};
+
+  if (!response.ok) {
+    throw new Error(
+      typeof json.error === "object" &&
+        json.error &&
+        "message" in json.error &&
+        typeof json.error.message === "string"
+        ? json.error.message
+        : `OpenAI request failed with status ${response.status}.`,
+    );
+  }
+
+  return json;
+}
+
+async function detachVectorFile(input: {
+  apiKey: string;
+  fileId?: string | null;
+  vectorStoreId: string;
+}) {
+  if (!input.fileId) {
+    return;
+  }
+
+  try {
+    await openAiJson({
+      apiKey: input.apiKey,
+      method: "DELETE",
+      url: `https://api.openai.com/v1/vector_stores/${input.vectorStoreId}/files/${input.fileId}`,
+    });
+  } catch {
+    // Stale vector attachments should not block replacing the article document.
+  }
+}
+
+async function uploadArticleToVectorStore(input: {
+  apiKey: string;
+  article: {
+    audience: string;
+    category: string;
+    content: string;
+    product: string;
+    slug: string;
+    sourcePath?: string | null;
+    tags: string[];
+    title: string;
+  };
+  vectorStoreId: string;
+}) {
+  const document = quiraArticleVectorDocument(input.article);
+  const fileForm = new FormData();
+  fileForm.append("purpose", "assistants");
+  fileForm.append(
+    "file",
+    new Blob([document], { type: "text/markdown" }),
+    `quira-${input.article.slug}.md`,
+  );
+
+  const uploaded = await openAiJson({
+    apiKey: input.apiKey,
+    body: fileForm,
+    method: "POST",
+    url: "https://api.openai.com/v1/files",
+  });
+  const fileId = typeof uploaded.id === "string" ? uploaded.id : undefined;
+
+  if (!fileId) {
+    throw new Error("OpenAI did not return a file id for the Quira article.");
+  }
+
+  await openAiJson({
+    apiKey: input.apiKey,
+    body: JSON.stringify({
+      attributes: {
+        audience: input.article.audience,
+        category: input.article.category,
+        product: input.article.product,
+        slug: input.article.slug,
+      },
+      file_id: fileId,
+    }),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
+    url: `https://api.openai.com/v1/vector_stores/${input.vectorStoreId}/files`,
+  });
+
+  return {
+    document,
+    fileId,
+  };
+}
+
+export async function syncQuiraKnowledgeToVectorStore() {
+  const vectorStoreId = cleanText(process.env.OPENAI_QUIRA_VECTOR_STORE_ID, 160);
+  const apiKey = getOpenAiApiKey("support");
+
+  if (!vectorStoreId) {
+    throw new Error("OPENAI_QUIRA_VECTOR_STORE_ID is not configured.");
+  }
+
+  if (!apiKey) {
+    throw new Error("OPENAI_QUIRA_API_KEY or support fallback key is not configured.");
+  }
+
+  const articles = await getDb()
+    .select({
+      audience: quiraKnowledgeArticles.audience,
+      category: quiraKnowledgeArticles.category,
+      content: quiraKnowledgeArticles.content,
+      id: quiraKnowledgeArticles.id,
+      product: quiraKnowledgeArticles.product,
+      slug: quiraKnowledgeArticles.slug,
+      sourceHash: quiraKnowledgeArticles.sourceHash,
+      sourcePath: quiraKnowledgeArticles.sourcePath,
+      tags: quiraKnowledgeArticles.tags,
+      title: quiraKnowledgeArticles.title,
+      vectorFileId: quiraKnowledgeArticles.vectorFileId,
+      vectorSyncStatus: quiraKnowledgeArticles.vectorSyncStatus,
+    })
+    .from(quiraKnowledgeArticles)
+    .where(eq(quiraKnowledgeArticles.published, true));
+  const summary = {
+    failed: 0,
+    skipped: 0,
+    synced: 0,
+    total: articles.length,
+  };
+
+  for (const article of articles) {
+    const document = quiraArticleVectorDocument(article);
+    const sourceHash = hashQuiraArticle(document);
+
+    if (
+      article.sourceHash === sourceHash &&
+      article.vectorFileId &&
+      article.vectorSyncStatus === "synced"
+    ) {
+      summary.skipped += 1;
+      continue;
+    }
+
+    try {
+      await detachVectorFile({
+        apiKey,
+        fileId: article.vectorFileId,
+        vectorStoreId,
+      });
+      const uploaded = await uploadArticleToVectorStore({
+        apiKey,
+        article,
+        vectorStoreId,
+      });
+
+      await getDb()
+        .update(quiraKnowledgeArticles)
+        .set({
+          sourceHash: hashQuiraArticle(uploaded.document),
+          updatedAt: new Date(),
+          vectorFileId: uploaded.fileId,
+          vectorSyncError: null,
+          vectorSyncStatus: "synced",
+          vectorSyncedAt: new Date(),
+        })
+        .where(eq(quiraKnowledgeArticles.id, article.id));
+      summary.synced += 1;
+    } catch (error) {
+      await getDb()
+        .update(quiraKnowledgeArticles)
+        .set({
+          sourceHash,
+          updatedAt: new Date(),
+          vectorSyncError: error instanceof Error ? error.message : "Vector sync failed.",
+          vectorSyncStatus: "failed",
+        })
+        .where(eq(quiraKnowledgeArticles.id, article.id));
+      summary.failed += 1;
+    }
+  }
+
+  return summary;
 }

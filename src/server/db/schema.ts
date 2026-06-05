@@ -1072,6 +1072,7 @@ export const quiraToolEvents = pgTable(
 export const quiraKnowledgeArticles = pgTable(
   "quira_knowledge_articles",
   {
+    audience: text("audience").$type<"public" | "signed_in">().default("public").notNull(),
     category: text("category").default("general").notNull(),
     content: text("content").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -1080,14 +1081,63 @@ export const quiraKnowledgeArticles = pgTable(
     product: text("product").default("shared").notNull(),
     published: boolean("published").default(false).notNull(),
     slug: text("slug").notNull(),
+    sourceHash: text("source_hash"),
+    sourcePath: text("source_path"),
+    sourceType: text("source_type")
+      .$type<"admin" | "docs" | "seed" | "upload">()
+      .default("admin")
+      .notNull(),
     tags: jsonb("tags").$type<string[]>().default([]).notNull(),
     title: text("title").notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    vectorFileId: text("vector_file_id"),
+    vectorSyncError: text("vector_sync_error"),
+    vectorSyncStatus: text("vector_sync_status")
+      .$type<"failed" | "not_synced" | "pending" | "synced">()
+      .default("not_synced")
+      .notNull(),
+    vectorSyncedAt: timestamp("vector_synced_at", { withTimezone: true }),
   },
   (article) => ({
     productIdx: index("quira_knowledge_articles_product_idx").on(article.product),
     publishedIdx: index("quira_knowledge_articles_published_idx").on(article.published),
     slugIdx: uniqueIndex("quira_knowledge_articles_slug_idx").on(article.slug),
+    vectorSyncIdx: index("quira_knowledge_articles_vector_sync_idx").on(
+      article.vectorSyncStatus,
+    ),
+  }),
+);
+
+export const quiraLeads = pgTable(
+  "quira_leads",
+  {
+    conversationId: uuid("conversation_id").references(() => quiraConversations.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    details: jsonb("details").$type<Record<string, unknown>>().default({}).notNull(),
+    email: text("email"),
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name"),
+    productInterest: text("product_interest").default("shared").notNull(),
+    source: text("source")
+      .$type<"public_chat" | "signed_in_chat">()
+      .default("public_chat")
+      .notNull(),
+    status: text("status")
+      .$type<"closed" | "contacted" | "new" | "qualified">()
+      .default("new")
+      .notNull(),
+    summary: text("summary").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  },
+  (lead) => ({
+    conversationIdx: index("quira_leads_conversation_idx").on(lead.conversationId),
+    createdAtIdx: index("quira_leads_created_at_idx").on(lead.createdAt),
+    emailIdx: index("quira_leads_email_idx").on(lead.email),
+    statusIdx: index("quira_leads_status_idx").on(lead.status),
+    userIdx: index("quira_leads_user_idx").on(lead.userId),
   }),
 );
 

@@ -124,11 +124,14 @@ async function QuiraAdminPanel() {
   );
   const quiraModel =
     process.env.OPENAI_QUIRA_MODEL || process.env.OPENAI_SUPPORT_MODEL || "gpt-5.4-mini";
+  const vectorStoreConfigured = Boolean(process.env.OPENAI_QUIRA_VECTOR_STORE_ID);
   let support: Awaited<ReturnType<typeof listQuiraAdminSupportData>> = {
     articles: [],
     cases: [],
     conversations: [],
+    leads: [],
     messages: [],
+    toolEvents: [],
   };
   let promptConfig: PromptConfigRecord = {
     ...promptConfigFallbacks.quira_support_chat,
@@ -151,6 +154,9 @@ async function QuiraAdminPanel() {
   } else {
     unavailable = true;
   }
+  const syncedArticles = support.articles.filter(
+    (article) => article.vectorSyncStatus === "synced",
+  ).length;
 
   return (
     <section className="ai-runs-panel" aria-labelledby="quira-admin-title">
@@ -173,6 +179,14 @@ async function QuiraAdminPanel() {
         <div className="study-stat-chip">
           <strong>{support.articles.length}</strong>
           <span>KB Articles</span>
+        </div>
+        <div className={vectorStoreConfigured ? "study-stat-chip highlight" : "study-stat-chip"}>
+          <strong>{vectorStoreConfigured ? "Ready" : "Missing"}</strong>
+          <span>Vector Store</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{support.leads.length}</strong>
+          <span>Leads</span>
         </div>
         <div className="study-stat-chip">
           <strong>{support.cases.length}</strong>
@@ -210,6 +224,42 @@ async function QuiraAdminPanel() {
       <section className="panel">
         <div className="section-head">
           <div>
+            <p className="eyebrow">Vector Sync</p>
+            <h3>OpenAI file-search knowledge state</h3>
+            <p>
+              Postgres remains Quira&apos;s source of truth. Published articles can
+              also sync into an OpenAI vector store for deeper retrieval.
+            </p>
+          </div>
+          <span className="pill">
+            {syncedArticles} / {support.articles.length} synced
+          </span>
+        </div>
+        {!vectorStoreConfigured && (
+          <div className="status-callout warning">
+            <strong>Set `OPENAI_QUIRA_VECTOR_STORE_ID` to enable file search.</strong>
+            <span>Without it, Quira falls back to curated Postgres knowledge search.</span>
+          </div>
+        )}
+        <div className="prompt-version-list">
+          {support.articles.map((article) => (
+            <article className="prompt-version-card" key={`${article.id}-sync`}>
+              <div>
+                <strong>{article.title}</strong>
+                <p className="field-note">
+                  {article.vectorSyncStatus} | {article.vectorFileId || "no vector file"} |{" "}
+                  {article.vectorSyncedAt ? formatDate(article.vectorSyncedAt) : "not synced"}
+                </p>
+                {article.vectorSyncError && <p>{article.vectorSyncError}</p>}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-head">
+          <div>
             <p className="eyebrow">Knowledge Database</p>
             <h3>Published and draft articles</h3>
           </div>
@@ -229,12 +279,47 @@ async function QuiraAdminPanel() {
                   {article.tags.length > 0 && (
                     <p className="field-note">Tags: {article.tags.join(", ")}</p>
                   )}
+                  <p className="field-note">
+                    Audience: {article.audience} | Source: {article.sourceType}
+                    {article.sourcePath ? ` | ${article.sourcePath}` : ""}
+                  </p>
                 </div>
               </article>
             ))}
           </div>
         ) : (
           <p>No Quira knowledge articles are available yet.</p>
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">Leads</p>
+            <h3>Public and signed-in follow-up requests</h3>
+          </div>
+          <span className="pill">{support.leads.length} leads</span>
+        </div>
+        {support.leads.length > 0 ? (
+          <div className="prompt-version-list">
+            {support.leads.map((lead) => (
+              <article className="prompt-version-card" key={lead.id}>
+                <div>
+                  <strong>{lead.name || lead.email || "Unnamed lead"}</strong>
+                  <p className="field-note">
+                    {lead.productInterest} | {lead.status} | {lead.source} |{" "}
+                    {formatDate(lead.createdAt)}
+                  </p>
+                  <p>{lead.summary}</p>
+                  {(lead.email || lead.userEmail) && (
+                    <p className="field-note">{lead.email || lead.userEmail}</p>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p>No Quira leads have been created yet.</p>
         )}
       </section>
 
@@ -268,6 +353,61 @@ async function QuiraAdminPanel() {
           </div>
         ) : (
           <p>No Quira support cases have been created yet.</p>
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">Conversations</p>
+            <h3>Recent Quira chat sessions</h3>
+          </div>
+          <span className="pill">{support.conversations.length} chats</span>
+        </div>
+        {support.conversations.length > 0 ? (
+          <div className="prompt-version-list">
+            {support.conversations.map((conversation) => (
+              <article className="prompt-version-card" key={conversation.id}>
+                <div>
+                  <strong>{conversation.title}</strong>
+                  <p className="field-note">
+                    {conversation.product} | {conversation.screen} | {conversation.status} |{" "}
+                    {conversation.userEmail || conversation.userId || "public visitor"} |{" "}
+                    {formatDate(conversation.updatedAt)}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p>No Quira conversations have been recorded yet.</p>
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">Tool Events</p>
+            <h3>Recent Quira tool calls</h3>
+          </div>
+          <span className="pill">{support.toolEvents.length} events</span>
+        </div>
+        {support.toolEvents.length > 0 ? (
+          <div className="prompt-version-list">
+            {support.toolEvents.map((event) => (
+              <article className="prompt-version-card" key={event.id}>
+                <div>
+                  <strong>{event.toolName}</strong>
+                  <p className="field-note">
+                    {event.status} | {formatDate(event.createdAt)}
+                  </p>
+                  {event.errorMessage && <p>{event.errorMessage}</p>}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p>No Quira tool events have been recorded yet.</p>
         )}
       </section>
     </section>

@@ -114,9 +114,15 @@ Last updated: 2026-06-02
   commit/push, and deploy-prep flow when requested. Do not assume the user will
   manually inspect code or catch implementation mistakes in GitHub; explain
   risks and verification in plain language and make the next action explicit.
-- New Study migrations to verify on deploy through
-  `0049_seed_study_library_taxonomy.sql`.
+- Current migrations to verify on deploy through
+  `0070_expand_quira_hybrid_support.sql`.
 - Recent completed local slices:
+  - Quira is now chat-first across shared launcher surfaces, supports limited
+    public chat for general QuesIQ/product/beta/signup questions, preserves
+    signed-in private support context, can create leads/support cases through
+    backend tools, stores tool events, and exposes Admin visibility for prompt,
+    vector sync state, knowledge articles, leads, cases, conversations, and
+    tool calls.
   - Job Targets now support true edit, delete, persisted active target, and
     target-aware Home nudges.
   - TMAAT saved stories now support delete from card/detail views.
@@ -505,8 +511,9 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 - ESLint passed.
 - TypeScript check passed.
-- Latest local feedback/progression/UI/Quira baseline and Story Lab Phase 1/2/3
-  checks passed: ESLint, TypeScript, and production build.
+- Latest local feedback/progression/UI/Quira baseline, Quira hybrid
+  support/knowledge, and Story Lab Phase 1/2/3 checks passed: ESLint,
+  TypeScript, lane guard, and production build.
 - Next production build passed.
 - Latest local review/debrief prompt work passed ESLint, TypeScript check, and
   production build. Build output includes `/api/realtime/debrief`.
@@ -637,11 +644,12 @@ path until Phase 2 navigation is completed unless the product direction changes.
 ## Next Best Work
 
 1. Deploy/user-confirm QA the latest Story Lab, prompt, debrief, progression,
-   job-target UI changes, and Study import work on `quesiq-web`. Confirm
-   migrations through `0049_seed_study_library_taxonomy.sql` run before testing
-   Introduction Builder, Intro Practice, verbal Debrief, Story Practice
-   coaching history, Tell Que story capture, saved Job Targets, Admin
-   Diagnostics, AI Usage prompt links/raw metadata, and Study library taxonomy.
+   job-target UI changes, Study import work, and Quira hybrid support on
+   `quesiq-web`. Confirm migrations through
+   `0070_expand_quira_hybrid_support.sql` run before testing Introduction
+   Builder, Intro Practice, verbal Debrief, Story Practice coaching history,
+   Tell Que story capture, saved Job Targets, Admin Diagnostics, AI Usage prompt
+   links/raw metadata, Study library taxonomy, and Quira public/signed-in chat.
 2. Run/user-confirm Study library taxonomy QA: run
    `scripts/study/seed_test_decks.sql`, confirm mapped audience-tag filters in
    `/study/library`, then run `scripts/study/cleanup_test_decks.sql`.
@@ -733,8 +741,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
   `/api/realtime/debrief`. Do not build new written debrief UX unless product
   direction changes.
 - `tsconfig.tsbuildinfo` is generated TypeScript cache and intentionally ignored.
-- Migrations through `0049_seed_study_library_taxonomy.sql` must be applied
-  before using the updated Story Lab and Study library taxonomy paths in
-  production. The Render start command currently runs Drizzle migrations before
-  `npm start`, so it should apply automatically on deploy, but verify it in
+- Migrations through `0070_expand_quira_hybrid_support.sql` must be applied
+  before using public Quira chat, lead capture, and Quira vector sync metadata
+  in production. The Render start command currently runs `npm run db:migrate &&
+  npm start`, so it should apply automatically on deploy, but verify it in
   Render logs before QA.

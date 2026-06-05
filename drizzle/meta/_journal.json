@@ -484,6 +484,13 @@
       "when": 1780779600000,
       "tag": "0069_remove_turn_prefetch_eval_prompt_append",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1780866000000,
+      "tag": "0070_expand_quira_hybrid_support",
+      "breakpoints": true
     }
   ]
 }

@@ -4607,8 +4607,28 @@ textarea::placeholder {
   max-width: 33rem;
 }
 
-.quira-mode {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.quira-receptionist-copy {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}
+
+.quira-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.quira-toolbar button {
+  background: var(--surface-raised);
+  border-color: var(--border);
+  min-height: 2.45rem;
+  padding: var(--space-2) var(--space-3);
+}
+
+.quira-toolbar button.active,
+.quira-toolbar button:hover {
+  background: var(--focus-soft);
+  border-color: var(--focus);
 }
 
 .quira-topics {
@@ -4641,6 +4661,25 @@ textarea::placeholder {
 
 .quira-answer p {
   margin-bottom: 0;
+}
+
+.quira-message-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.quira-message {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.8rem;
+}
+
+.quira-message.user {
+  background: var(--surface-raised);
+  border-color: rgba(136, 95, 255, 0.45);
 }
 .context-checklist span {
   background: var(--surface-raised);

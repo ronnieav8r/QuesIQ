@@ -62,23 +62,23 @@ async function readJsonBody<T>(response: Response) {
 const quickActions: QuickAction[] = [
   {
     action: "send",
-    label: "Practice won't start",
-    message:
-      "Practice won't start. Please help me troubleshoot the current screen and session.",
+    label: "What is QuesIQ?",
+    message: "What is QuesIQ and which product should I use?",
   },
   {
     action: "send",
-    label: "Review missing",
+    label: "Beta access",
+    message: "How do I get beta access or create an account?",
+  },
+  {
+    action: "send",
+    label: "Troubleshoot this",
     message:
-      "My review is missing. Please help me understand what to check on this screen and session.",
+      "Please help me troubleshoot what I am doing on this screen.",
   },
   {
     action: "bug",
-    label: "Report a bug",
-  },
-  {
-    action: "ask",
-    label: "Ask a question",
+    label: "Report issue",
   },
 ];
 
@@ -169,17 +169,18 @@ export function QuiraChatLauncher({
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const messageIdRef = useRef(0);
   const canSubmitBug = Boolean(bugMessage.trim() || rating || screenshot);
-  const supportLocked = !authLoaded || !signedIn;
+  const chatLocked = !authLoaded;
+  const reportLocked = !authLoaded || !signedIn;
   const emptyStateText = useMemo(() => {
     if (!authLoaded) {
       return "Checking support access.";
     }
 
     if (!signedIn) {
-      return "Quira can help with QuesIQ questions after you sign in. Create an account or sign in to start a support chat.";
+      return "Ask general QuesIQ, beta, signup, and product questions. Sign in for account-specific troubleshooting.";
     }
 
-    return "Ask about this screen, troubleshooting, or how QuesIQ works.";
+    return "Ask about this screen, your account, troubleshooting, or how QuesIQ works.";
   }, [authLoaded, signedIn]);
 
   function openChat() {
@@ -227,11 +228,6 @@ export function QuiraChatLauncher({
       return;
     }
 
-    if (!signedIn) {
-      setError("Sign in to use support chat.");
-      return;
-    }
-
     if (!nextMessage) {
       setError("Write a message first.");
       return;
@@ -257,6 +253,7 @@ export function QuiraChatLauncher({
           product,
           screen,
           sessionId,
+          source: signedIn ? "signed_in" : "public",
         }),
         headers: {
           "Content-Type": "application/json",
@@ -300,7 +297,7 @@ export function QuiraChatLauncher({
   }
 
   async function submitBugReport() {
-    if (supportLocked) {
+    if (reportLocked) {
       setError("Sign in to send a bug report from Quira.");
       return;
     }
@@ -415,28 +412,19 @@ export function QuiraChatLauncher({
                 <div className="section-head">
                   <div>
                     <p className="eyebrow">Quira</p>
-                    <h2 id="quira-title">Support chat</h2>
+                    <h2 id="quira-title">Ask Quira</h2>
                   </div>
                   <button className="quiet-button" onClick={close} type="button">
                     Close
                   </button>
                 </div>
 
-                <div className="feedback-kind quira-mode" aria-label="Support mode">
-                  <button
-                    className={mode === "chat" ? "active" : ""}
-                    onClick={() => setMode("chat")}
-                    type="button"
-                  >
-                    Chat
-                  </button>
-                  <button
-                    className={mode === "bug" ? "active" : ""}
-                    onClick={() => setMode("bug")}
-                    type="button"
-                  >
-                    Bug
-                  </button>
+                <p className="quira-receptionist-copy">
+                  Ask Quira about QuesIQ, this screen, billing, account setup, or
+                  report an issue.
+                </p>
+
+                <div className="quira-toolbar" aria-label="Quira chat controls">
                   <button
                     onClick={() => {
                       setChatMessages([]);
@@ -448,19 +436,28 @@ export function QuiraChatLauncher({
                   >
                     New chat
                   </button>
+                  <button
+                    className={mode === "bug" ? "active" : ""}
+                    onClick={() => setMode(mode === "bug" ? "chat" : "bug")}
+                    type="button"
+                  >
+                    {mode === "bug" ? "Back to chat" : "Report issue"}
+                  </button>
                 </div>
 
-                <div className="quira-topics" aria-label="Quick actions">
-                  {quickActions.map((action) => (
-                    <button
-                      key={action.label}
-                      onClick={() => runQuickAction(action)}
-                      type="button"
-                    >
-                      {action.label}
-                    </button>
-                  ))}
-                </div>
+                {mode === "chat" && chatMessages.length === 0 && (
+                  <div className="quira-topics" aria-label="Quick actions">
+                    {quickActions.map((action) => (
+                      <button
+                        key={action.label}
+                        onClick={() => runQuickAction(action)}
+                        type="button"
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 <section
                   aria-live="polite"
@@ -486,40 +483,18 @@ export function QuiraChatLauncher({
                       )}
                     </>
                   ) : (
-                    <div
-                      style={{
-                        display: "grid",
-                        gap: "0.75rem",
-                      }}
-                    >
+                    <div className="quira-message-list">
                       {chatMessages.map((message) => (
                         <article
+                          className={`quira-message ${message.role}`}
                           key={message.id}
-                          style={{
-                            background:
-                              message.role === "assistant"
-                                ? "var(--surface-card)"
-                                : "var(--surface-raised)",
-                            border: "1px solid var(--border)",
-                            borderRadius: "var(--radius-sm)",
-                            display: "grid",
-                            gap: "0.35rem",
-                            padding: "0.8rem",
-                          }}
                         >
                           <strong>{message.role === "assistant" ? "Quira" : "You"}</strong>
                           <p>{message.body}</p>
                         </article>
                       ))}
                       {pending && (
-                        <article
-                          style={{
-                            background: "var(--surface-card)",
-                            border: "1px solid var(--border)",
-                            borderRadius: "var(--radius-sm)",
-                            padding: "0.8rem",
-                          }}
-                        >
+                        <article className="quira-message">
                           <strong>Quira</strong>
                           <p>Thinking...</p>
                         </article>
@@ -534,19 +509,20 @@ export function QuiraChatLauncher({
                       <span>Message</span>
                       <textarea
                         onChange={(event) => setDraft(event.target.value)}
-                        placeholder="Ask about this screen, a missing review, or how to use QuesIQ."
+                        placeholder="Ask Quira a question or describe what you need."
                         ref={composerRef}
-                        rows={4}
+                        rows={3}
                         value={draft}
                       />
                     </label>
                     <p className="feedback-context">
-                      Sending {product} / {screen}
-                      {sessionId ? ` / ${sessionId}` : ""}.
+                      {signedIn
+                        ? `Sending ${product} / ${screen}${sessionId ? ` / ${sessionId}` : ""}.`
+                        : "Public chat can answer general questions. Sign in for private account or session help."}
                     </p>
                     <div className="inline-actions">
                       <button
-                        disabled={pending || !authLoaded || !signedIn || !draft.trim()}
+                        disabled={pending || chatLocked || !draft.trim()}
                         onClick={() => void sendChatMessage()}
                         type="button"
                       >
@@ -608,7 +584,7 @@ export function QuiraChatLauncher({
                       Quira will include {product} / {screen}
                       {sessionId ? ` / ${sessionId}` : ""}.
                     </p>
-                    {supportLocked && (
+                    {reportLocked && (
                       <p className="feedback-context">
                         Sign in to send a bug report from inside QuesIQ.
                       </p>
@@ -617,7 +593,7 @@ export function QuiraChatLauncher({
                     <div className="inline-actions">
                       <button
                         disabled={
-                          supportLocked || !canSubmitBug || submitState === "sending"
+                          reportLocked || !canSubmitBug || submitState === "sending"
                         }
                         onClick={() => void submitBugReport()}
                         type="button"

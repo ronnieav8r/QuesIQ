@@ -69,6 +69,7 @@ export async function POST(request: Request) {
           email: appSession.user.email,
           id: appSession.user.id,
           name: appSession.user.name,
+          source: "signed_in",
         },
       );
     }

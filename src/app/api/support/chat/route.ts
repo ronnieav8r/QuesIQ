@@ -12,10 +12,6 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   const appSession = await auth();
 
-  if (!appSession?.user?.id) {
-    return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
-  }
-
   if (!process.env.DATABASE_URL) {
     return NextResponse.json(
       { error: "Quira support chat needs a configured database." },
@@ -29,7 +25,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Add a message before sending." }, { status: 400 });
   }
 
-  if (!checkQuiraRateLimit(appSession.user.id)) {
+  const rateLimitKey =
+    appSession?.user?.id ??
+    `public:${request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "unknown"}`;
+
+  if (!checkQuiraRateLimit(rateLimitKey)) {
     return NextResponse.json(
       { error: "Too many Quira messages. Wait a minute and try again." },
       { status: 429 },
@@ -38,9 +38,10 @@ export async function POST(request: Request) {
 
   try {
     const result = await handleQuiraChat(input, {
-      email: appSession.user.email,
-      id: appSession.user.id,
-      name: appSession.user.name,
+      email: appSession?.user?.email,
+      id: appSession?.user?.id,
+      name: appSession?.user?.name,
+      source: appSession?.user?.id ? "signed_in" : "public",
     });
 
     return NextResponse.json(result);

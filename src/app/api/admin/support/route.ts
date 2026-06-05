@@ -4,6 +4,7 @@ import { requireAdminSession } from "@/server/admin";
 import {
   listQuiraAdminSupportData,
   parseQuiraSupportCaseStatus,
+  syncQuiraKnowledgeToVectorStore,
   updateQuiraSupportCaseStatus,
 } from "@/server/support/quira-support";
 
@@ -78,6 +79,45 @@ export async function PUT(request: Request) {
 
     return NextResponse.json(
       { error: "Quira support case could not be updated." },
+      { status: 503 },
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  const appSession = await requireAdminSession();
+
+  if (!appSession?.user?.id) {
+    return NextResponse.json({ error: "Admin access is required." }, { status: 403 });
+  }
+
+  const body = (await request.json().catch(() => ({}))) as {
+    action?: unknown;
+  };
+
+  if (body.action !== "sync_vector_store") {
+    return NextResponse.json({ error: "Unsupported Quira admin action." }, { status: 400 });
+  }
+
+  if (!process.env.DATABASE_URL) {
+    return NextResponse.json(
+      { error: "Quira vector sync needs a configured database." },
+      { status: 503 },
+    );
+  }
+
+  try {
+    const result = await syncQuiraKnowledgeToVectorStore();
+
+    return NextResponse.json({ result });
+  } catch (error) {
+    console.error("Quira vector sync failed.", error);
+
+    return NextResponse.json(
+      {
+        detail: error instanceof Error ? error.message : "Quira vector sync failed.",
+        error: "Quira vector sync could not complete.",
+      },
       { status: 503 },
     );
   }

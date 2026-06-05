@@ -37,12 +37,14 @@ Last updated: 2026-06-02
 - User is not expecting to manually review code for correctness. Future Codex
   passes should own verification, explain outcomes plainly, and when requested
   prepare the GitHub push/deploy path instead of leaving that work to the user.
-- Latest pushed integration pass before the account-routing slice:
-  `691ccad Fix turn-based voice hook warnings`.
+- Latest integration focus: Quira chat-first support and hybrid knowledge.
 - Quira support chatbot V1 is active inside the shared app platform. It includes
-  signed-in `/api/support/chat`, `/api/support/report`, Quira storage tables,
-  Admin Support readout/status updates, prompt key `quira_support_chat`, and
-  shared messenger-style support UI hosted across the product apps.
+  shared chat-first launcher UI, limited public `/api/support/chat`, signed-in
+  private support context, `/api/support/report`, Quira storage tables, lead
+  capture, tool-event storage, Admin Support readout/status updates, prompt key
+  `quira_support_chat`, optional OpenAI vector-store file search through
+  `OPENAI_QUIRA_VECTOR_STORE_ID`, and shared messenger-style support UI hosted
+  across the marketing page and product apps.
 
 ## Built So Far
 
@@ -418,13 +420,18 @@ Last updated: 2026-06-02
   - global support now uses a small Quira launcher instead of a plain Feedback
     button
   - launcher is chat-first and opens a messenger-style support window
-  - Quira chat runs through `/api/support/chat` with signed-in context, curated
-    KB, and support-case tool escalation
+  - Quira chat runs through `/api/support/chat` with limited public chat for
+    general brand/product/beta/signup questions and signed-in context for
+    private account/session troubleshooting
+  - Quira can use curated Postgres KB, optional OpenAI vector-store file search,
+    support-case tool escalation, lead capture, and safe Interview session
+    snapshots for signed-in users
   - explicit Quira bug/feedback reports save into Quira support storage via
     `/api/support/report` (conversation + case), with compatibility support for
     `/api/feedback` callers that set `supportSource: "quira"`
-  - Admin support now includes practical case workflow controls (status update)
-    and conversation message context, not only read-only lists
+  - Admin support now includes prompt visibility, vector sync state, knowledge
+    article metadata, leads, practical case workflow controls, conversations,
+    messages, and recent tool events
 - Story Lab Phase 1 started:
   - the former Stories placeholder is now positioned as Story Lab
   - users can now choose Tell Que, Dictate, or Type as story-capture modes:
@@ -796,17 +803,22 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
    visible by default, hide only on meaningful downward scroll, show
    immediately on upward scroll, and never hide during active voice/session,
    error, modal, save, or onboarding states.
-16. Later Quira work: extend KB management and add richer case workflow
+16. Quira follow-up QA: after deploy, verify public marketing-page chat can
+   answer general QuesIQ/product/beta/signup questions, signed-in app chat can
+   use product/screen/session context, Quira can create leads and support cases,
+   Admin > Quira shows prompt, vector sync state, knowledge articles, leads,
+   cases, conversations, and tool events, and vector search is used only when
+   `OPENAI_QUIRA_VECTOR_STORE_ID` is configured.
+17. Later Quira work: extend KB management and add richer case workflow
    operations (assignment/history/triage notes) without overbuilding ticketing.
-17. Product gap backlog from the Bubble reference, ordered by current user value:
-   richer coaching memory controls, tuning XP rules from beta behavior, and
-   AI-backed Quira support.
-18. Treat standalone anonymous bug reports, in-app marketing/blog pages,
+18. Product gap backlog from the Bubble reference, ordered by current user value:
+   richer coaching memory controls and tuning XP rules from beta behavior.
+19. Treat standalone anonymous bug reports, in-app marketing/blog pages,
    payments, industry packs, mascot work, and VAPI parity as lower-priority
    until the core practice loop and retention features are stronger.
-19. Continue deploy-based QA on `quesiq-web` while localhost preview is
+20. Continue deploy-based QA on `quesiq-web` while localhost preview is
    deprecated until we intentionally fix it.
-20. Before broader live traffic, establish the documented branch/release flow:
+21. Before broader live traffic, establish the documented branch/release flow:
    scoped `codex/*` work branches, `main` as stable integration, and `live` as
    the exact production branch after the current production commit is confirmed.
 
