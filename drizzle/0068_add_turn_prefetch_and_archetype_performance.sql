@@ -78,11 +78,3 @@ States include brief_feedback, more_feedback, retry_answer, move_on, and wrap_up
 This prompt slot is intentionally inactive until final responder prompt wording is approved.$$
   )
 ON CONFLICT ("key", "version") DO NOTHING;
---> statement-breakpoint
-UPDATE "prompt_configs"
-SET
-  "instructions" = "instructions" || E'\nIf turn archetype metadata is provided, return archetypePerformance entries summarizing performance by archetype using only transcript-backed evidence. If no archetype metadata is available, return an empty archetypePerformance array.',
-  "updated_at" = now()
-WHERE "key" = 'session_evaluation'
-  AND "active" = true
-  AND "instructions" NOT ILIKE '%archetypePerformance%';

@@ -470,6 +470,20 @@
       "when": 1780689600000,
       "tag": "0067_add_interview_question_audio_cache",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1780776000000,
+      "tag": "0068_add_turn_prefetch_and_archetype_performance",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1780779600000,
+      "tag": "0069_remove_turn_prefetch_eval_prompt_append",
+      "breakpoints": true
     }
   ]
 }

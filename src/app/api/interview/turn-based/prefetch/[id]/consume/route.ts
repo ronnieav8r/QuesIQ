@@ -12,6 +12,11 @@ type RouteParams = {
 };
 
 type RequestBody = {
+  answerDurationSeconds?: number;
+  answerTranscript?: string;
+  timingSource?: "turn_based_recording_window";
+  wordCount?: number;
+  wordsPerMinute?: number;
   sessionId?: string;
 };
 
@@ -44,6 +49,15 @@ export async function POST(request: Request, { params }: RouteParams) {
     const result = await consumeTurnBasedInterviewPrefetch({
       id,
       sessionId,
+      transcript: body.answerTranscript?.trim() || undefined,
+      transcriptMetrics: body.answerTranscript?.trim()
+        ? {
+            answerDurationSeconds: body.answerDurationSeconds,
+            timingSource: body.timingSource,
+            wordCount: body.wordCount,
+            wordsPerMinute: body.wordsPerMinute,
+          }
+        : undefined,
       userId: appSession.user.id,
     });
 

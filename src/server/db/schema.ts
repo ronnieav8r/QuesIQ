@@ -457,7 +457,9 @@ export const interviewTurnPrefetches = pgTable(
       .notNull(),
     turnIndex: integer("turn_index").notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
   },
   (prefetch) => ({
     requestHashIdx: uniqueIndex("interview_turn_prefetches_request_hash_idx").on(

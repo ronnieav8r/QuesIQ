@@ -31,6 +31,7 @@ const lanes = {
     "drizzle/0066_allow_interview_question_queue_attempts.sql",
     "drizzle/0067_add_interview_question_audio_cache.sql",
     "drizzle/0068_add_turn_prefetch_and_archetype_performance.sql",
+    "drizzle/0069_remove_turn_prefetch_eval_prompt_append.sql",
     "drizzle/meta/_journal.json",
     "docs/products/interview/",
     "scripts/guards/check-lane.mjs",

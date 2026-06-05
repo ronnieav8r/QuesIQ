@@ -33,6 +33,7 @@ type TurnPayload = {
   answerAudioBase64?: string;
   answerDurationSeconds?: number;
   answerMimeType?: string;
+  answerTranscript?: string;
   endAfterAnswer?: boolean;
   priorTurns: VoiceTranscriptTurn[];
   sessionId: string;
@@ -115,6 +116,25 @@ function canShowSessionCountdown(phase: TurnBasedPhase) {
   return phase === "connecting" || phase === "live";
 }
 
+function isMoveOnIntent(text?: string) {
+  const normalized = text?.trim().toLowerCase() ?? "";
+
+  if (!normalized) {
+    return false;
+  }
+
+  const asksToMoveOn =
+    /\b(move on|next question|new question|go on|continue|skip this|skip it)\b/.test(
+      normalized,
+    );
+  const asksToStay =
+    /\b(more feedback|more detail|explain|try again|retry|repeat|same question|not yet|don't|do not)\b/.test(
+      normalized,
+    );
+
+  return asksToMoveOn && !asksToStay;
+}
+
 export function TurnBasedVoiceSession({
   config,
   onArtifactChange,
@@ -161,6 +181,7 @@ export function TurnBasedVoiceSession({
   const [turnCount, setTurnCount] = useState(0);
   const [requesting, setRequesting] = useState(false);
   const [openingPrefetch, setOpeningPrefetch] = useState<PrefetchState>({ status: "idle" });
+  const [moveOnPrefetch, setMoveOnPrefetch] = useState<PrefetchState>({ status: "idle" });
 
   const latestEvents = useMemo(() => artifactDraft.events.slice(-6).reverse(), [artifactDraft.events]);
   const maxAnswerSeconds = config.maxAnswerSeconds ?? 60;
@@ -549,6 +570,7 @@ export function TurnBasedVoiceSession({
     }
 
     try {
+      setMoveOnPrefetch({ status: "loading" });
       appendEvent("turn_based.prefetch.move_on.request");
       const response = await fetch("/api/interview/turn-based/prefetch", {
         body: JSON.stringify({
@@ -562,23 +584,103 @@ export function TurnBasedVoiceSession({
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
+      const body = (await response.json()) as {
+        id?: string;
+        payload?: NextTurnResponse;
+      };
 
-      appendEvent(
-        response.ok
-          ? "turn_based.prefetch.move_on.ready"
-          : "turn_based.prefetch.move_on.failed",
-      );
+      if (!response.ok || !body.id || !body.payload || !isSessionActive(runId)) {
+        setMoveOnPrefetch({ status: "failed" });
+        appendEvent("turn_based.prefetch.move_on.failed");
+        return;
+      }
+
+      setMoveOnPrefetch({ id: body.id, payload: body.payload, status: "ready" });
+      appendEvent("turn_based.prefetch.move_on.ready");
     } catch {
+      setMoveOnPrefetch({ status: "failed" });
       appendEvent("turn_based.prefetch.move_on.failed");
+    }
+  }
+
+  async function consumeMoveOnPrefetch(
+    runId: number,
+    answerTranscript?: string,
+    transcriptMetrics?: Pick<
+      VoiceTranscriptTurn,
+      "answerDurationSeconds" | "timingSource" | "wordCount" | "wordsPerMinute"
+    >,
+  ) {
+    if (moveOnPrefetch.status !== "ready") {
+      return false;
+    }
+
+    try {
+      updateRequesting(true);
+      appendEvent("turn_based.prefetch.move_on.consume_request");
+      const response = await fetch(
+        `/api/interview/turn-based/prefetch/${moveOnPrefetch.id}/consume`,
+        {
+          body: JSON.stringify({
+            answerDurationSeconds: transcriptMetrics?.answerDurationSeconds,
+            answerTranscript,
+            sessionId,
+            timingSource: transcriptMetrics?.timingSource,
+            wordCount: transcriptMetrics?.wordCount,
+            wordsPerMinute: transcriptMetrics?.wordsPerMinute,
+          }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        },
+      );
+      const body = (await response.json()) as {
+        payload?: NextTurnResponse;
+      };
+
+      if (!response.ok || !body.payload) {
+        appendEvent("turn_based.prefetch.move_on.consume_miss");
+        updateRequesting(false);
+        return false;
+      }
+
+      appendEvent("turn_based.prefetch.move_on.consumed");
+      setMoveOnPrefetch({ status: "idle" });
+      await applyTurnResponse(
+        {
+          ...moveOnPrefetch.payload,
+          ...body.payload,
+          questionAudioBase64:
+            body.payload.questionAudioBase64 ?? moveOnPrefetch.payload.questionAudioBase64,
+          questionAudioMimeType:
+            body.payload.questionAudioMimeType ?? moveOnPrefetch.payload.questionAudioMimeType,
+        },
+        runId,
+      );
+      return true;
+    } catch {
+      appendEvent("turn_based.prefetch.move_on.consume_error");
+      updateRequesting(false);
+      return false;
     }
   }
 
   async function requestTurn(payload: TurnPayload) {
     const runId = sessionRunIdRef.current;
+    if (
+      snapshot.modeKey === "coaching" &&
+      payload.answerTranscript &&
+      isMoveOnIntent(payload.answerTranscript)
+    ) {
+      const usedPrefetch = await consumeMoveOnPrefetch(runId, payload.answerTranscript);
+      if (usedPrefetch) {
+        return;
+      }
+    }
+
     const abortController = new AbortController();
     currentRequestAbortRef.current?.abort();
     currentRequestAbortRef.current = abortController;
-    requestContainsAnswerRef.current = Boolean(payload.answerAudioBase64);
+    requestContainsAnswerRef.current = Boolean(payload.answerAudioBase64 || payload.answerTranscript);
     updateRequesting(true);
     appendEvent("turn_based.next_turn.request");
     try {

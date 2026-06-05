@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { createHash, randomUUID } from "node:crypto";
 
 import type {
@@ -27,6 +27,7 @@ import {
 } from "@/server/pricing/ai-pricing";
 import type { InterviewRuntimeConfigRecord } from "@/server/interview/runtime-configs";
 import { listStoryLibraryContext } from "@/server/stories/stories";
+import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 
 type PriorTurn = {
   feedback?: string;
@@ -228,6 +229,25 @@ function latestAssistantPromptWasRetry(priorTurns: PriorTurn[]) {
   const text = latestAssistantTurn?.text ?? latestAssistantTurn?.question ?? "";
 
   return /\bretry\b|\btry again\b/i.test(text);
+}
+
+function isMoveOnIntent(text?: string) {
+  const normalized = text?.trim().toLowerCase() ?? "";
+
+  if (!normalized) {
+    return false;
+  }
+
+  const asksToMoveOn =
+    /\b(move on|next question|new question|go on|continue|skip this|skip it)\b/.test(
+      normalized,
+    );
+  const asksToStay =
+    /\b(more feedback|more detail|explain|try again|retry|repeat|same question|not yet|don't|do not)\b/.test(
+      normalized,
+    );
+
+  return asksToMoveOn && !asksToStay;
 }
 
 function parseDecision(
@@ -617,6 +637,59 @@ export function buildTurnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) 
   ].join(" ");
 }
 
+function buildTurnOutputContract() {
+  return [
+    "Output contract: return only compact JSON with keys state, detectedUserIntent, archetypeId, question, feedback, routingReason, targetSkill, and done.",
+    "Allowed state and detectedUserIntent values: opening_question, awaiting_answer, brief_feedback_choice, more_feedback, retry_answer, move_on, wrap_up.",
+    "Generate at most one Que spoken question. Keep feedback short unless the active prompt explicitly asks for more detail.",
+    "Do not invent candidate facts, company facts, resume facts, credentials, metrics, or motivations.",
+    "Set done true only when the session should end or wrap up.",
+  ].join(" ");
+}
+
+async function getTurnPromptRuntime(input: {
+  configuredModel: string;
+  modeKey: SessionSetupSnapshot["modeKey"];
+}) {
+  const [plannerPrompt, responderPrompt] = await Promise.all([
+    getActivePromptConfig("turn_question_planner"),
+    getActivePromptConfig("turn_coaching_responder"),
+  ]);
+  const activeLayers = [
+    plannerPrompt.active
+      ? `Turn question planner (${plannerPrompt.name} v${plannerPrompt.version}):\n${plannerPrompt.instructions}`
+      : undefined,
+    responderPrompt.active
+      ? `Turn coaching responder (${responderPrompt.name} v${responderPrompt.version}):\n${responderPrompt.instructions}`
+      : undefined,
+  ].filter(Boolean);
+
+  if (activeLayers.length === 0) {
+    return {
+      model: input.configuredModel,
+      promptConfigKeys: [],
+      systemPrompt: buildTurnSystemPrompt(input.modeKey),
+    };
+  }
+
+  return {
+    model: plannerPrompt.active
+      ? plannerPrompt.model
+      : responderPrompt.active
+        ? responderPrompt.model
+        : input.configuredModel,
+    promptConfigKeys: [
+      plannerPrompt.active
+        ? { key: plannerPrompt.key, version: plannerPrompt.version }
+        : undefined,
+      responderPrompt.active
+        ? { key: responderPrompt.key, version: responderPrompt.version }
+        : undefined,
+    ].filter(Boolean),
+    systemPrompt: [...activeLayers, buildTurnOutputContract()].join("\n\n"),
+  };
+}
+
 async function generateTurnDecision(input: {
   apiKey: string;
   config: InterviewRuntimeConfigRecord;
@@ -655,9 +728,17 @@ async function generateTurnDecision(input: {
   const mustEnd =
     Boolean(input.latestTranscript) &&
     (input.endAfterAnswer === true || input.turnIndex >= maxTurns);
+  const promptRuntime = await getTurnPromptRuntime({
+    configuredModel: input.config.textModel,
+    modeKey: input.snapshot.modeKey,
+  });
   const run = await startAiRun({
-    model: input.config.textModel,
-    rawJson: { modeKey: input.snapshot.modeKey, turnIndex: input.turnIndex },
+    model: promptRuntime.model,
+    rawJson: {
+      modeKey: input.snapshot.modeKey,
+      promptConfigKeys: promptRuntime.promptConfigKeys,
+      turnIndex: input.turnIndex,
+    },
     runType: "interview_turn",
     sessionId: input.sessionId,
     userId: input.userId,
@@ -772,7 +853,7 @@ async function generateTurnDecision(input: {
       body: JSON.stringify({
         input: [
           {
-            content: buildTurnSystemPrompt(input.snapshot.modeKey),
+            content: promptRuntime.systemPrompt,
             role: "system",
           },
           {
@@ -780,7 +861,7 @@ async function generateTurnDecision(input: {
             role: "user",
           },
         ],
-        model: input.config.textModel,
+        model: promptRuntime.model,
         text: {
           format: {
             name: "interview_turn",
@@ -857,7 +938,7 @@ async function generateTurnDecision(input: {
     if (!outputText) {
       throw new Error("Interview turn generation returned no text.");
     }
-    const pricing = await getActiveAiPricing(input.config.textModel, "text");
+    const pricing = await getActiveAiPricing(promptRuntime.model, "text");
     const estimatedCostMicroUsd = estimateTokenCostMicroUsd(
       pricing,
       body.usage?.input_tokens,
@@ -1069,6 +1150,14 @@ function decisionPayload(input: {
   };
 }
 
+function persistedPrefetchDecision(payload: TurnBasedResult) {
+  const decision = { ...payload };
+  delete decision.feedbackAudioBase64;
+  delete decision.questionAudioBase64;
+
+  return decision;
+}
+
 async function payloadFromPrefetchRow(row: typeof interviewTurnPrefetches.$inferSelect) {
   const decision = row.decision as TurnBasedResult;
   let questionAudioBase64: string | undefined;
@@ -1084,7 +1173,7 @@ async function payloadFromPrefetchRow(row: typeof interviewTurnPrefetches.$infer
 
   return {
     ...decision,
-    questionAudioBase64: questionAudioBase64 ?? decision.questionAudioBase64,
+    questionAudioBase64,
     questionAudioMimeType: row.questionAudioMimeType ?? decision.questionAudioMimeType,
   };
 }
@@ -1168,10 +1257,7 @@ export async function prefetchTurnBasedInterviewTurn(input: {
     const [prefetch] = await getDb()
       .insert(interviewTurnPrefetches)
       .values({
-        decision: {
-          ...payload,
-          questionAudioBase64: questionAudioUrl ? undefined : payload.questionAudioBase64,
-        },
+        decision: persistedPrefetchDecision(payload),
         id: prefetchId,
         modeKey: session.modeKey,
         prefetchKind: input.prefetchKind,
@@ -1187,10 +1273,7 @@ export async function prefetchTurnBasedInterviewTurn(input: {
       })
       .onConflictDoUpdate({
         set: {
-          decision: {
-            ...payload,
-            questionAudioBase64: questionAudioUrl ? undefined : payload.questionAudioBase64,
-          },
+          decision: persistedPrefetchDecision(payload),
           errorMessage: null,
           questionAudioMimeType: questionAudio ? "audio/mpeg" : undefined,
           questionAudioUrl,
@@ -1238,6 +1321,8 @@ export async function prefetchTurnBasedInterviewTurn(input: {
 export async function consumeTurnBasedInterviewPrefetch(input: {
   id: string;
   sessionId: string;
+  transcript?: string;
+  transcriptMetrics?: TurnBasedResult["transcriptMetrics"];
   userId: string;
 }): Promise<TurnPrefetchResult | undefined> {
   const [prefetch] = await getDb()
@@ -1262,6 +1347,7 @@ export async function consumeTurnBasedInterviewPrefetch(input: {
   const [turn] = await getDb()
     .insert(interviewTurnBasedTurns)
     .values({
+      answerTranscript: input.transcript,
       archetypeId: payload.archetypeId,
       feedback: payload.feedback,
       modeKey: prefetch.modeKey,
@@ -1277,6 +1363,7 @@ export async function consumeTurnBasedInterviewPrefetch(input: {
     })
     .onConflictDoUpdate({
       set: {
+        answerTranscript: input.transcript,
         archetypeId: payload.archetypeId,
         feedback: payload.feedback,
         question:
@@ -1302,10 +1389,48 @@ export async function consumeTurnBasedInterviewPrefetch(input: {
     id: prefetch.id,
     payload: {
       ...payload,
+      transcript: input.transcript,
+      transcriptMetrics: input.transcriptMetrics,
       turnId: turn.id,
     },
     status: "ready",
   };
+}
+
+export async function consumeReadyTurnBasedInterviewPrefetch(input: {
+  prefetchKind: TurnPrefetchKind;
+  sessionId: string;
+  transcript?: string;
+  transcriptMetrics?: TurnBasedResult["transcriptMetrics"];
+  turnIndex: number;
+  userId: string;
+}): Promise<TurnPrefetchResult | undefined> {
+  const [prefetch] = await getDb()
+    .select()
+    .from(interviewTurnPrefetches)
+    .where(
+      and(
+        eq(interviewTurnPrefetches.prefetchKind, input.prefetchKind),
+        eq(interviewTurnPrefetches.sessionId, input.sessionId),
+        eq(interviewTurnPrefetches.status, "ready"),
+        eq(interviewTurnPrefetches.turnIndex, input.turnIndex),
+        eq(interviewTurnPrefetches.userId, input.userId),
+      ),
+    )
+    .orderBy(desc(interviewTurnPrefetches.createdAt))
+    .limit(1);
+
+  if (!prefetch?.questionAudioUrl) {
+    return undefined;
+  }
+
+  return consumeTurnBasedInterviewPrefetch({
+    id: prefetch.id,
+    sessionId: input.sessionId,
+    transcript: input.transcript,
+    transcriptMetrics: input.transcriptMetrics,
+    userId: input.userId,
+  });
 }
 
 export async function runTurnBasedInterviewTurn(input: {
@@ -1362,6 +1487,27 @@ export async function runTurnBasedInterviewTurn(input: {
   const queuedNextQuestion = latestTranscript
     ? selectedQuestionQueue[input.turnInput.turnIndex]
     : selectedQuestionContext;
+
+  if (
+    selectedQuestionQueue.length === 0 &&
+    input.turnInput.snapshot.modeKey === "coaching" &&
+    latestTranscript &&
+    isMoveOnIntent(latestTranscript)
+  ) {
+    const prefetchedMoveOnTurn = await consumeReadyTurnBasedInterviewPrefetch({
+      prefetchKind: "move_on_question",
+      sessionId: input.turnInput.sessionId,
+      transcript: latestTranscript,
+      transcriptMetrics,
+      turnIndex: input.turnInput.turnIndex,
+      userId: input.userId,
+    });
+
+    if (prefetchedMoveOnTurn) {
+      return prefetchedMoveOnTurn.payload;
+    }
+  }
+
   const queuedSessionMustEnd =
     selectedQuestionQueue.length > 0 &&
     Boolean(latestTranscript) &&
