@@ -1,6 +1,6 @@
 # Parallel Development
 
-Last updated: 2026-05-30
+Last updated: 2026-06-05
 
 ## Rule
 
@@ -92,9 +92,9 @@ Prefer this order when multiple branches are active:
 3. Marketing changes
 4. Integration QA and release promotion
 
-## Clone Guardrails
+## Subagent And Clone Guardrails
 
-The current local parallel setup uses one manager clone and four worker clones:
+The current local parallel setup uses one manager clone and product/lane clones:
 
 ```txt
 QuesIQ-manager   -> main, manager/integration
@@ -105,11 +105,23 @@ QuesIQ-admin     -> codex/admin
 QuesIQ-quira     -> codex/quira
 ```
 
-The manager thread sends work to the worker threads, reads their handoffs,
-reviews diffs, runs lane guards, merges one branch at a time into `main`, and
-pushes `main`. Workers should not merge or push `main`.
+Perpetual lane-specific worker chats are deprecated. The manager should use
+objective-scoped subagents only when a planning objective benefits from parallel
+research, isolated implementation, or lane-local review.
 
-Before merging a worker branch, the manager should run:
+The manager owns planning, task routing, review, integration, and pushes to
+`main`. Subagents may use the lane clones and `codex/*` branches as isolated
+workspaces, but they should receive bounded assignments with explicit lane,
+clone, branch, allowed paths, expected checks, and commit/push permissions.
+
+Default subagent rule: subagents produce findings, patches, or branch diffs for
+manager review. They do not merge or push `main`. They should not commit or push
+their lane branch unless the manager assignment explicitly allows it.
+
+The manager reviews subagent output, inspects diffs, runs lane guards, merges
+one branch at a time into `main`, runs final checks, and then pushes `main`.
+
+Before merging a lane branch, the manager should run:
 
 ```txt
 npm run guard:interview -- origin/codex/interview
@@ -122,8 +134,8 @@ npm run guard:quira -- origin/codex/quira
 The lane guard checks changed files against allowed path prefixes. It does not
 replace review, but it catches obvious cross-lane edits before merge.
 
-Worker handoffs should include summary, files changed, commits, checks run,
-risks, and whether the worker branch was pushed.
+Subagent returns should include summary, files changed, commits if any, checks
+run, risks, and whether the lane branch was changed or pushed.
 
 ## Branch Sync States
 

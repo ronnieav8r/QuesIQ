@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-06-02
+Last updated: 2026-06-05
 
 ## Immediate Handoff Snapshot
 
@@ -13,15 +13,19 @@ Last updated: 2026-06-02
   workflows.
 - Current manager workspace:
   `C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-manager` on `main`.
-  Use the manager/worker clone flow in `docs/rebuild/BRANCHING_AND_RELEASES.md`
-  and `docs/platform/PARALLEL_DEVELOPMENT.md`. The older
+  Use the manager/subagent clone flow in
+  `docs/rebuild/BRANCHING_AND_RELEASES.md` and
+  `docs/platform/PARALLEL_DEVELOPMENT.md`. The older
   `C:\Users\weeks\Documents\github\QuesIQ` checkout is reference/archive.
-- Latest integration pass is `1c42658 Add admin DPE progression visibility`.
+- Latest integration pass is `4d70a8e Add Quira hybrid support chat`.
   `QuesIQ-manager/main` is clean and aligned with `origin/main` at that commit.
-- The current worker-thread set is Manager, Admin, Interview, Study, and DPE.
-  Admin owns shared `/admin` and Content Studio work; product workers own their
-  product lanes and must not work on or push `main`.
-- Quira Support has been added as a new worker lane/clone for signed-in CS/TS
+- Perpetual lane-specific worker chats are deprecated. The manager may dispatch
+  objective-scoped subagents into the existing lane clones when parallel work,
+  lane-local implementation, or independent review is useful. Admin owns shared
+  `/admin` and Content Studio work; product lanes own their product files.
+  Subagents must stay within the assigned clone/branch/path scope and must not
+  merge or push `main`.
+- Quira Support has been added as a product lane/clone for signed-in CS/TS
   chatbot work: `QuesIQ-quira` on `codex/quira`. The first slice adds the
   Quira storage/API/prompt/Admin-review foundation and replaces the
   Interview-only static help launcher with a shared support chat UI.

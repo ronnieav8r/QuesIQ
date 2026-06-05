@@ -1,6 +1,6 @@
 # Branching And Releases
 
-Last updated: 2026-05-30
+Last updated: 2026-06-05
 
 ## Goal
 
@@ -32,26 +32,34 @@ would make the branch name comforting but inaccurate.
    production.
 7. Deploy production from `live` after Render is configured for the branch.
 
-## Manager And Worker Clone Flow
+## Manager, Subagent, And Clone Flow
 
-For parallel product work, use separate full clones. Each clone has its own
-`.git` folder so Codex workers do not share Git metadata:
+For parallel product work, keep using separate full clones. Each clone has its
+own `.git` folder so objective-scoped subagents do not share Git metadata:
 
 ```txt
 C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-manager   -> main, manager/integration
 C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-interview -> codex/interview
 C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-study     -> codex/study
 C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-dpe       -> codex/dpe
+C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-admin     -> codex/admin
 C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-quira     -> codex/quira
 ```
 
-The manager thread owns task routing, review, integration, and pushes to
-`main`. Worker threads work only in their assigned clone and branch.
+Perpetual lane-specific worker chats are deprecated. The manager owns task
+routing, review, integration, and pushes to `main`. The manager may dispatch
+one or more subagents for a planning objective when parallel lane work or
+independent review is useful.
 
-Workers should not merge to `main`. They should finish scoped work, run relevant
-checks, and produce a handoff. The manager should inspect the branch, run the
-matching lane guard, merge one branch at a time into `main`, then run final
-checks.
+Subagents should work only in the clone, branch, and paths named in their
+assignment. They should finish scoped work, run relevant checks, and return a
+summary plus diff/commit status. They should not merge to `main`, and they
+should not commit or push lane branches unless the manager assignment explicitly
+allows it.
+
+The manager should inspect the branch or patch, run the matching lane guard,
+merge one branch at a time into `main`, then run final checks before committing
+or pushing integration work.
 
 Lane guard commands, run from the manager folder:
 
@@ -62,21 +70,21 @@ npm run guard:dpe -- origin/codex/dpe
 npm run guard:quira -- origin/codex/quira
 ```
 
-Worker branches may be pushed to `origin/codex/*` for manager integration.
-Only the manager pushes `main`.
+Lane branches may be pushed to `origin/codex/*` for manager integration only
+when the manager assignment allows it. Only the manager pushes `main`.
 
 After each successful `main` push, the manager must not blindly update every
-worker branch. Idle worker branches should be fast-forwarded to `origin/main`.
-Active worker branches should be marked as needing an update from `origin/main`
-before final handoff, unless the manager decides to pause the worker because of
-likely shared-file conflicts.
+lane branch. Idle lane branches should be fast-forwarded to `origin/main`.
+Active subagent branches should be marked as needing an update from
+`origin/main` before final return, unless the manager decides to pause the work
+because of likely shared-file conflicts.
 
-Use these lane states when coordinating worker branches:
+Use these lane states when coordinating lane branches:
 
 ```txt
-idle              -> no active worker changes; safe to fast-forward to main
-active            -> worker is implementing; do not reset or fast-forward
-awaiting handoff  -> worker should return MANAGER HANDOFF: <Lane>
+idle              -> no active lane changes; safe to fast-forward to main
+active            -> subagent or manager is implementing; do not reset or fast-forward
+awaiting handoff  -> subagent should return a lane summary and diff/commit status
 needs rebase      -> main changed while active; update from origin/main before handoff
 ready for review  -> pushed and ready for manager guard/review/merge
 merged            -> manager merged the lane into main

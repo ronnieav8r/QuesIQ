@@ -31,8 +31,10 @@ They should not override the active docs listed above.
 - Keep shared auth/account/platform code generic. Keep product-specific session,
   evaluation, progression, content, prompt, and product data in product-owned
   lanes keyed by the shared Auth.js user id.
-- Products can move in parallel. Platform changes, auth changes, schema
-  migrations, route-shell changes, and release merges should be serialized.
+- Products can move in parallel. Perpetual lane worker chats are deprecated;
+  use objective-scoped subagents and the lane clones only when parallel work or
+  isolated review is useful. Platform changes, auth changes, schema migrations,
+  route-shell changes, and release merges should be serialized.
 - Build thin runnable slices and keep the plan docs current when durable
   decisions change.
 - When adding a new AI feature or OpenAI call, include Admin AI Usage
