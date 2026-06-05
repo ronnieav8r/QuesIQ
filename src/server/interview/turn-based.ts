@@ -2,6 +2,7 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import { createHash, randomUUID } from "node:crypto";
 
 import type {
+  CoachingChoiceIntent,
   CoachingTurnState,
   SessionSetupSnapshot,
   VoiceTranscriptTurn,
@@ -44,6 +45,7 @@ export type TurnBasedInput = {
   answerMimeType?: string;
   answerTranscript?: string;
   endAfterAnswer?: boolean;
+  explicitChoiceIntent?: CoachingChoiceIntent;
   priorTurns: PriorTurn[];
   sessionId: string;
   snapshot: SessionSetupSnapshot;
@@ -231,23 +233,73 @@ function latestAssistantPromptWasRetry(priorTurns: PriorTurn[]) {
   return /\bretry\b|\btry again\b/i.test(text);
 }
 
-function isMoveOnIntent(text?: string) {
+function latestAssistantPromptWasChoice(priorTurns: PriorTurn[]) {
+  const latestAssistantTurn = [...priorTurns]
+    .reverse()
+    .find((turn) => turn.role === "assistant" || turn.speaker === "Que");
+  const text = (
+    latestAssistantTurn?.text ??
+    latestAssistantTurn?.question ??
+    ""
+  ).toLowerCase();
+
+  return (
+    text.includes("more feedback") ||
+    text.includes("try again") ||
+    text.includes("move on")
+  );
+}
+
+function normalizeCoachingChoiceIntent(value: unknown): CoachingChoiceIntent | undefined {
+  return value === "more_feedback" ||
+    value === "move_on" ||
+    value === "try_again" ||
+    value === "unclear"
+    ? value
+    : undefined;
+}
+
+function classifyCoachingChoiceDeterministic(text?: string): CoachingChoiceIntent | undefined {
   const normalized = text?.trim().toLowerCase() ?? "";
 
   if (!normalized) {
-    return false;
+    return undefined;
   }
 
-  const asksToMoveOn =
-    /\b(move on|next question|new question|go on|continue|skip this|skip it)\b/.test(
+  const asksMore =
+    /\b(more feedback|more detail|explain|explanation|what was missing|how can i improve|what should i fix|coach me|advice)\b/.test(
       normalized,
     );
-  const asksToStay =
-    /\b(more feedback|more detail|explain|try again|retry|repeat|same question|not yet|don't|do not)\b/.test(
+  const asksRetry =
+    /\b(try again|retry|redo|same question|answer again|let me answer again|practice that)\b/.test(
       normalized,
     );
+  const asksMoveOn =
+    /\b(move on|next question|new question|continue|skip|keep going|go ahead)\b/.test(
+      normalized,
+    );
+  const negatesMoveOn = /\b(don't|do not|not yet|not now|no)\b.{0,24}\b(move on|next|skip|continue)\b/.test(
+    normalized,
+  );
+  const hits = [asksMore, asksRetry, asksMoveOn && !negatesMoveOn].filter(Boolean).length;
 
-  return asksToMoveOn && !asksToStay;
+  if (hits !== 1) {
+    return undefined;
+  }
+
+  if (asksMoveOn && !negatesMoveOn) {
+    return "move_on";
+  }
+
+  if (asksRetry) {
+    return "try_again";
+  }
+
+  return "more_feedback";
+}
+
+function isMoveOnIntent(text?: string) {
+  return classifyCoachingChoiceDeterministic(text) === "move_on";
 }
 
 function parseDecision(
@@ -287,6 +339,82 @@ function parseDecision(
       targetSkill: fallbackTargetSkill(input.modeKey),
     };
   }
+}
+
+function normalizeCoachingDecision(input: {
+  choiceIntent?: CoachingChoiceIntent;
+  decision: TurnDecision;
+  hasLatestAnswer: boolean;
+  retryAlreadyOffered: boolean;
+  snapshot: SessionSetupSnapshot;
+}) {
+  const isStandardCoaching =
+    input.snapshot.modeKey === "coaching" &&
+    !input.snapshot.storyContext &&
+    !input.snapshot.introductionContext;
+
+  if (!isStandardCoaching || input.decision.done) {
+    return input.decision;
+  }
+
+  if (input.choiceIntent === "more_feedback") {
+    return {
+      ...input.decision,
+      detectedUserIntent: "more_feedback" as const,
+      question: "Do you want to try again or move on?",
+      state: "more_feedback" as const,
+    };
+  }
+
+  if (input.choiceIntent === "try_again") {
+    return {
+      ...input.decision,
+      detectedUserIntent: "retry_answer" as const,
+      state: "retry_answer" as const,
+    };
+  }
+
+  if (input.choiceIntent === "move_on") {
+    return {
+      ...input.decision,
+      detectedUserIntent: "move_on" as const,
+      feedback: input.decision.feedback || undefined,
+      state: "move_on" as const,
+    };
+  }
+
+  if (input.choiceIntent === "unclear") {
+    return {
+      ...input.decision,
+      detectedUserIntent: "brief_feedback_choice" as const,
+      feedback: undefined,
+      question: "Say More feedback, Try again, or Move on.",
+      state: "brief_feedback_choice" as const,
+    };
+  }
+
+  if (input.retryAlreadyOffered && input.hasLatestAnswer) {
+    return {
+      ...input.decision,
+      detectedUserIntent: "move_on" as const,
+      state: "move_on" as const,
+    };
+  }
+
+  if (
+    input.hasLatestAnswer &&
+    input.decision.state !== "retry_answer" &&
+    input.decision.state !== "wrap_up"
+  ) {
+    return {
+      ...input.decision,
+      detectedUserIntent: "brief_feedback_choice" as const,
+      question: "You can say More feedback, Try again, or Move on.",
+      state: "brief_feedback_choice" as const,
+    };
+  }
+
+  return input.decision;
 }
 
 async function transcribeAnswer(input: {
@@ -550,7 +678,24 @@ export function buildTurnTaskInstruction(
   mustEnd: boolean,
   hasLatestAnswer: boolean,
   retryAlreadyOffered: boolean,
+  coachingChoiceIntent?: CoachingChoiceIntent,
 ) {
+  if (snapshot.modeKey === "coaching" && coachingChoiceIntent) {
+    if (coachingChoiceIntent === "more_feedback") {
+      return "The user chose More feedback. Give one or two short coaching sentences about the latest answer, name one improvement only, then ask exactly: Do you want to try again or move on?";
+    }
+
+    if (coachingChoiceIntent === "try_again") {
+      return "The user chose Try again. Ask the candidate to retry one specific missing element only. Do not ask for full STAR and do not ask for multiple improvements.";
+    }
+
+    if (coachingChoiceIntent === "move_on") {
+      return "The user chose Move on. Ask one completely new interview question from a different scenario, angle, or archetype. Do not revisit the same answer.";
+    }
+
+    return "The user's choice was unclear. Do not coach or ask a new interview question. Ask exactly: Say More feedback, Try again, or Move on.";
+  }
+
   if (snapshot.introductionContext) {
     return mustEnd || hasLatestAnswer
       ? "Give brief final coaching feedback on the saved introduction practice and set done true. Do not return a next question."
@@ -575,7 +720,7 @@ export function buildTurnTaskInstruction(
     }
 
     return hasLatestAnswer
-      ? "Give one short, specific coaching note about the latest answer, then ask a completely new interview question. Only ask one retry prompt when the answer is unusable, off-topic, or too fragmented to coach."
+      ? "Give one short, specific coaching note about the latest answer, then offer the fixed Coaching choice prompt. Do not ask a new interview question in the same turn unless the latest answer is unusable, off-topic, or too fragmented to coach."
       : "Generate the opening Coaching question for this session.";
   }
 
@@ -612,9 +757,12 @@ export function buildTurnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) 
       "You route QuesIQ Interview Coaching turns.",
       "Return only compact JSON with keys: state, detectedUserIntent, archetypeId, question, feedback, routingReason, targetSkill, done.",
       universalRules,
-      "Coaching is a question-answer-coach-next-question loop.",
+      "Coaching is a question-answer-coach-choice loop.",
       "After each user answer, write one brief, specific feedback sentence tied to what the user actually said.",
-      "Then ask one concise new interview question from a different scenario or angle by default.",
+      "Then ask exactly: You can say More feedback, Try again, or Move on.",
+      "Do not ask a new interview question in the same turn as the fixed Coaching choice prompt.",
+      "If the user chooses Move on, ask one concise new interview question from a different scenario or angle.",
+      "If the user chooses More feedback, give one or two short coaching sentences and ask exactly: Do you want to try again or move on?",
       "Only ask the user to retry when the latest answer is unusable, off-topic, or too fragmented to evaluate.",
       "If the previous Que prompt was a retry, move on to a completely new question no matter how incomplete the new answer was.",
       "The selected question count means distinct primary questions, not repeated retries on the same scenario.",
@@ -642,6 +790,7 @@ function buildTurnOutputContract() {
     "Output contract: return only compact JSON with keys state, detectedUserIntent, archetypeId, question, feedback, routingReason, targetSkill, and done.",
     "Allowed state and detectedUserIntent values: opening_question, awaiting_answer, brief_feedback_choice, more_feedback, retry_answer, move_on, wrap_up.",
     "Generate at most one Que spoken question. Keep feedback short unless the active prompt explicitly asks for more detail.",
+    "For Coaching after a usable answer, return state brief_feedback_choice, one short feedback sentence, and question exactly: You can say More feedback, Try again, or Move on.",
     "Do not invent candidate facts, company facts, resume facts, credentials, metrics, or motivations.",
     "Set done true only when the session should end or wrap up.",
   ].join(" ");
@@ -690,8 +839,31 @@ async function getTurnPromptRuntime(input: {
   };
 }
 
+function resolveCoachingChoiceIntent(input: {
+  explicitIntent?: CoachingChoiceIntent;
+  latestTranscript?: string;
+  priorTurns: PriorTurn[];
+}) {
+  if (input.explicitIntent) {
+    return input.explicitIntent;
+  }
+
+  if (!input.latestTranscript || !latestAssistantPromptWasChoice(input.priorTurns)) {
+    return undefined;
+  }
+
+  const deterministic = classifyCoachingChoiceDeterministic(input.latestTranscript);
+
+  if (deterministic) {
+    return deterministic;
+  }
+
+  return "unclear";
+}
+
 async function generateTurnDecision(input: {
   apiKey: string;
+  coachingChoiceIntent?: CoachingChoiceIntent;
   config: InterviewRuntimeConfigRecord;
   latestTranscript?: string;
   sessionId: string;
@@ -735,6 +907,7 @@ async function generateTurnDecision(input: {
   const run = await startAiRun({
     model: promptRuntime.model,
     rawJson: {
+      coachingChoiceIntent: input.coachingChoiceIntent,
       modeKey: input.snapshot.modeKey,
       promptConfigKeys: promptRuntime.promptConfigKeys,
       turnIndex: input.turnIndex,
@@ -750,8 +923,10 @@ async function generateTurnDecision(input: {
       mustEnd,
       Boolean(input.latestTranscript),
       retryAlreadyOffered,
+      input.coachingChoiceIntent,
     ),
     config: {
+      coachingChoiceIntent: input.coachingChoiceIntent ?? null,
       feedbackDepth: input.config.feedbackDepth,
       maxTurns,
       retryAlreadyOffered,
@@ -956,10 +1131,16 @@ async function generateTurnDecision(input: {
       totalTokens: body.usage?.total_tokens,
     });
 
-    const decision = parseDecision(outputText, {
+    const decision = normalizeCoachingDecision({
+      choiceIntent: input.coachingChoiceIntent,
+      decision: parseDecision(outputText, {
+        hasLatestAnswer: Boolean(input.latestTranscript),
+        modeKey: input.snapshot.modeKey,
+        mustEnd,
+      }),
       hasLatestAnswer: Boolean(input.latestTranscript),
-      modeKey: input.snapshot.modeKey,
-      mustEnd,
+      retryAlreadyOffered,
+      snapshot: input.snapshot,
     });
     if (
       retryAlreadyOffered &&
@@ -1012,6 +1193,7 @@ function turnPrefetchRequestHash(input: {
 
 async function createTurnPayload(input: {
   apiKey: string;
+  coachingChoiceIntent?: CoachingChoiceIntent;
   config: InterviewRuntimeConfigRecord;
   endAfterAnswer?: boolean;
   latestTranscript?: string;
@@ -1050,6 +1232,7 @@ async function createTurnPayload(input: {
         }
       : await generateTurnDecision({
           apiKey: input.apiKey,
+          coachingChoiceIntent: input.coachingChoiceIntent,
           config: input.config,
           endAfterAnswer: input.endAfterAnswer || queuedSessionMustEnd,
           latestTranscript: input.latestTranscript,
@@ -1236,6 +1419,7 @@ export async function prefetchTurnBasedInterviewTurn(input: {
   try {
     const { decision, feedbackAudio, questionAudio } = await createTurnPayload({
       apiKey,
+      coachingChoiceIntent: input.prefetchKind === "move_on_question" ? "move_on" : undefined,
       config: input.config,
       priorTurns: input.priorTurns,
       sessionId: input.sessionId,
@@ -1476,6 +1660,14 @@ export async function runTurnBasedInterviewTurn(input: {
         text: latestTranscript,
       })
     : undefined;
+  const coachingChoiceIntent =
+    input.turnInput.snapshot.modeKey === "coaching"
+      ? resolveCoachingChoiceIntent({
+          explicitIntent: normalizeCoachingChoiceIntent(input.turnInput.explicitChoiceIntent),
+          latestTranscript,
+          priorTurns: input.turnInput.priorTurns,
+        })
+      : undefined;
 
   const selectedQuestionQueue =
     input.turnInput.snapshot.selectedQuestionQueueContext?.length
@@ -1491,8 +1683,7 @@ export async function runTurnBasedInterviewTurn(input: {
   if (
     selectedQuestionQueue.length === 0 &&
     input.turnInput.snapshot.modeKey === "coaching" &&
-    latestTranscript &&
-    isMoveOnIntent(latestTranscript)
+    (coachingChoiceIntent === "move_on" || (latestTranscript && isMoveOnIntent(latestTranscript)))
   ) {
     const prefetchedMoveOnTurn = await consumeReadyTurnBasedInterviewPrefetch({
       prefetchKind: "move_on_question",
@@ -1525,8 +1716,20 @@ export async function runTurnBasedInterviewTurn(input: {
           state: "opening_question" as const,
           targetSkill: selectedQuestionContext.targetSkill || "selected question practice",
         }
+      : coachingChoiceIntent === "unclear"
+        ? {
+            detectedUserIntent: "brief_feedback_choice" as const,
+            done: false,
+            feedback: undefined,
+            question: "Say More feedback, Try again, or Move on.",
+            routingReason:
+              "Deterministic Coaching choice routing could not classify the user's choice.",
+            state: "brief_feedback_choice" as const,
+            targetSkill: "coaching choice routing",
+          }
       : await generateTurnDecision({
           apiKey,
+          coachingChoiceIntent,
           config: input.config,
           endAfterAnswer: input.turnInput.endAfterAnswer || queuedSessionMustEnd,
           latestTranscript,

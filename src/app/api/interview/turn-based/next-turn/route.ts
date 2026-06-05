@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import type { CoachingChoiceIntent } from "@/product/interview-types";
 import { parseSessionSetupSnapshot } from "@/product/session-snapshot";
 import { getInterviewRuntimeConfig } from "@/server/interview/runtime-configs";
 import { runTurnBasedInterviewTurn } from "@/server/interview/turn-based";
@@ -13,6 +14,7 @@ type RequestBody = {
   answerMimeType?: string;
   answerTranscript?: string;
   endAfterAnswer?: boolean;
+  explicitChoiceIntent?: CoachingChoiceIntent;
   priorTurns?: Array<{
     feedback?: string;
     question?: string;
@@ -82,6 +84,7 @@ export async function POST(request: Request) {
         answerTranscript:
           typeof body.answerTranscript === "string" ? body.answerTranscript : undefined,
         endAfterAnswer: body.endAfterAnswer === true,
+        explicitChoiceIntent: body.explicitChoiceIntent,
         priorTurns: body.priorTurns ?? [],
         sessionId,
         snapshot,

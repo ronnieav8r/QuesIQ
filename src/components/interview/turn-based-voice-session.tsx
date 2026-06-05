@@ -5,6 +5,7 @@ import { Mic } from "lucide-react";
 
 import { logDiagnosticEvent } from "@/components/interview/diagnostics-client";
 import type {
+  CoachingChoiceIntent,
   SessionSetupSnapshot,
   VoiceSessionArtifactDraft,
   VoiceSessionEvent,
@@ -35,6 +36,7 @@ type TurnPayload = {
   answerMimeType?: string;
   answerTranscript?: string;
   endAfterAnswer?: boolean;
+  explicitChoiceIntent?: CoachingChoiceIntent;
   priorTurns: VoiceTranscriptTurn[];
   sessionId: string;
   snapshot: SessionSetupSnapshot;
@@ -124,7 +126,7 @@ function isMoveOnIntent(text?: string) {
   }
 
   const asksToMoveOn =
-    /\b(move on|next question|new question|go on|continue|skip this|skip it)\b/.test(
+    /\b(move on|next question|new question|continue|skip|keep going|go ahead)\b/.test(
       normalized,
     );
   const asksToStay =
@@ -168,6 +170,7 @@ export function TurnBasedVoiceSession({
   const sessionRunIdRef = useRef(0);
   const pendingEndReasonRef = useRef<VoiceSessionArtifactDraft["endReason"]>(undefined);
   const requestContainsAnswerRef = useRef(false);
+  const suppressNextRecordingRef = useRef(false);
   const turnCountRef = useRef(0);
   const artifactDraftRef = useRef<VoiceSessionArtifactDraft>(emptyArtifactDraft);
   const [artifactDraft, setArtifactDraft] = useState<VoiceSessionArtifactDraft>(emptyArtifactDraft);
@@ -176,6 +179,7 @@ export function TurnBasedVoiceSession({
   const [phase, setPhase] = useState<TurnBasedPhase>("ready");
   const [errorMessage, setErrorMessage] = useState<string>();
   const [currentQuestion, setCurrentQuestion] = useState<string>();
+  const [currentTurnState, setCurrentTurnState] = useState<string>();
   const [recording, setRecording] = useState(false);
   const [done, setDone] = useState(false);
   const [turnCount, setTurnCount] = useState(0);
@@ -497,6 +501,7 @@ export function TurnBasedVoiceSession({
       setCurrentQuestion(body.question.trim());
       appendTranscript(transcriptTurn("Que", "assistant", body.question));
     }
+    setCurrentTurnState(body.state);
     updateRequesting(false);
     await playQuestionAudio(body, runId);
     if (body.question?.trim() && !body.done && isSessionActive(runId)) {
@@ -506,7 +511,6 @@ export function TurnBasedVoiceSession({
       snapshot.modeKey === "coaching" &&
       body.state === "brief_feedback_choice" &&
       body.feedback?.trim() &&
-      !body.question?.trim() &&
       !body.done
     ) {
       void prefetchMoveOnQuestion(runId);
@@ -668,8 +672,8 @@ export function TurnBasedVoiceSession({
     const runId = sessionRunIdRef.current;
     if (
       snapshot.modeKey === "coaching" &&
-      payload.answerTranscript &&
-      isMoveOnIntent(payload.answerTranscript)
+      (payload.explicitChoiceIntent === "move_on" ||
+        (payload.answerTranscript && isMoveOnIntent(payload.answerTranscript)))
     ) {
       const usedPrefetch = await consumeMoveOnPrefetch(runId, payload.answerTranscript);
       if (usedPrefetch) {
@@ -786,6 +790,7 @@ export function TurnBasedVoiceSession({
       updateDone(false);
       updateTurnCount(0);
       setCurrentQuestion(undefined);
+      setCurrentTurnState(undefined);
       sessionStartedAtMsRef.current = Date.now();
       const initialArtifact = {
         events: [artifactEvent("turn_based.session.start")],
@@ -840,6 +845,12 @@ export function TurnBasedVoiceSession({
       };
       recorder.onstop = async () => {
         const endingAfterAnswer = endingRequestedRef.current;
+        if (suppressNextRecordingRef.current) {
+          suppressNextRecordingRef.current = false;
+          closeMedia();
+          appendEvent("turn_based.answer.recording_cancelled");
+          return;
+        }
         if (!isSessionActive(runId)) {
           closeMedia();
           appendEvent("turn_based.answer.recording_cancelled");
@@ -884,6 +895,38 @@ export function TurnBasedVoiceSession({
     appendEvent("turn_based.answer.recording_stop");
   }
 
+  async function handleCoachingChoice(intent: Exclude<CoachingChoiceIntent, "unclear">) {
+    const runId = sessionRunIdRef.current;
+
+    if (!isSessionActive(runId) || requestingRef.current || doneRef.current) {
+      return;
+    }
+
+    const activeRecorder = mediaRecorderRef.current;
+    if (recordingRef.current && activeRecorder?.state !== "inactive") {
+      suppressNextRecordingRef.current = true;
+      activeRecorder?.stop();
+    }
+
+    const answerTranscript =
+      intent === "more_feedback"
+        ? "More feedback"
+        : intent === "try_again"
+          ? "Try again"
+          : "Move on";
+    const nextTurnIndex = turnCountRef.current + 1;
+    updateTurnCount(nextTurnIndex);
+    appendEvent(`turn_based.choice.${intent}`);
+    await requestTurn({
+      answerTranscript,
+      explicitChoiceIntent: intent,
+      priorTurns: artifactDraftRef.current.transcript,
+      sessionId,
+      snapshot,
+      turnIndex: nextTurnIndex,
+    });
+  }
+
   finalizeSessionRef.current = finalizeSession;
   stopRecordingRef.current = stopRecording;
 
@@ -907,6 +950,16 @@ export function TurnBasedVoiceSession({
   const displayedDuration = artifactDraft.durationSeconds ?? elapsedSeconds;
   const minutes = Math.floor(displayedDuration / 60).toString().padStart(2, "0");
   const seconds = (displayedDuration % 60).toString().padStart(2, "0");
+  const showFullCoachingChoices =
+    snapshot.modeKey === "coaching" &&
+    currentTurnState === "brief_feedback_choice" &&
+    phase === "live" &&
+    !done;
+  const showRetryMoveChoices =
+    snapshot.modeKey === "coaching" &&
+    currentTurnState === "more_feedback" &&
+    phase === "live" &&
+    !done;
 
   return (
     <section className={surfaceClassName} aria-labelledby="turn-based-session-title">
@@ -958,6 +1011,35 @@ export function TurnBasedVoiceSession({
           End Session
         </button>
       </div>
+      {(showFullCoachingChoices || showRetryMoveChoices) && (
+        <div className="inline-actions coaching-choice-actions" aria-label="Coaching choices">
+          {showFullCoachingChoices && (
+            <button
+              className="secondary"
+              disabled={requesting}
+              onClick={() => void handleCoachingChoice("more_feedback")}
+              type="button"
+            >
+              More feedback
+            </button>
+          )}
+          <button
+            className="secondary"
+            disabled={requesting}
+            onClick={() => void handleCoachingChoice("try_again")}
+            type="button"
+          >
+            Try again
+          </button>
+          <button
+            disabled={requesting}
+            onClick={() => void handleCoachingChoice("move_on")}
+            type="button"
+          >
+            Move on
+          </button>
+        </div>
+      )}
       {phase === "live" && !done && (
         <p className="field-note">
           {recording

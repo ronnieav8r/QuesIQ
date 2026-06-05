@@ -646,6 +646,12 @@ export type CoachingTurnState =
   | "move_on"
   | "wrap_up";
 
+export type CoachingChoiceIntent =
+  | "more_feedback"
+  | "move_on"
+  | "try_again"
+  | "unclear";
+
 export type PromptConfigRecord = {
   active: boolean;
   createdAt: string;

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import type { VoiceTranscriptTurn } from "@/product/interview-types";
+import type { CoachingChoiceIntent, VoiceTranscriptTurn } from "@/product/interview-types";
 import { parseSessionSetupSnapshot } from "@/product/session-snapshot";
 import { requireAdminSession } from "@/server/admin";
 import { getInterviewRuntimeConfig } from "@/server/interview/runtime-configs";
@@ -13,6 +13,7 @@ type RequestBody = {
   answerDurationSeconds?: number;
   answerTranscript?: string;
   endAfterAnswer?: boolean;
+  explicitChoiceIntent?: CoachingChoiceIntent;
   priorTurns?: VoiceTranscriptTurn[];
   sessionId?: string;
   snapshot?: unknown;
@@ -83,6 +84,7 @@ export async function POST(request: Request) {
             : undefined,
         answerTranscript,
         endAfterAnswer: body.endAfterAnswer === true,
+        explicitChoiceIntent: body.explicitChoiceIntent,
         priorTurns: body.priorTurns ?? [],
         sessionId,
         snapshot,
