@@ -12,6 +12,10 @@ with production or static checks.
 - Confirm result has no FAIL blockers.
 - Confirm warnings are expected manual items only, such as voice hardware,
   production browser QA, or missing local env vars.
+- Run `npm run smoke:interview-turns` when local Postgres is running,
+  migrations are applied, and an Interview test-tunnel OpenAI key or accepted
+  fallback key is configured. This model-backed smoke covers Rapid Fire,
+  Intro Practice, and Story Practice/TMAAT through the backend turn engine.
 - Run `npm run typecheck`.
 - Run `npm run lint`.
 - Run `npm run build`.

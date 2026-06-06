@@ -334,14 +334,25 @@ function parseDecision(
   const fallbackState = defaultTurnState(input);
   try {
     const parsed = JSON.parse(raw) as Partial<TurnDecision>;
+    const parsedIntent = cleanTurnState(parsed.detectedUserIntent, fallbackState);
+    const parsedState = cleanTurnState(parsed.state, fallbackState);
+    const normalizedState = input.mustEnd
+      ? "wrap_up"
+      : !input.hasLatestAnswer
+        ? "opening_question"
+        : parsedState;
     return {
       archetypeId: cleanUuid(parsed.archetypeId),
-      detectedUserIntent: cleanTurnState(parsed.detectedUserIntent, fallbackState),
+      detectedUserIntent: input.mustEnd
+        ? "wrap_up"
+        : !input.hasLatestAnswer
+          ? "opening_question"
+          : parsedIntent,
       done: input.mustEnd || parsed.done === true,
       feedback: allowFeedback ? cleanText(parsed.feedback) || undefined : undefined,
       question: input.mustEnd ? undefined : cleanText(parsed.question) || undefined,
       routingReason: cleanText(parsed.routingReason, fallbackRoutingReason(input.modeKey)),
-      state: cleanTurnState(parsed.state, fallbackState),
+      state: normalizedState,
       targetSkill: cleanText(parsed.targetSkill, fallbackTargetSkill(input.modeKey)),
     };
   } catch {
@@ -1080,9 +1091,14 @@ async function generateTurnDecision(input: {
   const maxTurns = turnLimit(input.snapshot, input.config.maxTurns);
   const retryAlreadyOffered =
     input.snapshot.modeKey === "coaching" && latestAssistantPromptWasRetry(input.priorTurns);
+  const isSingleAnswerPractice =
+    Boolean(input.latestTranscript) &&
+    Boolean(input.snapshot.introductionContext || input.snapshot.storyContext);
   const mustEnd =
     Boolean(input.latestTranscript) &&
-    (input.endAfterAnswer === true || (input.turnIndex >= maxTurns && !retryAlreadyOffered));
+    (input.endAfterAnswer === true ||
+      isSingleAnswerPractice ||
+      (input.turnIndex >= maxTurns && !retryAlreadyOffered));
   const promptRuntime = await getTurnPromptRuntime({
     configuredModel: input.config.textModel,
     snapshot: input.snapshot,

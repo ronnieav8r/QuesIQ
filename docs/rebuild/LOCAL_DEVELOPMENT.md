@@ -91,6 +91,18 @@ For Coaching QA, create a Coaching session, submit typed candidate answers, and
 use the More feedback, Try again, and Move on controls to test explicit choice
 routing without microphone hardware.
 
+For standard backend prompt/runtime smoke before deploy, run:
+
+```powershell
+npm run smoke:interview-turns
+```
+
+This uses local Postgres, disposable local session rows, the same backend
+turn-based engine used by the Admin Prompt Test Tunnel, and
+`OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY` or an accepted fallback key. It covers
+Rapid Fire, Intro Practice, and Story Practice/TMAAT without adding a Render
+backdoor endpoint.
+
 Stop local Postgres:
 
 ```powershell

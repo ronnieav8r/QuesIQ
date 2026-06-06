@@ -39,6 +39,7 @@ const lanes = {
     "docs/products/interview/",
     "docs/rebuild/HANDOFF.md",
     "docs/rebuild/LOCAL_DEVELOPMENT.md",
+    "package.json",
     "scripts/guards/check-lane.mjs",
     "scripts/interview/",
     "src/app/globals.css",

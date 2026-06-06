@@ -192,6 +192,16 @@ function run() {
     "getOpenAiInterviewTestTunnelApiKeySource",
     "turn_choice_router",
   ]);
+  requireMarkers("Turn-based backend smoke runner", "scripts/interview/turn-based-smoke.ts", [
+    "runRapidFireSmoke",
+    "runIntroPracticeSmoke",
+    "runStoryPracticeSmoke",
+    "getOpenAiInterviewTestTunnelApiKey()",
+    "OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY or an accepted Interview/OpenAI fallback key is required.",
+    "cleanupSmokeRows",
+    "aiRuns",
+    "selectedQuestionQueueContext",
+  ]);
 
   requireMarkers("AI usage instrumentation markers", "src/server/sessions/create-session-evaluation.ts", [
     "startAiRun(",
