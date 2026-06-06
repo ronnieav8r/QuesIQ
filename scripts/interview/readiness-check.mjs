@@ -70,8 +70,20 @@ function hasEnvVar(varName, envText) {
   if (typeof process.env[varName] === "string" && process.env[varName].trim()) {
     return true;
   }
-  const pattern = new RegExp(`^\\s*${varName}\\s*=\\s*.+$`, "m");
-  return pattern.test(envText);
+
+  for (const line of envText.split(/\r?\n/)) {
+    const match = line.match(new RegExp(`^\\s*${varName}\\s*=\\s*(.*)\\s*$`));
+    if (!match) {
+      continue;
+    }
+
+    const value = match[1].trim().replace(/^['"]|['"]$/g, "");
+    if (value && !value.startsWith("#")) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function run() {
