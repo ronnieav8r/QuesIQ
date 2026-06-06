@@ -235,8 +235,13 @@ function latestAssistantPromptWasRetry(priorTurns: PriorTurn[]) {
     .reverse()
     .find((turn) => turn.role === "assistant" || turn.speaker === "Que");
   const text = latestAssistantTurn?.text ?? latestAssistantTurn?.question ?? "";
+  const lowerText = text.toLowerCase();
 
-  return /\bretry\b|\btry again\b/i.test(text);
+  if (lowerText.includes("more feedback") || lowerText.includes("move on")) {
+    return false;
+  }
+
+  return /\bretry\b|\btry again\b|\btry that again\b/i.test(text);
 }
 
 function latestAssistantPromptWasChoice(priorTurns: PriorTurn[]) {
@@ -250,9 +255,10 @@ function latestAssistantPromptWasChoice(priorTurns: PriorTurn[]) {
   ).toLowerCase();
 
   return (
-    text.includes("more feedback") ||
-    text.includes("try again") ||
-    text.includes("move on")
+    (text.includes("more feedback") &&
+      text.includes("try again") &&
+      text.includes("move on")) ||
+    text.includes("do you want to try again or move on")
   );
 }
 
@@ -359,6 +365,7 @@ function normalizeCoachingDecision(input: {
   choiceIntent?: CoachingChoiceIntent;
   decision: TurnDecision;
   hasLatestAnswer: boolean;
+  mustEnd: boolean;
   retryAlreadyOffered: boolean;
   snapshot: SessionSetupSnapshot;
 }) {
@@ -367,7 +374,7 @@ function normalizeCoachingDecision(input: {
     !input.snapshot.storyContext &&
     !input.snapshot.introductionContext;
 
-  if (!isStandardCoaching || input.decision.done) {
+  if (!isStandardCoaching) {
     return input.decision;
   }
 
@@ -375,6 +382,7 @@ function normalizeCoachingDecision(input: {
     return {
       ...input.decision,
       detectedUserIntent: "more_feedback" as const,
+      done: false,
       question: "Do you want to try again or move on?",
       state: "more_feedback" as const,
     };
@@ -384,6 +392,7 @@ function normalizeCoachingDecision(input: {
     return {
       ...input.decision,
       detectedUserIntent: "retry_answer" as const,
+      done: false,
       state: "retry_answer" as const,
     };
   }
@@ -392,6 +401,7 @@ function normalizeCoachingDecision(input: {
     return {
       ...input.decision,
       detectedUserIntent: "move_on" as const,
+      done: false,
       feedback: input.decision.feedback || undefined,
       state: "move_on" as const,
     };
@@ -401,18 +411,27 @@ function normalizeCoachingDecision(input: {
     return {
       ...input.decision,
       detectedUserIntent: "brief_feedback_choice" as const,
+      done: false,
       feedback: undefined,
       question: "Say More feedback, Try again, or Move on.",
       state: "brief_feedback_choice" as const,
     };
   }
 
-  if (input.retryAlreadyOffered && input.hasLatestAnswer) {
+  if (input.retryAlreadyOffered && input.hasLatestAnswer && !input.mustEnd) {
     return {
       ...input.decision,
       detectedUserIntent: "move_on" as const,
+      done: false,
+      question:
+        input.decision.question ||
+        "Let's move to a different scenario. Tell me about a time you had to adapt quickly when conditions changed.",
       state: "move_on" as const,
     };
+  }
+
+  if (input.decision.done) {
+    return input.decision;
   }
 
   if (
@@ -1063,7 +1082,7 @@ async function generateTurnDecision(input: {
     input.snapshot.modeKey === "coaching" && latestAssistantPromptWasRetry(input.priorTurns);
   const mustEnd =
     Boolean(input.latestTranscript) &&
-    (input.endAfterAnswer === true || input.turnIndex >= maxTurns);
+    (input.endAfterAnswer === true || (input.turnIndex >= maxTurns && !retryAlreadyOffered));
   const promptRuntime = await getTurnPromptRuntime({
     configuredModel: input.config.textModel,
     snapshot: input.snapshot,
@@ -1304,11 +1323,13 @@ async function generateTurnDecision(input: {
         mustEnd,
       }),
       hasLatestAnswer: Boolean(input.latestTranscript),
+      mustEnd,
       retryAlreadyOffered,
       snapshot: input.snapshot,
     });
     if (
       retryAlreadyOffered &&
+      decision.state !== "more_feedback" &&
       decision.question &&
       /\bretry\b|\btry again\b/i.test(decision.question)
     ) {
