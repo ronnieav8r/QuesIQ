@@ -15,6 +15,7 @@ type RequestBody = {
   answerTranscript?: string;
   endAfterAnswer?: boolean;
   explicitChoiceIntent?: CoachingChoiceIntent;
+  coachingChoiceIntent?: CoachingChoiceIntent;
   priorTurns?: Array<{
     feedback?: string;
     question?: string;
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
         answerTranscript:
           typeof body.answerTranscript === "string" ? body.answerTranscript : undefined,
         endAfterAnswer: body.endAfterAnswer === true,
-        explicitChoiceIntent: body.explicitChoiceIntent,
+        explicitChoiceIntent: body.explicitChoiceIntent ?? body.coachingChoiceIntent,
         priorTurns: body.priorTurns ?? [],
         sessionId,
         snapshot,

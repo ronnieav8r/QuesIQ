@@ -13,6 +13,7 @@ type RequestBody = {
   answerDurationSeconds?: number;
   answerTranscript?: string;
   endAfterAnswer?: boolean;
+  coachingChoiceIntent?: CoachingChoiceIntent;
   explicitChoiceIntent?: CoachingChoiceIntent;
   priorTurns?: VoiceTranscriptTurn[];
   sessionId?: string;
@@ -36,6 +37,7 @@ export async function POST(request: Request) {
 
   const body = (await request.json()) as RequestBody;
   const answerTranscript = body.answerTranscript?.trim();
+  const explicitChoiceIntent = body.explicitChoiceIntent ?? body.coachingChoiceIntent;
   const sessionId = body.sessionId?.trim();
   const snapshot = parseSessionSetupSnapshot(body.snapshot);
   const turnIndex = Number(body.turnIndex);
@@ -59,7 +61,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Turn index is invalid." }, { status: 400 });
   }
 
-  if (turnIndex > 0 && !answerTranscript) {
+  if (turnIndex > 0 && !answerTranscript && !explicitChoiceIntent) {
     return NextResponse.json({ error: "Typed answer text is required." }, { status: 400 });
   }
 
@@ -84,7 +86,7 @@ export async function POST(request: Request) {
             : undefined,
         answerTranscript,
         endAfterAnswer: body.endAfterAnswer === true,
-        explicitChoiceIntent: body.explicitChoiceIntent,
+        explicitChoiceIntent,
         priorTurns: body.priorTurns ?? [],
         sessionId,
         snapshot,

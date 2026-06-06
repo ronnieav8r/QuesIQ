@@ -43,7 +43,7 @@ export const defaultInterviewRuntimeConfigs: InterviewRuntimeConfigRecord[] = [
     maxDurationSeconds: 900,
     maxTurns: 8,
     modeKey: "coaching",
-    textModel: "gpt-5.4-mini",
+    textModel: "gpt-5.4",
     transcriptionModel: "gpt-4o-mini-transcribe",
     ttsModel: "tts-1",
     ttsVoice: "alloy",

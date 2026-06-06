@@ -626,6 +626,7 @@ export type PromptConfigKey =
   | "story_outline"
   | "story_practice_evaluation"
   | "story_practice_realtime"
+  | "turn_choice_router"
   | "turn_coaching_responder"
   | "turn_question_planner";
 
@@ -700,6 +701,7 @@ export type AiRunRecord = {
     | "interview_transcription"
     | "interview_tts"
     | "interview_turn"
+    | "interview_turn_choice_router"
     | "introduction_draft"
     | "pricing_review"
     | "quira_support"

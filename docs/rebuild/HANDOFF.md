@@ -25,6 +25,13 @@ Last updated: 2026-06-05
   `/admin` and Content Studio work; product lanes own their product files.
   Subagents must stay within the assigned clone/branch/path scope and must not
   merge or push `main`.
+- Interview Admin Prompt Test Tunnel is the standard backend text-clone QA path
+  for turn-based Interview prompt/runtime testing on both local and Render. It
+  remains admin-only, lives in the legacy Interview Admin panel under
+  `Prompt Test Tunnel`, and reports server-side readiness for database, OpenAI
+  key source, turn-based modes, and active prompts. Configure
+  `OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY` locally and on Render when possible;
+  accepted fallbacks remain available but are less useful for cost tracking.
 - Quira Support has been added as a product lane/clone for signed-in CS/TS
   chatbot work: `QuesIQ-quira` on `codex/quira`. The first slice adds the
   Quira storage/API/prompt/Admin-review foundation and replaces the

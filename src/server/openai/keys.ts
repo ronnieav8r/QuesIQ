@@ -17,13 +17,20 @@ export function getOpenAiApiKey(product: OpenAiProduct = "interview") {
 }
 
 export function getOpenAiInterviewTestTunnelApiKey() {
-  return (
-    process.env.OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY ||
-    process.env.OPENAI_INTERVIEW_REALTIME_API_KEY ||
-    process.env.OPENAI_INTERVIEW_API_KEY ||
-    process.env.OPENAI_REALTIME_API_KEY ||
-    process.env.OPENAI_API_KEY
-  );
+  const source = getOpenAiInterviewTestTunnelApiKeySource();
+  return source ? process.env[source] : undefined;
+}
+
+export function getOpenAiInterviewTestTunnelApiKeySource() {
+  const sources = [
+    "OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY",
+    "OPENAI_INTERVIEW_REALTIME_API_KEY",
+    "OPENAI_INTERVIEW_API_KEY",
+    "OPENAI_REALTIME_API_KEY",
+    "OPENAI_API_KEY",
+  ];
+
+  return sources.find((source) => process.env[source]?.trim());
 }
 
 export function getOpenAiRealtimeApiKey(product: OpenAiProduct = "interview") {

@@ -14,6 +14,7 @@ import type {
   AdminProgressionSummaryRecord,
   AiRunRecord,
   AiPricingRecord,
+  CoachingChoiceIntent,
   DiagnosticEventRecord,
   FeedbackKind,
   FeedbackRecord,
@@ -233,6 +234,15 @@ type TestTunnelTurnResponse = {
   transcript?: string;
 };
 
+type TestTunnelReadinessResponse = {
+  apiKeySource?: string | null;
+  blockers?: string[];
+  databaseConfigured?: boolean;
+  modes?: Record<string, { enabled: boolean; engine: string; textModel: string }>;
+  prompts?: Record<string, { active: boolean; model: string; version: number }>;
+  ready?: boolean;
+};
+
 type AdminPanelMode = "legacy" | "new_panel";
 type NewPanelSection = "database_visibility" | "prompt_workspace";
 
@@ -340,6 +350,7 @@ const promptLabels: Record<PromptConfigKey, string> = {
   story_outline: "Story Lab Outline",
   story_practice_evaluation: "Story Practice Evaluation",
   story_practice_realtime: "Story Practice Realtime",
+  turn_choice_router: "Turn Choice Router",
   turn_coaching_responder: "Turn Coaching Responder",
   turn_question_planner: "Turn Question Planner",
 };
@@ -359,7 +370,12 @@ const promptPlaybooks: PromptPlaybook[] = [
     title: "Rapid Fire",
   },
   {
-    basePromptKeys: ["realtime_interviewer", "session_evaluation"],
+    basePromptKeys: [
+      "turn_question_planner",
+      "turn_coaching_responder",
+      "turn_choice_router",
+      "session_evaluation",
+    ],
     componentModeKeys: ["coaching"],
     description:
       "Live answer improvement. Que asks, listens, coaches, and routes retry or follow-up practice.",
@@ -1042,6 +1058,10 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
   const [testTunnelError, setTestTunnelError] = useState<string>();
   const [testTunnelMode, setTestTunnelMode] = useState<TestTunnelMode>("coaching");
   const [testTunnelQuestionType, setTestTunnelQuestionType] = useState("behavioral");
+  const [testTunnelReadiness, setTestTunnelReadiness] =
+    useState<TestTunnelReadinessResponse>();
+  const [testTunnelReadinessStatus, setTestTunnelReadinessStatus] =
+    useState<"idle" | "loaded" | "loading">("idle");
   const [testTunnelRealtimeEndpoint, setTestTunnelRealtimeEndpoint] =
     useState<TestTunnelRealtimeEndpoint>("/api/realtime/session");
   const [testTunnelRealtimeSessionId, setTestTunnelRealtimeSessionId] = useState("");
@@ -1770,6 +1790,33 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     }
   }
 
+  async function loadTestTunnelReadiness() {
+    try {
+      setTestTunnelReadinessStatus("loading");
+      const response = await fetch("/api/admin/interview/test-tunnel/status");
+      const body = (await response.json().catch(() => ({}))) as TestTunnelReadinessResponse & {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(body.error || "Prompt Test Tunnel readiness could not be loaded.");
+      }
+
+      setTestTunnelReadiness(body);
+    } catch (readinessError) {
+      setTestTunnelReadiness({
+        blockers: [
+          readinessError instanceof Error
+            ? readinessError.message
+            : "Prompt Test Tunnel readiness could not be loaded.",
+        ],
+        ready: false,
+      });
+    } finally {
+      setTestTunnelReadinessStatus("loaded");
+    }
+  }
+
   useEffect(() => {
     let ignore = false;
 
@@ -1939,6 +1986,22 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
 
     return () => window.clearTimeout(loadTimer);
   }, [adminSection, dataStatus]);
+
+  useEffect(() => {
+    if (
+      adminPanelMode !== "legacy" ||
+      adminSection !== "test_tunnel" ||
+      testTunnelReadinessStatus !== "idle"
+    ) {
+      return;
+    }
+
+    const loadTimer = window.setTimeout(() => {
+      void loadTestTunnelReadiness();
+    }, 0);
+
+    return () => window.clearTimeout(loadTimer);
+  }, [adminPanelMode, adminSection, testTunnelReadinessStatus]);
 
   useEffect(() => {
     if (
@@ -2134,6 +2197,7 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     }
 
     if (adminSection === "test_tunnel") {
+      void loadTestTunnelReadiness();
       return;
     }
 
@@ -2308,10 +2372,13 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     priorTurns: VoiceTranscriptTurn[],
     turnIndex: number,
     answerTranscript?: string,
+    coachingChoiceIntent?: CoachingChoiceIntent,
   ) {
     const response = await fetch("/api/admin/interview/test-tunnel/turn", {
       body: JSON.stringify({
         answerTranscript,
+        coachingChoiceIntent,
+        explicitChoiceIntent: coachingChoiceIntent,
         priorTurns,
         sessionId,
         snapshot,
@@ -2330,6 +2397,44 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
     }
 
     return body;
+  }
+
+  async function submitTestTunnelChoice(intent: CoachingChoiceIntent) {
+    if (!testTunnelSession || testTunnelMode !== "coaching") {
+      return;
+    }
+
+    try {
+      setTestTunnelError(undefined);
+      setTestTunnelStatus("running");
+      const snapshot = testTunnelSnapshot();
+      const nextTurnIndex = testTunnelTurnIndex + 1;
+      const result = await requestTestTunnelTurn(
+        testTunnelSession.id,
+        snapshot,
+        testTunnelTranscript,
+        nextTurnIndex,
+        undefined,
+        intent,
+      );
+      const nextTurns = [...testTunnelTranscript];
+
+      if (result.feedback?.trim()) {
+        nextTurns.push(createAdminTranscriptTurn("Que", "assistant", result.feedback));
+      }
+
+      if (result.question?.trim()) {
+        nextTurns.push(createAdminTranscriptTurn("Que", "assistant", result.question));
+      }
+
+      setTestTunnelTranscript(nextTurns);
+      setTestTunnelTurnIndex(nextTurnIndex);
+      setTestTunnelStatus(result.done ? "saved" : "ready");
+      setTestTunnelArtifact(createTestTunnelArtifact(nextTurns));
+    } catch (error) {
+      setTestTunnelStatus("error");
+      setTestTunnelError(error instanceof Error ? error.message : "Test choice failed.");
+    }
   }
 
   async function submitTestTunnelAnswer() {
@@ -3401,8 +3506,43 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
                     controls.
                   </p>
                 </div>
-                <span>{testTunnelStatus}</span>
+                <span>
+                  {testTunnelReadinessStatus === "loading"
+                    ? "checking"
+                    : testTunnelReadiness?.ready
+                      ? "ready"
+                      : "blocked"}
+                  {" / "}
+                  {testTunnelStatus}
+                </span>
               </div>
+
+              <section className="auth-panel auth-secondary">
+                <h3>Backend readiness</h3>
+                <p className="field-note">
+                  Database: {testTunnelReadiness?.databaseConfigured ? "configured" : "missing"}
+                  {" | "}
+                  OpenAI key: {testTunnelReadiness?.apiKeySource ?? "missing"}
+                </p>
+                {testTunnelReadiness?.blockers?.length ? (
+                  <ul className="field-note">
+                    {testTunnelReadiness.blockers.map((blocker) => (
+                      <li key={blocker}>{blocker}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="field-note">
+                    Typed turn testing is configured for this server.
+                  </p>
+                )}
+                <button
+                  className="secondary"
+                  onClick={() => void loadTestTunnelReadiness()}
+                  type="button"
+                >
+                  Recheck Readiness
+                </button>
+              </section>
 
               <div className="admin-data-grid">
                 <section className="auth-panel auth-secondary">
@@ -3519,6 +3659,46 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
                       Finalize Artifact
                     </button>
                   </div>
+                  {testTunnelMode === "coaching" && (
+                    <div className="inline-actions">
+                      <button
+                        className="secondary"
+                        disabled={
+                          !testTunnelSession ||
+                          testTunnelStatus === "running" ||
+                          testTunnelTranscript.length === 0
+                        }
+                        onClick={() => void submitTestTunnelChoice("more_feedback")}
+                        type="button"
+                      >
+                        More feedback
+                      </button>
+                      <button
+                        className="secondary"
+                        disabled={
+                          !testTunnelSession ||
+                          testTunnelStatus === "running" ||
+                          testTunnelTranscript.length === 0
+                        }
+                        onClick={() => void submitTestTunnelChoice("try_again")}
+                        type="button"
+                      >
+                        Try again
+                      </button>
+                      <button
+                        className="secondary"
+                        disabled={
+                          !testTunnelSession ||
+                          testTunnelStatus === "running" ||
+                          testTunnelTranscript.length === 0
+                        }
+                        onClick={() => void submitTestTunnelChoice("move_on")}
+                        type="button"
+                      >
+                        Move on
+                      </button>
+                    </div>
+                  )}
                   {testTunnelError && <p className="form-error">{testTunnelError}</p>}
                 </section>
               </div>

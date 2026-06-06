@@ -60,7 +60,15 @@ with production or static checks.
 
 - User can choose number of questions.
 - Session starts hands-free after Que speaks.
+- After a usable answer, Coaching shows More feedback, Try again, and Move on
+  choices.
+- Spoken choices keep listening active and route through deterministic matching
+  before AI fallback.
 - Que gives coaching feedback after the answer.
+- More feedback gives one focused improvement and asks whether to try again or
+  move on.
+- Try again asks for one missing detail only.
+- Move on by button and voice advances to a new question.
 - Que allows at most one retry/follow-up on the same question before moving on.
 - If the answer is decent, Que gives feedback and advances instead of getting
   stuck.
@@ -114,6 +122,13 @@ with production or static checks.
 - Runtime & Cost contains the Interview runtime config panel.
 - Rapid Fire and Coaching runtime configs show turn-based settings.
 - First-turn/kickoff instructions are visible in Admin and not hidden in code.
+- Prompt Test Tunnel is available to admins in the legacy Interview Admin
+  panel.
+- Prompt Test Tunnel readiness shows database, OpenAI key source, active
+  turn-based modes, and prompt status without exposing secret values.
+- Prompt Test Tunnel can create a Coaching test session, submit typed answers,
+  and send More feedback, Try again, and Move on as explicit choices.
+- Prompt Test Tunnel finalized artifacts are marked as `text_simulated_voice`.
 
 ## Quira Support
 
@@ -129,6 +144,9 @@ with production or static checks.
 - Production migrations are applied through latest migration.
 - `DATABASE_URL` is configured on production.
 - `OPENAI_INTERVIEW_API_KEY` or configured fallback is present.
+- `OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY` is configured on production for
+  admin-only Prompt Test Tunnel QA, or an accepted Interview/OpenAI fallback key
+  is intentionally used.
 - Realtime API key/model/voice env vars are present for Mock Interview.
 - Quira key is present if testing Quira AI responses.
 - Production signed-in browser QA passes on `https://quesiq.com`.

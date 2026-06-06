@@ -98,6 +98,10 @@ function run() {
     "src/app/api/feedback/route.ts",
     "src/app/api/catalog/route.ts",
     "src/app/api/coaching-memory/route.ts",
+    "src/app/api/admin/interview/test-tunnel/session/route.ts",
+    "src/app/api/admin/interview/test-tunnel/status/route.ts",
+    "src/app/api/admin/interview/test-tunnel/turn/route.ts",
+    "src/app/api/admin/interview/test-tunnel/finalize/route.ts",
   ]);
 
   requireFiles("Interview server modules", [
@@ -166,6 +170,16 @@ function run() {
     "const appSession = await auth()",
     "saveSessionArtifact(sessionId, appSession.user.id",
   ]);
+  requireMarkers("Admin Prompt Test Tunnel access guard", "src/app/api/admin/interview/test-tunnel/turn/route.ts", [
+    "requireAdminSession",
+    "getOpenAiInterviewTestTunnelApiKey()",
+    "const explicitChoiceIntent = body.explicitChoiceIntent ?? body.coachingChoiceIntent",
+  ]);
+  requireMarkers("Admin Prompt Test Tunnel readiness status", "src/app/api/admin/interview/test-tunnel/status/route.ts", [
+    "requireAdminSession",
+    "getOpenAiInterviewTestTunnelApiKeySource",
+    "turn_choice_router",
+  ]);
 
   requireMarkers("AI usage instrumentation markers", "src/server/sessions/create-session-evaluation.ts", [
     "startAiRun(",
@@ -182,6 +196,17 @@ function run() {
   if (!hasEnvVar("ADMIN_EMAILS", envText)) envWarns.push("ADMIN_EMAILS");
   if (!hasEnvVar("OPENAI_INTERVIEW_API_KEY", envText) && !hasEnvVar("OPENAI_API_KEY", envText)) {
     envWarns.push("OPENAI_INTERVIEW_API_KEY (or OPENAI_API_KEY fallback)");
+  }
+  if (
+    !hasEnvVar("OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY", envText) &&
+    !hasEnvVar("OPENAI_INTERVIEW_REALTIME_API_KEY", envText) &&
+    !hasEnvVar("OPENAI_INTERVIEW_API_KEY", envText) &&
+    !hasEnvVar("OPENAI_REALTIME_API_KEY", envText) &&
+    !hasEnvVar("OPENAI_API_KEY", envText)
+  ) {
+    envWarns.push(
+      "OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY (or OPENAI_INTERVIEW_REALTIME_API_KEY / OPENAI_INTERVIEW_API_KEY / OPENAI_REALTIME_API_KEY / OPENAI_API_KEY fallback)",
+    );
   }
   if (
     !hasEnvVar("OPENAI_INTERVIEW_REALTIME_API_KEY", envText) &&

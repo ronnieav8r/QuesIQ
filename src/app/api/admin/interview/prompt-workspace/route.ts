@@ -60,7 +60,12 @@ const actionDefinitions: Array<{
   title: string;
 }> = [
   {
-    basePromptKeys: ["turn_question_planner", "turn_coaching_responder", "session_evaluation"],
+    basePromptKeys: [
+      "turn_question_planner",
+      "turn_coaching_responder",
+      "turn_choice_router",
+      "session_evaluation",
+    ],
     description: "Turn-based coaching next-turn prompts, role context, story memory context, and review prompts.",
     key: "coaching",
     modeKey: "coaching",

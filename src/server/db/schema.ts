@@ -798,6 +798,7 @@ export const aiRuns = pgTable(
         | "interview_transcription"
         | "interview_tts"
         | "interview_turn"
+        | "interview_turn_choice_router"
         | "introduction_draft"
         | "pricing_review"
         | "quira_support"

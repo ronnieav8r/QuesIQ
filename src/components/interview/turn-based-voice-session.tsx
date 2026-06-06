@@ -37,6 +37,7 @@ type TurnPayload = {
   answerTranscript?: string;
   endAfterAnswer?: boolean;
   explicitChoiceIntent?: CoachingChoiceIntent;
+  coachingChoiceIntent?: CoachingChoiceIntent;
   priorTurns: VoiceTranscriptTurn[];
   sessionId: string;
   snapshot: SessionSetupSnapshot;
@@ -672,7 +673,7 @@ export function TurnBasedVoiceSession({
     const runId = sessionRunIdRef.current;
     if (
       snapshot.modeKey === "coaching" &&
-      (payload.explicitChoiceIntent === "move_on" ||
+      ((payload.explicitChoiceIntent ?? payload.coachingChoiceIntent) === "move_on" ||
         (payload.answerTranscript && isMoveOnIntent(payload.answerTranscript)))
     ) {
       const usedPrefetch = await consumeMoveOnPrefetch(runId, payload.answerTranscript);
@@ -919,6 +920,7 @@ export function TurnBasedVoiceSession({
     appendEvent(`turn_based.choice.${intent}`);
     await requestTurn({
       answerTranscript,
+      coachingChoiceIntent: intent,
       explicitChoiceIntent: intent,
       priorTurns: artifactDraftRef.current.transcript,
       sessionId,

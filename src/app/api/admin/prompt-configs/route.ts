@@ -38,7 +38,11 @@ function targetForKey(key: PromptConfigKey): PromptConfigTarget {
     return "realtime";
   }
 
-  if (key === "turn_coaching_responder" || key === "turn_question_planner") {
+  if (
+    key === "turn_choice_router" ||
+    key === "turn_coaching_responder" ||
+    key === "turn_question_planner"
+  ) {
     return "turn_based";
   }
 

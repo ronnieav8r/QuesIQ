@@ -61,6 +61,36 @@ Open:
 http://127.0.0.1:3100
 ```
 
+## Admin Prompt Test Tunnel
+
+The backend text-clone path for Interview QA is the Admin Prompt Test Tunnel.
+It is an admin-only typed-turn simulator for testing server-side prompt/runtime
+behavior after a transcript would normally exist. It is not a public backdoor
+and must stay behind admin authentication.
+
+Local requirements:
+
+- `DATABASE_URL` points at local Postgres.
+- `ADMIN_EMAILS` includes the signed-in local admin email.
+- `OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY` is set in `.env.local`.
+  Existing fallback order is
+  `OPENAI_INTERVIEW_REALTIME_API_KEY`, `OPENAI_INTERVIEW_API_KEY`,
+  `OPENAI_REALTIME_API_KEY`, then `OPENAI_API_KEY`, but the dedicated
+  test-tunnel key is preferred for usage tracking.
+- Local migrations are applied with `npm run db:local:migrate`.
+
+Local path:
+
+```text
+http://127.0.0.1:3100/admin
+```
+
+Open the legacy Interview Admin panel, then `Prompt Test Tunnel`. The panel
+shows backend readiness for the current server before creating a test session.
+For Coaching QA, create a Coaching session, submit typed candidate answers, and
+use the More feedback, Try again, and Move on controls to test explicit choice
+routing without microphone hardware.
+
 Stop local Postgres:
 
 ```powershell

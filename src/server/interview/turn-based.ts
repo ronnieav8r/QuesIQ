@@ -93,6 +93,12 @@ export type TurnPrefetchResult = {
   status: "ready";
 };
 
+type CoachingChoiceRouterDecision = {
+  confidence: number;
+  intent: CoachingChoiceIntent;
+  reason: string;
+};
+
 type SpeechResult = {
   audioBase64: string;
   cacheStatus?: "hit" | "miss" | "stored";
@@ -300,6 +306,14 @@ function classifyCoachingChoiceDeterministic(text?: string): CoachingChoiceInten
 
 function isMoveOnIntent(text?: string) {
   return classifyCoachingChoiceDeterministic(text) === "move_on";
+}
+
+function isStandardCoachingSnapshot(snapshot: SessionSetupSnapshot) {
+  return (
+    snapshot.modeKey === "coaching" &&
+    !snapshot.storyContext &&
+    !snapshot.introductionContext
+  );
 }
 
 function parseDecision(
@@ -798,8 +812,16 @@ function buildTurnOutputContract() {
 
 async function getTurnPromptRuntime(input: {
   configuredModel: string;
-  modeKey: SessionSetupSnapshot["modeKey"];
+  snapshot: SessionSetupSnapshot;
 }) {
+  if (!isStandardCoachingSnapshot(input.snapshot)) {
+    return {
+      model: input.configuredModel,
+      promptConfigKeys: [],
+      systemPrompt: buildTurnSystemPrompt(input.snapshot.modeKey),
+    };
+  }
+
   const [plannerPrompt, responderPrompt] = await Promise.all([
     getActivePromptConfig("turn_question_planner"),
     getActivePromptConfig("turn_coaching_responder"),
@@ -817,7 +839,7 @@ async function getTurnPromptRuntime(input: {
     return {
       model: input.configuredModel,
       promptConfigKeys: [],
-      systemPrompt: buildTurnSystemPrompt(input.modeKey),
+      systemPrompt: buildTurnSystemPrompt(input.snapshot.modeKey),
     };
   }
 
@@ -839,11 +861,148 @@ async function getTurnPromptRuntime(input: {
   };
 }
 
-function resolveCoachingChoiceIntent(input: {
+function parseChoiceRouterDecision(raw: string): CoachingChoiceRouterDecision {
+  try {
+    const parsed = JSON.parse(raw) as Partial<CoachingChoiceRouterDecision>;
+    const intent = normalizeCoachingChoiceIntent(parsed.intent);
+    const confidence = Number(parsed.confidence);
+
+    return {
+      confidence: Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : 0,
+      intent: intent ?? "unclear",
+      reason: cleanText(parsed.reason, "Router returned an unsupported intent."),
+    };
+  } catch {
+    return {
+      confidence: 0,
+      intent: "unclear",
+      reason: "Router returned malformed JSON.",
+    };
+  }
+}
+
+async function routeCoachingChoiceWithAi(input: {
+  apiKey: string;
+  latestTranscript: string;
+  sessionId: string;
+  userId: string;
+}): Promise<CoachingChoiceIntent> {
+  const routerPrompt = await getActivePromptConfig("turn_choice_router");
+  const model = routerPrompt.active ? routerPrompt.model : "gpt-5.4-nano";
+  const instructions = routerPrompt.active
+    ? routerPrompt.instructions
+    : "Classify the user's latest Coaching choice as more_feedback, try_again, move_on, or unclear. Return only JSON.";
+  const run = await startAiRun({
+    model,
+    rawJson: {
+      promptConfigKeys: routerPrompt.active
+        ? [{ key: routerPrompt.key, version: routerPrompt.version }]
+        : [],
+      routerFallback: true,
+    },
+    runType: "interview_turn_choice_router",
+    sessionId: input.sessionId,
+    userId: input.userId,
+  });
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      body: JSON.stringify({
+        input: [
+          {
+            content: instructions,
+            role: "system",
+          },
+          {
+            content: JSON.stringify({ latestUtterance: input.latestTranscript }),
+            role: "user",
+          },
+        ],
+        model,
+        reasoning: { effort: "low" },
+        text: {
+          format: {
+            name: "coaching_choice_router",
+            schema: {
+              additionalProperties: false,
+              properties: {
+                confidence: { maximum: 1, minimum: 0, type: "number" },
+                intent: {
+                  enum: ["more_feedback", "try_again", "move_on", "unclear"],
+                  type: "string",
+                },
+                reason: { type: "string" },
+              },
+              required: ["intent", "confidence", "reason"],
+              type: "object",
+            },
+            type: "json_schema",
+          },
+        },
+      }),
+      headers: {
+        Authorization: `Bearer ${input.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      await completeAiRun(run.id, {
+        errorMessage: `Coaching choice router failed: ${detail.slice(0, 300)}`,
+        rawJson: { status: response.status },
+        status: "failed",
+      });
+      return "unclear";
+    }
+
+    const providerRequestId = response.headers.get("x-request-id") ?? undefined;
+    const body = (await response.json()) as ResponsesApiBody;
+    const outputText = extractResponseText(body);
+    const decision = outputText
+      ? parseChoiceRouterDecision(outputText)
+      : {
+          confidence: 0,
+          intent: "unclear" as const,
+          reason: "Router returned no text.",
+        };
+    const pricing = await getActiveAiPricing(model, "text");
+    const estimatedCostMicroUsd = estimateTokenCostMicroUsd(
+      pricing,
+      body.usage?.input_tokens,
+      body.usage?.output_tokens,
+    );
+
+    await completeAiRun(run.id, {
+      costSource: estimatedCostMicroUsd === undefined ? "unavailable" : "estimated",
+      estimatedCostMicroUsd,
+      inputTokens: body.usage?.input_tokens,
+      outputTokens: body.usage?.output_tokens,
+      providerRequestId: providerRequestId || body.id,
+      rawJson: { responseId: body.id, routerDecision: decision },
+      status: "succeeded",
+      totalTokens: body.usage?.total_tokens,
+    });
+
+    return decision.confidence >= 0.65 ? decision.intent : "unclear";
+  } catch (error) {
+    await completeAiRun(run.id, {
+      errorMessage: error instanceof Error ? error.message : "Coaching choice router failed.",
+      status: "failed",
+    });
+    return "unclear";
+  }
+}
+
+async function resolveCoachingChoiceIntent(input: {
+  apiKey: string;
   explicitIntent?: CoachingChoiceIntent;
   latestTranscript?: string;
   priorTurns: PriorTurn[];
-}) {
+  sessionId: string;
+  userId: string;
+}): Promise<CoachingChoiceIntent | undefined> {
   if (input.explicitIntent) {
     return input.explicitIntent;
   }
@@ -858,7 +1017,12 @@ function resolveCoachingChoiceIntent(input: {
     return deterministic;
   }
 
-  return "unclear";
+  return routeCoachingChoiceWithAi({
+    apiKey: input.apiKey,
+    latestTranscript: input.latestTranscript,
+    sessionId: input.sessionId,
+    userId: input.userId,
+  });
 }
 
 async function generateTurnDecision(input: {
@@ -902,7 +1066,7 @@ async function generateTurnDecision(input: {
     (input.endAfterAnswer === true || input.turnIndex >= maxTurns);
   const promptRuntime = await getTurnPromptRuntime({
     configuredModel: input.config.textModel,
-    modeKey: input.snapshot.modeKey,
+    snapshot: input.snapshot,
   });
   const run = await startAiRun({
     model: promptRuntime.model,
@@ -1037,6 +1201,7 @@ async function generateTurnDecision(input: {
           },
         ],
         model: promptRuntime.model,
+        reasoning: { effort: "low" },
         text: {
           format: {
             name: "interview_turn",
@@ -1662,10 +1827,13 @@ export async function runTurnBasedInterviewTurn(input: {
     : undefined;
   const coachingChoiceIntent =
     input.turnInput.snapshot.modeKey === "coaching"
-      ? resolveCoachingChoiceIntent({
+      ? await resolveCoachingChoiceIntent({
+          apiKey,
           explicitIntent: normalizeCoachingChoiceIntent(input.turnInput.explicitChoiceIntent),
           latestTranscript,
           priorTurns: input.turnInput.priorTurns,
+          sessionId: input.turnInput.sessionId,
+          userId: input.userId,
         })
       : undefined;
 
@@ -1749,6 +1917,7 @@ export async function runTurnBasedInterviewTurn(input: {
           done: false,
           question: queuedNextQuestion.questionText,
           routingReason: `Question Queue item ${input.turnInput.turnIndex + 1} used exactly from the Interview question bank.`,
+          state: "move_on" as const,
           targetSkill:
             queuedNextQuestion.targetSkill ||
             generatedDecision.targetSkill ||
