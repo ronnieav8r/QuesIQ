@@ -177,6 +177,7 @@ export type PracticeStep = "mode" | "question" | "style" | "ready";
 export type PracticeModeKey =
   | "first_impression"
   | "coaching"
+  | "hands_free_coaching"
   | "rapid_fire"
   | "mock_interview";
 
@@ -619,6 +620,7 @@ export type PromptConfigKey =
   | "introduction_draft"
   | "quira_support_chat"
   | "session_debrief"
+  | "realtime_hands_free_coach"
   | "realtime_interviewer"
   | "session_evaluation"
   | "story_conversation_realtime"

@@ -39,6 +39,8 @@ export function buildInterviewFirstTurnInstructions(snapshot: SessionSetupSnapsh
   const opening =
     snapshot.modeKey === "first_impression"
       ? `For Introduction practice, ask exactly one natural opening question such as "Tell me about yourself" or "Walk me through your background as it relates to ${target}."`
+      : snapshot.modeKey === "hands_free_coaching"
+        ? "For Hands-Free Coaching, ask exactly one focused interview question. Do not explain the mode or mention button choices."
       : "Ask exactly one opening interview question appropriate for the selected mode.";
 
   return interviewFirstTurnInstructionTemplate

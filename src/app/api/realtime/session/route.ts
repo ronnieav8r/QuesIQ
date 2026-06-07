@@ -9,6 +9,7 @@ import { isAdminEmail } from "@/server/admin";
 import type { SessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
 import { getSessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
 import { getCoachingMemory } from "@/server/coaching-memory/coaching-memory";
+import { canUseHandsFreeCoaching, handsFreeCoachingModeKey } from "@/server/interview/hands-free-coaching";
 import {
   getOpenAiInterviewTestTunnelApiKey,
   getOpenAiRealtimeApiKey,
@@ -29,6 +30,7 @@ type RealtimeSessionRequest = {
   sessionId?: string;
   snapshot?: SessionSetupSnapshot;
   testTunnel?: boolean;
+  realtimeInstructions?: string;
 };
 
 const strictSpokenTurnContract = [
@@ -195,14 +197,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Session was not found." }, { status: 404 });
   }
 
+  if (
+    body.snapshot?.modeKey === handsFreeCoachingModeKey &&
+    !canUseHandsFreeCoaching(appSession.user.email)
+  ) {
+    return NextResponse.json(
+      {
+        detail: "Hands-Free Coaching is a premium feature that is not enabled for this account.",
+        error: "Hands-Free Coaching is unavailable.",
+      },
+      { status: 403 },
+    );
+  }
+
   const [
     promptConfig,
+    handsFreeCoachConfig,
     storyPracticeConfig,
     promptComponents,
     memory,
     storyLibrary,
   ] = await Promise.all([
     getActivePromptConfig("realtime_interviewer"),
+    body.snapshot?.modeKey === handsFreeCoachingModeKey
+      ? getActivePromptConfig("realtime_hands_free_coach")
+      : Promise.resolve(undefined),
     body.snapshot?.storyContext
       ? getActivePromptConfig("story_practice_realtime")
       : Promise.resolve(undefined),
@@ -210,7 +229,8 @@ export async function POST(request: Request) {
     getCoachingMemory(appSession.user.id),
     listStoryLibraryContext(appSession.user.id),
   ]);
-  const activeRealtimeConfig = storyPracticeConfig ?? promptConfig;
+  const baseRealtimeConfig = handsFreeCoachConfig ?? promptConfig;
+  const activeRealtimeConfig = storyPracticeConfig ?? baseRealtimeConfig;
   const aiRun = await startAiRun({
     model: activeRealtimeConfig.model,
     promptConfigId: activeRealtimeConfig.id,
@@ -231,7 +251,7 @@ export async function POST(request: Request) {
     type: "realtime",
     model: activeRealtimeConfig.model,
     instructions: buildQueInstructions(
-      promptConfig,
+      baseRealtimeConfig,
       body.snapshot,
       promptComponents,
       storyPracticeConfig,

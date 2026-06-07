@@ -8,6 +8,10 @@ import type {
 } from "@/product/interview-types";
 import { requireAdminSession } from "@/server/admin";
 import { listPromptComponents } from "@/server/catalog/prompt-components";
+import {
+  handsFreeCoachingFeatureFlag,
+  isHandsFreeCoachingEnabled,
+} from "@/server/interview/hands-free-coaching";
 import { buildTurnSystemPrompt, buildTurnTaskInstruction } from "@/server/interview/turn-based";
 import { listPromptConfigs } from "@/server/prompts/prompt-configs";
 
@@ -17,6 +21,7 @@ type WorkspaceActionKey =
   | "coaching"
   | "debrief"
   | "evaluation"
+  | "hands_free_coaching"
   | "introduction_builder"
   | "mock_interview"
   | "rapid_fire"
@@ -44,7 +49,7 @@ type WorkspaceAction = {
   modeKey?: SessionSetupSnapshot["modeKey"];
   testTunnel?: {
     endpoint?: "/api/realtime/debrief" | "/api/realtime/session" | "/api/realtime/story";
-    mode: "coaching" | "first_impression" | "mock_interview" | "rapid_fire";
+    mode: "coaching" | "first_impression" | "hands_free_coaching" | "mock_interview" | "rapid_fire";
   };
   title: string;
 };
@@ -83,6 +88,16 @@ const actionDefinitions: Array<{
     styleKey: "neutral",
     testTunnel: { mode: "rapid_fire" },
     title: "Rapid Fire",
+  },
+  {
+    basePromptKeys: ["realtime_hands_free_coach", "session_evaluation"],
+    description: "Premium Realtime coaching prompt stack plus post-session evaluation.",
+    key: "hands_free_coaching",
+    modeKey: "hands_free_coaching",
+    questionTypeKey: "behavioral",
+    styleKey: "friendly",
+    testTunnel: { endpoint: "/api/realtime/session", mode: "hands_free_coaching" },
+    title: "Hands-Free Coaching",
   },
   {
     basePromptKeys: ["realtime_interviewer", "session_evaluation"],
@@ -269,15 +284,36 @@ function generatedBlocks(definition: (typeof actionDefinitions)[number]): Worksp
     });
   }
 
-  if (definition.key === "mock_interview") {
+  if (definition.key === "mock_interview" || definition.key === "hands_free_coaching") {
     blocks.push({
       body: [
-        "Realtime runtime composes the active realtime_interviewer prompt with mode, question-focus, style, story/introduction context when present, story library, target role/company, resume excerpt, coaching memory, and strict spoken-turn contract.",
+        definition.key === "hands_free_coaching"
+          ? "Realtime runtime composes the active realtime_hands_free_coach prompt with mode, question-focus, style, story library, target role/company, resume excerpt, coaching memory, and strict spoken-turn contract."
+          : "Realtime runtime composes the active realtime_interviewer prompt with mode, question-focus, style, story/introduction context when present, story library, target role/company, resume excerpt, coaching memory, and strict spoken-turn contract.",
         "The client first-turn instruction starts the live voice session and asks exactly one opening question.",
       ].join("\n"),
       collapsed: true,
       readOnly: true,
       title: "Generated Realtime Assembly",
+    });
+  }
+
+  if (definition.key === "hands_free_coaching") {
+    blocks.push({
+      body: JSON.stringify(
+        {
+          accessWhenDisabled: "Admins only",
+          enabledForLearners: isHandsFreeCoachingEnabled(),
+          featureFlag: handsFreeCoachingFeatureFlag,
+          runtime: "OpenAI Realtime voice",
+          sessionCapSeconds: 900,
+        },
+        null,
+        2,
+      ),
+      collapsed: false,
+      readOnly: true,
+      title: "Premium Feature Gate",
     });
   }
 

@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-type InterviewModeKey = "coaching" | "mock_interview" | "rapid_fire";
+type InterviewModeKey = "coaching" | "hands_free_coaching" | "mock_interview" | "rapid_fire";
 type InterviewEngine = "realtime" | "turn_based";
-type FeedbackDepth = "brief" | "detailed" | "standard";
+type FeedbackDepth = "brief" | "coaching" | "review_only";
 
 type InterviewRuntimeConfig = {
   enabled: boolean;
@@ -22,6 +22,7 @@ type InterviewRuntimeConfig = {
 
 const modeLabels: Record<InterviewModeKey, string> = {
   coaching: "Coaching",
+  hands_free_coaching: "Hands-Free Coaching",
   mock_interview: "Mock Interview",
   rapid_fire: "Rapid Fire",
 };
@@ -30,7 +31,7 @@ const defaultConfigs: InterviewRuntimeConfig[] = [
   {
     enabled: true,
     engine: "turn_based",
-    feedbackDepth: "standard",
+    feedbackDepth: "brief",
     maxAnswerSeconds: 45,
     maxDurationSeconds: 600,
     maxTurns: 12,
@@ -42,23 +43,36 @@ const defaultConfigs: InterviewRuntimeConfig[] = [
   },
   {
     enabled: true,
-    engine: "realtime",
-    feedbackDepth: "detailed",
-    maxAnswerSeconds: 180,
-    maxDurationSeconds: 1200,
-    maxTurns: 10,
+    engine: "turn_based",
+    feedbackDepth: "coaching",
+    maxAnswerSeconds: 90,
+    maxDurationSeconds: 900,
+    maxTurns: 8,
     modeKey: "coaching",
-    textModel: "gpt-5.4-mini",
+    textModel: "gpt-5.4",
     transcriptionModel: "gpt-4o-mini-transcribe",
-    ttsModel: "gpt-4o-mini-tts",
+    ttsModel: "tts-1",
     ttsVoice: "alloy",
   },
   {
     enabled: true,
     engine: "realtime",
-    feedbackDepth: "detailed",
-    maxAnswerSeconds: 240,
-    maxDurationSeconds: 1800,
+    feedbackDepth: "coaching",
+    maxAnswerSeconds: 180,
+    maxDurationSeconds: 900,
+    maxTurns: 8,
+    modeKey: "hands_free_coaching",
+    textModel: "gpt-realtime",
+    transcriptionModel: "gpt-4o-mini-transcribe",
+    ttsModel: "tts-1",
+    ttsVoice: "marin",
+  },
+  {
+    enabled: true,
+    engine: "realtime",
+    feedbackDepth: "review_only",
+    maxAnswerSeconds: 120,
+    maxDurationSeconds: 1200,
     maxTurns: 12,
     modeKey: "mock_interview",
     textModel: "gpt-5.4-mini",
@@ -72,6 +86,7 @@ function normalizeConfig(input: Partial<InterviewRuntimeConfig>): InterviewRunti
   if (
     input.modeKey !== "rapid_fire" &&
     input.modeKey !== "coaching" &&
+    input.modeKey !== "hands_free_coaching" &&
     input.modeKey !== "mock_interview"
   ) {
     return null;
@@ -87,8 +102,8 @@ function normalizeConfig(input: Partial<InterviewRuntimeConfig>): InterviewRunti
     engine: input.engine === "realtime" || input.engine === "turn_based" ? input.engine : modeDefault.engine,
     feedbackDepth:
       input.feedbackDepth === "brief" ||
-      input.feedbackDepth === "standard" ||
-      input.feedbackDepth === "detailed"
+      input.feedbackDepth === "coaching" ||
+      input.feedbackDepth === "review_only"
         ? input.feedbackDepth
         : modeDefault.feedbackDepth,
     maxAnswerSeconds:
@@ -402,8 +417,8 @@ export function InterviewRuntimeConfigPanel() {
             value={selectedConfig.feedbackDepth}
           >
             <option value="brief">Brief</option>
-            <option value="standard">Standard</option>
-            <option value="detailed">Detailed</option>
+            <option value="coaching">Coaching</option>
+            <option value="review_only">Review only</option>
           </select>
         </label>
       </div>

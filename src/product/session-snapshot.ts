@@ -12,6 +12,7 @@ import { parseStoryOutline } from "@/product/story-lab";
 const modeKeys: PracticeModeKey[] = [
   "first_impression",
   "coaching",
+  "hands_free_coaching",
   "rapid_fire",
   "mock_interview",
 ];

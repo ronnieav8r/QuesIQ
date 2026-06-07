@@ -151,7 +151,12 @@ export function PracticeSetup({
                 onClick={() => onMode(mode)}
                 type="button"
               >
-                <strong>{mode.name}</strong>
+                <strong>
+                  {mode.name}
+                  {mode.key === "hands_free_coaching" && (
+                    <span className="mode-premium-pill">Premium</span>
+                  )}
+                </strong>
                 <span>{mode.description}</span>
                 <small>{mode.use}</small>
               </button>

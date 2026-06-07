@@ -224,6 +224,43 @@ function run() {
     "Show admin panel",
     "Hide admin panel",
   ]);
+  requireMarkers("Hands-Free Coaching premium realtime mode", "src/product/interview-types.ts", [
+    "\"hands_free_coaching\"",
+    "\"realtime_hands_free_coach\"",
+  ]);
+  requireMarkers("Hands-Free Coaching feature gate helper", "src/server/interview/hands-free-coaching.ts", [
+    "INTERVIEW_HANDS_FREE_COACHING_ENABLED",
+    "canUseHandsFreeCoaching",
+    "isAdminEmail",
+  ]);
+  requireMarkers("Hands-Free Coaching catalog visibility gate", "src/app/api/catalog/route.ts", [
+    "handsFreeCoachingModeKey",
+    "canUseHandsFreeCoaching(appSession?.user?.email)",
+  ]);
+  requireMarkers("Hands-Free Coaching server launch gate", "src/app/api/sessions/route.ts", [
+    "handsFreeCoachingModeKey",
+    "Hands-Free Coaching is unavailable.",
+  ]);
+  requireMarkers("Hands-Free Coaching realtime launch gate", "src/app/api/realtime/session/route.ts", [
+    "realtime_hands_free_coach",
+    "handsFreeCoachingModeKey",
+    "Hands-Free Coaching is unavailable.",
+  ]);
+  requireMarkers("Hands-Free Coaching runtime cap", "src/components/interview/realtime-voice-session.tsx", [
+    "maxDurationSeconds",
+    "client.session.max_duration_reached",
+  ]);
+  requireMarkers("Hands-Free Coaching admin playbook", "src/components/interview/admin-view.tsx", [
+    "Hands-Free Coaching",
+    "realtime_hands_free_coach",
+    "hands_free_coaching",
+  ]);
+  requireMarkers("Hands-Free Coaching durable migration", "drizzle/0072_add_hands_free_coaching_mode.sql", [
+    "hands_free_coaching",
+    "realtime_hands_free_coach",
+    "max_duration_seconds",
+    "900",
+  ]);
 
   requireMarkers("AI usage instrumentation markers", "src/server/sessions/create-session-evaluation.ts", [
     "startAiRun(",

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { parseSessionSetupSnapshot } from "@/product/session-snapshot";
+import { canUseHandsFreeCoaching, handsFreeCoachingModeKey } from "@/server/interview/hands-free-coaching";
 import {
   getAccessibleInterviewQuestion,
   toSelectedQuestionContext,
@@ -69,6 +70,19 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Session setup snapshot is invalid." },
       { status: 400 },
+    );
+  }
+
+  if (
+    parsedSnapshot.modeKey === handsFreeCoachingModeKey &&
+    !canUseHandsFreeCoaching(appSession.user.email)
+  ) {
+    return NextResponse.json(
+      {
+        detail: "Hands-Free Coaching is a premium feature that is not enabled for this account.",
+        error: "Hands-Free Coaching is unavailable.",
+      },
+      { status: 403 },
     );
   }
 

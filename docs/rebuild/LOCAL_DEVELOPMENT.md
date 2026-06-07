@@ -103,6 +103,24 @@ turn-based engine used by the Admin Prompt Test Tunnel, and
 Rapid Fire, Intro Practice, and Story Practice/TMAAT without adding a Render
 backdoor endpoint.
 
+## Hands-Free Coaching QA
+
+Hands-Free Coaching is a separate premium-labeled realtime voice mode. It is
+not part of the button-driven Coaching, Question Queue, Rapid Fire, Intro
+Practice, or TMAAT flows.
+
+Local learner visibility is controlled by:
+
+```powershell
+INTERVIEW_HANDS_FREE_COACHING_ENABLED=true
+```
+
+When the flag is absent or false, admin users can still see and launch
+Hands-Free Coaching for QA. Normal learners should not see it in the catalog and
+server launch routes should reject direct attempts. The session uses the
+`realtime_hands_free_coach` prompt config, the `hands_free_coaching` runtime
+config, and a 900-second session cap.
+
 Stop local Postgres:
 
 ```powershell

@@ -220,7 +220,12 @@ type InterviewRuntimeConfigSummary = {
   ttsVoice: string;
 };
 
-type TestTunnelMode = "coaching" | "first_impression" | "mock_interview" | "rapid_fire";
+type TestTunnelMode =
+  | "coaching"
+  | "first_impression"
+  | "hands_free_coaching"
+  | "mock_interview"
+  | "rapid_fire";
 
 type TestTunnelRealtimeEndpoint =
   | "/api/realtime/debrief"
@@ -280,6 +285,7 @@ type PromptWorkspaceActionKey =
   | "coaching"
   | "debrief"
   | "evaluation"
+  | "hands_free_coaching"
   | "introduction_builder"
   | "mock_interview"
   | "rapid_fire"
@@ -342,6 +348,7 @@ type PromptPlaybook = {
 const promptLabels: Record<PromptConfigKey, string> = {
   introduction_draft: "Introduction Draft",
   quira_support_chat: "Quira Support Chat",
+  realtime_hands_free_coach: "Realtime Hands-Free Coach",
   realtime_interviewer: "Live Voice Interviewer",
   session_debrief: "Session Debrief",
   session_evaluation: "Post-Session Evaluation",
@@ -356,6 +363,18 @@ const promptLabels: Record<PromptConfigKey, string> = {
 };
 
 const promptPlaybooks: PromptPlaybook[] = [
+  {
+    basePromptKeys: ["realtime_hands_free_coach", "session_evaluation"],
+    componentModeKeys: ["hands_free_coaching"],
+    description:
+      "Premium live Realtime coaching. Que coaches naturally after answers without button-choice menus.",
+    includeAllQuestionTypes: true,
+    includeAllStyles: true,
+    includeFirstTurn: true,
+    key: "hands_free_coaching",
+    runtimeModeKey: "hands_free_coaching",
+    title: "Hands-Free Coaching",
+  },
   {
     basePromptKeys: ["realtime_interviewer", "session_evaluation"],
     componentModeKeys: ["rapid_fire"],
@@ -894,6 +913,10 @@ function diagnosticMetadataText(event: DiagnosticEventRecord) {
 
 function aiRunRawJsonText(run: AiRunRecord) {
   return run.rawJson ? JSON.stringify(run.rawJson) : "";
+}
+
+function isRealtimeTestTunnelMode(mode: TestTunnelMode) {
+  return mode === "hands_free_coaching" || mode === "mock_interview";
 }
 
 function createAdminTranscriptTurn(
@@ -2347,7 +2370,7 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
 
       setTestTunnelSession(body.session);
       setTestTunnelRealtimeSessionId(body.session.id);
-      if (snapshot.modeKey === "mock_interview") {
+      if (isRealtimeTestTunnelMode(snapshot.modeKey)) {
         setTestTunnelArtifact(createTestTunnelArtifact([]));
         setTestTunnelStatus("ready");
         return;
@@ -3558,6 +3581,7 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
                       <option value="coaching">Coaching</option>
                       <option value="rapid_fire">Rapid Fire</option>
                       <option value="first_impression">Intro Practice</option>
+                      <option value="hands_free_coaching">Hands-Free Coaching Realtime</option>
                       <option value="mock_interview">Mock Interview Realtime</option>
                     </select>
                   </label>
@@ -3620,7 +3644,7 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
                   <label>
                     <span>Typed candidate answer</span>
                     <textarea
-                      disabled={!testTunnelSession || testTunnelMode === "mock_interview"}
+                      disabled={!testTunnelSession || isRealtimeTestTunnelMode(testTunnelMode)}
                       onChange={(event) => setTestTunnelAnswer(event.target.value)}
                       placeholder="Type the candidate answer to submit as transcript."
                       rows={5}
@@ -3632,7 +3656,7 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
                       disabled={
                         !testTunnelSession ||
                         !testTunnelAnswer.trim() ||
-                        testTunnelMode === "mock_interview" ||
+                        isRealtimeTestTunnelMode(testTunnelMode) ||
                         testTunnelStatus === "running"
                       }
                       onClick={() => void submitTestTunnelAnswer()}

@@ -34,7 +34,11 @@ function targetForKey(key: PromptConfigKey): PromptConfigTarget {
     return "debrief";
   }
 
-  if (key === "realtime_interviewer" || key === "story_practice_realtime") {
+  if (
+    key === "realtime_interviewer" ||
+    key === "realtime_hands_free_coach" ||
+    key === "story_practice_realtime"
+  ) {
     return "realtime";
   }
 

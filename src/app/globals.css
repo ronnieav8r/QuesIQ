@@ -2527,6 +2527,26 @@ label span {
   font-weight: 700;
 }
 
+.choice-row strong {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.mode-premium-pill {
+  background: rgba(255, 165, 49, 0.16);
+  border: 1px solid rgba(255, 165, 49, 0.52);
+  border-radius: var(--radius-sm);
+  color: #ffd28a;
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
+  padding: 0.28rem 0.45rem;
+  text-transform: uppercase;
+}
+
 .choice-row.compact small {
   display: none;
 }

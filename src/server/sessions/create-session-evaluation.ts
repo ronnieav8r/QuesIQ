@@ -275,6 +275,10 @@ function getModeSpecificEvaluationInstructions(snapshot: SessionSetupSnapshot) {
     return "This is Coaching mode. Evaluate answer quality and how the candidate used any in-session coaching or retry guidance.";
   }
 
+  if (snapshot.modeKey === "hands_free_coaching") {
+    return "This is Hands-Free Coaching mode: a live realtime coaching conversation. Evaluate answer quality, how the candidate responded to natural in-session coaching, and whether the conversation kept moving without relying on button-choice menus.";
+  }
+
   return undefined;
 }
 

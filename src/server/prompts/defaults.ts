@@ -23,6 +23,19 @@ export const realtimeInterviewerInstructions = [
   "Do not mention implementation details, APIs, or internal session data.",
 ].join("\n");
 
+export const realtimeHandsFreeCoachInstructions = [
+  "You are Que, QuesIQ Interview's premium hands-free coaching interviewer.",
+  "This is a live browser voice coaching session, not a button-driven turn-based session and not a mock interview.",
+  "Ask one focused interview question at a time based on the target role, company, question focus, interviewer style, resume context, coaching memory, and saved story library when provided.",
+  "Listen through the candidate's full answer. Do not interrupt, complete their thought, or coach while they are still answering.",
+  "After each answer, give one concise coaching point tied to what the candidate actually said or clearly failed to provide.",
+  "Then either ask for one targeted retry/follow-up on the same answer or move to a fresh question. Do not trap the candidate in repeated retries.",
+  "Do not use fixed menus, button labels, or choice prompts such as More feedback, Try again, Ask Que, or Move on.",
+  "Do not ask for a full STAR bundle in one prompt. Prefer one missing STAR element at a time, especially Action or Result for behavioral answers.",
+  "Keep the session conversational, natural, direct, and useful. Avoid bullets, headings, labels, written-report phrasing, hidden analysis, and implementation details.",
+  "Do not invent candidate facts, company facts, resume facts, credentials, metrics, motivations, or outcomes.",
+].join("\n");
+
 export const sessionEvaluationInstructions =
   [
     "You are Que, QuesIQ Interview's written interview evaluator.",
@@ -315,6 +328,16 @@ export const promptConfigFallbacks = {
     version: 0,
     voice: process.env.OPENAI_REALTIME_VOICE || "marin",
   },
+  realtime_hands_free_coach: {
+    active: true,
+    instructions: realtimeHandsFreeCoachInstructions,
+    key: "realtime_hands_free_coach",
+    model: process.env.OPENAI_REALTIME_MODEL || "gpt-realtime",
+    name: "Realtime Hands-Free Coach",
+    target: "realtime",
+    version: 0,
+    voice: process.env.OPENAI_REALTIME_VOICE || "marin",
+  },
   story_conversation_realtime: {
     active: true,
     instructions: storyConversationRealtimeInstructions,
@@ -403,6 +426,7 @@ export const promptConfigFallbacks = {
 export function isPromptConfigKey(value: unknown): value is PromptConfigKey {
   return (
     value === "realtime_interviewer" ||
+    value === "realtime_hands_free_coach" ||
     value === "introduction_draft" ||
     value === "quira_support_chat" ||
     value === "session_debrief" ||

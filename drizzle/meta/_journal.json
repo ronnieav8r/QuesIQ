@@ -498,6 +498,13 @@
       "when": 1780869600000,
       "tag": "0071_add_micro_coach_v2_prompts",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1780956000000,
+      "tag": "0072_add_hands_free_coaching_mode",
+      "breakpoints": true
     }
   ]
 }

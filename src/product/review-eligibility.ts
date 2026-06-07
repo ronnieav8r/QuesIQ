@@ -12,7 +12,7 @@ function countUserTranscriptTurns(artifact: Pick<VoiceSessionArtifactDraft, "tra
 }
 
 export function getMinimumReviewDurationSeconds(snapshot: SessionSetupSnapshot) {
-  if (isTurnBasedReview(snapshot)) {
+  if (isAnswerBasedReview(snapshot)) {
     return 0;
   }
 
@@ -21,9 +21,10 @@ export function getMinimumReviewDurationSeconds(snapshot: SessionSetupSnapshot) 
     : minimumStandardReviewDurationSeconds;
 }
 
-function isTurnBasedReview(snapshot: SessionSetupSnapshot) {
+function isAnswerBasedReview(snapshot: SessionSetupSnapshot) {
   return (
     snapshot.modeKey === "rapid_fire" ||
+    snapshot.modeKey === "hands_free_coaching" ||
     Boolean(snapshot.turnBasedQuestionCount) ||
     Boolean(snapshot.storyContext) ||
     Boolean(snapshot.introductionContext)
@@ -34,7 +35,7 @@ export function isArtifactTooShortToReview(
   snapshot: SessionSetupSnapshot,
   artifact: Pick<VoiceSessionArtifactDraft, "durationSeconds" | "transcript">,
 ) {
-  if (isTurnBasedReview(snapshot)) {
+  if (isAnswerBasedReview(snapshot)) {
     return countUserTranscriptTurns(artifact) < minimumTurnBasedAnsweredTurns;
   }
 
@@ -45,7 +46,7 @@ export function isArtifactTooShortToReview(
 }
 
 export function getTooShortReviewMessage(snapshot: SessionSetupSnapshot) {
-  if (isTurnBasedReview(snapshot)) {
+  if (isAnswerBasedReview(snapshot)) {
     return "Answer at least one question before ending the session so Que can create a review.";
   }
 

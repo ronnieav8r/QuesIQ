@@ -20,6 +20,7 @@ type RealtimeVoiceSessionProps = {
   hideTranscript?: boolean;
   initialResponseMode?: "model" | "static" | "wait_for_user";
   initialStaticMessage?: string;
+  maxDurationSeconds?: number;
   realtimeInstructions?: string;
   testTunnel?: boolean;
   onErrorAction?: () => void;
@@ -97,6 +98,7 @@ export function RealtimeVoiceSession({
   hideTranscript = false,
   initialResponseMode = "model",
   initialStaticMessage,
+  maxDurationSeconds,
   realtimeInstructions,
   testTunnel = false,
   onErrorAction,
@@ -118,6 +120,7 @@ export function RealtimeVoiceSession({
   const pendingUserTranscriptRef = useRef("");
   const responseActiveRef = useRef(false);
   const queStartedRef = useRef(false);
+  const maxDurationReachedRef = useRef(false);
   const sessionStartedAtMsRef = useRef<number | undefined>(undefined);
   const [artifactDraft, setArtifactDraft] =
     useState<VoiceSessionArtifactDraft>(emptyArtifactDraft);
@@ -172,6 +175,7 @@ export function RealtimeVoiceSession({
     finishingRef.current = false;
     pendingUserTranscriptRef.current = "";
     responseActiveRef.current = false;
+    maxDurationReachedRef.current = false;
     window.clearTimeout(endFinalizeTimeoutRef.current);
     sessionStartedAtMsRef.current = Date.now();
     setElapsedSeconds(0);
@@ -272,6 +276,25 @@ export function RealtimeVoiceSession({
 
     return () => window.clearInterval(timer);
   }, [phase]);
+
+  useEffect(() => {
+    if (!maxDurationSeconds || phase !== "live" || ending) {
+      return;
+    }
+
+    if (elapsedSeconds >= maxDurationSeconds && !maxDurationReachedRef.current) {
+      maxDurationReachedRef.current = true;
+      const timer = window.setTimeout(() => {
+        addEvent("client.session.max_duration_reached");
+        endSession();
+      }, 0);
+
+      return () => window.clearTimeout(timer);
+    }
+    return undefined;
+    // The session timer should react only to clock/phase changes, not to function identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elapsedSeconds, ending, maxDurationSeconds, phase]);
 
   function startQue(dataChannel: RTCDataChannel) {
     if (queStartedRef.current) {

@@ -85,6 +85,7 @@ export function SessionView({
   const canLoadTurnBasedRuntime =
     snapshot.modeKey === "rapid_fire" ||
     snapshot.modeKey === "coaching" ||
+    snapshot.modeKey === "hands_free_coaching" ||
     snapshot.modeKey === "first_impression" ||
     Boolean(snapshot.storyContext || snapshot.introductionContext || selectedQuestionQueue.length);
   const [runtimeConfigLoaded, setRuntimeConfigLoaded] = useState(
@@ -121,6 +122,7 @@ export function SessionView({
     if (
       snapshot.modeKey !== "rapid_fire" &&
       snapshot.modeKey !== "coaching" &&
+      snapshot.modeKey !== "hands_free_coaching" &&
       snapshot.modeKey !== "first_impression" &&
       !snapshot.storyContext &&
       !snapshot.introductionContext &&
@@ -298,6 +300,7 @@ export function SessionView({
       ) : (
         <RealtimeVoiceSession
           firstTurnInstructions={buildInterviewFirstTurnInstructions(snapshot)}
+          maxDurationSeconds={runtimeConfig.maxDurationSeconds}
           onArtifactChange={setArtifactDraft}
           sessionId={session.id}
           snapshot={snapshot}
@@ -358,6 +361,12 @@ export function SessionView({
               <div>
                 <dt>Questions</dt>
                 <dd>{turnBasedQuestionCount}</dd>
+              </div>
+            )}
+            {snapshot.modeKey === "hands_free_coaching" && (
+              <div>
+                <dt>Premium voice limit</dt>
+                <dd>{runtimeConfig.maxDurationSeconds}s</dd>
               </div>
             )}
             {questionType && (

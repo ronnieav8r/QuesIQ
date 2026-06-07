@@ -40,6 +40,8 @@ with production or static checks.
 - Practice setup does not show retired First Impression as a normal Practice
   mode.
 - Coaching, Rapid Fire, and Mock Interview are selectable.
+- Hands-Free Coaching is visible with a Premium pill only for admins while
+  `INTERVIEW_HANDS_FREE_COACHING_ENABLED` is off.
 - Question focus and interviewer style selections persist into a session.
 - Session preview only shows user-relevant information; admin/debug context is
   not exposed to normal users.
@@ -90,6 +92,23 @@ with production or static checks.
 - End session creates transcript artifact and review path.
 - Mock Interview quest/reward feels premium relative to Rapid Fire/Coaching.
 
+## Hands-Free Coaching
+
+- Hands-Free Coaching uses realtime voice, not the button-driven Coaching
+  controls.
+- Normal learners cannot launch it while
+  `INTERVIEW_HANDS_FREE_COACHING_ENABLED` is off.
+- Admins can launch it for QA while the flag is off.
+- Signed-in learners can launch it when
+  `INTERVIEW_HANDS_FREE_COACHING_ENABLED=true`.
+- Que gives concise natural coaching after answers without the More feedback,
+  Try again, Ask Que, or Move on menu.
+- Que may ask one targeted retry/follow-up, then moves forward instead of
+  looping on the same answer.
+- The 15-minute cap ends the session cleanly.
+- Transcript artifact, review generation, `ai_runs`, and
+  `realtime_session_usage` records are saved.
+
 ## Story Lab
 
 - Introduction Builder is in Story Lab, not normal Practice.
@@ -117,7 +136,7 @@ with production or static checks.
 ## Admin Interview Panel
 
 - Admin opens to Interview `Mode Playbooks`.
-- Mode Playbooks include Rapid Fire, Coaching, Mock Interview, Story Lab,
+- Mode Playbooks include Rapid Fire, Coaching, Hands-Free Coaching, Mock Interview, Story Lab,
   Post-Session Review, and Voice Debrief.
 - Story Lab playbook includes Introduction Builder prompts.
 - Long prompt text is collapsed by default.
@@ -125,6 +144,8 @@ with production or static checks.
 - Mode/question/style component editing still works.
 - Runtime & Cost contains the Interview runtime config panel.
 - Rapid Fire and Coaching runtime configs show turn-based settings.
+- Hands-Free Coaching runtime config shows realtime engine, coaching feedback
+  depth, and a 900-second max duration.
 - First-turn/kickoff instructions are visible in Admin and not hidden in code.
 - Prompt Test Tunnel is available to admins in the legacy Interview Admin
   panel.
@@ -152,6 +173,9 @@ with production or static checks.
   admin-only Prompt Test Tunnel QA, or an accepted Interview/OpenAI fallback key
   is intentionally used.
 - Realtime API key/model/voice env vars are present for Mock Interview.
+- Realtime API key/model/voice env vars are present for Hands-Free Coaching.
+- `INTERVIEW_HANDS_FREE_COACHING_ENABLED` is intentionally set or unset for the
+  planned learner visibility state.
 - Quira key is present if testing Quira AI responses.
 - Production signed-in browser QA passes on `https://quesiq.com`.
 - Real microphone QA passes on at least one desktop browser and one mobile
