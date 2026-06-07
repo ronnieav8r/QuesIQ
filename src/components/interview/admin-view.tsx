@@ -346,6 +346,7 @@ type PromptPlaybook = {
 };
 
 const promptLabels: Record<PromptConfigKey, string> = {
+  dpe_answer_evaluator_v1: "DPE Answer Evaluator V1",
   introduction_draft: "Introduction Draft",
   quira_support_chat: "Quira Support Chat",
   resume_summary: "Interview Resume Summary",

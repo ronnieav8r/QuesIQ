@@ -1535,3 +1535,47 @@ packets without changing learner runtime behavior:
 5. Preview mode does not generate questions, import content, publish, mark
    Official, mark Verified, write durable source-pack storage, or write learner
    runtime state.
+
+## DPE Button-Driven Practice V1
+
+This slice reshapes learner Practice around two Interview-like DPE modes:
+
+1. `dpe_coaching`: one question at a time, spoken answer submission, immediate
+   evaluator feedback, then `Try again`, `Next question`, or `End session`.
+2. `dpe_rapid_fire`: learner-selected question count, spoken answer submission
+   for each prompt, quiet per-answer evaluation, and end-of-session result
+   cards with counts for Meets standard, Partial, and Below standard.
+
+Main learner Practice no longer presents `oral`, `visual`, or `combined` as
+start options. Those legacy labels are retained only so historical sessions can
+render in History/review.
+
+The learner answer flow is manual and oral-first:
+
+1. `Record`
+2. `Stop`
+3. `Record again` to discard the prior recording
+4. `Submit answer`
+
+Before submit, Practice shows: `Submit your answer to transcribe it and check
+it against the DPE answer key.` Typed transcript entry remains only as a dev
+recovery fallback when microphone capture or transcription is unavailable.
+
+Per-answer evaluation uses prompt key `dpe_answer_evaluator_v1`. Evaluations are
+grounded in the authored DPE question, ACS metadata, answer key, rubric, optional
+asset metadata, and submitted transcript. The evaluator returns JSON only with
+`verdict`, `knowledgeGaps`, `tightenUpAdvice`, `safetyOrRiskNotes`,
+`referenceAnswerElementsMatched`, `missingAnswerElements`, and `confidence`.
+Internal verdicts are `meets_standard`, `partial`, and `below_standard`; learner
+labels are Meets standard, Partial, and Below standard.
+
+Storage added in migration `0074_add_dpe_button_practice.sql`:
+
+1. `dpe_question_assets`: DPE-owned optional question assets with type
+   `image`, `audio`, `document`, `chart`, or `other`.
+2. `dpe_answer_attempts`: per-answer transcript/evaluation audit history linked
+   to `dpe_session_questions` and `ai_runs`.
+
+The question API now returns `assets`; legacy `visualImage` is treated as a
+compatibility-derived image asset when no DPE-owned assets exist. No separate
+Visual or Combined learner mode is added for V1.

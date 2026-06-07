@@ -31,6 +31,7 @@ export type DpeQuestion = {
   practiceLane: "oral" | "visual";
   supportsHandsFree: boolean;
   answerKeyStatus: "draft" | "missing" | "placeholder" | "provisional" | "ready" | "review" | "published" | "verified" | "pending";
+  assets: DpeQuestionAsset[];
   provisionalAnswerKey: string;
   answerKey: {
     status: string;
@@ -51,6 +52,43 @@ export type DpeQuestion = {
     status: string;
     scoringNotes: string | null;
   } | null;
+};
+
+export type DpeQuestionAsset = {
+  id: string;
+  type: "audio" | "chart" | "document" | "image" | "other";
+  label: string;
+  url: string | null;
+  storageKey: string | null;
+  transcript: string | null;
+  instructions: string | null;
+  sortOrder: number;
+  metadata: Record<string, unknown> | null;
+};
+
+export type DpeAnswerVerdict = "below_standard" | "meets_standard" | "partial";
+
+export type DpeAnswerEvaluation = {
+  verdict: DpeAnswerVerdict;
+  knowledgeGaps: string[];
+  tightenUpAdvice: string[];
+  safetyOrRiskNotes: string[];
+  referenceAnswerElementsMatched: string[];
+  missingAnswerElements: string[];
+  confidence: number;
+};
+
+export type DpeAnswerAttempt = {
+  id?: string;
+  attemptNumber?: number;
+  transcriptText: string;
+  transcriptSource: "audio_transcription" | "typed_dev_recovery";
+  submittedAt: string;
+  evaluation: DpeAnswerEvaluation;
+  evaluatorPromptKey: string;
+  evaluatorPromptVersion: number;
+  evaluatorModel: string | null;
+  aiRunId?: string | null;
 };
 
 export type QuestionApiResponse = {

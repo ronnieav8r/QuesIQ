@@ -32,6 +32,8 @@ import type { VoiceSessionArtifactDraft } from "@/product/interview-types";
 import {
   areaLabels,
   buildEmptyQuestionResponse,
+  type DpeAnswerAttempt,
+  type DpeAnswerEvaluation,
   type QuestionApiResponse,
   type DpeQuestion
 } from "./questions";
@@ -49,13 +51,21 @@ import {
 } from "./target-tracks";
 
 type Screen = "home" | "practice" | "scenarios" | "history" | "content" | "me";
-type PracticeMode = "oral" | "visual" | "combined";
+type PracticeMode = "dpe_coaching" | "dpe_rapid_fire" | "oral" | "visual" | "combined";
 type PracticeStage = "setup" | "live" | "review";
 
 type SessionAnswer = {
+  attemptId?: string;
+  attemptNumber?: number;
+  evaluation?: DpeAnswerEvaluation;
+  evaluatorModel?: string | null;
+  evaluatorPromptKey?: string;
+  evaluatorPromptVersion?: number;
   question: DpeQuestion;
   response: string;
   skipped: boolean;
+  submittedAt?: string;
+  transcriptSource?: DpeAnswerAttempt["transcriptSource"];
 };
 
 type CertificateOption = QuestionApiResponse["certificateTypes"][number];
@@ -406,7 +416,7 @@ export default function App() {
     user: null
   });
   const [screen, setScreen] = useState<Screen>("home");
-  const [mode, setMode] = useState<PracticeMode>("oral");
+  const [mode, setMode] = useState<PracticeMode>("dpe_coaching");
   const [stage, setStage] = useState<PracticeStage>("setup");
   const [session, setSession] = useState<LocalSession | null>(null);
   const [storedSessions, setStoredSessions] = useState<StoredPracticeSession[]>([]);
@@ -438,7 +448,14 @@ export default function App() {
   const [practiceNotice, setPracticeNotice] = useState<PracticeNotice | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [draftAnswer, setDraftAnswer] = useState("");
+  const [recordedAudioBase64, setRecordedAudioBase64] = useState<string | null>(null);
+  const [recordedAudioMimeType, setRecordedAudioMimeType] = useState<string | null>(null);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
+  const [recordingStatus, setRecordingStatus] = useState<"idle" | "recorded" | "recording">("idle");
+  const [rapidQuestionCount, setRapidQuestionCount] = useState(5);
   const [certificateTypeId, setCertificateTypeId] = useState("");
+  const audioChunksRef = useRef<Blob[]>([]);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
   const certificateOptions = useMemo(
     () =>
@@ -747,6 +764,17 @@ export default function App() {
     setTask(nextTask);
   }
 
+  function resetAnswerCapture() {
+    mediaRecorderRef.current?.stream.getTracks().forEach((track) => track.stop());
+    mediaRecorderRef.current = null;
+    audioChunksRef.current = [];
+    setRecordedAudioBase64(null);
+    setRecordedAudioMimeType(null);
+    setRecordingError(null);
+    setRecordingStatus("idle");
+    setDraftAnswer("");
+  }
+
   function continueStoredInProgressSession(storedSession: StoredPracticeSession) {
     const storedTargetTrack = getStoredTargetTrack(storedSession);
     const certificateType = normalizeStoredCertificateType(storedSession.transcriptJson?.certificateType);
@@ -776,7 +804,7 @@ export default function App() {
     if (resumePlan.kind === "resume") {
       setSession(resumePlan.session);
       setCurrentIndex(resumePlan.nextIndex);
-      setDraftAnswer("");
+      resetAnswerCapture();
       setStage("live");
       setScreen("practice");
       setPracticeNotice({
@@ -800,10 +828,12 @@ export default function App() {
   async function startSession(voiceMode = false) {
     if (sessionStarting) return;
 
-    const questions = selectedQuestions.slice(0, 5);
+    const sessionQuestionLimit = mode === "dpe_rapid_fire" ? rapidQuestionCount : 5;
+    const questions = selectedQuestions.slice(0, sessionQuestionLimit);
     if (questions.length === 0) return;
     setSessionStarting(true);
     setPracticeNotice(null);
+    resetAnswerCapture();
 
     try {
       const draftSession: LocalSession = {
@@ -817,7 +847,7 @@ export default function App() {
         answers: [],
         startedAt: new Date(),
         persisted: false,
-        voiceMode
+        voiceMode: false
       };
       const typedFallbackSession: LocalSession = {
         ...draftSession,
@@ -857,7 +887,7 @@ export default function App() {
           setPracticeNotice(null);
           setSession({ ...draftSession, id: data.session.id, persisted: true });
           setCurrentIndex(0);
-          setDraftAnswer("");
+          resetAnswerCapture();
           setStage("live");
           await loadStoredSessions();
           return;
@@ -872,7 +902,7 @@ export default function App() {
           });
           setSession(typedFallbackSession);
           setCurrentIndex(0);
-          setDraftAnswer("");
+          resetAnswerCapture();
           setStage("live");
           return;
         }
@@ -891,7 +921,7 @@ export default function App() {
           });
           setSession(typedFallbackSession);
           setCurrentIndex(0);
-          setDraftAnswer("");
+          resetAnswerCapture();
           setStage("live");
           return;
         }
@@ -904,14 +934,92 @@ export default function App() {
 
       setSession(draftSession);
       setCurrentIndex(0);
-      setDraftAnswer("");
+      resetAnswerCapture();
       setStage("live");
     } finally {
       setSessionStarting(false);
     }
   }
 
-  async function recordAnswer(skipped: boolean) {
+  function blobToDataUrl(blob: Blob) {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function startAnswerRecording() {
+    if (answerSaving || recordingStatus === "recording") return;
+
+    resetAnswerCapture();
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      mediaRecorderRef.current = recorder;
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      recorder.onstop = () => {
+        const mimeType = recorder.mimeType || "audio/webm";
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+        stream.getTracks().forEach((track) => track.stop());
+        void blobToDataUrl(blob)
+          .then((dataUrl) => {
+            setRecordedAudioBase64(dataUrl);
+            setRecordedAudioMimeType(mimeType);
+            setRecordingStatus("recorded");
+          })
+          .catch(() => {
+            setRecordingError("Recording could not be prepared. Type a recovery transcript instead.");
+            setRecordingStatus("idle");
+          });
+      };
+      recorder.start();
+      setRecordingStatus("recording");
+    } catch {
+      setRecordingError("Microphone is unavailable. Type a recovery transcript if needed.");
+      setRecordingStatus("idle");
+    }
+  }
+
+  function stopAnswerRecording() {
+    if (mediaRecorderRef.current?.state === "recording") {
+      mediaRecorderRef.current.stop();
+    }
+  }
+
+  function buildClientFallbackAnswer(question: DpeQuestion, transcriptText: string): SessionAnswer {
+    const wordCount = transcriptText.trim().split(/\s+/).filter(Boolean).length;
+    const evaluation: DpeAnswerEvaluation = {
+      confidence: wordCount >= 20 ? 0.5 : 0.25,
+      knowledgeGaps:
+        wordCount >= 20
+          ? ["Server evaluator was unavailable, so this answer needs saved review when storage recovers."]
+          : ["Answer is too short for reliable local evaluation."],
+      missingAnswerElements: question.answerKey?.correctAnswerElements?.slice(0, 5) ?? [],
+      referenceAnswerElementsMatched: [],
+      safetyOrRiskNotes: ["Local recovery evaluation cannot fully assess safety or risk-management detail."],
+      tightenUpAdvice: ["Submit again after DPE storage/evaluator recovery for answer-key scoring."],
+      verdict: wordCount >= 20 ? "partial" : "below_standard",
+    };
+
+    return {
+      evaluation,
+      question,
+      response: transcriptText,
+      skipped: false,
+      submittedAt: new Date().toISOString(),
+      transcriptSource: "typed_dev_recovery",
+    };
+  }
+
+  async function recordAnswer() {
     if (!session) return;
     if (answerSaving) return;
 
@@ -919,41 +1027,75 @@ export default function App() {
 
     try {
       const question = session.questions[currentIndex];
-      const nextAnswers = [
-        ...session.answers,
-        {
-          question,
-          response: skipped ? "" : draftAnswer.trim(),
-          skipped
-        }
-      ];
+      const typedTranscript = draftAnswer.trim();
+      let answer: SessionAnswer | null = null;
 
+      if (session.persisted) {
+        const response = await fetch(`/api/dpe/practice-sessions/${session.id}/answers`, {
+          body: JSON.stringify({
+            audioBase64: recordedAudioBase64,
+            audioMimeType: recordedAudioMimeType,
+            question,
+            transcriptText: typedTranscript,
+          }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+        const data = (await response.json().catch(() => ({}))) as {
+          answer?: SessionAnswer;
+          available?: boolean;
+          error?: string;
+        };
+        const answerSaved = response.ok && data.available === true && Boolean(data.answer);
+        setDatabaseAvailable(response.ok && data.available === true);
+
+        if (answerSaved && data.answer) {
+          answer = data.answer;
+        } else if (typedTranscript) {
+          answer = buildClientFallbackAnswer(question, typedTranscript);
+          setPracticeNotice({
+            title: "Answer saved locally",
+            detail:
+              data.error ?? "DPE answer submission is unavailable. Typed recovery transcript is shown locally.",
+          });
+        } else {
+          setPracticeNotice({
+            title: "Transcript needed",
+            detail:
+              data.error ?? "Submit your recording again, or type a recovery transcript if transcription is unavailable.",
+          });
+          return;
+        }
+      } else if (typedTranscript) {
+        answer = buildClientFallbackAnswer(question, typedTranscript);
+      } else {
+        setPracticeNotice({
+          title: "Typed recovery transcript needed",
+          detail:
+            "DPE session storage is unavailable, so recording cannot be transcribed. Type the answer to continue locally.",
+        });
+        return;
+      }
+
+      const nextAnswers = upsertSessionAnswer(session.answers, answer);
       const isLastQuestion = currentIndex >= session.questions.length - 1;
+      const shouldEndRapidFire = mode === "dpe_rapid_fire" && isLastQuestion;
       const nextSession = {
         ...session,
         answers: nextAnswers,
-        endedAt: isLastQuestion ? new Date() : session.endedAt
+        endedAt: shouldEndRapidFire ? new Date() : session.endedAt
       };
 
       setSession(nextSession);
-      setDraftAnswer("");
+      resetAnswerCapture();
 
-      if (isLastQuestion) {
+      if (shouldEndRapidFire) {
         const persisted = await persistSession(nextSession, "completed");
         const reviewSession = persisted ? nextSession : markSessionLocalOnly(nextSession);
         setSession(reviewSession);
         setStage("review");
         await generateReview(reviewSession);
-      } else {
-        const persisted = await persistSession(nextSession, "in_progress");
-        if (!persisted) {
-          setSession(markSessionLocalOnly(nextSession));
-          setPracticeNotice({
-            title: "Typed practice running locally",
-            detail:
-              "DPE session storage stopped accepting updates. Continue locally, but History, progression, diagnostics, and saved review retry require storage to recover.",
-          });
-        }
+      } else if (mode === "dpe_rapid_fire") {
         setCurrentIndex((value) => value + 1);
       }
     } finally {
@@ -974,9 +1116,30 @@ export default function App() {
       setSession(reviewSession);
       setStage("review");
       await generateReview(reviewSession);
+      resetAnswerCapture();
     } finally {
       setAnswerSaving(false);
     }
+  }
+
+  function tryCurrentQuestionAgain() {
+    if (!session) return;
+    const question = session.questions[currentIndex];
+    setSession({
+      ...session,
+      answers: session.answers.filter((answer) => answer.question.id !== question.id),
+    });
+    resetAnswerCapture();
+  }
+
+  function goToNextQuestion() {
+    if (!session) return;
+    resetAnswerCapture();
+    if (currentIndex >= session.questions.length - 1) {
+      void finishEarly();
+      return;
+    }
+    setCurrentIndex((value) => value + 1);
   }
 
   async function persistSession(nextSession: LocalSession, status: "in_progress" | "completed") {
@@ -1092,7 +1255,7 @@ export default function App() {
       voiceMode: false,
     });
     setCurrentIndex(Math.min(answeredCount, Math.max(0, voiceSession.questions.length - 1)));
-    setDraftAnswer("");
+    resetAnswerCapture();
     setStage("live");
     setScreen("practice");
     setPracticeNotice({
@@ -1109,7 +1272,7 @@ export default function App() {
     setStage("setup");
     setSession(null);
     setCurrentIndex(0);
-    setDraftAnswer("");
+    resetAnswerCapture();
     setPracticeNotice(null);
   }
 
@@ -1298,6 +1461,10 @@ export default function App() {
                 selectedTargetTrack={selectedTargetTrack}
                 practiceNotice={practiceNotice}
                 publicStatus={publicStatus}
+                rapidQuestionCount={rapidQuestionCount}
+                recordedAudioBase64={recordedAudioBase64}
+                recordingError={recordingError}
+                recordingStatus={recordingStatus}
                 session={session}
                 stage={stage}
                 taskOptions={taskOptions}
@@ -1309,14 +1476,19 @@ export default function App() {
                 answerSaving={answerSaving}
                 sessionStarting={sessionStarting}
                 onFinishEarly={finishEarly}
+                onNextQuestion={goToNextQuestion}
                 onModeChange={setMode}
                 onOpenMe={() => setScreen("me")}
                 onCertificateChange={changeCertificate}
                 onRecordAnswer={recordAnswer}
+                onRapidQuestionCountChange={setRapidQuestionCount}
                 onReset={resetPractice}
                 onRetryReview={() => (session ? generateReview(session) : Promise.resolve())}
+                onStartRecording={startAnswerRecording}
                 onStartSession={() => startSession(false)}
                 onStartVoiceSession={() => startSession(true)}
+                onStopRecording={stopAnswerRecording}
+                onTryAgain={tryCurrentQuestionAgain}
                 onVoiceUnavailable={continueVoiceSessionAsTyped}
                 onVoiceArtifactFinalized={saveVoiceArtifact}
                 areaOptions={areaOptions}
@@ -2298,6 +2470,10 @@ function PracticeScreen(props: {
   selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
   practiceNotice: PracticeNotice | null;
   publicStatus: DpePublicStatus | null;
+  rapidQuestionCount: number;
+  recordedAudioBase64: string | null;
+  recordingError: string | null;
+  recordingStatus: "idle" | "recorded" | "recording";
   stage: PracticeStage;
   session: LocalSession | null;
   currentIndex: number;
@@ -2315,11 +2491,16 @@ function PracticeScreen(props: {
   onOpenMe: () => void;
     onStartSession: () => void;
   onStartVoiceSession: () => void;
-  onRecordAnswer: (skipped: boolean) => void;
+  onRecordAnswer: () => void;
   onFinishEarly: () => void;
+  onNextQuestion: () => void;
   onReset: () => void;
   onRetryReview: () => Promise<void>;
+  onRapidQuestionCountChange: (count: number) => void;
   onAnswerChange: (value: string) => void;
+  onStartRecording: () => void;
+  onStopRecording: () => void;
+  onTryAgain: () => void;
   onVoiceUnavailable: (session: LocalSession) => void;
   onVoiceArtifactFinalized: (artifact: VoiceSessionArtifactDraft) => void;
   }) {
@@ -2373,6 +2554,7 @@ function PracticeSetupScreen({
   selectedTargetTrack,
   practiceNotice,
   publicStatus,
+  rapidQuestionCount,
   databaseAvailable,
   dpeProfile,
   sessionStarting,
@@ -2381,8 +2563,8 @@ function PracticeSetupScreen({
     onTaskChange,
     onModeChange,
     onOpenMe,
-    onStartSession,
-    onStartVoiceSession
+    onRapidQuestionCountChange,
+    onStartSession
   }: {
   areaOptions: string[];
   area: string;
@@ -2397,6 +2579,7 @@ function PracticeSetupScreen({
   selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
   practiceNotice: PracticeNotice | null;
     publicStatus: DpePublicStatus | null;
+    rapidQuestionCount: number;
     databaseAvailable: boolean | null;
     dpeProfile: DpeProfileState;
     sessionStarting: boolean;
@@ -2405,8 +2588,8 @@ function PracticeSetupScreen({
     onTaskChange: (task: string) => void;
     onModeChange: (mode: PracticeMode) => void;
     onOpenMe: () => void;
+    onRapidQuestionCountChange: (count: number) => void;
     onStartSession: () => void;
-    onStartVoiceSession: () => void;
   }) {
   const visualCount = questions.filter((question) => question.practiceLane === "visual").length;
   const handsFreeCount = questions.filter((question) => question.supportsHandsFree).length;
@@ -2418,30 +2601,15 @@ function PracticeSetupScreen({
     : 0;
   const practiceBlocked = questions.length === 0;
   const reviewAiUnavailable = publicStatus?.reviewAiConfigured === false;
-  const voiceAiUnavailable = publicStatus?.realtimeVoiceConfigured === false;
-  const voiceDisabled =
-    practiceBlocked || sessionStarting || databaseAvailable === false || voiceAiUnavailable;
-  const voiceDisabledReason = practiceBlocked
-    ? "Voice disabled: no active prompts match this practice selection."
-    : sessionStarting
-      ? "Voice disabled: session setup is already starting."
-    : databaseAvailable === false
-      ? "Voice disabled: DPE session storage is unavailable."
-      : voiceAiUnavailable
-        ? "Voice disabled: Voice AI is not configured here."
-        : "";
   const privatePilotTrack = getDpeTargetTrackById(defaultDpeTargetTrackId) ?? dpeTargetTracks[0];
   const targetMissing = buildTargetMissingFields(dpeProfile);
   const typedStartLabel = sessionStarting
     ? "Starting session"
     : targetMissing.length > 0
       ? "Start with incomplete target"
-      : "Type Answers";
-  const voiceStartLabel = sessionStarting
-    ? "Starting session"
-    : targetMissing.length > 0
-      ? "Start voice with incomplete target"
-      : "Start Voice Practice";
+      : mode === "dpe_rapid_fire"
+        ? "Start Rapid Fire"
+        : "Start Coaching";
   const targetAlignedCertificate = findCertificateOptionForTargetTrack(
     selectedTargetTrack,
     certificateOptions,
@@ -2453,22 +2621,31 @@ function PracticeSetupScreen({
       <div className="section-head">
         <div>
           <h2>Practice setup</h2>
-          <p>Choose the practice lane and ACS target for this session.</p>
+          <p>Choose Coaching or Rapid Fire, then answer out loud with manual controls.</p>
         </div>
         <ClipboardCheck />
       </div>
 
       <div className="panel">
-        <div className="segmented-control" aria-label="Practice mode">
-          <ModeButton active={mode === "oral"} onClick={() => onModeChange("oral")}>
-            Oral
-          </ModeButton>
-          <ModeButton active={mode === "visual"} onClick={() => onModeChange("visual")}>
-            Visual
-          </ModeButton>
-          <ModeButton active={mode === "combined"} onClick={() => onModeChange("combined")}>
-            Combined
-          </ModeButton>
+        <div className="grid two-col" aria-label="Practice mode">
+          <button
+            className={`raised-card mode-card ${mode === "dpe_coaching" ? "selected" : ""}`}
+            onClick={() => onModeChange("dpe_coaching")}
+            type="button"
+          >
+            <span className="card-icon"><Mic /></span>
+            <strong>Coaching</strong>
+            <p>One question at a time with evaluator feedback after each submitted answer.</p>
+          </button>
+          <button
+            className={`raised-card mode-card ${mode === "dpe_rapid_fire" ? "selected" : ""}`}
+            onClick={() => onModeChange("dpe_rapid_fire")}
+            type="button"
+          >
+            <span className="card-icon"><ListChecks /></span>
+            <strong>Rapid Fire</strong>
+            <p>Quick sequence with quiet evaluations after each answer and results at the end.</p>
+          </button>
         </div>
         {practiceNotice && (
           <div className="raised-card mt-4">
@@ -2523,6 +2700,22 @@ function PracticeSetupScreen({
               ))}
             </select>
           </label>
+
+          {mode === "dpe_rapid_fire" && (
+            <label className="field">
+              <span>Question count</span>
+              <select
+                value={rapidQuestionCount}
+                onChange={(event) => onRapidQuestionCountChange(Number(event.target.value))}
+              >
+                {[3, 5, 8, 10].map((count) => (
+                  <option key={count} value={count}>
+                    {count} questions
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
       </div>
 
@@ -2533,10 +2726,13 @@ function PracticeSetupScreen({
               <h3>{modeCopy[mode].title}</h3>
               <p>{modeCopy[mode].description}</p>
             </div>
-            {mode === "oral" ? <Mic /> : mode === "visual" ? <BookOpenCheck /> : <Radio />}
+            {mode === "dpe_rapid_fire" ? <ListChecks /> : <Mic />}
           </div>
           <div className="stat-strip mt-4">
-            <Stat label="Session prompts" value={`${Math.min(5, questions.length)}`} />
+            <Stat
+              label="Session prompts"
+              value={`${Math.min(mode === "dpe_rapid_fire" ? rapidQuestionCount : 5, questions.length)}`}
+            />
             <Stat label="Target" value={selectedTargetTrack.code} />
             <Stat label="Prompt cert" value={selectedCertificateType?.code ?? "pending"} />
             <Stat label="Hands-free" value={`${handsFreeCount}`} />
@@ -2620,31 +2816,12 @@ function PracticeSetupScreen({
               </p>
             </div>
           )}
-          {voiceAiUnavailable && databaseAvailable !== false && (
-            <div className="raised-card mt-4">
-              <strong>Voice AI unavailable</strong>
-              <p>
-                Realtime voice is not configured for this environment. Use typed practice with the
-                same saved prompts, target track, transcript shape, and review path.
-              </p>
-            </div>
-          )}
             <div className="inline-actions mt-4">
-              <button
-                className="button primary"
-                onClick={onStartVoiceSession}
-                disabled={voiceDisabled}
-                title={voiceDisabledReason || "Start realtime DPE voice practice"}
-              >
-                <Mic />
-                {voiceStartLabel}
-              </button>
               <button className="button" onClick={onStartSession} disabled={practiceBlocked || sessionStarting}>
                 <ListChecks />
                 {typedStartLabel}
               </button>
             </div>
-            {voiceDisabledReason && <p className="muted mt-4">{voiceDisabledReason}</p>}
         </div>
 
         <div className="panel">
@@ -2684,26 +2861,47 @@ function PracticeSetupScreen({
     session,
     currentIndex,
     draftAnswer,
+    recordedAudioBase64,
+    recordingError,
+    recordingStatus,
     answerSaving,
     onAnswerChange,
     onRecordAnswer,
     onFinishEarly,
+    onNextQuestion,
+    onStartRecording,
+    onStopRecording,
+    onTryAgain,
     onVoiceUnavailable,
     onVoiceArtifactFinalized
   }: {
     session: LocalSession;
     currentIndex: number;
     draftAnswer: string;
+    recordedAudioBase64: string | null;
+    recordingError: string | null;
+    recordingStatus: "idle" | "recorded" | "recording";
     answerSaving: boolean;
     onAnswerChange: (value: string) => void;
-    onRecordAnswer: (skipped: boolean) => void;
+    onRecordAnswer: () => void;
     onFinishEarly: () => void;
+    onNextQuestion: () => void;
+    onStartRecording: () => void;
+    onStopRecording: () => void;
+    onTryAgain: () => void;
     onVoiceUnavailable: (session: LocalSession) => void;
     onVoiceArtifactFinalized: (artifact: VoiceSessionArtifactDraft) => void;
   }) {
     const question = session.questions[currentIndex];
     const progress = `${currentIndex + 1} of ${session.questions.length}`;
     const sessionTrackLabel = buildSessionTrackLabel(session);
+    const currentAnswer = session.answers.find((answer) => answer.question.id === question.id);
+    const feedbackVisible = session.mode === "dpe_coaching" && Boolean(currentAnswer?.evaluation);
+    const isLastQuestion = currentIndex >= session.questions.length - 1;
+    const submitDisabled =
+      answerSaving ||
+      recordingStatus === "recording" ||
+      (!recordedAudioBase64 && draftAnswer.trim().length === 0);
 
     if (session.voiceMode) {
       return (
@@ -2744,7 +2942,7 @@ function PracticeSetupScreen({
     <section className="screen">
       <div className="section-head">
         <div>
-          <h2>Local oral session</h2>
+          <h2>{session.mode === "dpe_rapid_fire" ? "Rapid Fire" : "Coaching"}</h2>
           <p>
             {sessionTrackLabel} - Area {session.area}, Task{" "}
             {session.task} - {progress}
@@ -2764,30 +2962,79 @@ function PracticeSetupScreen({
 
         <p className="session-question">{question.questionText}</p>
 
+        <QuestionAssetPanel question={question} />
+
+        {feedbackVisible && currentAnswer?.evaluation ? (
+          <div className="question-list mt-4">
+            <DpeAnswerEvaluationCard answer={currentAnswer} />
+            <div className="inline-actions">
+              <button className="button" disabled={answerSaving} onClick={onTryAgain}>
+                <RotateCcw />
+                Try again
+              </button>
+              <button className="button primary" disabled={answerSaving} onClick={onNextQuestion}>
+                <SkipForward />
+                {isLastQuestion ? "End session" : "Next question"}
+              </button>
+              <button className="button" disabled={answerSaving} onClick={onFinishEarly}>
+                <History />
+                End session
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="raised-card mt-4">
+              <strong>Manual voice controls</strong>
+              <p>
+                Submit your answer to transcribe it and check it against the DPE answer key.
+              </p>
+              {recordingError && <p className="muted">{recordingError}</p>}
+              {recordedAudioBase64 && recordingStatus === "recorded" && (
+                <p className="muted">Recording ready. Record again will discard it.</p>
+              )}
+              <div className="inline-actions mt-4">
+                <button
+                  className="button"
+                  disabled={answerSaving || recordingStatus === "recording"}
+                  onClick={onStartRecording}
+                >
+                  <Mic />
+                  {recordedAudioBase64 ? "Record again" : "Record"}
+                </button>
+                <button
+                  className="button"
+                  disabled={answerSaving || recordingStatus !== "recording"}
+                  onClick={onStopRecording}
+                >
+                  <CheckCircle2 />
+                  Stop
+                </button>
+              </div>
+            </div>
+
         <label className="field">
-          <span>Applicant response</span>
+          <span>Typed recovery transcript</span>
           <textarea
             value={draftAnswer}
             disabled={answerSaving}
             onChange={(event) => onAnswerChange(event.target.value)}
-            placeholder="Type the applicant answer as you would say it to an examiner. Short or skipped answers will be flagged in the review."
+            placeholder="Use only if microphone recording or transcription is unavailable."
           />
         </label>
 
         <div className="inline-actions">
-          <button className="button primary" disabled={answerSaving} onClick={() => onRecordAnswer(false)}>
+          <button className="button primary" disabled={submitDisabled} onClick={onRecordAnswer}>
             <CheckCircle2 />
-            {answerSaving ? "Saving answer" : "Save Typed Answer"}
-          </button>
-          <button className="button" disabled={answerSaving} onClick={() => onRecordAnswer(true)}>
-            <SkipForward />
-            Skip
+            {answerSaving ? "Submitting" : "Submit answer"}
           </button>
           <button className="button" disabled={answerSaving} onClick={onFinishEarly}>
             <History />
             Finish
           </button>
         </div>
+          </>
+        )}
       </div>
 
       {session.answers.length > 0 && (
@@ -2969,6 +3216,33 @@ function ReviewScreen({
         </div>
       </div>
 
+      {session.answers.some((answer) => answer.evaluation) && (
+        <div className="panel">
+          <div className="section-head">
+            <div>
+              <h3>Per-question results</h3>
+              <p>
+                Rapid Fire keeps feedback quiet during the run, then shows each answer result here.
+              </p>
+            </div>
+            <ListChecks />
+          </div>
+          <div className="stat-strip mt-4">
+            <Stat label="Meets standard" value={`${countAnswerVerdicts(session.answers, "meets_standard")}`} />
+            <Stat label="Partial" value={`${countAnswerVerdicts(session.answers, "partial")}`} />
+            <Stat label="Below standard" value={`${countAnswerVerdicts(session.answers, "below_standard")}`} />
+            <Stat label="Overall" value={`${formatOverallAnswerScore(session.answers)}%`} />
+          </div>
+          <div className="question-list mt-4">
+            {session.answers
+              .filter((answer) => answer.evaluation)
+              .map((answer) => (
+                <DpeAnswerEvaluationCard answer={answer} key={answer.question.id} />
+              ))}
+          </div>
+        </div>
+      )}
+
       <div className="panel">
         <div className="section-head">
           <div>
@@ -3141,6 +3415,40 @@ function ReviewList({ items, fallback }: { items: string[]; fallback?: string })
 
 function formatScore(score: number | null) {
   return score ? `${score}/5` : "-";
+}
+
+function formatAnswerVerdict(verdict: DpeAnswerEvaluation["verdict"]) {
+  if (verdict === "meets_standard") return "Meets standard";
+  if (verdict === "below_standard") return "Below standard";
+  return "Partial";
+}
+
+function countAnswerVerdicts(answers: SessionAnswer[], verdict: DpeAnswerEvaluation["verdict"]) {
+  return answers.filter((answer) => answer.evaluation?.verdict === verdict).length;
+}
+
+function formatOverallAnswerScore(answers: SessionAnswer[]) {
+  const evaluated = answers.filter((answer) => answer.evaluation);
+  if (evaluated.length === 0) return 0;
+  const points = evaluated.reduce((total, answer) => {
+    if (answer.evaluation?.verdict === "meets_standard") return total + 1;
+    if (answer.evaluation?.verdict === "partial") return total + 0.5;
+    return total;
+  }, 0);
+  return Math.round((points / evaluated.length) * 100);
+}
+
+function upsertSessionAnswer(answers: SessionAnswer[], answer: SessionAnswer) {
+  const nextAnswers = [...answers];
+  const existingIndex = nextAnswers.findIndex((item) => item.question.id === answer.question.id);
+
+  if (existingIndex >= 0) {
+    nextAnswers[existingIndex] = answer;
+  } else {
+    nextAnswers.push(answer);
+  }
+
+  return nextAnswers;
 }
 
 function formatReviewSource(review: ReviewJson | null | undefined) {
@@ -3715,7 +4023,7 @@ function normalizeStoredAnswers(value: unknown): SessionAnswer[] {
   if (!Array.isArray(value)) return [];
 
   return value
-    .map((answer) => {
+    .map((answer): SessionAnswer | null => {
       if (!isRecord(answer) || !isRecord(answer.question)) return null;
       if (
         typeof answer.question.id !== "string" ||
@@ -3726,12 +4034,56 @@ function normalizeStoredAnswers(value: unknown): SessionAnswer[] {
       }
 
       return {
+        attemptId: typeof answer.attemptId === "string" ? answer.attemptId : undefined,
+        attemptNumber: typeof answer.attemptNumber === "number" ? answer.attemptNumber : undefined,
+        evaluation: normalizeStoredAnswerEvaluation(answer.evaluation),
+        evaluatorModel: typeof answer.evaluatorModel === "string" ? answer.evaluatorModel : null,
+        evaluatorPromptKey:
+          typeof answer.evaluatorPromptKey === "string" ? answer.evaluatorPromptKey : undefined,
+        evaluatorPromptVersion:
+          typeof answer.evaluatorPromptVersion === "number" ? answer.evaluatorPromptVersion : undefined,
         question: answer.question as DpeQuestion,
         response: typeof answer.response === "string" ? answer.response : "",
-        skipped: Boolean(answer.skipped)
+        skipped: Boolean(answer.skipped),
+        submittedAt: typeof answer.submittedAt === "string" ? answer.submittedAt : undefined,
+        transcriptSource:
+          answer.transcriptSource === "audio_transcription" ||
+          answer.transcriptSource === "typed_dev_recovery"
+            ? answer.transcriptSource
+            : undefined,
       };
     })
     .filter((answer): answer is SessionAnswer => answer !== null);
+}
+
+function normalizeStoredAnswerEvaluation(value: unknown): DpeAnswerEvaluation | undefined {
+  if (!isRecord(value)) return undefined;
+  const verdict =
+    value.verdict === "meets_standard" ||
+    value.verdict === "partial" ||
+    value.verdict === "below_standard"
+      ? value.verdict
+      : "partial";
+  const confidence =
+    typeof value.confidence === "number" && Number.isFinite(value.confidence)
+      ? Math.max(0, Math.min(1, value.confidence))
+      : 0.5;
+
+  return {
+    confidence,
+    knowledgeGaps: normalizeStoredStringList(value.knowledgeGaps),
+    missingAnswerElements: normalizeStoredStringList(value.missingAnswerElements),
+    referenceAnswerElementsMatched: normalizeStoredStringList(value.referenceAnswerElementsMatched),
+    safetyOrRiskNotes: normalizeStoredStringList(value.safetyOrRiskNotes),
+    tightenUpAdvice: normalizeStoredStringList(value.tightenUpAdvice),
+    verdict,
+  };
+}
+
+function normalizeStoredStringList(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string").map((item) => item.trim()).filter(Boolean)
+    : [];
 }
 
 function QuestionPreview({
@@ -3802,6 +4154,95 @@ function Transcript({ answers }: { answers: SessionAnswer[] }) {
         </div>
       ))}
     </div>
+  );
+}
+
+function QuestionAssetPanel({ question }: { question: DpeQuestion }) {
+  if (question.assets.length === 0) return null;
+
+  return (
+    <div className="question-list mt-4">
+      {question.assets.map((asset) => (
+        <div className="raised-card" key={asset.id}>
+          <div className="question-meta">
+            <span className="pill">{asset.type}</span>
+            <span className="pill">Asset</span>
+          </div>
+          <strong>{asset.label}</strong>
+          {asset.instructions && <p>{asset.instructions}</p>}
+          {asset.type === "image" && asset.url ? (
+            <Image
+              alt={asset.label}
+              height={450}
+              src={asset.url}
+              style={{ borderRadius: 8, marginTop: "0.75rem", maxWidth: "100%" }}
+              unoptimized
+              width={800}
+            />
+          ) : asset.url ? (
+            <p>
+              <a href={asset.url} rel="noreferrer" target="_blank">
+                Open asset
+              </a>
+            </p>
+          ) : null}
+          {asset.transcript && <p className="muted">{asset.transcript}</p>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DpeAnswerEvaluationCard({ answer }: { answer: SessionAnswer }) {
+  const evaluation = answer.evaluation;
+  if (!evaluation) return null;
+  const verdictColor =
+    evaluation.verdict === "meets_standard"
+      ? "#15803d"
+      : evaluation.verdict === "below_standard"
+        ? "#b91c1c"
+        : "#a16207";
+
+  return (
+    <article className="raised-card" style={{ borderLeft: `4px solid ${verdictColor}` }}>
+      <div className="section-head">
+        <div>
+          <strong>{answer.question.questionText}</strong>
+          <p>{answer.response}</p>
+        </div>
+        <span className="pill">{formatAnswerVerdict(evaluation.verdict)}</span>
+      </div>
+      <div className="stat-strip mt-4">
+        <Stat label="Result" value={formatAnswerVerdict(evaluation.verdict)} />
+        <Stat label="Confidence" value={`${Math.round(evaluation.confidence * 100)}%`} />
+        <Stat label="Attempt" value={`${answer.attemptNumber ?? 1}`} />
+      </div>
+      <div className="grid two-col mt-4">
+        <div>
+          <strong>Gaps</strong>
+          <ReviewList items={evaluation.knowledgeGaps} fallback="No specific knowledge gaps returned." />
+        </div>
+        <div>
+          <strong>Tighten-up advice</strong>
+          <ReviewList items={evaluation.tightenUpAdvice} fallback="No tighten-up advice returned." />
+        </div>
+        <div>
+          <strong>Expected answer elements</strong>
+          <ReviewList
+            items={evaluation.referenceAnswerElementsMatched}
+            fallback="No answer-key elements were matched."
+          />
+        </div>
+        <div>
+          <strong>Missing elements</strong>
+          <ReviewList items={evaluation.missingAnswerElements} fallback="No missing elements returned." />
+        </div>
+        <div>
+          <strong>Safety or risk notes</strong>
+          <ReviewList items={evaluation.safetyOrRiskNotes} fallback="No safety or risk notes returned." />
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -4937,22 +5378,6 @@ function ReviewPreview({ onOpenPractice }: { onOpenPractice: () => void }) {
   );
 }
 
-function ModeButton({
-  active,
-  onClick,
-  children
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button className={`segment ${active ? "active" : ""}`} onClick={onClick}>
-      {children}
-    </button>
-  );
-}
-
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="stat-chip">
@@ -4963,25 +5388,37 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 const modeLabel: Record<PracticeMode, string> = {
+  dpe_coaching: "Coaching",
+  dpe_rapid_fire: "Rapid Fire",
   oral: "Oral",
   visual: "Visual",
   combined: "Combined"
 };
 
 const modeCopy: Record<PracticeMode, { title: string; description: string }> = {
-  oral: {
-    title: "Hands-free oral",
+  dpe_coaching: {
+    title: "Coaching",
     description:
-      "A checkride-style examiner asks and follows up by voice. Screen content stays secondary."
+      "Answer one DPE question out loud, submit it, then review immediate evaluator feedback before trying again or moving on."
+  },
+  dpe_rapid_fire: {
+    title: "Rapid Fire",
+    description:
+      "Answer a quick sequence out loud. Evaluations run quietly after each submit and appear together at the end."
+  },
+  oral: {
+    title: "Legacy oral",
+    description:
+      "Historical oral-session label retained so older saved sessions can render."
   },
   visual: {
-    title: "Visual/example check",
+    title: "Legacy visual",
     description:
-      "Use images, charts, weather products, and examples for tasks that need more than verbal recall."
+      "Historical visual-session label retained so older saved sessions can render."
   },
   combined: {
-    title: "Combined simulation",
+    title: "Legacy combined",
     description:
-      "Voice remains active while labeled visual aids are available for realistic checkride practice."
+      "Historical combined-session label retained so older saved sessions can render."
   }
 };

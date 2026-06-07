@@ -98,6 +98,14 @@ Last updated: 2026-06-02
   - DPE learner polish now includes a Home MVP readiness checklist, clearer
     scaffolded-track/demo-content practice messaging, and History review
     selection for reopening a specific stored session review
+  - DPE Button-Driven Practice V1 is implemented for learner sessions:
+    `dpe_coaching` and `dpe_rapid_fire` replace the main Practice setup's
+    `oral` / `visual` / `combined` choices, while legacy labels remain
+    renderable for historical sessions. Learners use explicit Record, Stop,
+    Record again, and Submit answer controls; per-answer evaluator output is
+    stored in `dpe_answer_attempts`, optional prompt assets use
+    `dpe_question_assets`, and `dpe_answer_evaluator_v1` records evaluator
+    AI runs as `dpe_review`.
   - Real DPE aviation content remains intentionally untouched for a later
     user-guided content curation pass
 - Shared Admin Content Studio:

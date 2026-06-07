@@ -1766,6 +1766,29 @@ export const dpeQuestionRubrics = pgTable("dpe_question_rubrics", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const dpeQuestionAssets = pgTable(
+  "dpe_question_assets",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    instructions: text("instructions"),
+    label: text("label").notNull(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    questionId: text("question_id")
+      .notNull()
+      .references(() => dpeOralQuestions.id, { onDelete: "cascade" }),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    storageKey: text("storage_key"),
+    transcript: text("transcript"),
+    type: text("type").$type<"audio" | "chart" | "document" | "image" | "other">().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    url: text("url"),
+  },
+  (asset) => ({
+    questionIdx: index("dpe_question_assets_question_idx").on(asset.questionId, asset.sortOrder),
+  }),
+);
+
 export const dpePracticeSessions = pgTable(
   "dpe_practice_sessions",
   {
@@ -1820,6 +1843,49 @@ export const dpeSessionQuestions = pgTable(
     sessionQuestionIdx: uniqueIndex("dpe_session_questions_session_question_idx").on(
       sessionQuestion.sessionId,
       sessionQuestion.questionId,
+    ),
+  }),
+);
+
+export const dpeAnswerAttempts = pgTable(
+  "dpe_answer_attempts",
+  {
+    aiRunId: uuid("ai_run_id").references(() => aiRuns.id, { onDelete: "set null" }),
+    attemptNumber: integer("attempt_number").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    evaluationJson: jsonb("evaluation_json").$type<Record<string, unknown>>().notNull(),
+    evaluatorModel: text("evaluator_model"),
+    evaluatorPromptKey: text("evaluator_prompt_key").notNull(),
+    evaluatorPromptVersion: integer("evaluator_prompt_version").notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    providerRequestId: text("provider_request_id"),
+    questionId: text("question_id")
+      .notNull()
+      .references(() => dpeOralQuestions.id, { onDelete: "restrict" }),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => dpePracticeSessions.id, { onDelete: "cascade" }),
+    sessionQuestionId: uuid("session_question_id")
+      .notNull()
+      .references(() => dpeSessionQuestions.id, { onDelete: "cascade" }),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }).defaultNow().notNull(),
+    totalTokens: integer("total_tokens"),
+    transcriptSource: text("transcript_source")
+      .$type<"audio_transcription" | "typed_dev_recovery">()
+      .notNull(),
+    transcriptText: text("transcript_text").notNull(),
+  },
+  (attempt) => ({
+    sessionQuestionAttemptIdx: index("dpe_answer_attempts_session_question_attempt_idx").on(
+      attempt.sessionQuestionId,
+      attempt.attemptNumber,
+    ),
+    sessionQuestionSubmittedIdx: index("dpe_answer_attempts_session_question_submitted_idx").on(
+      attempt.sessionId,
+      attempt.questionId,
+      attempt.submittedAt,
     ),
   }),
 );

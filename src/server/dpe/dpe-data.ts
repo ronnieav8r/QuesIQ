@@ -3,6 +3,8 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import placeholderQuestions from "@/features/dpe/placeholder-questions.json";
 import { formatQuestion } from "@/features/dpe/question-format";
 import {
+  type DpeAnswerAttempt,
+  type DpeAnswerEvaluation,
   type DpeQuestion,
   type QuestionApiResponse,
 } from "@/features/dpe/questions";
@@ -13,11 +15,14 @@ import {
   dpeCheckrideTargets,
   dpeContentVersions,
   dpeDiagnosticEvents,
+  dpeAnswerAttempts,
   dpeOralQuestions,
   dpePracticeSessions,
   dpeProfiles,
+  dpeQuestionAssets,
   dpeQuestionAnswerKeys,
   dpeQuestionRubrics,
+  dpeSessionQuestions,
 } from "@/server/db/schema";
 
 type SessionAnswer = {
@@ -141,6 +146,34 @@ export async function listDpeQuestions(input?: {
     .orderBy(dpeOralQuestions.acsArea, dpeOralQuestions.acsTask, dpeOralQuestions.id)
     .limit(limit);
 
+  const questionIds = rows.map((row) => row.id);
+  const assetRows =
+    questionIds.length > 0
+      ? await getDb()
+          .select()
+          .from(dpeQuestionAssets)
+          .where(inArray(dpeQuestionAssets.questionId, questionIds))
+          .orderBy(dpeQuestionAssets.questionId, dpeQuestionAssets.sortOrder)
+      : [];
+  const assetsByQuestionId = assetRows.reduce<Record<string, DpeQuestion["assets"]>>(
+    (accumulator, asset) => {
+      accumulator[asset.questionId] ??= [];
+      accumulator[asset.questionId].push({
+        id: asset.id,
+        instructions: asset.instructions,
+        label: asset.label,
+        metadata: asset.metadata ?? null,
+        sortOrder: asset.sortOrder,
+        storageKey: asset.storageKey,
+        transcript: asset.transcript,
+        type: asset.type,
+        url: asset.url,
+      });
+      return accumulator;
+    },
+    {},
+  );
+
   const questions = rows.map((row) =>
     formatQuestion({
       active: row.active,
@@ -181,6 +214,7 @@ export async function listDpeQuestions(input?: {
       primarySubject: row.primarySubject,
       questionMode: row.questionMode,
       questionText: row.questionText,
+      assets: assetsByQuestionId[row.id] ?? [],
       rubric: row.rubricStatus
         ? {
             checkrideReadiness: row.rubricCheckrideReadiness ?? "",
@@ -332,6 +366,37 @@ export async function createDpePracticeSession(input: {
     })
     .returning();
 
+  const requestedQuestionIds = input.questions
+    .map((question) =>
+      typeof question === "object" &&
+      question !== null &&
+      !Array.isArray(question) &&
+      "id" in question &&
+      typeof question.id === "string"
+        ? question.id
+        : null,
+    )
+    .filter((id): id is string => Boolean(id));
+
+  if (requestedQuestionIds.length > 0) {
+    const existingQuestions = await getDb()
+      .select({ id: dpeOralQuestions.id })
+      .from(dpeOralQuestions)
+      .where(inArray(dpeOralQuestions.id, requestedQuestionIds));
+    const existingIds = new Set(existingQuestions.map((question) => question.id));
+    const sessionQuestionRows = requestedQuestionIds
+      .filter((questionId) => existingIds.has(questionId))
+      .map((questionId, index) => ({
+        questionId,
+        sessionId: session.id,
+        sortOrder: index,
+      }));
+
+    if (sessionQuestionRows.length > 0) {
+      await getDb().insert(dpeSessionQuestions).values(sessionQuestionRows).onConflictDoNothing();
+    }
+  }
+
   return session;
 }
 
@@ -452,6 +517,143 @@ export async function saveDpeVoiceArtifact(input: {
     .returning();
 
   return session;
+}
+
+export async function saveDpeAnswerAttempt(input: {
+  aiRunId?: string | null;
+  attempt: Omit<DpeAnswerAttempt, "id">;
+  evaluation: DpeAnswerEvaluation;
+  evaluatorModel: string | null;
+  inputTokens?: number;
+  outputTokens?: number;
+  providerRequestId?: string | null;
+  question: DpeQuestion;
+  sessionId: string;
+  totalTokens?: number;
+}) {
+  const [existingSession] = await getDb()
+    .select({ transcriptJson: dpePracticeSessions.transcriptJson })
+    .from(dpePracticeSessions)
+    .where(eq(dpePracticeSessions.id, input.sessionId))
+    .limit(1);
+  const transcript =
+    typeof existingSession?.transcriptJson === "object" &&
+    existingSession.transcriptJson !== null &&
+    !Array.isArray(existingSession.transcriptJson)
+      ? (existingSession.transcriptJson as {
+          answers?: unknown[];
+          certificateType?: unknown;
+          questions?: unknown[];
+          targetTrack?: unknown;
+        })
+      : {};
+  const transcriptQuestions = Array.isArray(transcript.questions) ? transcript.questions : [];
+  const questionIndex = transcriptQuestions.findIndex(
+    (question) =>
+      typeof question === "object" &&
+      question !== null &&
+      "id" in question &&
+      question.id === input.question.id,
+  );
+  const sortOrder = questionIndex >= 0 ? questionIndex : 0;
+
+  const [sessionQuestion] = await getDb()
+    .insert(dpeSessionQuestions)
+    .values({
+      questionId: input.question.id,
+      response: input.attempt.transcriptText,
+      sessionId: input.sessionId,
+      sortOrder,
+    })
+    .onConflictDoUpdate({
+      set: {
+        response: input.attempt.transcriptText,
+        sortOrder,
+      },
+      target: [dpeSessionQuestions.sessionId, dpeSessionQuestions.questionId],
+    })
+    .returning();
+
+  const [latestAttempt] = await getDb()
+    .select({ attemptNumber: dpeAnswerAttempts.attemptNumber })
+    .from(dpeAnswerAttempts)
+    .where(eq(dpeAnswerAttempts.sessionQuestionId, sessionQuestion.id))
+    .orderBy(desc(dpeAnswerAttempts.attemptNumber))
+    .limit(1);
+  const attemptNumber = (latestAttempt?.attemptNumber ?? 0) + 1;
+
+  const [attempt] = await getDb()
+    .insert(dpeAnswerAttempts)
+    .values({
+      aiRunId: input.aiRunId ?? undefined,
+      attemptNumber,
+      evaluationJson: input.evaluation,
+      evaluatorModel: input.evaluatorModel,
+      evaluatorPromptKey: input.attempt.evaluatorPromptKey,
+      evaluatorPromptVersion: input.attempt.evaluatorPromptVersion,
+      inputTokens: input.inputTokens,
+      outputTokens: input.outputTokens,
+      providerRequestId: input.providerRequestId ?? undefined,
+      questionId: input.question.id,
+      sessionId: input.sessionId,
+      sessionQuestionId: sessionQuestion.id,
+      submittedAt: new Date(input.attempt.submittedAt),
+      totalTokens: input.totalTokens,
+      transcriptSource: input.attempt.transcriptSource,
+      transcriptText: input.attempt.transcriptText,
+    })
+    .returning();
+
+  const answers = Array.isArray(transcript.answers) ? [...transcript.answers] : [];
+  const displayAnswer = {
+    aiRunId: input.aiRunId ?? null,
+    attemptId: attempt.id,
+    attemptNumber,
+    evaluation: input.evaluation,
+    evaluatorModel: input.evaluatorModel,
+    evaluatorPromptKey: input.attempt.evaluatorPromptKey,
+    evaluatorPromptVersion: input.attempt.evaluatorPromptVersion,
+    question: input.question,
+    response: input.attempt.transcriptText,
+    skipped: false,
+    submittedAt: input.attempt.submittedAt,
+    transcriptSource: input.attempt.transcriptSource,
+  };
+  const existingAnswerIndex = answers.findIndex(
+    (answer) =>
+      typeof answer === "object" &&
+      answer !== null &&
+      "question" in answer &&
+      typeof answer.question === "object" &&
+      answer.question !== null &&
+      "id" in answer.question &&
+      answer.question.id === input.question.id,
+  );
+
+  if (existingAnswerIndex >= 0) {
+    answers[existingAnswerIndex] = displayAnswer;
+  } else {
+    answers.push(displayAnswer);
+  }
+
+  await getDb()
+    .update(dpePracticeSessions)
+    .set({
+      transcriptJson: {
+        ...transcript,
+        answers,
+      },
+      updatedAt: new Date(),
+    })
+    .where(eq(dpePracticeSessions.id, input.sessionId));
+
+  return {
+    attempt: {
+      ...displayAnswer,
+      id: attempt.id,
+    },
+    attemptRow: attempt,
+  };
 }
 
 export async function listDpeContentSummary() {

@@ -1,5 +1,7 @@
 import type { DpeQuestion } from "./questions";
 
+type DpeQuestionAssetInput = DpeQuestion["assets"][number];
+
 type QuestionWithContent = {
   active: boolean;
   acsArea: string;
@@ -43,6 +45,7 @@ type QuestionWithContent = {
     status: string;
   } | null;
   visualImage: string | null;
+  assets?: DpeQuestionAssetInput[];
 };
 
 type StoredAiContext = {
@@ -114,6 +117,24 @@ export function formatQuestion(question: QuestionWithContent): DpeQuestion {
   const taskKey = `${question.acsArea}.${question.acsTask}`;
   const taskTitle = context.taskTitle ?? taskLabels[taskKey] ?? `Task ${question.acsTask}`;
   const practiceLane = context.practiceLane ?? (question.visualImage ? "visual" : "oral");
+  const assets =
+    question.assets && question.assets.length > 0
+      ? question.assets
+      : question.visualImage
+        ? [
+            {
+              id: `${question.id}:legacy-visual-image`,
+              instructions: "Legacy visual prompt image migrated into the DPE asset contract.",
+              label: "Visual prompt",
+              metadata: { source: "legacy_visualImage" },
+              sortOrder: 0,
+              storageKey: null,
+              transcript: null,
+              type: "image" as const,
+              url: question.visualImage,
+            },
+          ]
+        : [];
 
   return {
     acsArea: question.acsArea,
@@ -137,6 +158,7 @@ export function formatQuestion(question: QuestionWithContent): DpeQuestion {
     answerKeyStatus: normalizeAnswerKeyStatus(
       question.answerKey?.status ?? context.answerKeyStatus ?? "pending",
     ),
+    assets,
     certificateType: question.certificateType
       ? {
           code: question.certificateType.code,

@@ -146,6 +146,15 @@ export const storyPracticeEvaluationInstructions =
     "If another saved story from the story library would fit the practiced question better, briefly name that story as an alternative. Do not force a story recommendation when none clearly fits.",
   ].join(" ");
 
+export const dpeAnswerEvaluatorInstructions = [
+  "You are a conservative DPE answer evaluator for QuesIQ DPE.",
+  "Evaluate one submitted spoken answer against one authored DPE question.",
+  "Use the authored answer key, ACS metadata, rubric, and optional asset metadata first. Do not rely on broad model knowledge when authored content is present.",
+  "If the answer key or rubric is pending, placeholder, provisional, missing, or incomplete, keep the verdict conservative and call out the authoring gap.",
+  "Return JSON only with verdict, knowledgeGaps, tightenUpAdvice, safetyOrRiskNotes, referenceAnswerElementsMatched, missingAnswerElements, and confidence.",
+  "Verdict must be one of meets_standard, partial, or below_standard.",
+].join("\n");
+
 export const turnQuestionPlannerInstructions = [
   "You are Que's turn-based Coaching question planner.",
   "",
@@ -311,6 +320,15 @@ export const quiraSupportChatInstructions = [
 ].join("\n");
 
 export const promptConfigFallbacks = {
+  dpe_answer_evaluator_v1: {
+    active: true,
+    instructions: dpeAnswerEvaluatorInstructions,
+    key: "dpe_answer_evaluator_v1",
+    model: process.env.OPENAI_DPE_ANSWER_EVALUATOR_MODEL || process.env.OPENAI_DPE_REVIEW_MODEL || "gpt-4o-mini",
+    name: "DPE Answer Evaluator V1",
+    target: "evaluation",
+    version: 0,
+  },
   introduction_draft: {
     active: true,
     instructions: introductionDraftInstructions,
@@ -455,6 +473,7 @@ export const promptConfigFallbacks = {
 
 export function isPromptConfigKey(value: unknown): value is PromptConfigKey {
   return (
+    value === "dpe_answer_evaluator_v1" ||
     value === "realtime_interviewer" ||
     value === "realtime_hands_free_coach" ||
     value === "introduction_draft" ||

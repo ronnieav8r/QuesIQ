@@ -644,6 +644,7 @@ export type VoiceSessionArtifactDraft = {
 };
 
 export type PromptConfigKey =
+  | "dpe_answer_evaluator_v1"
   | "introduction_draft"
   | "quira_support_chat"
   | "resume_summary"
