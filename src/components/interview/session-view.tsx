@@ -56,6 +56,7 @@ export function SessionView({
   >("idle");
   const evaluationRequestedRef = useRef(false);
   const [reviewAttempt, setReviewAttempt] = useState(0);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const savedArtifactRef = useRef<string | undefined>(undefined);
   const mode = catalog.practiceModes.find(
     (practiceMode) => practiceMode.key === snapshot.modeKey,
@@ -71,31 +72,38 @@ export function SessionView({
   const [runtimeConfig, setRuntimeConfig] = useState<RuntimeConfig>({
     engine: "realtime",
   });
-  const canLoadTurnBasedRuntime =
-    snapshot.modeKey === "rapid_fire" ||
-    snapshot.modeKey === "coaching" ||
-    snapshot.modeKey === "first_impression";
-  const [runtimeConfigLoaded, setRuntimeConfigLoaded] = useState(
-    !canLoadTurnBasedRuntime,
-  );
-  const useTurnBasedSession = runtimeConfigLoaded && runtimeConfig.engine === "turn_based";
-  const turnBasedQuestionCount =
-    snapshot.turnBasedQuestionCount ?? snapshot.rapidFireQuestionCount ?? 4;
   const selectedQuestionQueue =
     snapshot.selectedQuestionQueueContext?.length
       ? snapshot.selectedQuestionQueueContext
       : snapshot.selectedQuestionContext
         ? [snapshot.selectedQuestionContext]
         : [];
+  const shouldUseTurnBasedSession =
+    snapshot.modeKey === "rapid_fire" ||
+    snapshot.modeKey === "coaching" ||
+    Boolean(snapshot.storyContext || snapshot.introductionContext || selectedQuestionQueue.length);
+  const canLoadTurnBasedRuntime =
+    snapshot.modeKey === "rapid_fire" ||
+    snapshot.modeKey === "coaching" ||
+    snapshot.modeKey === "first_impression" ||
+    Boolean(snapshot.storyContext || snapshot.introductionContext || selectedQuestionQueue.length);
+  const [runtimeConfigLoaded, setRuntimeConfigLoaded] = useState(
+    !canLoadTurnBasedRuntime,
+  );
+  const useTurnBasedSession = runtimeConfigLoaded && shouldUseTurnBasedSession;
+  const turnBasedQuestionCount =
+    snapshot.turnBasedQuestionCount ?? snapshot.rapidFireQuestionCount ?? 4;
   const turnBasedRuntimeConfig: RuntimeConfig =
     useTurnBasedSession && (snapshot.storyContext || snapshot.introductionContext)
       ? {
           ...runtimeConfig,
+          engine: "turn_based",
           maxTurns: snapshot.turnBasedQuestionCount ?? 1,
         }
       : useTurnBasedSession && snapshot.modeKey === "rapid_fire"
         ? {
             ...runtimeConfig,
+            engine: "turn_based",
             maxAnswerSeconds: 65,
             maxDurationSeconds: turnBasedQuestionCount * 65,
             maxTurns: turnBasedQuestionCount,
@@ -103,6 +111,7 @@ export function SessionView({
         : useTurnBasedSession && snapshot.modeKey === "coaching"
           ? {
               ...runtimeConfig,
+              engine: "turn_based",
               maxTurns: turnBasedQuestionCount,
             }
           : runtimeConfig;
@@ -112,7 +121,10 @@ export function SessionView({
     if (
       snapshot.modeKey !== "rapid_fire" &&
       snapshot.modeKey !== "coaching" &&
-      snapshot.modeKey !== "first_impression"
+      snapshot.modeKey !== "first_impression" &&
+      !snapshot.storyContext &&
+      !snapshot.introductionContext &&
+      selectedQuestionQueue.length === 0
     ) {
       return;
     }
@@ -147,7 +159,12 @@ export function SessionView({
     return () => {
       ignore = true;
     };
-  }, [snapshot.modeKey]);
+  }, [
+    selectedQuestionQueue.length,
+    snapshot.introductionContext,
+    snapshot.modeKey,
+    snapshot.storyContext,
+  ]);
 
   useEffect(() => {
     if (!artifactDraft.endedAt || savedArtifactRef.current === artifactDraft.endedAt) {
@@ -287,6 +304,17 @@ export function SessionView({
         />
       )}
 
+      <div className="inline-actions">
+        <button
+          className="secondary"
+          onClick={() => setShowAdminPanel((current) => !current)}
+          type="button"
+        >
+          {showAdminPanel ? "Hide admin panel" : "Show admin panel"}
+        </button>
+      </div>
+
+      {showAdminPanel && (
       <div className="session-grid">
         <section className="panel session-config" aria-labelledby="session-config-title">
           <div className="section-head">
@@ -465,6 +493,7 @@ export function SessionView({
           )}
         </section>
       </div>
+      )}
     </section>
   );
 }

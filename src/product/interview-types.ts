@@ -648,6 +648,7 @@ export type CoachingTurnState =
   | "wrap_up";
 
 export type CoachingChoiceIntent =
+  | "ask_que"
   | "more_feedback"
   | "move_on"
   | "try_again"

@@ -207,6 +207,23 @@ function run() {
     "aiRuns",
     "selectedQuestionQueueContext",
   ]);
+  requireMarkers("Button-driven turn-based answer controls", "src/components/interview/turn-based-voice-session.tsx", [
+    "Record answer",
+    "Submit answer",
+    "Record again",
+    "Ask Que",
+    "Click Submit answer to transcribe this recording and send it",
+  ]);
+  requireMarkers("Turn-based session routing for button-driven modes", "src/components/interview/session-view.tsx", [
+    "shouldUseTurnBasedSession",
+    "snapshot.storyContext || snapshot.introductionContext || selectedQuestionQueue.length",
+    "engine: \"turn_based\"",
+  ]);
+  requireMarkers("Session admin panel toggle", "src/components/interview/session-view.tsx", [
+    "showAdminPanel",
+    "Show admin panel",
+    "Hide admin panel",
+  ]);
 
   requireMarkers("AI usage instrumentation markers", "src/server/sessions/create-session-evaluation.ts", [
     "startAiRun(",

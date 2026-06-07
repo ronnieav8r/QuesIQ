@@ -79,7 +79,6 @@ type PendingRecordedAnswer = {
 };
 
 const emptyArtifactDraft: VoiceSessionArtifactDraft = { events: [], transcript: [] };
-const listenStartDelayMs = 800;
 const turnRequestTimeoutMs = 60_000;
 
 function createRecordId(prefix: string) {
@@ -157,20 +156,15 @@ export function TurnBasedVoiceSession({
   title = "Direct browser voice session",
 }: TurnBasedVoiceSessionProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const audioContextRef = useRef<AudioContext | undefined>(undefined);
   const currentRequestAbortRef = useRef<AbortController | undefined>(undefined);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
-  const listenStartTimerRef = useRef<number | undefined>(undefined);
   const recordingStartedAtMsRef = useRef<number | undefined>(undefined);
   const sessionStartedAtMsRef = useRef<number | undefined>(undefined);
-  const silenceStartedAtMsRef = useRef<number | undefined>(undefined);
-  const silenceTimerRef = useRef<number | undefined>(undefined);
   const finalizeSessionRef = useRef<
     (endReason: VoiceSessionArtifactDraft["endReason"]) => Promise<void>
   >(undefined);
   const stopRecordingRef = useRef<(() => void) | undefined>(undefined);
-  const voiceDetectedRef = useRef(false);
   const doneRef = useRef(false);
   const phaseRef = useRef<TurnBasedPhase>("ready");
   const recordingRef = useRef(false);
@@ -191,6 +185,8 @@ export function TurnBasedVoiceSession({
   const [errorMessage, setErrorMessage] = useState<string>();
   const [currentQuestion, setCurrentQuestion] = useState<string>();
   const [currentTurnState, setCurrentTurnState] = useState<string>();
+  const [askQueDraft, setAskQueDraft] = useState("");
+  const [askingQue, setAskingQue] = useState(false);
   const [recording, setRecording] = useState(false);
   const [microphoneStarting, setMicrophoneStarting] = useState(false);
   const [done, setDone] = useState(false);
@@ -211,7 +207,6 @@ export function TurnBasedVoiceSession({
   const showSessionCountdown =
     canShowSessionCountdown(phase) && sessionSecondsRemaining <= 60 && sessionSecondsRemaining > 0;
   const openingPrefetchReady = openingPrefetch.status === "ready";
-  const controlledAnswerMode = snapshot.modeKey === "coaching";
 
   function updatePhase(nextPhase: TurnBasedPhase) {
     phaseRef.current = nextPhase;
@@ -371,18 +366,10 @@ export function TurnBasedVoiceSession({
   }
 
   function closeMedia() {
-    window.clearTimeout(listenStartTimerRef.current);
-    listenStartTimerRef.current = undefined;
-    window.clearInterval(silenceTimerRef.current);
-    silenceTimerRef.current = undefined;
-    void audioContextRef.current?.close();
-    audioContextRef.current = undefined;
     mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
     mediaRecorderRef.current = null;
     mediaStreamRef.current = null;
     recordingStartedAtMsRef.current = undefined;
-    silenceStartedAtMsRef.current = undefined;
-    voiceDetectedRef.current = false;
     setAnswerElapsedSeconds(0);
     updateMicrophoneStarting(false);
     updateRecording(false);
@@ -397,67 +384,8 @@ export function TurnBasedVoiceSession({
       audio.removeAttribute("src");
       audio.load();
     }
-    window.clearTimeout(listenStartTimerRef.current);
-    listenStartTimerRef.current = undefined;
     updateMicrophoneStarting(false);
     updateRequesting(false);
-  }
-
-  function startSilenceMonitor(stream: MediaStream) {
-    window.clearInterval(silenceTimerRef.current);
-
-    const AudioContextCtor = (
-      window as unknown as {
-        AudioContext?: typeof AudioContext;
-        webkitAudioContext?: typeof AudioContext;
-      }
-    ).AudioContext ?? (
-      window as unknown as {
-        AudioContext?: typeof AudioContext;
-        webkitAudioContext?: typeof AudioContext;
-      }
-    ).webkitAudioContext;
-    if (!AudioContextCtor) {
-      return;
-    }
-
-    const context = new AudioContextCtor();
-    const source = context.createMediaStreamSource(stream);
-    const analyser = context.createAnalyser();
-
-    analyser.fftSize = 1024;
-    const samples = new Uint8Array(analyser.fftSize);
-    source.connect(analyser);
-    audioContextRef.current = context;
-    silenceTimerRef.current = window.setInterval(() => {
-      if (!recordingStartedAtMsRef.current || !mediaRecorderRef.current) {
-        return;
-      }
-
-      analyser.getByteTimeDomainData(samples);
-      const averageDeviation =
-        samples.reduce((sum, sample) => sum + Math.abs(sample - 128), 0) / samples.length;
-      const now = Date.now();
-      const elapsedMs = now - recordingStartedAtMsRef.current;
-      const voiceDetected = averageDeviation > 4.5;
-
-      if (voiceDetected) {
-        voiceDetectedRef.current = true;
-        silenceStartedAtMsRef.current = undefined;
-        return;
-      }
-
-      if (!voiceDetectedRef.current || elapsedMs < 1800) {
-        return;
-      }
-
-      silenceStartedAtMsRef.current ??= now;
-
-      if (now - silenceStartedAtMsRef.current > 1800) {
-        appendEvent("turn_based.answer.silence_detected");
-        stopRecording();
-      }
-    }, 250);
   }
 
   async function playAudioClip(
@@ -512,15 +440,6 @@ export function TurnBasedVoiceSession({
     await playAudioClip(response.questionAudioBase64, response.questionAudioMimeType, runId);
   }
 
-  function scheduleRecordingStart(runId: number) {
-    window.clearTimeout(listenStartTimerRef.current);
-    updateMicrophoneStarting(true);
-    listenStartTimerRef.current = window.setTimeout(() => {
-      listenStartTimerRef.current = undefined;
-      void startRecording(runId);
-    }, listenStartDelayMs);
-  }
-
   async function applyTurnResponse(body: NextTurnResponse, runId: number) {
     if (!isSessionActive(runId)) {
       return;
@@ -543,9 +462,6 @@ export function TurnBasedVoiceSession({
     setCurrentTurnState(body.state);
     updateRequesting(false);
     await playQuestionAudio(body, runId);
-    if (body.question?.trim() && !body.done && isSessionActive(runId) && !controlledAnswerMode) {
-      scheduleRecordingStart(runId);
-    }
     if (
       snapshot.modeKey === "coaching" &&
       body.state === "brief_feedback_choice" &&
@@ -848,6 +764,8 @@ export function TurnBasedVoiceSession({
       pendingEndReasonRef.current = undefined;
       requestContainsAnswerRef.current = false;
       setErrorMessage(undefined);
+      setAskQueDraft("");
+      setAskingQue(false);
       updatePendingRecordedAnswer(undefined);
       updatePhase("connecting");
       updateDone(false);
@@ -902,9 +820,6 @@ export function TurnBasedVoiceSession({
         return;
       }
       mediaStreamRef.current = stream;
-      if (!controlledAnswerMode) {
-        startSilenceMonitor(stream);
-      }
       const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
       const chunks: Blob[] = [];
@@ -931,35 +846,18 @@ export function TurnBasedVoiceSession({
         const answerMimeType = blob.type || "audio/webm";
         const answerAudioBase64 = await blobToBase64(blob);
         closeMedia();
-        if (controlledAnswerMode) {
-          if (endingAfterAnswer) {
-            appendEvent("turn_based.answer.recording_cancelled");
-            completeFinalization(pendingEndReasonRef.current || "user_ended");
-            return;
-          }
-
-          updatePendingRecordedAnswer({
-            answerAudioBase64,
-            answerDurationSeconds,
-            answerMimeType,
-          });
-          appendEvent("turn_based.answer.recorded_ready");
+        if (endingAfterAnswer) {
+          appendEvent("turn_based.answer.recording_cancelled");
+          completeFinalization(pendingEndReasonRef.current || "user_ended");
           return;
         }
 
-        appendEvent("turn_based.answer.recorded");
-        const nextTurnIndex = turnCountRef.current + 1;
-        updateTurnCount(nextTurnIndex);
-        await requestTurn({
+        updatePendingRecordedAnswer({
           answerAudioBase64,
           answerDurationSeconds,
           answerMimeType,
-          endAfterAnswer: endingAfterAnswer,
-          priorTurns: artifactDraftRef.current.transcript,
-          sessionId,
-          snapshot,
-          turnIndex: nextTurnIndex,
         });
+        appendEvent("turn_based.answer.recorded_ready");
       };
       recorder.start();
       recordingStartedAtMsRef.current = Date.now();
@@ -1025,6 +923,13 @@ export function TurnBasedVoiceSession({
       activeRecorder?.stop();
     }
 
+    if (intent === "ask_que") {
+      setAskQueDraft("");
+      setAskingQue(true);
+      appendEvent("turn_based.choice.ask_que.open");
+      return;
+    }
+
     const answerTranscript =
       intent === "more_feedback"
         ? "More feedback"
@@ -1038,6 +943,28 @@ export function TurnBasedVoiceSession({
       answerTranscript,
       coachingChoiceIntent: intent,
       explicitChoiceIntent: intent,
+      priorTurns: artifactDraftRef.current.transcript,
+      sessionId,
+      snapshot,
+      turnIndex: nextTurnIndex,
+    });
+  }
+
+  async function submitAskQueQuestion() {
+    const question = askQueDraft.trim();
+    if (!question || requestingRef.current || doneRef.current || !isSessionActive()) {
+      return;
+    }
+
+    const nextTurnIndex = turnCountRef.current + 1;
+    updateTurnCount(nextTurnIndex);
+    setAskingQue(false);
+    setAskQueDraft("");
+    appendEvent("turn_based.choice.ask_que.submit");
+    await requestTurn({
+      answerTranscript: question,
+      coachingChoiceIntent: "ask_que",
+      explicitChoiceIntent: "ask_que",
       priorTurns: artifactDraftRef.current.transcript,
       sessionId,
       snapshot,
@@ -1079,12 +1006,17 @@ export function TurnBasedVoiceSession({
     phase === "live" &&
     !done;
   const showCoachingAnswerControls =
-    controlledAnswerMode &&
     phase === "live" &&
     !done &&
+    !askingQue &&
     !showFullCoachingChoices &&
     !showRetryMoveChoices &&
     Boolean(currentQuestion?.trim());
+  const showAskQueInput =
+    askingQue &&
+    phase === "live" &&
+    !done &&
+    !requesting;
 
   return (
     <section className={surfaceClassName} aria-labelledby="turn-based-session-title">
@@ -1148,7 +1080,7 @@ export function TurnBasedVoiceSession({
         </button>
       </div>
       {showCoachingAnswerControls && (
-        <div className="inline-actions coaching-choice-actions" aria-label="Coaching answer recording">
+        <div className="inline-actions coaching-choice-actions" aria-label="Answer recording">
           {recording ? (
             <button onClick={stopRecording} type="button">
               Stop recording
@@ -1189,6 +1121,13 @@ export function TurnBasedVoiceSession({
           </button>
           <button
             disabled={requesting}
+            onClick={() => void handleCoachingChoice("ask_que")}
+            type="button"
+          >
+            Ask Que
+          </button>
+          <button
+            disabled={requesting}
             onClick={() => void handleCoachingChoice("move_on")}
             type="button"
           >
@@ -1196,29 +1135,57 @@ export function TurnBasedVoiceSession({
           </button>
         </div>
       )}
+      {showAskQueInput && (
+        <div className="realtime-log transcript-log" aria-label="Ask Que">
+          <p className="eyebrow">Ask Que</p>
+          <label className="sr-only" htmlFor="ask-que-question">
+            Ask a question about your latest answer
+          </label>
+          <textarea
+            id="ask-que-question"
+            onChange={(event) => setAskQueDraft(event.target.value)}
+            placeholder="Ask a question about your answer or Que's feedback."
+            rows={3}
+            value={askQueDraft}
+          />
+          <div className="inline-actions">
+            <button disabled={!askQueDraft.trim()} onClick={() => void submitAskQueQuestion()} type="button">
+              Submit question
+            </button>
+            <button
+              className="secondary"
+              onClick={() => {
+                setAskQueDraft("");
+                setAskingQue(false);
+              }}
+              type="button"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       {phase === "live" && !done && (
         <p className="field-note">
           {recording
-            ? controlledAnswerMode
-              ? "Recording now. Click Stop recording when you are finished."
-              : "Listening now. Pause after your answer to submit it."
+            ? "Recording now. Click Stop recording when you are finished."
             : endingRequested
               ? requestContainsAnswerRef.current
                 ? "Ending after Que processes your current answer."
                 : "Ending session."
               : pendingRecordedAnswer
-                ? "Submit this recording for coaching, or record again to replace it."
+                ? "Submit this recording to Que, or record again to replace it."
+              : askingQue
+                ? "Ask Que a specific question about your latest answer."
               : microphoneStarting
                 ? "Starting the microphone. Begin when Recording appears."
                 : requesting
               ? "Que is preparing the next question."
               : showFullCoachingChoices || showRetryMoveChoices
                 ? "Choose your next Coaching step."
-              : controlledAnswerMode
-                ? "Record when you are ready, then submit the answer for coaching."
               : turnCount >= maxTurns
                 ? "Turn limit reached. End the session for review."
-                : "Que will listen automatically after each question."}
+                : "Record when you are ready, then submit the answer to Que."}
         </p>
       )}
 
@@ -1246,7 +1213,7 @@ export function TurnBasedVoiceSession({
               {pendingRecordedAnswer && (
                 <p>
                   <strong>You:</strong> Click Submit answer to transcribe this recording and send it
-                  for feedback.
+                  to Que.
                 </p>
               )}
             </>
