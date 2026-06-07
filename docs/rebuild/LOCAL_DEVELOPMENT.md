@@ -121,6 +121,20 @@ server launch routes should reject direct attempts. The session uses the
 `realtime_hands_free_coach` prompt config, the `hands_free_coaching` runtime
 config, and a 900-second session cap.
 
+Hands-Free Coaching realtime context should include:
+
+- cleaned mode instructions;
+- active `realtime_hands_free_coach` prompt;
+- `resume_summary` output generated immediately after resume upload when a
+  parsed resume exists;
+- target role/company plus a capped job description excerpt;
+- coaching memory;
+- relevance-ranked saved story library context.
+
+It should not switch to `story_practice_realtime`. If structured resume summary
+generation is unavailable, the route may fall back to a capped raw resume
+excerpt and records the unavailable reason in `ai_runs.raw_json`.
+
 Stop local Postgres:
 
 ```powershell

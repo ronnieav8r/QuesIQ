@@ -1,6 +1,9 @@
 import { and, desc, eq } from "drizzle-orm";
 
 import type {
+  CoachingMemoryRecord,
+  InterviewResumeSummary,
+  QuestionTypeKey,
   SessionEvaluationResult,
   StoryOutline,
   StoryPracticeCoachingEntry,
@@ -37,9 +40,22 @@ export type StoryLibraryContextItem = {
   id: string;
   lastPracticedAt?: string;
   practicePrompt: string;
+  practiceCount: number;
   result: string;
   summary: string;
   title: string;
+};
+
+type SelectStoryLibraryContextInput = {
+  activeStoryId?: string;
+  coachingMemory?: CoachingMemoryRecord;
+  limit?: number;
+  questionFocus?: string;
+  questionTypeKey?: QuestionTypeKey;
+  resumeSummary?: InterviewResumeSummary;
+  stories: StoryLibraryContextItem[];
+  targetCompany?: string;
+  targetRole?: string;
 };
 
 export async function listStories(userId: string): Promise<StoryRecord[]> {
@@ -63,6 +79,7 @@ export async function listStoryLibraryContext(
       id: stories.id,
       lastPracticedAt: stories.lastPracticedAt,
       practicePrompt: stories.practicePrompt,
+      practiceCount: stories.practiceCount,
       result: stories.result,
       summary: stories.summary,
       title: stories.title,
@@ -76,6 +93,97 @@ export async function listStoryLibraryContext(
     ...story,
     lastPracticedAt: story.lastPracticedAt?.toISOString(),
   }));
+}
+
+function normalizeTerms(...values: Array<string | string[] | undefined>) {
+  return values
+    .flatMap((value) => (Array.isArray(value) ? value : value ? [value] : []))
+    .join(" ")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((term) => term.length >= 4);
+}
+
+function containsAny(haystack: string, terms: string[]) {
+  const normalizedHaystack = haystack.toLowerCase();
+
+  return terms.some((term) => normalizedHaystack.includes(term));
+}
+
+export function selectStoryLibraryContextForSession({
+  activeStoryId,
+  coachingMemory,
+  limit = 8,
+  questionFocus,
+  questionTypeKey,
+  resumeSummary,
+  stories,
+  targetCompany,
+  targetRole,
+}: SelectStoryLibraryContextInput) {
+  const focusTerms = normalizeTerms(
+    questionTypeKey,
+    questionFocus,
+    targetRole,
+    targetCompany,
+    resumeSummary?.keySkills,
+    resumeSummary?.strongestExperience,
+  );
+  const coachingTerms = normalizeTerms(
+    coachingMemory?.growthAreas,
+    coachingMemory?.latestRecommendation,
+    coachingMemory?.recurringPatterns,
+  );
+  const now = Date.now();
+
+  return stories
+    .filter((story) => story.id !== activeStoryId)
+    .map((story, index) => {
+      const storyText = [
+        story.categories.join(" "),
+        story.summary,
+        story.practicePrompt,
+        story.result,
+        story.coachNotes.join(" "),
+        story.title,
+      ].join(" ");
+      const practicedAtMs = story.lastPracticedAt
+        ? new Date(story.lastPracticedAt).getTime()
+        : undefined;
+      const practicedRecently =
+        practicedAtMs !== undefined && now - practicedAtMs < 14 * 24 * 60 * 60 * 1000;
+      let score = 0;
+
+      if (
+        questionTypeKey &&
+        story.categories.some((category) => category.toLowerCase().includes(questionTypeKey))
+      ) {
+        score += 3;
+      }
+      if (containsAny(storyText, focusTerms)) {
+        score += 2;
+      }
+      if (containsAny(story.coachNotes.join(" "), coachingTerms)) {
+        score += 2;
+      }
+      if (story.result.trim()) {
+        score += 1;
+      }
+      if (!practicedRecently) {
+        score += 1;
+      }
+      if (story.practiceCount <= 1) {
+        score += 1;
+      }
+      if (practicedRecently) {
+        score -= 1;
+      }
+
+      return { index, score, story };
+    })
+    .sort((left, right) => right.score - left.score || left.index - right.index)
+    .slice(0, limit)
+    .map((ranked) => ranked.story);
 }
 
 export async function saveStory(

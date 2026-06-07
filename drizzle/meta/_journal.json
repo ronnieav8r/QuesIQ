@@ -505,6 +505,13 @@
       "when": 1780956000000,
       "tag": "0072_add_hands_free_coaching_mode",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1781042400000,
+      "tag": "0073_cleanup_hands_free_coaching_context",
+      "breakpoints": true
     }
   ]
 }

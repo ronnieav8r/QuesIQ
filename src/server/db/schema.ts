@@ -523,6 +523,10 @@ export const profiles = pgTable(
     resumeName: text("resume_name"),
     resumeParsedAt: timestamp("resume_parsed_at", { withTimezone: true }),
     resumeSize: integer("resume_size"),
+    resumeSummary: jsonb("resume_summary").$type<Record<string, unknown>>(),
+    resumeSummaryGeneratedAt: timestamp("resume_summary_generated_at", { withTimezone: true }),
+    resumeSummarySourceHash: text("resume_summary_source_hash"),
+    resumeSummaryVersion: integer("resume_summary_version"),
     resumeText: text("resume_text"),
     targetCompany: text("target_company").default("").notNull(),
     targetRole: text("target_role").default("").notNull(),
@@ -745,7 +749,9 @@ export const promptConfigs = pgTable(
     model: text("model").notNull(),
     name: text("name").notNull(),
     target: text("target")
-      .$type<"debrief" | "evaluation" | "realtime" | "story" | "support" | "turn_based">()
+      .$type<
+        "debrief" | "evaluation" | "interview" | "realtime" | "story" | "support" | "turn_based"
+      >()
       .notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     version: integer("version").notNull(),
@@ -803,6 +809,7 @@ export const aiRuns = pgTable(
         | "pricing_review"
         | "quira_support"
         | "realtime"
+        | "resume_summary"
         | "study_evaluate"
         | "study_import"
         | "study_tts"

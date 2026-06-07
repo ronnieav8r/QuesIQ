@@ -90,8 +90,9 @@ const actionDefinitions: Array<{
     title: "Rapid Fire",
   },
   {
-    basePromptKeys: ["realtime_hands_free_coach", "session_evaluation"],
-    description: "Premium Realtime coaching prompt stack plus post-session evaluation.",
+    basePromptKeys: ["realtime_hands_free_coach", "resume_summary", "session_evaluation"],
+    description:
+      "Premium Realtime coaching prompt stack, structured resume summary, plus post-session evaluation.",
     key: "hands_free_coaching",
     modeKey: "hands_free_coaching",
     questionTypeKey: "behavioral",
@@ -288,7 +289,7 @@ function generatedBlocks(definition: (typeof actionDefinitions)[number]): Worksp
     blocks.push({
       body: [
         definition.key === "hands_free_coaching"
-          ? "Realtime runtime composes the active realtime_hands_free_coach prompt with mode, question-focus, style, story library, target role/company, resume excerpt, coaching memory, and strict spoken-turn contract."
+          ? "Realtime runtime composes the active realtime_hands_free_coach prompt with cleaned mode instructions, question-focus, style, ranked story library, job target context, structured resume summary with raw-excerpt fallback only when unavailable, coaching memory, and the Hands-Free spoken-turn contract. It does not apply story_practice_realtime for Hands-Free Coaching."
           : "Realtime runtime composes the active realtime_interviewer prompt with mode, question-focus, style, story/introduction context when present, story library, target role/company, resume excerpt, coaching memory, and strict spoken-turn contract.",
         "The client first-turn instruction starts the live voice session and asks exactly one opening question.",
       ].join("\n"),

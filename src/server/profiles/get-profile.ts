@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import type { InterviewContext } from "@/product/interview-types";
+import { parseInterviewResumeSummary } from "@/product/resume-summary";
 import { getDb } from "@/server/db/client";
 import { profiles } from "@/server/db/schema";
 
@@ -12,6 +13,7 @@ export async function getProfile(userId: string): Promise<InterviewContext | und
       preferredName: profiles.preferredName,
       resumeName: profiles.resumeName,
       resumeParsedAt: profiles.resumeParsedAt,
+      resumeSummary: profiles.resumeSummary,
       resumeText: profiles.resumeText,
       targetCompany: profiles.targetCompany,
       targetRole: profiles.targetRole,
@@ -30,6 +32,7 @@ export async function getProfile(userId: string): Promise<InterviewContext | und
     preferredName: profile.preferredName,
     resumeName: profile.resumeName ?? undefined,
     resumeParsedAt: profile.resumeParsedAt?.toISOString(),
+    resumeSummary: parseInterviewResumeSummary(profile.resumeSummary),
     resumeText: profile.resumeText ?? undefined,
     targetCompany: profile.targetCompany,
     targetRole: profile.targetRole,

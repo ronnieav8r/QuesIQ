@@ -5,6 +5,7 @@ import {
   extractResumeText,
   MAX_RESUME_BYTES,
 } from "@/server/profiles/resume-parser";
+import { getOrCreateInterviewResumeSummary } from "@/server/profiles/resume-summary";
 import { saveResume } from "@/server/profiles/save-resume";
 
 export const runtime = "nodejs";
@@ -57,8 +58,19 @@ export async function POST(request: Request) {
       text: resumeText,
     });
 
+    const resumeSummaryResult = resume.resumeText
+      ? await getOrCreateInterviewResumeSummary({
+          resumeName: resume.resumeName,
+          resumeParsedAt: resume.resumeParsedAt,
+          resumeText: resume.resumeText,
+          userId: appSession.user.id,
+        })
+      : { unavailableReason: "missing_resume_text" };
+
     return NextResponse.json({
       resume,
+      resumeSummaryGenerated: Boolean(resumeSummaryResult.summary),
+      resumeSummaryUnavailable: resumeSummaryResult.unavailableReason,
       warning: resumeText
         ? undefined
         : "Resume was saved by filename, but text could not be extracted from this file.",

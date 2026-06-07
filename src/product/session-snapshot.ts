@@ -7,6 +7,7 @@ import type {
   IntroLength,
   SelectedQuestionContext,
 } from "@/product/interview-types";
+import { parseInterviewResumeSummary } from "@/product/resume-summary";
 import { parseStoryOutline } from "@/product/story-lab";
 
 const modeKeys: PracticeModeKey[] = [
@@ -211,6 +212,7 @@ export function parseSessionSetupSnapshot(value: unknown): SessionSetupSnapshot 
       preferredName: context.preferredName,
       resumeParsedAt: isString(context.resumeParsedAt) ? context.resumeParsedAt : undefined,
       resumeName: isString(context.resumeName) ? context.resumeName : undefined,
+      resumeSummary: parseInterviewResumeSummary(context.resumeSummary),
       resumeText: isString(context.resumeText) ? context.resumeText : undefined,
       targetCompany: context.targetCompany,
       targetRole: context.targetRole,
@@ -230,8 +232,14 @@ export function parseSessionSetupSnapshot(value: unknown): SessionSetupSnapshot 
             candidate.turnBasedQuestionCount ?? candidate.rapidFireQuestionCount,
           )
         : undefined,
-    storyContext: parseStoryContext(candidate.storyContext),
-    storyPracticeSpin: parseStoryPracticeSpin(candidate.storyPracticeSpin),
+    storyContext:
+      candidate.modeKey === "hands_free_coaching"
+        ? undefined
+        : parseStoryContext(candidate.storyContext),
+    storyPracticeSpin:
+      candidate.modeKey === "hands_free_coaching"
+        ? undefined
+        : parseStoryPracticeSpin(candidate.storyPracticeSpin),
     selectedQuestionContext: parseSelectedQuestionContext(candidate.selectedQuestionContext),
     selectedQuestionQueueContext: parseSelectedQuestionQueueContext(
       candidate.selectedQuestionQueueContext,

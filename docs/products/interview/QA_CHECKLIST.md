@@ -105,6 +105,16 @@ with production or static checks.
   Try again, Ask Que, or Move on menu.
 - Que may ask one targeted retry/follow-up, then moves forward instead of
   looping on the same answer.
+- Active prompt is `realtime_hands_free_coach`, not
+  `story_practice_realtime`, even if selected story context is accidentally
+  present.
+- Realtime context includes cleaned mode instructions, question focus, style,
+  job target context, coaching memory, structured resume summary, and ranked
+  story library context.
+- Structured resume summary is generated immediately after resume upload and is
+  reused until the resume text changes.
+- Raw resume excerpt is only used as a temporary fallback when structured
+  resume summary generation is unavailable.
 - The 15-minute cap ends the session cleanly.
 - Transcript artifact, review generation, `ai_runs`, and
   `realtime_session_usage` records are saved.
@@ -146,6 +156,9 @@ with production or static checks.
 - Rapid Fire and Coaching runtime configs show turn-based settings.
 - Hands-Free Coaching runtime config shows realtime engine, coaching feedback
   depth, and a 900-second max duration.
+- Prompt Library includes `realtime_hands_free_coach` and `resume_summary`.
+- Hands-Free Coaching playbook shows `realtime_hands_free_coach`,
+  `resume_summary`, and `session_evaluation` as the active prompt stack.
 - First-turn/kickoff instructions are visible in Admin and not hidden in code.
 - Prompt Test Tunnel is available to admins in the legacy Interview Admin
   panel.

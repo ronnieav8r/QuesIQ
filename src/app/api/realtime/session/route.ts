@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import type { CoachingMemoryRecord } from "@/product/interview-types";
-import type { SessionSetupSnapshot } from "@/product/interview-types";
-import type { PromptConfigRecord } from "@/product/interview-types";
+import type {
+  CoachingMemoryRecord,
+  InterviewResumeSummary,
+  PromptConfigRecord,
+  SessionSetupSnapshot,
+} from "@/product/interview-types";
 import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
 import { isAdminEmail } from "@/server/admin";
 import type { SessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
@@ -14,12 +17,17 @@ import {
   getOpenAiInterviewTestTunnelApiKey,
   getOpenAiRealtimeApiKey,
 } from "@/server/openai/keys";
+import {
+  getOrCreateInterviewResumeSummary,
+  type ResumeSummaryResult,
+} from "@/server/profiles/resume-summary";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 import { buildRealtimeAudioInputConfig } from "@/server/realtime/audio-config";
 import { getOwnedSession } from "@/server/sessions/get-owned-session";
 import { saveRealtimeSessionConfig } from "@/server/sessions/save-realtime-call";
 import {
   listStoryLibraryContext,
+  selectStoryLibraryContextForSession,
   type StoryLibraryContextItem,
 } from "@/server/stories/stories";
 
@@ -33,7 +41,7 @@ type RealtimeSessionRequest = {
   realtimeInstructions?: string;
 };
 
-const strictSpokenTurnContract = [
+const defaultStrictSpokenTurnContract = [
   "Strict spoken-turn contract:",
   "Output one short spoken line.",
   "Use at most one short transition sentence.",
@@ -55,8 +63,89 @@ const strictSpokenTurnContract = [
   "Sound natural, direct, and human. Avoid bullets, labels, headings, hidden analysis, and written-report phrasing.",
 ].join(" ");
 
-function resumeExcerpt(snapshot?: SessionSetupSnapshot) {
-  return snapshot?.interviewContext.resumeText?.trim().slice(0, 3000);
+const handsFreeStrictSpokenTurnContract = [
+  "Spoken-turn contract:",
+  "Keep each turn short and natural.",
+  "Ask one question at a time.",
+  "Ask for one missing detail at a time.",
+  "Do not ask compound questions.",
+  "Do not ask for a full STAR answer in one turn.",
+  "Give one concrete coaching point after an answer when useful.",
+  "After one retry or clarification, continue forward.",
+  "Do not repeat the same scenario after a retry.",
+  "Avoid bullets, headings, labels, hidden analysis, and written-report phrasing.",
+].join(" ");
+
+function strictSpokenTurnContract(modeKey?: string) {
+  return modeKey === handsFreeCoachingModeKey
+    ? handsFreeStrictSpokenTurnContract
+    : defaultStrictSpokenTurnContract;
+}
+
+function jobDescriptionExcerpt(snapshot?: SessionSetupSnapshot) {
+  return snapshot?.interviewContext.jobDescription?.trim().slice(0, 1500);
+}
+
+function formatResumeSummary(summary?: InterviewResumeSummary) {
+  if (!summary) {
+    return undefined;
+  }
+
+  return [
+    "Resume summary context:",
+    `Current/recent role: ${summary.currentOrRecentRole || "Not provided"}.`,
+    `Target role alignment: ${summary.targetRoleAlignment || "Not provided"}.`,
+    `Relevant industries: ${summary.relevantIndustries.join(" | ") || "Not provided"}.`,
+    `Strongest experience: ${summary.strongestExperience.join(" | ") || "Not provided"}.`,
+    `Key skills: ${summary.keySkills.join(" | ") || "Not provided"}.`,
+    `Quantified wins: ${summary.quantifiedWins.join(" | ") || "Not provided"}.`,
+    `Likely behavioral stories: ${
+      summary.likelyBehavioralStories
+        .slice(0, 6)
+        .map((story) =>
+          [
+            story.title,
+            story.evidence,
+            story.likelyQuestionTypes.join("/"),
+            story.starElementHints.action
+              ? `Action hint: ${story.starElementHints.action}`
+              : undefined,
+            story.starElementHints.result
+              ? `Result hint: ${story.starElementHints.result}`
+              : undefined,
+          ]
+            .filter(Boolean)
+            .join(" - "),
+        )
+        .join(" | ") || "Not provided"
+    }.`,
+    `Gaps or areas to probe: ${summary.gapsOrAreasToProbe.join(" | ") || "Not provided"}.`,
+    "Use this quietly to ask role-relevant questions and give better coaching. Do not read this summary aloud unless the candidate asks about a specific detail.",
+  ].join(" ");
+}
+
+function formatResumeContext(
+  snapshot?: SessionSetupSnapshot,
+  summary?: InterviewResumeSummary,
+  unavailableReason?: string,
+) {
+  const summaryContext = formatResumeSummary(summary ?? snapshot?.interviewContext.resumeSummary);
+
+  if (summaryContext) {
+    return summaryContext;
+  }
+
+  const fallbackExcerpt = snapshot?.interviewContext.resumeText?.trim().slice(0, 3000);
+
+  if (fallbackExcerpt) {
+    return [
+      `Resume summary unavailable${unavailableReason ? ` (${unavailableReason})` : ""}.`,
+      `Temporary raw resume excerpt fallback: ${fallbackExcerpt}.`,
+      "Use this quietly to ask role-relevant questions. Do not read raw resume text aloud unless the candidate asks about a specific detail.",
+    ].join(" ");
+  }
+
+  return "No parsed resume summary or resume context was provided.";
 }
 
 function buildQueInstructions(
@@ -66,10 +155,12 @@ function buildQueInstructions(
   storyPracticeConfig?: PromptConfigRecord,
   memory?: CoachingMemoryRecord,
   storyLibrary: StoryLibraryContextItem[] = [],
+  resumeSummary?: InterviewResumeSummary,
+  resumeSummaryUnavailableReason?: string,
 ) {
   const role = snapshot?.interviewContext.targetRole || "the user's target role";
   const company = snapshot?.interviewContext.targetCompany || "an unspecified company";
-  const resumeContext = resumeExcerpt(snapshot);
+  const jobDescriptionContext = jobDescriptionExcerpt(snapshot);
   const modeLabel = promptComponents?.mode?.name || snapshot?.modeKey || "first_impression";
   const styleLabel = promptComponents?.style?.label || snapshot?.styleKey || "friendly";
   const questionLabel = promptComponents?.questionType?.label || snapshot?.questionTypeKey;
@@ -110,7 +201,7 @@ function buildQueInstructions(
   const storyLibraryContext =
     storyLibrary.length > 0
       ? [
-          "Saved story library context: use this quietly when choosing behavioral questions and coaching after an answer. In Mock Interview, ask natural questions that may give the candidate a chance to use a strong saved story without saying you are selecting from their library. Do not compare multiple saved stories during a live turn. If one saved story is clearly a better fit after the candidate answers, you may briefly suggest it by title. Do not force a story suggestion when none is clearly relevant.",
+          "Saved story library context: use this quietly when choosing behavioral questions and coaching after an answer. Do not compare multiple saved stories during a live turn. If one saved story is clearly useful after the candidate struggles or asks for help, you may briefly suggest it by title. Do not force a story suggestion when none is clearly relevant.",
           ...storyLibrary
             .filter((story) => story.id !== snapshot?.storyContext?.storyId)
             .slice(0, 8)
@@ -145,13 +236,14 @@ function buildQueInstructions(
     storyLibraryContext,
     `Target role: ${role}.`,
     `Target company: ${company}.`,
+    jobDescriptionContext
+      ? `Job target context: Target role: ${role}. Target company: ${company}. Job description focus: ${jobDescriptionContext}.`
+      : `Job target context: Target role: ${role}. Target company: ${company}. No job description was provided.`,
     memory
       ? `Coaching memory: ${memory.summary} Latest focus: ${memory.latestRecommendation}. Recurring patterns: ${memory.recurringPatterns.join(" | ") || "None yet"}. Use this quietly to tailor coaching and question choice. Do not mention stored memory unless the candidate asks.`
       : "No prior coaching memory was provided.",
-    resumeContext
-      ? `Resume context: ${resumeContext}. Use it quietly to ask role-relevant questions. If the candidate asks whether you have their resume, say you have the context they provided for this practice session and can tailor questions from it. Do not say you have a file, a private file, or a resume summary in front of you. Do not read resume text aloud unless the candidate asks about a specific detail.`
-      : "No parsed resume context was provided.",
-    strictSpokenTurnContract,
+    formatResumeContext(snapshot, resumeSummary, resumeSummaryUnavailableReason),
+    strictSpokenTurnContract(snapshot?.modeKey),
   ]
     .filter(Boolean)
     .join(" ");
@@ -197,10 +289,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Session was not found." }, { status: 404 });
   }
 
-  if (
-    body.snapshot?.modeKey === handsFreeCoachingModeKey &&
-    !canUseHandsFreeCoaching(appSession.user.email)
-  ) {
+  const isHandsFreeCoaching = body.snapshot?.modeKey === handsFreeCoachingModeKey;
+  const effectiveSnapshot =
+    isHandsFreeCoaching && body.snapshot
+      ? {
+          ...body.snapshot,
+          storyContext: undefined,
+          storyPracticeSpin: undefined,
+        }
+      : body.snapshot;
+
+  if (isHandsFreeCoaching && !canUseHandsFreeCoaching(appSession.user.email)) {
     return NextResponse.json(
       {
         detail: "Hands-Free Coaching is a premium feature that is not enabled for this account.",
@@ -217,32 +316,69 @@ export async function POST(request: Request) {
     promptComponents,
     memory,
     storyLibrary,
+    resumeSummaryResult,
   ] = await Promise.all([
     getActivePromptConfig("realtime_interviewer"),
-    body.snapshot?.modeKey === handsFreeCoachingModeKey
+    isHandsFreeCoaching
       ? getActivePromptConfig("realtime_hands_free_coach")
       : Promise.resolve(undefined),
-    body.snapshot?.storyContext
+    !isHandsFreeCoaching && effectiveSnapshot?.storyContext
       ? getActivePromptConfig("story_practice_realtime")
       : Promise.resolve(undefined),
-    body.snapshot ? getSessionPromptComponents(body.snapshot) : Promise.resolve({}),
+    effectiveSnapshot
+      ? getSessionPromptComponents(effectiveSnapshot)
+      : Promise.resolve({} as SessionPromptComponents),
     getCoachingMemory(appSession.user.id),
     listStoryLibraryContext(appSession.user.id),
+    effectiveSnapshot
+      ? getOrCreateInterviewResumeSummary({
+        resumeName: effectiveSnapshot.interviewContext.resumeName,
+        resumeParsedAt: effectiveSnapshot.interviewContext.resumeParsedAt,
+        resumeText: effectiveSnapshot.interviewContext.resumeText,
+        userId: appSession.user.id,
+      })
+      : Promise.resolve<ResumeSummaryResult>({
+          unavailableReason: "missing_session_snapshot",
+        }),
   ]);
-  const baseRealtimeConfig = handsFreeCoachConfig ?? promptConfig;
+  const baseRealtimeConfig = isHandsFreeCoaching
+    ? handsFreeCoachConfig ?? promptConfig
+    : promptConfig;
   const activeRealtimeConfig = storyPracticeConfig ?? baseRealtimeConfig;
+  const storyPracticePromptApplied = Boolean(storyPracticeConfig);
+  const selectedStoryContextIgnored = Boolean(isHandsFreeCoaching && body.snapshot?.storyContext);
+  const rankedStoryLibrary = selectStoryLibraryContextForSession({
+    activeStoryId: effectiveSnapshot?.storyContext?.storyId,
+    coachingMemory: memory,
+    limit: 8,
+    questionFocus: promptComponents.questionType?.label,
+    questionTypeKey: effectiveSnapshot?.questionTypeKey,
+    resumeSummary: resumeSummaryResult.summary,
+    stories: storyLibrary,
+    targetCompany: effectiveSnapshot?.interviewContext.targetCompany,
+    targetRole: effectiveSnapshot?.interviewContext.targetRole,
+  });
+  const realtimeRunMetadata = {
+    activePromptConfigKey: activeRealtimeConfig.key,
+    activePromptConfigVersion: activeRealtimeConfig.version,
+    endpoint: "/api/realtime/session",
+    modeKey: effectiveSnapshot?.modeKey,
+    questionTypeKey: effectiveSnapshot?.questionTypeKey,
+    resumeSummaryAvailable: Boolean(resumeSummaryResult.summary),
+    resumeSummarySourceHash: resumeSummaryResult.sourceHash,
+    resumeSummaryUnavailable: resumeSummaryResult.unavailableReason,
+    selectedStoryContextIgnored,
+    storyContextPresent: Boolean(effectiveSnapshot?.storyContext),
+    storyLibraryContextCount: rankedStoryLibrary.length,
+    storyPracticePromptApplied,
+  };
   const aiRun = await startAiRun({
     model: activeRealtimeConfig.model,
     promptConfigId: activeRealtimeConfig.id,
     promptConfigKey: activeRealtimeConfig.key,
     promptConfigVersion: activeRealtimeConfig.version,
     promptSnapshot: activeRealtimeConfig.instructions,
-    rawJson: {
-      endpoint: "/api/realtime/session",
-      modeKey: body.snapshot?.modeKey,
-      questionTypeKey: body.snapshot?.questionTypeKey,
-      storyContextPresent: Boolean(body.snapshot?.storyContext),
-    },
+    rawJson: realtimeRunMetadata,
     runType: "realtime",
     sessionId: body.sessionId,
     userId: appSession.user.id,
@@ -252,11 +388,13 @@ export async function POST(request: Request) {
     model: activeRealtimeConfig.model,
     instructions: buildQueInstructions(
       baseRealtimeConfig,
-      body.snapshot,
+      effectiveSnapshot,
       promptComponents,
       storyPracticeConfig,
       memory,
-      storyLibrary,
+      rankedStoryLibrary,
+      resumeSummaryResult.summary,
+      resumeSummaryResult.unavailableReason,
     ),
     audio: {
       input: buildRealtimeAudioInputConfig({
@@ -289,7 +427,7 @@ export async function POST(request: Request) {
         costSource: "unavailable",
         errorMessage: detail,
         rawJson: {
-          endpoint: "/api/realtime/session",
+          ...realtimeRunMetadata,
           status: realtimeResponse.status,
         },
         status: "failed",
@@ -334,7 +472,7 @@ export async function POST(request: Request) {
       costSource: "unavailable",
       providerRequestId: realtimeCallId,
       rawJson: {
-        endpoint: "/api/realtime/session",
+        ...realtimeRunMetadata,
         providerRequestId: realtimeCallId,
       },
       status: "succeeded",
@@ -350,7 +488,7 @@ export async function POST(request: Request) {
       costSource: "unavailable",
       errorMessage: error instanceof Error ? error.message : "Unknown network error.",
       rawJson: {
-        endpoint: "/api/realtime/session",
+        ...realtimeRunMetadata,
       },
       status: "failed",
     });

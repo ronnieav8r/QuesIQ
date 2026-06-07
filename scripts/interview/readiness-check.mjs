@@ -245,6 +245,8 @@ function run() {
     "realtime_hands_free_coach",
     "handsFreeCoachingModeKey",
     "Hands-Free Coaching is unavailable.",
+    "storyPracticePromptApplied",
+    "selectedStoryContextIgnored",
   ]);
   requireMarkers("Hands-Free Coaching runtime cap", "src/components/interview/realtime-voice-session.tsx", [
     "maxDurationSeconds",
@@ -253,6 +255,7 @@ function run() {
   requireMarkers("Hands-Free Coaching admin playbook", "src/components/interview/admin-view.tsx", [
     "Hands-Free Coaching",
     "realtime_hands_free_coach",
+    "resume_summary",
     "hands_free_coaching",
   ]);
   requireMarkers("Hands-Free Coaching durable migration", "drizzle/0072_add_hands_free_coaching_mode.sql", [
@@ -260,6 +263,38 @@ function run() {
     "realtime_hands_free_coach",
     "max_duration_seconds",
     "900",
+  ]);
+  requireMarkers("Hands-Free Coaching context cleanup migration", "drizzle/0073_cleanup_hands_free_coaching_context.sql", [
+    "resume_summary",
+    "realtime_hands_free_coach",
+    "Premium live coaching mode. Keep the session spoken",
+    "version",
+    "2",
+  ]);
+  requireMarkers("Resume summary storage and generation", "src/server/profiles/resume-summary.ts", [
+    "resumeSummaryVersion",
+    "quesiq_interview_resume_summary",
+    "getOrCreateInterviewResumeSummary",
+    "resume_summary",
+    "resumeSummarySourceHash",
+  ]);
+  requireMarkers("Resume upload summary generation", "src/app/api/profile/resume/route.ts", [
+    "getOrCreateInterviewResumeSummary",
+    "resumeSummaryGenerated",
+    "resumeSummaryUnavailable",
+  ]);
+  requireMarkers("Realtime resume summary context", "src/app/api/realtime/session/route.ts", [
+    "Resume summary context:",
+    "Temporary raw resume excerpt fallback",
+    "resumeSummaryAvailable",
+    "story_practice_realtime",
+  ]);
+  requireMarkers("Story library relevance ranking", "src/server/stories/stories.ts", [
+    "selectStoryLibraryContextForSession",
+    "practiceCount",
+    "lastPracticedAt",
+    "coachingMemory",
+    "resumeSummary",
   ]);
 
   requireMarkers("AI usage instrumentation markers", "src/server/sessions/create-session-evaluation.ts", [

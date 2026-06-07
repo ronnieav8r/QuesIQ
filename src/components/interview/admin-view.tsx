@@ -348,6 +348,7 @@ type PromptPlaybook = {
 const promptLabels: Record<PromptConfigKey, string> = {
   introduction_draft: "Introduction Draft",
   quira_support_chat: "Quira Support Chat",
+  resume_summary: "Interview Resume Summary",
   realtime_hands_free_coach: "Realtime Hands-Free Coach",
   realtime_interviewer: "Live Voice Interviewer",
   session_debrief: "Session Debrief",
@@ -364,10 +365,10 @@ const promptLabels: Record<PromptConfigKey, string> = {
 
 const promptPlaybooks: PromptPlaybook[] = [
   {
-    basePromptKeys: ["realtime_hands_free_coach", "session_evaluation"],
+    basePromptKeys: ["realtime_hands_free_coach", "resume_summary", "session_evaluation"],
     componentModeKeys: ["hands_free_coaching"],
     description:
-      "Premium live Realtime coaching. Que coaches naturally after answers without button-choice menus.",
+      "Premium live Realtime coaching. Que uses structured resume context and coaches naturally after answers without button-choice menus.",
     includeAllQuestionTypes: true,
     includeAllStyles: true,
     includeFirstTurn: true,
@@ -497,6 +498,12 @@ const runtimeContextByTarget = {
     "Transcript: speaker and text for each saved turn",
     "Response scaffold enforced in code: summary, coaching insight, next action, five scores with evidence and next steps, review detail sections, and updated coaching memory",
   ],
+  interview: [
+    "Resume text, resume name, and parsed timestamp",
+    "Structured output schema for compact interview-coaching resume context",
+    "Stored profile summary metadata: schema version, generated timestamp, and source hash",
+    "Generation runs immediately after upload and is cached until resume text or schema version changes",
+  ],
   realtime: [
     "Active Admin prompt instructions",
     "Visible Admin component prompts for selected mode, question focus, and interviewer style",
@@ -505,7 +512,7 @@ const runtimeContextByTarget = {
     "Question focus",
     "Target role",
     "Target company",
-    "Capped resume context when available",
+    "Structured resume summary when available, with capped raw excerpt only as a temporary fallback",
     "Saved Story or Introduction context when practicing one",
     "Regular practice uses a client kickoff that restates role/company, mode, question focus, and style for the first turn",
     "Opening guardrail: Que must not infer or mention surroundings, camera view, current activity, food, cooking, objects, clothing, or what the user appears to be doing",

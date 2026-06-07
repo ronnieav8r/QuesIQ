@@ -156,9 +156,36 @@ export type InterviewContext = {
   preferredName: string;
   resumeName?: string;
   resumeParsedAt?: string;
+  resumeSummary?: InterviewResumeSummary;
   resumeText?: string;
   targetCompany: string;
   targetRole: string;
+};
+
+export type InterviewResumeSummary = {
+  currentOrRecentRole: string;
+  gapsOrAreasToProbe: string[];
+  generatedAt: string;
+  keySkills: string[];
+  likelyBehavioralStories: Array<{
+    evidence: string;
+    likelyQuestionTypes: string[];
+    starElementHints: {
+      action?: string;
+      result?: string;
+      situation?: string;
+      task?: string;
+    };
+    title: string;
+  }>;
+  quantifiedWins: string[];
+  relevantIndustries: string[];
+  sourceResumeName?: string;
+  sourceResumeParsedAt?: string;
+  strongestExperience: string[];
+  targetCompany?: string;
+  targetRole?: string;
+  targetRoleAlignment: string;
 };
 
 export type JobTargetRecord = {
@@ -619,6 +646,7 @@ export type VoiceSessionArtifactDraft = {
 export type PromptConfigKey =
   | "introduction_draft"
   | "quira_support_chat"
+  | "resume_summary"
   | "session_debrief"
   | "realtime_hands_free_coach"
   | "realtime_interviewer"
@@ -635,6 +663,7 @@ export type PromptConfigKey =
 export type PromptConfigTarget =
   | "debrief"
   | "evaluation"
+  | "interview"
   | "realtime"
   | "story"
   | "support"
@@ -709,6 +738,7 @@ export type AiRunRecord = {
     | "pricing_review"
     | "quira_support"
     | "realtime"
+    | "resume_summary"
     | "study_evaluate"
     | "study_import"
     | "study_tts"

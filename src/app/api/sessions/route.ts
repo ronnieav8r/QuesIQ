@@ -7,6 +7,7 @@ import {
   getAccessibleInterviewQuestion,
   toSelectedQuestionContext,
 } from "@/server/interview/question-bank";
+import { getOrCreateInterviewResumeSummary } from "@/server/profiles/resume-summary";
 import { createSession } from "@/server/sessions/create-session";
 import { listOwnedSessions } from "@/server/sessions/list-owned-sessions";
 
@@ -132,6 +133,23 @@ export async function POST(request: Request) {
         selectedQuestionQueueContext,
         styleKey: "friendly",
         turnBasedQuestionCount: selectedQuestionQueueContext.length,
+      };
+    }
+
+    const resumeSummaryResult = await getOrCreateInterviewResumeSummary({
+      resumeName: snapshot.interviewContext.resumeName,
+      resumeParsedAt: snapshot.interviewContext.resumeParsedAt,
+      resumeText: snapshot.interviewContext.resumeText,
+      userId: appSession.user.id,
+    });
+
+    if (resumeSummaryResult.summary) {
+      snapshot = {
+        ...snapshot,
+        interviewContext: {
+          ...snapshot.interviewContext,
+          resumeSummary: resumeSummaryResult.summary,
+        },
       };
     }
 
