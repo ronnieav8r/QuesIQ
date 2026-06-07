@@ -1173,7 +1173,6 @@ export function TurnBasedVoiceSession({
         <div className="inline-actions coaching-choice-actions" aria-label="Coaching choices">
           {showFullCoachingChoices && (
             <button
-              className="secondary"
               disabled={requesting}
               onClick={() => void handleCoachingChoice("more_feedback")}
               type="button"
@@ -1182,7 +1181,6 @@ export function TurnBasedVoiceSession({
             </button>
           )}
           <button
-            className="secondary"
             disabled={requesting}
             onClick={() => void handleCoachingChoice("try_again")}
             type="button"
@@ -1239,11 +1237,19 @@ export function TurnBasedVoiceSession({
           {artifactDraft.transcript.length === 0 ? (
             <p>Que and candidate turns will collect here for the session artifact.</p>
           ) : (
-            artifactDraft.transcript.map((turn) => (
-              <p key={turn.id}>
-                <strong>{turn.speaker}:</strong> {turn.text}
-              </p>
-            ))
+            <>
+              {artifactDraft.transcript.map((turn) => (
+                <p key={turn.id}>
+                  <strong>{turn.speaker}:</strong> {turn.text}
+                </p>
+              ))}
+              {pendingRecordedAnswer && (
+                <p>
+                  <strong>You:</strong> Click Submit answer to transcribe this recording and send it
+                  for feedback.
+                </p>
+              )}
+            </>
           )}
         </section>
         {latestEvents.length > 0 && (

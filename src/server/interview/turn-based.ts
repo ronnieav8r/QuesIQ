@@ -394,7 +394,7 @@ function normalizeCoachingDecision(input: {
       ...input.decision,
       detectedUserIntent: "more_feedback" as const,
       done: false,
-      question: "Do you want to try again or move on?",
+      question: "Select Try again or Move on.",
       state: "more_feedback" as const,
     };
   }
@@ -424,7 +424,7 @@ function normalizeCoachingDecision(input: {
       detectedUserIntent: "brief_feedback_choice" as const,
       done: false,
       feedback: undefined,
-      question: "Say More feedback, Try again, or Move on.",
+      question: "Select More feedback, Try again, or Move on.",
       state: "brief_feedback_choice" as const,
     };
   }
@@ -447,13 +447,13 @@ function normalizeCoachingDecision(input: {
 
   if (
     input.hasLatestAnswer &&
-    input.decision.state !== "retry_answer" &&
     input.decision.state !== "wrap_up"
   ) {
     return {
       ...input.decision,
       detectedUserIntent: "brief_feedback_choice" as const,
-      question: "You can say More feedback, Try again, or Move on.",
+      done: false,
+      question: "Select More feedback, Try again, or Move on.",
       state: "brief_feedback_choice" as const,
     };
   }
@@ -726,7 +726,7 @@ export function buildTurnTaskInstruction(
 ) {
   if (snapshot.modeKey === "coaching" && coachingChoiceIntent) {
     if (coachingChoiceIntent === "more_feedback") {
-      return "The user chose More feedback. Give one or two short coaching sentences about the latest answer, name one improvement only, then ask exactly: Do you want to try again or move on?";
+      return "The user chose More feedback. Give one or two short coaching sentences about the latest answer, name one improvement only, then ask exactly: Select Try again or Move on.";
     }
 
     if (coachingChoiceIntent === "try_again") {
@@ -737,7 +737,7 @@ export function buildTurnTaskInstruction(
       return "The user chose Move on. Ask one completely new interview question from a different scenario, angle, or archetype. Do not revisit the same answer.";
     }
 
-    return "The user's choice was unclear. Do not coach or ask a new interview question. Ask exactly: Say More feedback, Try again, or Move on.";
+    return "The user's choice was unclear. Do not coach or ask a new interview question. Ask exactly: Select More feedback, Try again, or Move on.";
   }
 
   if (snapshot.introductionContext) {
@@ -803,10 +803,10 @@ export function buildTurnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) 
       universalRules,
       "Coaching is a question-answer-coach-choice loop.",
       "After each user answer, write one brief, specific feedback sentence tied to what the user actually said.",
-      "Then ask exactly: You can say More feedback, Try again, or Move on.",
+      "Then ask exactly: Select More feedback, Try again, or Move on.",
       "Do not ask a new interview question in the same turn as the fixed Coaching choice prompt.",
       "If the user chooses Move on, ask one concise new interview question from a different scenario or angle.",
-      "If the user chooses More feedback, give one or two short coaching sentences and ask exactly: Do you want to try again or move on?",
+      "If the user chooses More feedback, give one or two short coaching sentences and ask exactly: Select Try again or Move on.",
       "Only ask the user to retry when the latest answer is unusable, off-topic, or too fragmented to evaluate.",
       "If the previous Que prompt was a retry, move on to a completely new question no matter how incomplete the new answer was.",
       "The selected question count means distinct primary questions, not repeated retries on the same scenario.",
@@ -834,7 +834,7 @@ function buildTurnOutputContract() {
     "Output contract: return only compact JSON with keys state, detectedUserIntent, archetypeId, question, feedback, routingReason, targetSkill, and done.",
     "Allowed state and detectedUserIntent values: opening_question, awaiting_answer, brief_feedback_choice, more_feedback, retry_answer, move_on, wrap_up.",
     "Generate at most one Que spoken question. Keep feedback short unless the active prompt explicitly asks for more detail.",
-    "For Coaching after a usable answer, return state brief_feedback_choice, one short feedback sentence, and question exactly: You can say More feedback, Try again, or Move on.",
+    "For Coaching after a usable answer, return state brief_feedback_choice, one short feedback sentence, and question exactly: Select More feedback, Try again, or Move on.",
     "Do not invent candidate facts, company facts, resume facts, credentials, metrics, or motivations.",
     "Set done true only when the session should end or wrap up.",
   ].join(" ");
@@ -1926,7 +1926,7 @@ export async function runTurnBasedInterviewTurn(input: {
             detectedUserIntent: "brief_feedback_choice" as const,
             done: false,
             feedback: undefined,
-            question: "Say More feedback, Try again, or Move on.",
+            question: "Select More feedback, Try again, or Move on.",
             routingReason:
               "Deterministic Coaching choice routing could not classify the user's choice.",
             state: "brief_feedback_choice" as const,
