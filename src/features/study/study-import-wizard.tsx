@@ -4,6 +4,8 @@ import { Check, ChevronLeft, ChevronRight, FileUp, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
+import styles from "./study-import-wizard.module.css";
+
 type SourceType = "csv" | "file" | "text" | "url";
 type Step = "done" | "parsing" | "review" | "saving" | "source";
 
@@ -208,23 +210,43 @@ export function StudyImportWizard({ deckId, deckTitle }: StudyImportWizardProps)
   if (step === "source") {
     return (
       <div className="study-import-wizard">
-        <div className="import-tabs">
-          {(["file", "text", "url", "csv"] as SourceType[]).map((type) => (
-            <button
-              className={`import-tab${sourceType === type ? " import-tab--active" : ""}`}
-              key={type}
-              onClick={() => {
-                setSourceType(type);
-                setError(null);
-              }}
-              type="button"
-            >
-              {type === "file" && "Upload File"}
-              {type === "text" && "Paste Text"}
-              {type === "url" && "Paste URL"}
-              {type === "csv" && "CSV / Quizlet"}
-            </button>
-          ))}
+        <div className={styles.sourceGroups} aria-label={`Add cards to ${deckTitle}`}>
+          <div className={styles.sourceGroup}>
+            <p className={styles.sourceGroupLabel}>Generate from source</p>
+            <div className={styles.tabs}>
+              {(["file", "text", "url"] as SourceType[]).map((type) => (
+                <button
+                  className={`${styles.tab}${sourceType === type ? ` ${styles.tabActive}` : ""}`}
+                  key={type}
+                  onClick={() => {
+                    setSourceType(type);
+                    setError(null);
+                  }}
+                  type="button"
+                >
+                  {type === "file" && "Upload File"}
+                  {type === "text" && "Paste Text"}
+                  {type === "url" && "Paste URL"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.sourceGroup}>
+            <p className={styles.sourceGroupLabel}>Import existing cards</p>
+            <div className={styles.tabs}>
+              <button
+                className={`${styles.tab}${sourceType === "csv" ? ` ${styles.tabActive}` : ""}`}
+                onClick={() => {
+                  setSourceType("csv");
+                  setError(null);
+                }}
+                type="button"
+              >
+                CSV / Quizlet
+              </button>
+            </div>
+          </div>
         </div>
 
         {sourceType === "file" && (

@@ -40,10 +40,10 @@ export default async function StudyImportPage({ params }: Props) {
       </div>
       <div>
         <p className="eyebrow">QuesIQ Study</p>
-        <h1>Import Cards</h1>
+        <h1>Add Cards</h1>
         <p>
-          Bring cards into &quot;{deck.title}&quot; from text, CSV/TSV, PDFs, images, or URLs.
-          You can review every card before saving.
+          Generate cards for &quot;{deck.title}&quot; from source material, or import existing cards from
+          CSV/TSV exports. You can review every card before saving.
         </p>
       </div>
       <section className="panel study-empty-panel">
