@@ -72,7 +72,15 @@ type PrefetchState =
   | { status: "failed" | "idle" | "loading" }
   | { id: string; payload: NextTurnResponse; status: "ready" };
 
+type PendingRecordedAnswer = {
+  answerAudioBase64: string;
+  answerDurationSeconds?: number;
+  answerMimeType: string;
+};
+
 const emptyArtifactDraft: VoiceSessionArtifactDraft = { events: [], transcript: [] };
+const listenStartDelayMs = 800;
+const turnRequestTimeoutMs = 60_000;
 
 function createRecordId(prefix: string) {
   return `${prefix}-${Date.now()}-${crypto.randomUUID()}`;
@@ -153,6 +161,7 @@ export function TurnBasedVoiceSession({
   const currentRequestAbortRef = useRef<AbortController | undefined>(undefined);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const listenStartTimerRef = useRef<number | undefined>(undefined);
   const recordingStartedAtMsRef = useRef<number | undefined>(undefined);
   const sessionStartedAtMsRef = useRef<number | undefined>(undefined);
   const silenceStartedAtMsRef = useRef<number | undefined>(undefined);
@@ -171,6 +180,7 @@ export function TurnBasedVoiceSession({
   const sessionRunIdRef = useRef(0);
   const pendingEndReasonRef = useRef<VoiceSessionArtifactDraft["endReason"]>(undefined);
   const requestContainsAnswerRef = useRef(false);
+  const pendingRecordedAnswerRef = useRef<PendingRecordedAnswer | undefined>(undefined);
   const suppressNextRecordingRef = useRef(false);
   const turnCountRef = useRef(0);
   const artifactDraftRef = useRef<VoiceSessionArtifactDraft>(emptyArtifactDraft);
@@ -182,9 +192,12 @@ export function TurnBasedVoiceSession({
   const [currentQuestion, setCurrentQuestion] = useState<string>();
   const [currentTurnState, setCurrentTurnState] = useState<string>();
   const [recording, setRecording] = useState(false);
+  const [microphoneStarting, setMicrophoneStarting] = useState(false);
   const [done, setDone] = useState(false);
+  const [endingRequested, setEndingRequested] = useState(false);
   const [turnCount, setTurnCount] = useState(0);
   const [requesting, setRequesting] = useState(false);
+  const [pendingRecordedAnswer, setPendingRecordedAnswer] = useState<PendingRecordedAnswer>();
   const [openingPrefetch, setOpeningPrefetch] = useState<PrefetchState>({ status: "idle" });
   const [moveOnPrefetch, setMoveOnPrefetch] = useState<PrefetchState>({ status: "idle" });
 
@@ -198,6 +211,7 @@ export function TurnBasedVoiceSession({
   const showSessionCountdown =
     canShowSessionCountdown(phase) && sessionSecondsRemaining <= 60 && sessionSecondsRemaining > 0;
   const openingPrefetchReady = openingPrefetch.status === "ready";
+  const controlledAnswerMode = snapshot.modeKey === "coaching";
 
   function updatePhase(nextPhase: TurnBasedPhase) {
     phaseRef.current = nextPhase;
@@ -209,6 +223,10 @@ export function TurnBasedVoiceSession({
     setRecording(nextRecording);
   }
 
+  function updateMicrophoneStarting(nextMicrophoneStarting: boolean) {
+    setMicrophoneStarting(nextMicrophoneStarting);
+  }
+
   function updateRequesting(nextRequesting: boolean) {
     requestingRef.current = nextRequesting;
     setRequesting(nextRequesting);
@@ -217,6 +235,16 @@ export function TurnBasedVoiceSession({
   function updateDone(nextDone: boolean) {
     doneRef.current = nextDone;
     setDone(nextDone);
+  }
+
+  function updateEndingRequested(nextEndingRequested: boolean) {
+    endingRequestedRef.current = nextEndingRequested;
+    setEndingRequested(nextEndingRequested);
+  }
+
+  function updatePendingRecordedAnswer(nextPendingRecordedAnswer?: PendingRecordedAnswer) {
+    pendingRecordedAnswerRef.current = nextPendingRecordedAnswer;
+    setPendingRecordedAnswer(nextPendingRecordedAnswer);
   }
 
   function updateTurnCount(nextTurnCount: number) {
@@ -343,6 +371,8 @@ export function TurnBasedVoiceSession({
   }
 
   function closeMedia() {
+    window.clearTimeout(listenStartTimerRef.current);
+    listenStartTimerRef.current = undefined;
     window.clearInterval(silenceTimerRef.current);
     silenceTimerRef.current = undefined;
     void audioContextRef.current?.close();
@@ -354,6 +384,7 @@ export function TurnBasedVoiceSession({
     silenceStartedAtMsRef.current = undefined;
     voiceDetectedRef.current = false;
     setAnswerElapsedSeconds(0);
+    updateMicrophoneStarting(false);
     updateRecording(false);
   }
 
@@ -366,12 +397,10 @@ export function TurnBasedVoiceSession({
       audio.removeAttribute("src");
       audio.load();
     }
+    window.clearTimeout(listenStartTimerRef.current);
+    listenStartTimerRef.current = undefined;
+    updateMicrophoneStarting(false);
     updateRequesting(false);
-  }
-
-  async function warmMicrophone() {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    stream.getTracks().forEach((track) => track.stop());
   }
 
   function startSilenceMonitor(stream: MediaStream) {
@@ -483,6 +512,15 @@ export function TurnBasedVoiceSession({
     await playAudioClip(response.questionAudioBase64, response.questionAudioMimeType, runId);
   }
 
+  function scheduleRecordingStart(runId: number) {
+    window.clearTimeout(listenStartTimerRef.current);
+    updateMicrophoneStarting(true);
+    listenStartTimerRef.current = window.setTimeout(() => {
+      listenStartTimerRef.current = undefined;
+      void startRecording(runId);
+    }, listenStartDelayMs);
+  }
+
   async function applyTurnResponse(body: NextTurnResponse, runId: number) {
     if (!isSessionActive(runId)) {
       return;
@@ -505,8 +543,8 @@ export function TurnBasedVoiceSession({
     setCurrentTurnState(body.state);
     updateRequesting(false);
     await playQuestionAudio(body, runId);
-    if (body.question?.trim() && !body.done && isSessionActive(runId)) {
-      void startRecording(runId);
+    if (body.question?.trim() && !body.done && isSessionActive(runId) && !controlledAnswerMode) {
+      scheduleRecordingStart(runId);
     }
     if (
       snapshot.modeKey === "coaching" &&
@@ -688,6 +726,11 @@ export function TurnBasedVoiceSession({
     requestContainsAnswerRef.current = Boolean(payload.answerAudioBase64 || payload.answerTranscript);
     updateRequesting(true);
     appendEvent("turn_based.next_turn.request");
+    let requestTimedOut = false;
+    const requestTimeout = window.setTimeout(() => {
+      requestTimedOut = true;
+      abortController.abort();
+    }, turnRequestTimeoutMs);
     try {
       const response = await fetch("/api/interview/turn-based/next-turn", {
         body: JSON.stringify(payload),
@@ -704,6 +747,22 @@ export function TurnBasedVoiceSession({
       await applyTurnResponse(body, runId);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
+        if (requestTimedOut) {
+          const message = "Que took too long to prepare the next turn. Please start again.";
+          setErrorMessage(message);
+          updatePhase("error");
+          sessionActiveRef.current = false;
+          appendEvent("turn_based.next_turn.timeout");
+          logDiagnosticEvent({
+            endpoint: "/api/interview/turn-based/next-turn",
+            eventType: "turn_based.next_turn.timeout",
+            message,
+            screen: "session",
+            sessionId,
+            severity: "error",
+            source: "realtime",
+          });
+        }
         return;
       }
       const message = toErrorMessage(error);
@@ -725,6 +784,7 @@ export function TurnBasedVoiceSession({
         currentRequestAbortRef.current = undefined;
       }
       requestContainsAnswerRef.current = false;
+      window.clearTimeout(requestTimeout);
       if (sessionRunIdRef.current === runId) {
         updateRequesting(false);
       }
@@ -733,11 +793,12 @@ export function TurnBasedVoiceSession({
 
   function completeFinalization(endReason: VoiceSessionArtifactDraft["endReason"]) {
     sessionActiveRef.current = false;
-    endingRequestedRef.current = false;
+    updateEndingRequested(false);
     pendingEndReasonRef.current = undefined;
     sessionRunIdRef.current += 1;
     cancelInFlightTurn();
     closeMedia();
+    updatePendingRecordedAnswer(undefined);
     const durationSeconds = sessionStartedAtMsRef.current
       ? Math.max(0, Math.round((Date.now() - sessionStartedAtMsRef.current) / 1000))
       : undefined;
@@ -759,7 +820,7 @@ export function TurnBasedVoiceSession({
   }
 
   async function finalizeSession(endReason: VoiceSessionArtifactDraft["endReason"]) {
-    endingRequestedRef.current = true;
+    updateEndingRequested(true);
     pendingEndReasonRef.current = endReason;
 
     if (recordingRef.current && mediaRecorderRef.current?.state !== "inactive") {
@@ -783,10 +844,11 @@ export function TurnBasedVoiceSession({
       const runId = sessionRunIdRef.current + 1;
       sessionRunIdRef.current = runId;
       sessionActiveRef.current = true;
-      endingRequestedRef.current = false;
+      updateEndingRequested(false);
       pendingEndReasonRef.current = undefined;
       requestContainsAnswerRef.current = false;
       setErrorMessage(undefined);
+      updatePendingRecordedAnswer(undefined);
       updatePhase("connecting");
       updateDone(false);
       updateTurnCount(0);
@@ -800,7 +862,6 @@ export function TurnBasedVoiceSession({
       };
       artifactDraftRef.current = initialArtifact;
       setArtifactDraft(initialArtifact);
-      await warmMicrophone();
       if (!isSessionActive(runId) && phaseRef.current !== "connecting") {
         return;
       }
@@ -828,16 +889,22 @@ export function TurnBasedVoiceSession({
       doneRef.current ||
       requestingRef.current
     ) {
+      updateMicrophoneStarting(false);
       return;
     }
     try {
+      updatePendingRecordedAnswer(undefined);
+      updateMicrophoneStarting(true);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       if (!isSessionActive(runId)) {
         stream.getTracks().forEach((track) => track.stop());
+        updateMicrophoneStarting(false);
         return;
       }
       mediaStreamRef.current = stream;
-      startSilenceMonitor(stream);
+      if (!controlledAnswerMode) {
+        startSilenceMonitor(stream);
+      }
       const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
       const chunks: Blob[] = [];
@@ -864,6 +931,22 @@ export function TurnBasedVoiceSession({
         const answerMimeType = blob.type || "audio/webm";
         const answerAudioBase64 = await blobToBase64(blob);
         closeMedia();
+        if (controlledAnswerMode) {
+          if (endingAfterAnswer) {
+            appendEvent("turn_based.answer.recording_cancelled");
+            completeFinalization(pendingEndReasonRef.current || "user_ended");
+            return;
+          }
+
+          updatePendingRecordedAnswer({
+            answerAudioBase64,
+            answerDurationSeconds,
+            answerMimeType,
+          });
+          appendEvent("turn_based.answer.recorded_ready");
+          return;
+        }
+
         appendEvent("turn_based.answer.recorded");
         const nextTurnIndex = turnCountRef.current + 1;
         updateTurnCount(nextTurnIndex);
@@ -881,10 +964,12 @@ export function TurnBasedVoiceSession({
       recorder.start();
       recordingStartedAtMsRef.current = Date.now();
       setAnswerElapsedSeconds(0);
+      updateMicrophoneStarting(false);
       updateRecording(true);
       appendEvent("turn_based.answer.recording_start");
     } catch (error) {
       const message = toErrorMessage(error);
+      updateMicrophoneStarting(false);
       setErrorMessage(message);
       appendEvent("turn_based.answer.recording_error");
     }
@@ -894,6 +979,37 @@ export function TurnBasedVoiceSession({
     if (!recordingRef.current) return;
     mediaRecorderRef.current?.stop();
     appendEvent("turn_based.answer.recording_stop");
+  }
+
+  async function submitRecordedAnswer() {
+    const pendingAnswer = pendingRecordedAnswerRef.current;
+    if (!pendingAnswer || requestingRef.current || recordingRef.current || !isSessionActive()) {
+      return;
+    }
+
+    updatePendingRecordedAnswer(undefined);
+    appendEvent("turn_based.answer.submitted");
+    const nextTurnIndex = turnCountRef.current + 1;
+    updateTurnCount(nextTurnIndex);
+    await requestTurn({
+      answerAudioBase64: pendingAnswer.answerAudioBase64,
+      answerDurationSeconds: pendingAnswer.answerDurationSeconds,
+      answerMimeType: pendingAnswer.answerMimeType,
+      priorTurns: artifactDraftRef.current.transcript,
+      sessionId,
+      snapshot,
+      turnIndex: nextTurnIndex,
+    });
+  }
+
+  function recordAgain() {
+    if (requestingRef.current || recordingRef.current || !isSessionActive()) {
+      return;
+    }
+
+    updatePendingRecordedAnswer(undefined);
+    appendEvent("turn_based.answer.record_again");
+    void startRecording();
   }
 
   async function handleCoachingChoice(intent: Exclude<CoachingChoiceIntent, "unclear">) {
@@ -962,6 +1078,13 @@ export function TurnBasedVoiceSession({
     currentTurnState === "more_feedback" &&
     phase === "live" &&
     !done;
+  const showCoachingAnswerControls =
+    controlledAnswerMode &&
+    phase === "live" &&
+    !done &&
+    !showFullCoachingChoices &&
+    !showRetryMoveChoices &&
+    Boolean(currentQuestion?.trim());
 
   return (
     <section className={surfaceClassName} aria-labelledby="turn-based-session-title">
@@ -971,6 +1094,12 @@ export function TurnBasedVoiceSession({
           <h2 id="turn-based-session-title">{title}</h2>
         </div>
         <div className="recording-status-row">
+          {microphoneStarting && !recording && (
+            <span className="recording-indicator">
+              <Mic aria-hidden="true" className="recording-indicator-icon" />
+              Starting mic
+            </span>
+          )}
           {recording && (
             <span className="recording-indicator active">
               <Mic aria-hidden="true" className="recording-indicator-icon" />
@@ -1009,10 +1138,37 @@ export function TurnBasedVoiceSession({
         <button disabled={!canStart || requesting} onClick={startSession} type="button">
           {startLabel}
         </button>
-        <button className="secondary" disabled={!canEnd} onClick={() => void finalizeSession("user_ended")} type="button">
-          End Session
+        <button
+          className="secondary"
+          disabled={!canEnd || endingRequested}
+          onClick={() => void finalizeSession("user_ended")}
+          type="button"
+        >
+          {endingRequested ? "Ending..." : "End Session"}
         </button>
       </div>
+      {showCoachingAnswerControls && (
+        <div className="inline-actions coaching-choice-actions" aria-label="Coaching answer recording">
+          {recording ? (
+            <button onClick={stopRecording} type="button">
+              Stop recording
+            </button>
+          ) : pendingRecordedAnswer ? (
+            <>
+              <button disabled={requesting} onClick={() => void submitRecordedAnswer()} type="button">
+                Submit answer
+              </button>
+              <button className="secondary" disabled={requesting} onClick={recordAgain} type="button">
+                Record again
+              </button>
+            </>
+          ) : (
+            <button disabled={requesting || microphoneStarting} onClick={() => void startRecording()} type="button">
+              Record answer
+            </button>
+          )}
+        </div>
+      )}
       {(showFullCoachingChoices || showRetryMoveChoices) && (
         <div className="inline-actions coaching-choice-actions" aria-label="Coaching choices">
           {showFullCoachingChoices && (
@@ -1045,9 +1201,23 @@ export function TurnBasedVoiceSession({
       {phase === "live" && !done && (
         <p className="field-note">
           {recording
-            ? "Listening now. Pause after your answer to submit it."
-            : requesting
+            ? controlledAnswerMode
+              ? "Recording now. Click Stop recording when you are finished."
+              : "Listening now. Pause after your answer to submit it."
+            : endingRequested
+              ? requestContainsAnswerRef.current
+                ? "Ending after Que processes your current answer."
+                : "Ending session."
+              : pendingRecordedAnswer
+                ? "Submit this recording for coaching, or record again to replace it."
+              : microphoneStarting
+                ? "Starting the microphone. Begin when Recording appears."
+                : requesting
               ? "Que is preparing the next question."
+              : showFullCoachingChoices || showRetryMoveChoices
+                ? "Choose your next Coaching step."
+              : controlledAnswerMode
+                ? "Record when you are ready, then submit the answer for coaching."
               : turnCount >= maxTurns
                 ? "Turn limit reached. End the session for review."
                 : "Que will listen automatically after each question."}

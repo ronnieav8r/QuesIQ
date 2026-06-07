@@ -5,6 +5,10 @@ import type { CoachingChoiceIntent } from "@/product/interview-types";
 import { parseSessionSetupSnapshot } from "@/product/session-snapshot";
 import { getInterviewRuntimeConfig } from "@/server/interview/runtime-configs";
 import { runTurnBasedInterviewTurn } from "@/server/interview/turn-based";
+import {
+  getOpenAiApiKey,
+  getOpenAiInterviewTestTunnelApiKey,
+} from "@/server/openai/keys";
 
 export const runtime = "nodejs";
 
@@ -72,7 +76,13 @@ export async function POST(request: Request) {
       );
     }
 
+    const localTestApiKeyOverride =
+      process.env.NODE_ENV !== "production" && !getOpenAiApiKey("interview")
+        ? getOpenAiInterviewTestTunnelApiKey()
+        : undefined;
+
     const result = await runTurnBasedInterviewTurn({
+      apiKeyOverride: localTestApiKeyOverride,
       config,
       turnInput: {
         answerAudioBase64: body.answerAudioBase64,

@@ -192,6 +192,11 @@ function run() {
     "getOpenAiInterviewTestTunnelApiKeySource",
     "turn_choice_router",
   ]);
+  requireMarkers("Local learner turn test-key fallback", "src/app/api/interview/turn-based/next-turn/route.ts", [
+    "process.env.NODE_ENV !== \"production\"",
+    "getOpenAiInterviewTestTunnelApiKey()",
+    "apiKeyOverride: localTestApiKeyOverride",
+  ]);
   requireMarkers("Turn-based backend smoke runner", "scripts/interview/turn-based-smoke.ts", [
     "runRapidFireSmoke",
     "runIntroPracticeSmoke",
