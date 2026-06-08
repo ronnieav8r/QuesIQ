@@ -23,8 +23,10 @@ const requiredFiles = [
   "src/features/dpe/dpe-app.tsx",
   "src/features/dpe/question-format.ts",
   "src/features/dpe/target-tracks.ts",
+  "src/server/dpe/dpe-answer-evaluator.ts",
   "src/server/dpe/dpe-data.ts",
   "src/server/dpe/dpe-progression.ts",
+  "scripts/dpe/answer-smoke.ts",
 ];
 
 const requiredTracks = [
@@ -230,16 +232,37 @@ const codeContracts = [
     ],
   },
   {
-    file: "src/app/api/dpe/practice-sessions/[id]/answers/route.ts",
+    file: "src/server/dpe/dpe-answer-evaluator.ts",
     checks: [
       "dpe_answer_evaluator_v1",
+      "buildDeterministicDpeAnswerEvaluation",
+      "evaluateDpeAnswer",
+      "runType: \"dpe_review\"",
+      "providerRequestId",
+    ],
+  },
+  {
+    file: "src/app/api/dpe/practice-sessions/[id]/answers/route.ts",
+    checks: [
+      "DPE_ANSWER_EVALUATOR_PROMPT_KEY",
       "audio_transcription",
       "typed_dev_recovery",
-      "buildDeterministicEvaluation",
+      "buildDeterministicDpeAnswerEvaluation",
       "transcribeAudio",
-      "evaluateAnswer",
-      "runType: \"dpe_review\"",
+      "evaluateDpeAnswer",
       "saveDpeAnswerAttempt",
+    ],
+  },
+  {
+    file: "scripts/dpe/answer-smoke.ts",
+    checks: [
+      "OPENAI_DPE_TEST_TUNNEL_API_KEY",
+      "OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY",
+      "cleanupSmokeRows",
+      "prepareSmokeContent",
+      "dpeQuestionAssets",
+      "saveDpeAnswerAttempt",
+      "evaluateDpeAnswer",
     ],
   },
   {

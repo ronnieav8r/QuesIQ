@@ -22,7 +22,9 @@
     "readiness:interview": "node scripts/interview/readiness-check.mjs",
     "readiness:mvp": "node scripts/mvp-readiness.mjs",
     "readiness:study": "node scripts/study/readiness-check.mjs",
+    "smoke:dpe": "tsx scripts/dpe/answer-smoke.ts",
     "smoke:interview-turns": "tsx scripts/interview/turn-based-smoke.ts",
+    "smoke:study": "tsx scripts/study/evaluate-smoke.ts",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"

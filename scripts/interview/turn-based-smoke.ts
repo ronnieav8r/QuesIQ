@@ -36,6 +36,8 @@ type SmokeResult = {
   states: string[];
 };
 
+type SmokeScenario = "intro_practice" | "rapid_fire" | "story_practice_tmaat";
+
 const smokeUserId = "interview-turn-smoke-admin";
 const smokeUserEmail = "interview-turn-smoke@example.test";
 const smokePrefix = "[TEST_DELETE] Interview Turn Smoke";
@@ -481,12 +483,27 @@ async function main() {
   await cleanupSmokeRows();
   await prepareSmokeUser();
 
+  const scenarioArg = process.argv.find((argument) => argument.startsWith("--scenario="));
+  const scenarioFilter = scenarioArg?.split("=")[1] as SmokeScenario | undefined;
+  const scenarioRunners: Record<SmokeScenario, () => Promise<SmokeResult>> = {
+    intro_practice: runIntroPracticeSmoke,
+    rapid_fire: runRapidFireSmoke,
+    story_practice_tmaat: runStoryPracticeSmoke,
+  };
+  assert(
+    !scenarioFilter || scenarioFilter in scenarioRunners,
+    "Unknown Interview smoke scenario. Use --scenario=rapid_fire, --scenario=intro_practice, or --scenario=story_practice_tmaat.",
+  );
+  const selectedScenarios = scenarioFilter
+    ? [scenarioFilter]
+    : (Object.keys(scenarioRunners) as SmokeScenario[]);
   const results: SmokeResult[] = [];
 
   try {
-    results.push(await runRapidFireSmoke());
-    results.push(await runIntroPracticeSmoke());
-    results.push(await runStoryPracticeSmoke());
+    for (const scenario of selectedScenarios) {
+      console.log(`Running Interview turn-based smoke scenario: ${scenario}`);
+      results.push(await scenarioRunners[scenario]());
+    }
   } catch (error) {
     await printSmokeAiRunFailureSummary();
     throw error;

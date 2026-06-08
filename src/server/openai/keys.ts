@@ -33,6 +33,38 @@ export function getOpenAiInterviewTestTunnelApiKeySource() {
   return sources.find((source) => process.env[source]?.trim());
 }
 
+export function getOpenAiStudySmokeTestApiKey() {
+  const source = getOpenAiStudySmokeTestApiKeySource();
+  return source ? process.env[source] : undefined;
+}
+
+export function getOpenAiStudySmokeTestApiKeySource() {
+  const sources = [
+    "OPENAI_STUDY_TEST_TUNNEL_API_KEY",
+    "OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY",
+    "OPENAI_STUDY_API_KEY",
+    "OPENAI_API_KEY",
+  ];
+
+  return sources.find((source) => process.env[source]?.trim());
+}
+
+export function getOpenAiDpeSmokeTestApiKey() {
+  const source = getOpenAiDpeSmokeTestApiKeySource();
+  return source ? process.env[source] : undefined;
+}
+
+export function getOpenAiDpeSmokeTestApiKeySource() {
+  const sources = [
+    "OPENAI_DPE_TEST_TUNNEL_API_KEY",
+    "OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY",
+    "OPENAI_DPE_API_KEY",
+    "OPENAI_API_KEY",
+  ];
+
+  return sources.find((source) => process.env[source]?.trim());
+}
+
 export function getOpenAiRealtimeApiKey(product: OpenAiProduct = "interview") {
   if (product === "study") {
     return (

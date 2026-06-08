@@ -65,7 +65,9 @@ const requiredFiles = [
   "src/server/study/study-content-studio.ts",
   "src/server/study/study-source-pack-draft-contract.ts",
   "src/server/study/study-source-pack-verification-queue.ts",
+  "src/server/study/study-answer-evaluator.ts",
   "src/server/study/study-rich-flashcard-import.ts",
+  "scripts/study/evaluate-smoke.ts",
   "scripts/study/rich-csv-import-smoke.ts",
   "docs/products/study/README.md",
   "docs/products/study/HANDOFF.md",
@@ -109,6 +111,22 @@ if (exists("scripts/study/rich-csv-import-smoke.ts")) {
   checkPattern(smoke, /mappedCsv|mappedColumnMapping/, "Rich CSV smoke includes non-default mapped header coverage", true);
 }
 
+if (exists("src/server/study/study-answer-evaluator.ts")) {
+  const evaluator = read("src/server/study/study-answer-evaluator.ts");
+  checkPattern(evaluator, /study_answer_evaluator_v1/, "Study answer evaluator prompt marker", true);
+  checkPattern(evaluator, /runType: "study_evaluate"/, "Study evaluator records study_evaluate ai_runs", true);
+  checkPattern(evaluator, /providerRequestId/, "Study evaluator records provider request ids", true);
+}
+
+if (exists("scripts/study/evaluate-smoke.ts")) {
+  const smoke = read("scripts/study/evaluate-smoke.ts");
+  checkPattern(smoke, /OPENAI_STUDY_TEST_TUNNEL_API_KEY/, "Study evaluator smoke has model-key gating", true);
+  checkPattern(smoke, /OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY/, "Study evaluator smoke accepts shared test tunnel key", true);
+  checkPattern(smoke, /cleanupSmokeRows/, "Study evaluator smoke cleans disposable rows", true);
+  checkPattern(smoke, /evaluateStudyAnswer/, "Study evaluator smoke uses backend evaluator helper", true);
+  checkPattern(smoke, /rateStudyCard/, "Study evaluator smoke persists a study attempt", true);
+}
+
 if (exists("src/features/study/study-card-list.tsx")) {
   const cardList = read("src/features/study/study-card-list.tsx");
   checkPattern(cardList, /verificationStatus/, "Study card list references verification status metadata", false);
@@ -137,6 +155,12 @@ if (exists("docs/products/study/README.md")) {
     readme,
     /The current contract\/preview layer intentionally stops before publish, Official,\s*Verified/,
     "Study README preserves publish/official/verified boundaries",
+    true,
+  );
+  checkPattern(
+    readme,
+    /npm run smoke:study/,
+    "Study README documents evaluator smoke command",
     true,
   );
 }

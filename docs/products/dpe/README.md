@@ -1579,3 +1579,17 @@ Storage added in migration `0074_add_dpe_button_practice.sql`:
 The question API now returns `assets`; legacy `visualImage` is treated as a
 compatibility-derived image asset when no DPE-owned assets exist. No separate
 Visual or Combined learner mode is added for V1.
+
+### Backend Smoke Testing
+
+Run `npm run smoke:dpe` after local Postgres, migrations, and an accepted test
+key are configured. The smoke creates a disposable DPE certificate/content
+version/question, authored answer key, rubric, and optional chart asset; starts
+a disposable `dpe_coaching` practice session; calls the same backend
+`dpe_answer_evaluator_v1` helper used by the answer-submission API; saves the
+per-answer attempt; verifies a successful `dpe_review` `ai_runs` record with
+provider request id and token usage; and cleans up disposable rows.
+
+Accepted smoke key sources are `OPENAI_DPE_TEST_TUNNEL_API_KEY`,
+`OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY`, `OPENAI_DPE_API_KEY`, or
+`OPENAI_API_KEY`. The command prints the key source name only, never the secret.

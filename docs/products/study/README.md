@@ -170,6 +170,14 @@ The first Study slice is imported:
   `[TEST_DELETE]` DB save/readback check. DB mode verifies the `0054` metadata
   columns before writing and accepts `--cleanup` to remove the disposable deck
   after readback.
+- model-backed Study answer-evaluator smoke coverage is available with
+  `npm run smoke:study` after local Postgres, migrations, and an accepted test
+  key are configured. It creates a disposable deck/card, calls the same backend
+  `study_answer_evaluator_v1` helper used by `/api/study/evaluate`, records
+  `study_evaluate` usage in `ai_runs`, persists a Study attempt, and cleans up
+  disposable rows. The smoke accepts `OPENAI_STUDY_TEST_TUNNEL_API_KEY`,
+  `OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY`, `OPENAI_STUDY_API_KEY`, or
+  `OPENAI_API_KEY`, without printing secrets.
 - `rich_csv_import_save` remains admin-only and can mark a deck Official only
   through this import path (`markDeckOfficial` or row-level `official=true`);
   card `isVerified` remains conservative and is only set true when verified
@@ -193,6 +201,8 @@ hardware, run:
 
 - `node scripts/study/readiness-check.mjs`
 - `node_modules/.bin/tsx scripts/study/rich-csv-import-smoke.ts --parse-only`
+- `npm run smoke:study` when local Postgres/migrations and an accepted test key
+  are available
 
 Readiness check behavior:
 
@@ -208,6 +218,8 @@ V1 readiness for this lane means:
 - rich CSV default headers/mapping/parser and parse-only smoke path are present
 - source/verification metadata and source-pack preview/save scaffolding are
   statically detectable
+- Study answer evaluator smoke coverage is present, model-key gated, and cleans
+  up disposable DB rows
 - Publish, Official, and broad Verified promotion remain disabled
 
 ## Boundaries
