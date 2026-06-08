@@ -2,11 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { signOut } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 import {
   BookOpenText,
   History as HistoryIcon,
   Home as HomeIcon,
+  LogOut,
   Menu,
   Mic,
   ShieldCheck,
@@ -16,7 +18,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { AuthControl, AuthView, useAuthSession } from "@/components/auth-control";
+import { AuthView, useAuthSession } from "@/components/auth-control";
 import { ClientDiagnostics } from "@/components/interview/client-diagnostics";
 import { Dashboard } from "@/components/interview/dashboard";
 import { DebriefView } from "@/components/interview/debrief-view";
@@ -859,7 +861,17 @@ export default function Home() {
         }
       >
         <header className="app-header">
-          {signedIn && activeView !== "session" && (
+          <div className="brand-lockup">
+            <Image
+              alt="QuesIQ Interview"
+              className="brand-logo"
+              height={144}
+              src="/brand/quesiq-interview-logo.png"
+              priority
+              width={360}
+            />
+          </div>
+          {signedIn && (
             <div className="app-menu">
               <button
                 aria-expanded={appMenuOpen}
@@ -885,6 +897,12 @@ export default function Home() {
                     <UserRound aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
                     <span>Me</span>
                   </button>
+                  {authSession?.user && (
+                    <button role="menuitem" type="button">
+                      <UserRound aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                      <span>{authSession.user.name || authSession.user.email || "Signed in"}</span>
+                    </button>
+                  )}
                   <Link href="/" role="menuitem">
                     <HomeIcon aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
                     <span>QuesIQ Home</span>
@@ -902,26 +920,16 @@ export default function Home() {
                       <span>Admin</span>
                     </Link>
                   )}
+                  <button
+                    onClick={() => signOut({ redirectTo: "/" })}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <LogOut aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                    <span>Sign out</span>
+                  </button>
                 </div>
               )}
-            </div>
-          )}
-          <div className="brand-lockup">
-            <Image
-              alt="QuesIQ Interview"
-              className="brand-logo"
-              height={144}
-              src="/brand/quesiq-interview-logo.png"
-              priority
-              width={360}
-            />
-          </div>
-          {activeView !== "session" && (
-            <div className="header-actions">
-              <Link className="button-link secondary" href="/">
-                QuesIQ Home
-              </Link>
-              <AuthControl authSession={authSession} />
             </div>
           )}
         </header>

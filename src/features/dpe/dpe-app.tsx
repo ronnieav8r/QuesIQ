@@ -9,13 +9,13 @@ import {
   History,
   Home,
   ListChecks,
+  LogOut,
   Map,
   Menu,
   Mic,
   Plane,
   Radio,
   RotateCcw,
-  Settings,
   ShieldCheck,
   SkipForward,
   User
@@ -1318,6 +1318,17 @@ export default function App() {
     <div className="product-shell dpe-shell">
       <div className="app-frame">
         <header className="app-header">
+          <div className="brand-lockup">
+            <Image
+              alt="QuesIQ DPE"
+              className="brand-logo dpe-brand-logo"
+              height={72}
+              priority
+              src="/brand/quesiq-dpe-logo.png"
+              width={260}
+            />
+            <span className="brand-subtitle">{brandSubtitle}</span>
+          </div>
           <div className="app-menu">
             <button
               aria-expanded={appMenuOpen}
@@ -1374,43 +1385,11 @@ export default function App() {
                   </Link>
                 )}
                 <button onClick={handleSignOut} role="menuitem" type="button">
+                  <LogOut aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
                   <span>{signingOut ? "Signing out..." : "Sign out"}</span>
                 </button>
               </div>
             )}
-          </div>
-          <div className="brand-lockup">
-            <Image
-              alt="QuesIQ DPE"
-              className="brand-logo dpe-brand-logo"
-              height={72}
-              priority
-              src="/brand/quesiq-dpe-logo.png"
-              width={260}
-            />
-            <span className="brand-subtitle">{brandSubtitle}</span>
-          </div>
-          <div className="inline-actions">
-            <Link className="button-link secondary" href="/">
-              QuesIQ Home
-            </Link>
-            <span className="muted">{authState.user?.email}</span>
-            {authState.isAdmin && (
-              <Link className="button-link secondary" href="/admin?product=dpe">
-                Admin
-              </Link>
-            )}
-            <button
-              className="button icon-only"
-              aria-label="Open profile settings"
-              onClick={() => setScreen("me")}
-              title="Open profile settings"
-            >
-              <Settings />
-            </button>
-            <button className="button" onClick={handleSignOut} disabled={signingOut}>
-              {signingOut ? "Signing out..." : "Sign out"}
-            </button>
           </div>
         </header>
 

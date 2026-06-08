@@ -534,6 +534,16 @@ export function SessionView({
             </div>
           </dl>
           {artifactSaveError && <p className="form-error">{artifactSaveError}</p>}
+          {artifactDraft.events.length > 0 && (
+            <details className="realtime-debug">
+              <summary>Connection details</summary>
+              <div className="realtime-debug-list">
+                {artifactDraft.events.slice(-12).reverse().map((event) => (
+                  <code key={event.id}>{event.type}</code>
+                ))}
+              </div>
+            </details>
+          )}
         </section>
 
         <section className="panel session-next" aria-labelledby="session-next-title">

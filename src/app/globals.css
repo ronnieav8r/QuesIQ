@@ -549,11 +549,6 @@ p {
   position: relative;
 }
 
-.study-shell .app-menu,
-.dpe-shell .app-menu {
-  display: none;
-}
-
 .app-menu-button {
   align-items: center;
   background: transparent;
@@ -581,10 +576,10 @@ p {
   box-shadow: var(--shadow-soft);
   display: grid;
   gap: var(--space-1);
-  left: 0;
   min-width: 10rem;
   padding: var(--space-2);
   position: absolute;
+  right: 0;
   top: calc(100% + var(--space-2));
   z-index: 25;
 }
@@ -5304,7 +5299,7 @@ textarea::placeholder {
 @media (max-width: 47.9375rem) {
   .app-header {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto;
     min-height: 4.25rem;
   }
 
@@ -5325,11 +5320,6 @@ textarea::placeholder {
     display: none;
   }
 
-  .study-shell .app-menu,
-  .dpe-shell .app-menu {
-    display: block;
-  }
-
   .app-menu-panel {
     max-width: calc(100vw - 2rem);
   }
@@ -5340,7 +5330,7 @@ textarea::placeholder {
   }
 
   .dpe-shell .app-header {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .dpe-shell .brand-lockup {

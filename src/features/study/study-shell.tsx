@@ -22,7 +22,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { AuthControl, type AppAuthSession } from "@/components/auth-control";
+import type { AppAuthSession } from "@/components/auth-control";
 import { ProductUsageTracker } from "@/features/platform/product-usage-tracker";
 import { QuiraChatLauncher } from "@/features/support/quira-chat";
 
@@ -118,6 +118,16 @@ export function StudyShell({ authSession, children }: StudyShellProps) {
         className={navCollapsed ? "app-frame study-app-frame nav-collapsed" : "app-frame study-app-frame"}
       >
         <header className="app-header">
+          <div className="brand-lockup">
+            <Image
+              alt="QuesIQ Study"
+              className="brand-logo"
+              height={144}
+              priority
+              src="/brand/quesiq-study-logo.png"
+              width={360}
+            />
+          </div>
           <div className="app-menu">
             <button
               aria-expanded={appMenuOpen}
@@ -159,27 +169,11 @@ export function StudyShell({ authSession, children }: StudyShellProps) {
                     type="button"
                   >
                     <LogOut aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
-                    <span>Sign Out</span>
+                    <span>Sign out</span>
                   </button>
                 )}
               </div>
             )}
-          </div>
-          <div className="brand-lockup">
-            <Image
-              alt="QuesIQ Study"
-              className="brand-logo"
-              height={144}
-              priority
-              src="/brand/quesiq-study-logo.png"
-              width={360}
-            />
-          </div>
-          <div className="header-actions">
-            <Link className="button-link secondary" href="/">
-              QuesIQ Home
-            </Link>
-            <AuthControl authSession={authSession} />
           </div>
         </header>
 

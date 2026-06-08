@@ -99,8 +99,8 @@ type CoachingChoiceRouterDecision = {
   reason: string;
 };
 
-const fullCoachingChoicePrompt = "Select More feedback, Try again, Ask Que, or Move on.";
-const followUpCoachingChoicePrompt = "Select Try again, Ask Que, or Move on.";
+const fullCoachingChoicePrompt = "Select More feedback, Try again, Ask Cue, or Move on.";
+const followUpCoachingChoicePrompt = "Select Try again, Ask Cue, or Move on.";
 
 type SpeechResult = {
   audioBase64: string;

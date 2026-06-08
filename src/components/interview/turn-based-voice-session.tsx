@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Mic } from "lucide-react";
 
 import { logDiagnosticEvent } from "@/components/interview/diagnostics-client";
@@ -79,6 +79,8 @@ type PendingRecordedAnswer = {
   answerDurationSeconds?: number;
   answerMimeType: string;
 };
+
+type RecordingPurpose = "answer" | "ask_que";
 
 const emptyArtifactDraft: VoiceSessionArtifactDraft = { events: [], transcript: [] };
 const turnRequestTimeoutMs = 60_000;
@@ -184,6 +186,8 @@ export function TurnBasedVoiceSession({
   const requestContainsAnswerRef = useRef(false);
   const completedQuestionCountRef = useRef(0);
   const currentQuestionCountedRef = useRef(false);
+  const recordingPurposeRef = useRef<RecordingPurpose>("answer");
+  const pendingAskQueRecordingRef = useRef<PendingRecordedAnswer | undefined>(undefined);
   const pendingRecordedAnswerRef = useRef<PendingRecordedAnswer | undefined>(undefined);
   const suppressNextRecordingRef = useRef(false);
   const turnCountRef = useRef(0);
@@ -204,11 +208,11 @@ export function TurnBasedVoiceSession({
   const [endingRequested, setEndingRequested] = useState(false);
   const [turnCount, setTurnCount] = useState(0);
   const [requesting, setRequesting] = useState(false);
+  const [pendingAskQueRecording, setPendingAskQueRecording] = useState<PendingRecordedAnswer>();
   const [pendingRecordedAnswer, setPendingRecordedAnswer] = useState<PendingRecordedAnswer>();
   const [openingPrefetch, setOpeningPrefetch] = useState<PrefetchState>({ status: "idle" });
   const [moveOnPrefetch, setMoveOnPrefetch] = useState<PrefetchState>({ status: "idle" });
 
-  const latestEvents = useMemo(() => artifactDraft.events.slice(-6).reverse(), [artifactDraft.events]);
   const maxAnswerSeconds = config.maxAnswerSeconds ?? 60;
   const maxDurationSeconds = config.maxDurationSeconds ?? 900;
   const maxTurns = config.maxTurns ?? 5;
@@ -258,6 +262,11 @@ export function TurnBasedVoiceSession({
   function updatePendingRecordedAnswer(nextPendingRecordedAnswer?: PendingRecordedAnswer) {
     pendingRecordedAnswerRef.current = nextPendingRecordedAnswer;
     setPendingRecordedAnswer(nextPendingRecordedAnswer);
+  }
+
+  function updatePendingAskQueRecording(nextPendingAskQueRecording?: PendingRecordedAnswer) {
+    pendingAskQueRecordingRef.current = nextPendingAskQueRecording;
+    setPendingAskQueRecording(nextPendingAskQueRecording);
   }
 
   function updateTurnCount(nextTurnCount: number) {
@@ -877,6 +886,7 @@ export function TurnBasedVoiceSession({
     sessionRunIdRef.current += 1;
     cancelInFlightTurn();
     closeMedia();
+    updatePendingAskQueRecording(undefined);
     updatePendingRecordedAnswer(undefined);
     const durationSeconds = sessionStartedAtMsRef.current
       ? Math.max(0, Math.round((Date.now() - sessionStartedAtMsRef.current) / 1000))
@@ -929,6 +939,7 @@ export function TurnBasedVoiceSession({
       setErrorMessage(undefined);
       setAskQueDraft("");
       setAskingQue(false);
+      updatePendingAskQueRecording(undefined);
       updatePendingRecordedAnswer(undefined);
       updatePhase("connecting");
       updateDone(false);
@@ -968,7 +979,10 @@ export function TurnBasedVoiceSession({
     }
   }
 
-  async function startRecording(runId = sessionRunIdRef.current) {
+  async function startRecording(
+    runId = sessionRunIdRef.current,
+    purpose: RecordingPurpose = "answer",
+  ) {
     if (
       recordingRef.current ||
       !isSessionActive(runId) ||
@@ -979,7 +993,11 @@ export function TurnBasedVoiceSession({
       return;
     }
     try {
-      updatePendingRecordedAnswer(undefined);
+      if (purpose === "ask_que") {
+        updatePendingAskQueRecording(undefined);
+      } else {
+        updatePendingRecordedAnswer(undefined);
+      }
       updateMicrophoneStarting(true);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       if (!isSessionActive(runId)) {
@@ -988,6 +1006,7 @@ export function TurnBasedVoiceSession({
         return;
       }
       mediaStreamRef.current = stream;
+      recordingPurposeRef.current = purpose;
       const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
       const chunks: Blob[] = [];
@@ -999,12 +1018,12 @@ export function TurnBasedVoiceSession({
         if (suppressNextRecordingRef.current) {
           suppressNextRecordingRef.current = false;
           closeMedia();
-          appendEvent("turn_based.answer.recording_cancelled");
+          appendEvent(`turn_based.${purpose}.recording_cancelled`);
           return;
         }
         if (!isSessionActive(runId)) {
           closeMedia();
-          appendEvent("turn_based.answer.recording_cancelled");
+          appendEvent(`turn_based.${purpose}.recording_cancelled`);
           return;
         }
         const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
@@ -1015,36 +1034,42 @@ export function TurnBasedVoiceSession({
         const answerAudioBase64 = await blobToBase64(blob);
         closeMedia();
         if (endingAfterAnswer) {
-          appendEvent("turn_based.answer.recording_cancelled");
+          appendEvent(`turn_based.${purpose}.recording_cancelled`);
           completeFinalization(pendingEndReasonRef.current || "user_ended");
           return;
         }
 
-        updatePendingRecordedAnswer({
+        const recordedPayload = {
           answerAudioBase64,
           answerDurationSeconds,
           answerMimeType,
-        });
-        appendEvent("turn_based.answer.recorded_ready");
+        };
+        if (purpose === "ask_que") {
+          updatePendingAskQueRecording(recordedPayload);
+        } else {
+          updatePendingRecordedAnswer(recordedPayload);
+        }
+        appendEvent(`turn_based.${purpose}.recorded_ready`);
       };
       recorder.start();
       recordingStartedAtMsRef.current = Date.now();
       setAnswerElapsedSeconds(0);
       updateMicrophoneStarting(false);
       updateRecording(true);
-      appendEvent("turn_based.answer.recording_start");
+      appendEvent(`turn_based.${purpose}.recording_start`);
     } catch (error) {
       const message = toErrorMessage(error);
       updateMicrophoneStarting(false);
       setErrorMessage(message);
-      appendEvent("turn_based.answer.recording_error");
+      appendEvent(`turn_based.${purpose}.recording_error`);
     }
   }
 
   function stopRecording() {
     if (!recordingRef.current) return;
+    const purpose = recordingPurposeRef.current;
     mediaRecorderRef.current?.stop();
-    appendEvent("turn_based.answer.recording_stop");
+    appendEvent(`turn_based.${purpose}.recording_stop`);
   }
 
   async function submitRecordedAnswer() {
@@ -1080,6 +1105,16 @@ export function TurnBasedVoiceSession({
     void startRecording();
   }
 
+  function recordAskQueAgain() {
+    if (requestingRef.current || recordingRef.current || !isSessionActive()) {
+      return;
+    }
+
+    updatePendingAskQueRecording(undefined);
+    appendEvent("turn_based.ask_que.record_again");
+    void startRecording(sessionRunIdRef.current, "ask_que");
+  }
+
   async function handleCoachingChoice(intent: Exclude<CoachingChoiceIntent, "unclear">) {
     const runId = sessionRunIdRef.current;
 
@@ -1095,6 +1130,7 @@ export function TurnBasedVoiceSession({
 
     if (intent === "ask_que") {
       setAskQueDraft("");
+      updatePendingAskQueRecording(undefined);
       setAskingQue(true);
       appendEvent("turn_based.choice.ask_que.open");
       return;
@@ -1133,6 +1169,31 @@ export function TurnBasedVoiceSession({
     appendEvent("turn_based.choice.ask_que.submit");
     await requestTurn({
       answerTranscript: question,
+      coachingChoiceIntent: "ask_que",
+      explicitChoiceIntent: "ask_que",
+      priorTurns: artifactDraftRef.current.transcript,
+      sessionId,
+      snapshot,
+      turnIndex: nextTurnIndex,
+    });
+  }
+
+  async function submitAskQueRecording() {
+    const pendingQuestion = pendingAskQueRecordingRef.current;
+    if (!pendingQuestion || requestingRef.current || recordingRef.current || doneRef.current || !isSessionActive()) {
+      return;
+    }
+
+    const nextTurnIndex = turnCountRef.current + 1;
+    updateTurnCount(nextTurnIndex);
+    setAskingQue(false);
+    setAskQueDraft("");
+    updatePendingAskQueRecording(undefined);
+    appendEvent("turn_based.choice.ask_que.voice_submit");
+    await requestTurn({
+      answerAudioBase64: pendingQuestion.answerAudioBase64,
+      answerDurationSeconds: pendingQuestion.answerDurationSeconds,
+      answerMimeType: pendingQuestion.answerMimeType,
       coachingChoiceIntent: "ask_que",
       explicitChoiceIntent: "ask_que",
       priorTurns: artifactDraftRef.current.transcript,
@@ -1341,14 +1402,43 @@ export function TurnBasedVoiceSession({
             rows={3}
             value={askQueDraft}
           />
+          {pendingAskQueRecording && (
+            <p className="field-note">
+              Click Submit recording to transcribe your question and send it to Que.
+            </p>
+          )}
           <div className="inline-actions">
             <button disabled={!askQueDraft.trim()} onClick={() => void submitAskQueQuestion()} type="button">
               Submit question
             </button>
+            {recording ? (
+              <button onClick={stopRecording} type="button">
+                Stop recording
+              </button>
+            ) : pendingAskQueRecording ? (
+              <>
+                <button disabled={requesting} onClick={() => void submitAskQueRecording()} type="button">
+                  Submit recording
+                </button>
+                <button className="secondary" disabled={requesting} onClick={recordAskQueAgain} type="button">
+                  Record again
+                </button>
+              </>
+            ) : (
+              <button
+                className="secondary"
+                disabled={requesting || microphoneStarting}
+                onClick={() => void startRecording(sessionRunIdRef.current, "ask_que")}
+                type="button"
+              >
+                Record question
+              </button>
+            )}
             <button
               className="secondary"
               onClick={() => {
                 setAskQueDraft("");
+                updatePendingAskQueRecording(undefined);
                 setAskingQue(false);
               }}
               type="button"
@@ -1369,7 +1459,9 @@ export function TurnBasedVoiceSession({
               : pendingRecordedAnswer
                 ? "Submit this recording to Que, or record again to replace it."
               : askingQue
-                ? "Ask Que a specific question about your latest answer."
+                ? pendingAskQueRecording
+                  ? "Submit this recording to Que, or record again to replace it."
+                  : "Ask Que a specific question about your latest answer."
               : microphoneStarting
                 ? "Starting the microphone. Begin when Recording appears."
                 : requesting
@@ -1412,14 +1504,6 @@ export function TurnBasedVoiceSession({
             </>
           )}
         </section>
-        {latestEvents.length > 0 && (
-          <details className="realtime-debug">
-            <summary>Connection details</summary>
-            <div className="realtime-debug-list">
-              {latestEvents.map((event) => <code key={event.id}>{event.type}</code>)}
-            </div>
-          </details>
-        )}
       </div>
     </section>
   );
