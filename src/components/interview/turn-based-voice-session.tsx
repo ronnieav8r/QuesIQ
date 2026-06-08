@@ -6,6 +6,7 @@ import { Mic } from "lucide-react";
 import { logDiagnosticEvent } from "@/components/interview/diagnostics-client";
 import type {
   CoachingChoiceIntent,
+  CoachingTurnState,
   SessionSetupSnapshot,
   VoiceSessionArtifactDraft,
   VoiceSessionEvent,
@@ -38,6 +39,7 @@ type TurnPayload = {
   endAfterAnswer?: boolean;
   explicitChoiceIntent?: CoachingChoiceIntent;
   coachingChoiceIntent?: CoachingChoiceIntent;
+  countsTowardQuestionProgress?: boolean;
   priorTurns: VoiceTranscriptTurn[];
   sessionId: string;
   snapshot: SessionSetupSnapshot;
@@ -145,6 +147,10 @@ function isMoveOnIntent(text?: string) {
   return asksToMoveOn && !asksToStay;
 }
 
+function isNewInterviewQuestionState(state?: string): state is CoachingTurnState {
+  return state === "opening_question" || state === "awaiting_answer" || state === "move_on";
+}
+
 export function TurnBasedVoiceSession({
   config,
   onArtifactChange,
@@ -161,6 +167,8 @@ export function TurnBasedVoiceSession({
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const recordingStartedAtMsRef = useRef<number | undefined>(undefined);
   const sessionStartedAtMsRef = useRef<number | undefined>(undefined);
+  const audioContextRef = useRef<AudioContext | undefined>(undefined);
+  const lastAudioPrimeAtMsRef = useRef(0);
   const finalizeSessionRef = useRef<
     (endReason: VoiceSessionArtifactDraft["endReason"]) => Promise<void>
   >(undefined);
@@ -174,12 +182,15 @@ export function TurnBasedVoiceSession({
   const sessionRunIdRef = useRef(0);
   const pendingEndReasonRef = useRef<VoiceSessionArtifactDraft["endReason"]>(undefined);
   const requestContainsAnswerRef = useRef(false);
+  const completedQuestionCountRef = useRef(0);
+  const currentQuestionCountedRef = useRef(false);
   const pendingRecordedAnswerRef = useRef<PendingRecordedAnswer | undefined>(undefined);
   const suppressNextRecordingRef = useRef(false);
   const turnCountRef = useRef(0);
   const artifactDraftRef = useRef<VoiceSessionArtifactDraft>(emptyArtifactDraft);
   const [artifactDraft, setArtifactDraft] = useState<VoiceSessionArtifactDraft>(emptyArtifactDraft);
   const [answerElapsedSeconds, setAnswerElapsedSeconds] = useState(0);
+  const [completedQuestionCount, setCompletedQuestionCount] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [phase, setPhase] = useState<TurnBasedPhase>("ready");
   const [errorMessage, setErrorMessage] = useState<string>();
@@ -207,6 +218,13 @@ export function TurnBasedVoiceSession({
   const showSessionCountdown =
     canShowSessionCountdown(phase) && sessionSecondsRemaining <= 60 && sessionSecondsRemaining > 0;
   const openingPrefetchReady = openingPrefetch.status === "ready";
+  const selectedQueueLength = snapshot.selectedQuestionQueueContext?.length ?? 0;
+  const plannedQuestionCount =
+    selectedQueueLength > 0
+      ? selectedQueueLength
+      : snapshot.modeKey === "rapid_fire" || snapshot.modeKey === "coaching"
+        ? snapshot.turnBasedQuestionCount ?? snapshot.rapidFireQuestionCount ?? config.maxTurns ?? 0
+        : 0;
 
   function updatePhase(nextPhase: TurnBasedPhase) {
     phaseRef.current = nextPhase;
@@ -247,6 +265,11 @@ export function TurnBasedVoiceSession({
     setTurnCount(nextTurnCount);
   }
 
+  function updateCompletedQuestionCount(nextCompletedQuestionCount: number) {
+    completedQuestionCountRef.current = nextCompletedQuestionCount;
+    setCompletedQuestionCount(nextCompletedQuestionCount);
+  }
+
   function isSessionActive(runId = sessionRunIdRef.current) {
     return (
       sessionActiveRef.current &&
@@ -259,6 +282,36 @@ export function TurnBasedVoiceSession({
     artifactDraftRef.current = artifactDraft;
     onArtifactChange?.(artifactDraft);
   }, [artifactDraft, onArtifactChange]);
+
+  useEffect(() => {
+    const supportWindow = window as typeof window & {
+      __quesiqSupportContext?: Record<string, unknown>;
+    };
+    supportWindow.__quesiqSupportContext = {
+      currentQuestion,
+      latestTurnBasedEvents: artifactDraft.events.slice(-12).map((event) => event.type),
+      phase,
+      plannedQuestionCount: plannedQuestionCount || undefined,
+      productArea: "interview_session",
+      questionsAnswered: completedQuestionCount,
+      questionsRemaining:
+        plannedQuestionCount > 0 ? Math.max(0, plannedQuestionCount - completedQuestionCount) : undefined,
+      sessionId,
+      turnState: currentTurnState,
+    };
+
+    return () => {
+      delete supportWindow.__quesiqSupportContext;
+    };
+  }, [
+    artifactDraft.events,
+    completedQuestionCount,
+    currentQuestion,
+    currentTurnState,
+    phase,
+    plannedQuestionCount,
+    sessionId,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -396,6 +449,7 @@ export function TurnBasedVoiceSession({
     if (!audioBase64 || !audioMimeType || !audioRef.current || !isSessionActive(runId)) {
       return;
     }
+    await primeAudioOutput(runId);
     const source = `data:${audioMimeType};base64,${audioBase64}`;
     audioRef.current.preload = "auto";
     audioRef.current.src = source;
@@ -446,7 +500,7 @@ export function TurnBasedVoiceSession({
               appendEvent("turn_based.question_audio.play_failed");
               resolve();
             });
-          }, 60);
+          }, 180);
         }
 
         audio.addEventListener("canplay", startPlayback, { once: true });
@@ -471,6 +525,43 @@ export function TurnBasedVoiceSession({
     await playAudioClip(response.questionAudioBase64, response.questionAudioMimeType, runId);
   }
 
+  async function primeAudioOutput(runId: number) {
+    if (!isSessionActive(runId)) {
+      return;
+    }
+
+    const now = Date.now();
+    if (now - lastAudioPrimeAtMsRef.current < 1500) {
+      return;
+    }
+
+    lastAudioPrimeAtMsRef.current = now;
+    try {
+      const AudioContextClass = window.AudioContext;
+      if (!AudioContextClass) {
+        await new Promise((resolve) => window.setTimeout(resolve, 120));
+        return;
+      }
+
+      const audioContext = audioContextRef.current ?? new AudioContextClass();
+      audioContextRef.current = audioContext;
+      if (audioContext.state === "suspended") {
+        await audioContext.resume();
+      }
+
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      gain.gain.value = 0.0001;
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.12);
+      await new Promise((resolve) => window.setTimeout(resolve, 170));
+    } catch {
+      await new Promise((resolve) => window.setTimeout(resolve, 140));
+    }
+  }
+
   async function applyTurnResponse(body: NextTurnResponse, runId: number) {
     if (!isSessionActive(runId)) {
       return;
@@ -487,6 +578,9 @@ export function TurnBasedVoiceSession({
       return;
     }
     if (body.question?.trim()) {
+      if (isNewInterviewQuestionState(body.state)) {
+        currentQuestionCountedRef.current = false;
+      }
       setCurrentQuestion(body.question.trim());
       appendTranscript(transcriptTurn("Que", "assistant", body.question));
     }
@@ -702,6 +796,12 @@ export function TurnBasedVoiceSession({
       }
 
       appendEvent("turn_based.next_turn.response");
+      if (payload.countsTowardQuestionProgress) {
+        updateCompletedQuestionCount(
+          Math.min(plannedQuestionCount || Number.MAX_SAFE_INTEGER, completedQuestionCountRef.current + 1),
+        );
+        currentQuestionCountedRef.current = true;
+      }
       if (
         body.transcript?.trim() &&
         answeredQuestion?.trim() &&
@@ -833,6 +933,10 @@ export function TurnBasedVoiceSession({
       updatePhase("connecting");
       updateDone(false);
       updateTurnCount(0);
+      updateCompletedQuestionCount(0);
+      setAnswerElapsedSeconds(0);
+      currentQuestionCountedRef.current = false;
+      lastAudioPrimeAtMsRef.current = 0;
       setCurrentQuestion(undefined);
       setCurrentTurnState(undefined);
       sessionStartedAtMsRef.current = Date.now();
@@ -847,6 +951,7 @@ export function TurnBasedVoiceSession({
         return;
       }
       updatePhase("live");
+      await primeAudioOutput(runId);
       const usedPrefetch = await consumeOpeningPrefetch(runId);
       if (!usedPrefetch) {
         await requestTurn({
@@ -951,11 +1056,13 @@ export function TurnBasedVoiceSession({
     updatePendingRecordedAnswer(undefined);
     appendEvent("turn_based.answer.submitted");
     const nextTurnIndex = turnCountRef.current + 1;
+    const countsTowardQuestionProgress = !currentQuestionCountedRef.current;
     updateTurnCount(nextTurnIndex);
     await requestTurn({
       answerAudioBase64: pendingAnswer.answerAudioBase64,
       answerDurationSeconds: pendingAnswer.answerDurationSeconds,
       answerMimeType: pendingAnswer.answerMimeType,
+      countsTowardQuestionProgress,
       priorTurns: artifactDraftRef.current.transcript,
       sessionId,
       snapshot,
@@ -1055,9 +1162,17 @@ export function TurnBasedVoiceSession({
         : openingPrefetchReady
           ? startButtonLabel
           : startButtonLabel;
-  const displayedDuration = artifactDraft.durationSeconds ?? elapsedSeconds;
-  const minutes = Math.floor(displayedDuration / 60).toString().padStart(2, "0");
-  const seconds = (displayedDuration % 60).toString().padStart(2, "0");
+  const questionsRemaining =
+    plannedQuestionCount > 0 ? Math.max(0, plannedQuestionCount - completedQuestionCount) : undefined;
+  const questionPosition =
+    plannedQuestionCount > 0
+      ? Math.min(plannedQuestionCount, Math.max(1, completedQuestionCount + 1))
+      : undefined;
+  const displayedAnswerDuration = recording
+    ? answerElapsedSeconds
+    : pendingRecordedAnswer?.answerDurationSeconds ?? 0;
+  const answerMinutes = Math.floor(displayedAnswerDuration / 60).toString().padStart(2, "0");
+  const answerSeconds = (displayedAnswerDuration % 60).toString().padStart(2, "0");
   const showFullCoachingChoices =
     snapshot.modeKey === "coaching" &&
     currentTurnState === "brief_feedback_choice" &&
@@ -1117,9 +1232,16 @@ export function TurnBasedVoiceSession({
         </div>
       </div>
 
-      <div className="session-timer" aria-label="Session duration">
-        {minutes}:{seconds}
+      <div className="session-timer turn-answer-timer" aria-label="Current answer duration">
+        <span>Answer time</span>
+        <strong>{answerMinutes}:{answerSeconds}</strong>
       </div>
+      {plannedQuestionCount > 0 && (
+        <div className="queue-progress-strip" role="status">
+          <strong>Question {questionPosition} of {plannedQuestionCount}</strong>
+          <span>{questionsRemaining} remaining</span>
+        </div>
+      )}
       {showSessionCountdown && (
         <div className="timer-warning" role="status">
           Session wraps in {formatClock(sessionSecondsRemaining)}.

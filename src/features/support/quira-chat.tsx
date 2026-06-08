@@ -4,6 +4,7 @@ import { useRef, useState, type KeyboardEvent } from "react";
 
 type SupportChatLauncherProps = {
   authLoaded: boolean;
+  contextDetails?: Record<string, unknown>;
   product: string;
   screen: string;
   sessionId?: string;
@@ -52,12 +53,16 @@ function getViewport() {
   return `${window.innerWidth}x${window.innerHeight}`;
 }
 
-function getBrowserContext() {
+function getBrowserContext(contextDetails?: Record<string, unknown>) {
   if (typeof window === "undefined") {
     return undefined;
   }
+  const supportWindow = window as typeof window & {
+    __quesiqSupportContext?: Record<string, unknown>;
+  };
 
   return {
+    contextDetails: contextDetails ?? supportWindow.__quesiqSupportContext,
     language: typeof navigator === "undefined" ? undefined : navigator.language,
     pathname: window.location.pathname,
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -78,6 +83,7 @@ function getAssistantText(body: SupportChatResponse) {
 
 export function QuiraChatLauncher({
   authLoaded,
+  contextDetails,
   product,
   screen,
   sessionId,
@@ -144,7 +150,7 @@ export function QuiraChatLauncher({
     try {
       const response = await fetch("/api/support/chat", {
         body: JSON.stringify({
-          browserContext: getBrowserContext(),
+          browserContext: getBrowserContext(contextDetails),
           conversationId,
           message: nextMessage,
           product,

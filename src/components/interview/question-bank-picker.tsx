@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 
 import type { InterviewQuestionRecord, QuestionTypeKey } from "@/product/interview-types";
 
@@ -117,6 +118,15 @@ export function QuestionBankPicker({
       const [item] = next.splice(index, 1);
       next.splice(nextIndex, 0, item);
       return next;
+    });
+  }
+
+  function preserveScrollAfterFilterChange(callback: () => void) {
+    const scrollY = window.scrollY;
+    callback();
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: scrollY });
+      window.requestAnimationFrame(() => window.scrollTo({ top: scrollY }));
     });
   }
 
@@ -239,21 +249,21 @@ export function QuestionBankPicker({
               <div className="queue-order-actions" aria-label="Queue item actions">
                 <button
                   aria-label={`Move question ${index + 1} up`}
-                  className="secondary"
+                  className="secondary queue-icon-action"
                   disabled={index === 0}
                   onClick={() => moveQueuedQuestion(question.id, -1)}
                   type="button"
                 >
-                  Up
+                  <ArrowUp aria-hidden="true" />
                 </button>
                 <button
                   aria-label={`Move question ${index + 1} down`}
-                  className="secondary"
+                  className="secondary queue-icon-action"
                   disabled={index === queue.length - 1}
                   onClick={() => moveQueuedQuestion(question.id, 1)}
                   type="button"
                 >
-                  Down
+                  <ArrowDown aria-hidden="true" />
                 </button>
                 <button
                   className="secondary"
@@ -285,7 +295,10 @@ export function QuestionBankPicker({
                 aria-pressed={selectedType === type.key}
                 className={selectedType === type.key ? "active" : undefined}
                 key={type.key || "all"}
-                onClick={() => setSelectedType(type.key)}
+                onClick={(event) => {
+                  event.currentTarget.blur();
+                  preserveScrollAfterFilterChange(() => setSelectedType(type.key));
+                }}
                 type="button"
               >
                 {type.label}
@@ -300,7 +313,10 @@ export function QuestionBankPicker({
               <button
                 aria-pressed={selectedSkill === ""}
                 className={selectedSkill === "" ? "active" : undefined}
-                onClick={() => setSelectedSkill("")}
+                onClick={(event) => {
+                  event.currentTarget.blur();
+                  preserveScrollAfterFilterChange(() => setSelectedSkill(""));
+                }}
                 type="button"
               >
                 All skills
@@ -310,7 +326,10 @@ export function QuestionBankPicker({
                   aria-pressed={selectedSkill === skill}
                   className={selectedSkill === skill ? "active" : undefined}
                   key={skill}
-                  onClick={() => setSelectedSkill(skill)}
+                  onClick={(event) => {
+                    event.currentTarget.blur();
+                    preserveScrollAfterFilterChange(() => setSelectedSkill(skill));
+                  }}
                   type="button"
                 >
                   {skill}

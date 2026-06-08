@@ -2590,6 +2590,7 @@ label span {
 .question-queue-screen {
   display: grid;
   gap: var(--space-3);
+  overflow-anchor: none;
 }
 
 .question-queue-summary {
@@ -2665,6 +2666,22 @@ label span {
   justify-content: flex-end;
 }
 
+.queue-order-actions .queue-icon-action {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 2.35rem;
+  justify-content: center;
+  min-height: 2.35rem;
+  padding: 0;
+  width: 2.35rem;
+}
+
+.queue-icon-action svg {
+  height: 1rem;
+  width: 1rem;
+}
+
 .question-bank-controls label,
 .question-bank-add label {
   display: grid;
@@ -2714,6 +2731,7 @@ label span {
   border-radius: var(--radius-sm);
   display: grid;
   gap: 0.65rem;
+  overflow-anchor: none;
   padding: var(--space-2);
 }
 
@@ -2745,6 +2763,7 @@ label span {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  overflow-anchor: none;
 }
 
 .skill-filter-strip button {
@@ -2809,7 +2828,7 @@ label span {
   }
 
   .queue-order-actions button {
-    flex: 1 1 5.5rem;
+    flex: 1 1 4rem;
   }
 
   .question-row-actions {
@@ -3311,6 +3330,41 @@ textarea::placeholder {
   font-weight: 800;
   padding: var(--space-2);
   text-align: center;
+}
+
+.turn-answer-timer {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.turn-answer-timer span {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.turn-answer-timer strong {
+  color: var(--brand-strong);
+  font-size: 1.5rem;
+}
+
+.queue-progress-strip {
+  align-items: center;
+  background: rgba(232, 114, 26, 0.1);
+  border: 1px solid rgba(232, 114, 26, 0.34);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  justify-content: center;
+  padding: 0.7rem var(--space-2);
+  text-align: center;
+}
+
+.queue-progress-strip span {
+  color: var(--muted);
 }
 
 .timer-warning {

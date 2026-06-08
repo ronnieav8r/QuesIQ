@@ -803,6 +803,7 @@ function parseToolArguments(value: string | undefined) {
 
 async function runTool(input: {
   args: Record<string, unknown>;
+  browserContext?: Record<string, unknown>;
   conversationId: string;
   name: string;
   product: string;
@@ -838,7 +839,7 @@ async function runTool(input: {
   if (input.name === "create_support_case" || input.name === "record_bug_report") {
     const supportCase = await createSupportCase({
       conversationId: input.conversationId,
-      details: { tool: input.name },
+      details: { browserContext: input.browserContext, tool: input.name },
       kind: input.name === "record_bug_report" ? "bug" : "support",
       product: input.product,
       screen: input.screen,
@@ -978,6 +979,7 @@ async function runQuiraModel(input: {
         try {
           output = await runTool({
             args,
+            browserContext: input.browserContext,
             conversationId: input.conversationId,
             name: call.name ?? "",
             product: input.product,
