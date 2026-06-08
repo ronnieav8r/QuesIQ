@@ -140,9 +140,10 @@ export function StudyShell({ authSession, children }: StudyShellProps) {
             </button>
             {appMenuOpen && (
               <div className="app-menu-panel" role="menu">
-                <Link href="/" role="menuitem">
+                <div className="app-menu-section-label" role="presentation">Study</div>
+                <Link href="/study" role="menuitem">
                   <Home aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
-                  <span>QuesIQ Home</span>
+                  <span>Study Home</span>
                 </Link>
                 {overflowMobileStudyNavItems.map((item) => (
                   <Link href={item.href} key={item.href} role="menuitem">
@@ -150,17 +151,13 @@ export function StudyShell({ authSession, children }: StudyShellProps) {
                     <span>{item.label}</span>
                   </Link>
                 ))}
+                <div className="app-menu-separator" role="separator" />
+                <div className="app-menu-section-label" role="presentation">Account</div>
                 {authSession?.user && (
-                  <button role="menuitem" type="button">
+                  <div className="app-menu-identity" role="presentation">
                     <UserRound aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
                     <span>{authSession.user.name || authSession.user.email || "Signed in"}</span>
-                  </button>
-                )}
-                {adminAccess && (
-                  <Link href="/admin?product=study" role="menuitem">
-                    <ShieldCheck aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
-                    <span>Admin</span>
-                  </Link>
+                  </div>
                 )}
                 {authSession?.user && (
                   <button
@@ -171,6 +168,18 @@ export function StudyShell({ authSession, children }: StudyShellProps) {
                     <LogOut aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
                     <span>Sign out</span>
                   </button>
+                )}
+                <div className="app-menu-separator" role="separator" />
+                <div className="app-menu-section-label" role="presentation">QuesIQ</div>
+                <Link href="/" role="menuitem">
+                  <Home aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                  <span>QuesIQ Home</span>
+                </Link>
+                {adminAccess && (
+                  <Link href="/admin?product=study" role="menuitem">
+                    <ShieldCheck aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                    <span>Admin</span>
+                  </Link>
                 )}
               </div>
             )}

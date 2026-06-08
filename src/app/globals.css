@@ -536,16 +536,18 @@ p {
     linear-gradient(90deg, rgba(109, 59, 255, 0.18), transparent 35%),
     rgba(13, 19, 38, 0.94);
   border-bottom: 1px solid var(--border);
-  display: flex;
+  display: grid;
   gap: var(--space-4);
+  grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
   grid-area: header;
-  justify-content: space-between;
   min-height: 4rem;
   padding: var(--space-2) var(--space-3);
 }
 
 .app-menu {
   flex: 0 0 auto;
+  grid-column: 3;
+  justify-self: end;
   position: relative;
 }
 
@@ -591,7 +593,8 @@ p {
 }
 
 .app-menu-panel button,
-.app-menu-panel a {
+.app-menu-panel a,
+.app-menu-identity {
   align-items: center;
   background: transparent;
   border-color: transparent;
@@ -605,6 +608,27 @@ p {
   text-decoration: none;
 }
 
+.app-menu-identity {
+  color: var(--muted);
+  min-height: auto;
+  padding-bottom: var(--space-1);
+  padding-top: var(--space-1);
+}
+
+.app-menu-section-label {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  letter-spacing: 0;
+  padding: var(--space-1) var(--space-3) 0.15rem;
+  text-transform: uppercase;
+}
+
+.app-menu-separator {
+  border-top: 1px solid var(--border);
+  margin: var(--space-1) 0;
+}
+
 .app-menu-panel button:hover,
 .app-menu-panel button.active,
 .app-menu-panel a:hover,
@@ -616,7 +640,10 @@ p {
 .brand-lockup {
   display: grid;
   gap: var(--space-1);
+  grid-column: 2;
+  justify-self: center;
   min-width: 0;
+  text-align: center;
 }
 
 .brand-logo {

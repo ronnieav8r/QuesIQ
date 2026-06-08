@@ -888,6 +888,16 @@ export default function Home() {
               </button>
               {appMenuOpen && (
                 <div className="app-menu-panel" role="menu">
+                  <div className="app-menu-section-label" role="presentation">Interview</div>
+                  <button
+                    className={activeView === "home" ? "active" : undefined}
+                    onClick={() => openView("home")}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <HomeIcon aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                    <span>Interview Home</span>
+                  </button>
                   <button
                     className={activeView === "me" ? "active" : undefined}
                     onClick={() => openView("me")}
@@ -897,12 +907,24 @@ export default function Home() {
                     <UserRound aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
                     <span>Me</span>
                   </button>
+                  <div className="app-menu-separator" role="separator" />
+                  <div className="app-menu-section-label" role="presentation">Account</div>
                   {authSession?.user && (
-                    <button role="menuitem" type="button">
+                    <div className="app-menu-identity" role="presentation">
                       <UserRound aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
                       <span>{authSession.user.name || authSession.user.email || "Signed in"}</span>
-                    </button>
+                    </div>
                   )}
+                  <button
+                    onClick={() => signOut({ redirectTo: "/" })}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <LogOut aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                    <span>Sign out</span>
+                  </button>
+                  <div className="app-menu-separator" role="separator" />
+                  <div className="app-menu-section-label" role="presentation">QuesIQ</div>
                   <Link href="/" role="menuitem">
                     <HomeIcon aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
                     <span>QuesIQ Home</span>
@@ -920,14 +942,6 @@ export default function Home() {
                       <span>Admin</span>
                     </Link>
                   )}
-                  <button
-                    onClick={() => signOut({ redirectTo: "/" })}
-                    role="menuitem"
-                    type="button"
-                  >
-                    <LogOut aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
-                    <span>Sign out</span>
-                  </button>
                 </div>
               )}
             </div>

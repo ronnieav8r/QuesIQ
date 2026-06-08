@@ -1341,6 +1341,19 @@ export default function App() {
             </button>
             {appMenuOpen && (
               <div className="app-menu-panel" role="menu">
+                <div className="app-menu-section-label" role="presentation">DPE</div>
+                <button
+                  className={screen === "home" ? "active" : undefined}
+                  onClick={() => {
+                    setScreen("home");
+                    setAppMenuOpen(false);
+                  }}
+                  role="menuitem"
+                  type="button"
+                >
+                  <Home aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                  <span>DPE Home</span>
+                </button>
                 <button
                   className={screen === "me" ? "active" : undefined}
                   onClick={() => {
@@ -1353,10 +1366,6 @@ export default function App() {
                   <User aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
                   <span>Me</span>
                 </button>
-                <Link href="/" role="menuitem">
-                  <Home aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
-                  <span>QuesIQ Home</span>
-                </Link>
                 {overflowMobileNavItems.map((item) => (
                   <button
                     className={screen === item.key ? "active" : undefined}
@@ -1372,22 +1381,30 @@ export default function App() {
                     <span>{item.label}</span>
                   </button>
                 ))}
+                <div className="app-menu-separator" role="separator" />
+                <div className="app-menu-section-label" role="presentation">Account</div>
                 {authState.user?.email && (
-                  <button role="menuitem" type="button">
+                  <div className="app-menu-identity" role="presentation">
                     <User aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
                     <span>{authState.user.email}</span>
-                  </button>
+                  </div>
                 )}
+                <button onClick={handleSignOut} role="menuitem" type="button">
+                  <LogOut aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                  <span>{signingOut ? "Signing out..." : "Sign out"}</span>
+                </button>
+                <div className="app-menu-separator" role="separator" />
+                <div className="app-menu-section-label" role="presentation">QuesIQ</div>
+                <Link href="/" role="menuitem">
+                  <Home aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                  <span>QuesIQ Home</span>
+                </Link>
                 {authState.isAdmin && (
                   <Link href="/admin?product=dpe" role="menuitem">
                     <ShieldCheck aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
                     <span>Admin</span>
                   </Link>
                 )}
-                <button onClick={handleSignOut} role="menuitem" type="button">
-                  <LogOut aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
-                  <span>{signingOut ? "Signing out..." : "Sign out"}</span>
-                </button>
               </div>
             )}
           </div>
