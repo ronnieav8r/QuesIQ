@@ -53,6 +53,7 @@ type NextTurnResponse = {
   feedback?: string;
   feedbackAudioBase64?: string;
   feedbackAudioMimeType?: string;
+  metaOrTestInput?: boolean;
   question?: string;
   questionAudioBase64?: string;
   questionAudioCacheStatus?: "hit" | "miss" | "stored";
@@ -587,10 +588,12 @@ export function TurnBasedVoiceSession({
       return;
     }
     if (body.question?.trim()) {
-      if (isNewInterviewQuestionState(body.state)) {
+      if (!body.metaOrTestInput && isNewInterviewQuestionState(body.state)) {
         currentQuestionCountedRef.current = false;
       }
-      setCurrentQuestion(body.question.trim());
+      if (!body.metaOrTestInput) {
+        setCurrentQuestion(body.question.trim());
+      }
       appendTranscript(transcriptTurn("Que", "assistant", body.question));
     }
     setCurrentTurnState(body.state);
@@ -805,7 +808,11 @@ export function TurnBasedVoiceSession({
       }
 
       appendEvent("turn_based.next_turn.response");
-      if (payload.countsTowardQuestionProgress) {
+      if (body.metaOrTestInput) {
+        if (payload.countsTowardQuestionProgress) {
+          updateTurnCount(Math.max(0, turnCountRef.current - 1));
+        }
+      } else if (payload.countsTowardQuestionProgress) {
         updateCompletedQuestionCount(
           Math.min(plannedQuestionCount || Number.MAX_SAFE_INTEGER, completedQuestionCountRef.current + 1),
         );

@@ -5,6 +5,7 @@ import {
   getTooShortReviewMessage,
   isArtifactTooShortToReview,
 } from "@/product/review-eligibility";
+import { hasUsableInterviewAnswerContent, isMetaOrTestInput } from "@/product/interview-meta-input";
 import { getSpeechSummary } from "@/product/speech-metrics";
 import type {
   CoachingMemoryRecord,
@@ -260,7 +261,9 @@ function extractResponseText(body: ResponsesApiBody) {
 
 function countAnsweredUserTurns(artifact: VoiceSessionArtifactDraft) {
   return artifact.transcript.filter(
-    (turn) => turn.role === "user" || turn.speaker.toLowerCase() === "you",
+    (turn) =>
+      (turn.role === "user" || turn.speaker.toLowerCase() === "you") &&
+      !isMetaOrTestInput(turn.text),
   ).length;
 }
 
@@ -737,6 +740,22 @@ export async function createSessionEvaluation(
       .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
 
     throw new Error("This practice session does not have a saved transcript yet.");
+  }
+
+  if (!hasUsableInterviewAnswerContent(session.voiceArtifact)) {
+    const message =
+      "There was not enough interview-answer content to review yet. When you restart, answer with one clear decision, one brief reason, and the action you would take next.";
+
+    await getDb()
+      .update(sessions)
+      .set({
+        evaluationError: message,
+        evaluationStatus: "too_short",
+        updatedAt: now,
+      })
+      .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
+
+    throw new Error(message);
   }
 
   if (isArtifactTooShortToReview(session.contextSnapshot, session.voiceArtifact)) {

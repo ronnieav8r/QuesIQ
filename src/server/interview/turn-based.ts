@@ -7,6 +7,7 @@ import type {
   SessionSetupSnapshot,
   VoiceTranscriptTurn,
 } from "@/product/interview-types";
+import { isMetaOrTestInput } from "@/product/interview-meta-input";
 import { getTurnSpeechMetrics } from "@/product/speech-metrics";
 import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
 import { getSessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
@@ -63,6 +64,7 @@ export type TurnBasedResult = {
   questionAudioBase64?: string;
   questionAudioCacheStatus?: "hit" | "miss" | "stored";
   questionAudioMimeType?: string;
+  metaOrTestInput?: boolean;
   routingReason?: string;
   state?: CoachingTurnState;
   targetSkill?: string;
@@ -99,8 +101,8 @@ type CoachingChoiceRouterDecision = {
   reason: string;
 };
 
-const fullCoachingChoicePrompt = "Select More feedback, Try again, Ask Cue, or Move on.";
-const followUpCoachingChoicePrompt = "Select Try again, Ask Cue, or Move on.";
+const fullCoachingChoicePrompt = "Select More feedback, Try again, Ask Que, or Move on.";
+const followUpCoachingChoicePrompt = "Select Try again, Ask Que, or Move on.";
 
 type SpeechResult = {
   audioBase64: string;
@@ -166,6 +168,26 @@ function cleanTurnState(value: unknown, fallback: CoachingTurnState): CoachingTu
   ).includes(text as CoachingTurnState)
     ? (text as CoachingTurnState)
     : fallback;
+}
+
+function normalizeQueForSpeech(text: string) {
+  return text.replace(/\bAsk Que\b/g, "Ask Q").replace(/\bto Que\b/g, "to Q");
+}
+
+function coachingMetaInputResponse(priorTurns: PriorTurn[]): TurnDecision {
+  const currentQuestion = latestPrimaryInterviewQuestion(priorTurns);
+  return {
+    detectedUserIntent: "awaiting_answer",
+    done: false,
+    feedback: undefined,
+    question: currentQuestion
+      ? `I heard the test phrase, but I do not have an interview answer to coach yet. When you're ready, answer the current question: ${currentQuestion}`
+      : "I heard the test phrase, but I do not have an interview answer to coach yet. When you're ready, answer the current question.",
+    routingReason:
+      "Detected microphone check, interface test, filler, pause request, or meta-commentary; kept the current Coaching question active.",
+    state: "awaiting_answer",
+    targetSkill: "usable interview answer",
+  };
 }
 
 function defaultTurnState(input: {
@@ -355,6 +377,7 @@ function latestPrimaryInterviewQuestion(priorTurns: PriorTurn[]) {
       const normalized = text.toLowerCase();
       return (
         !isCoachingChoicePrompt(text) &&
+        !normalized.startsWith("i heard the test phrase") &&
         (text.endsWith("?") ||
           normalized.startsWith("tell me about") ||
           normalized.startsWith("describe a time") ||
@@ -613,9 +636,10 @@ async function generateSpeechBuffer(input: {
   });
 
   try {
+    const speechText = normalizeQueForSpeech(input.question);
     const response = await fetch("https://api.openai.com/v1/audio/speech", {
       body: JSON.stringify({
-        input: input.question.slice(0, 1000),
+        input: speechText.slice(0, 1000),
         model: input.model,
         response_format: "mp3",
         voice: input.voice,
@@ -844,6 +868,7 @@ export function buildTurnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) 
     "Do not invent candidate facts, company facts, resume facts, credentials, metrics, or motivations.",
     "Keep feedback to one short sentence when feedback is allowed.",
     "Each call must make one clear state transition.",
+    "If the user's reply is a microphone check, interface test, filler, pause request, or meta-comment rather than an interview answer, treat it as no usable answer; do not evaluate or infer composure, confidence, judgment, answer quality, motivation, or intent from it.",
   ].join(" ");
 
   if (modeKey === "first_impression") {
@@ -866,6 +891,7 @@ export function buildTurnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) 
       universalRules,
       "Coaching is a question-answer-coach-choice loop.",
       "After each user answer, write one brief, specific feedback sentence tied to what the user actually said.",
+      "For test/meta input, acknowledge that no usable interview answer was provided and keep the current interview question active.",
       `Then ask exactly: ${fullCoachingChoicePrompt}`,
       "Do not ask a new interview question in the same turn as the fixed Coaching choice prompt.",
       "If the user chooses Move on, ask one concise new interview question from a different scenario or angle.",
@@ -880,6 +906,7 @@ export function buildTurnSystemPrompt(modeKey: SessionSetupSnapshot["modeKey"]) 
       "For rare retry prompts, make the retry instruction clear inside the question field.",
       "Do not invent experience, credentials, metrics, or motivations.",
       "For the opening turn, leave feedback empty and ask one focused interview question.",
+      "For wrap-up, do not produce a coaching pattern summary unless actual interview-answer content supports it.",
     ].join(" ");
   }
 
@@ -1928,6 +1955,73 @@ export async function runTurnBasedInterviewTurn(input: {
         text: latestTranscript,
       })
     : undefined;
+  const latestIsMetaOrTestInput =
+    input.turnInput.snapshot.modeKey === "coaching" &&
+    Boolean(latestTranscript) &&
+    isMetaOrTestInput(latestTranscript);
+
+  if (latestIsMetaOrTestInput) {
+    const decision = coachingMetaInputResponse(input.turnInput.priorTurns);
+    const questionAudio = decision.question
+      ? await generateSpeech({
+          apiKey,
+          model: input.config.ttsModel,
+          question: decision.question,
+          sessionId: input.turnInput.sessionId,
+          userId: input.userId,
+          voice: input.config.ttsVoice,
+        })
+      : undefined;
+
+    const [turn] = await getDb()
+      .insert(interviewTurnBasedTurns)
+      .values({
+        answerTranscript: latestTranscript,
+        archetypeId: decision.archetypeId,
+        feedback: decision.feedback,
+        modeKey: session.modeKey,
+        question: decision.question || `${modeLabel(input.turnInput.snapshot.modeKey)} awaiting answer.`,
+        routingReason: decision.routingReason,
+        sessionId: input.turnInput.sessionId,
+        targetSkill: decision.targetSkill,
+        turnIndex: input.turnInput.turnIndex,
+        updatedAt: new Date(),
+        userId: input.userId,
+      })
+      .onConflictDoUpdate({
+        set: {
+          answerTranscript: latestTranscript,
+          archetypeId: decision.archetypeId,
+          feedback: decision.feedback,
+          question:
+            decision.question || `${modeLabel(input.turnInput.snapshot.modeKey)} awaiting answer.`,
+          routingReason: decision.routingReason,
+          targetSkill: decision.targetSkill,
+          updatedAt: new Date(),
+        },
+        target: [interviewTurnBasedTurns.sessionId, interviewTurnBasedTurns.turnIndex],
+      })
+      .returning({ id: interviewTurnBasedTurns.id });
+
+    return {
+      archetypeId: decision.archetypeId,
+      detectedUserIntent: decision.detectedUserIntent,
+      done: false,
+      feedback: undefined,
+      metaOrTestInput: true,
+      question: decision.question,
+      questionAudioBase64: questionAudio?.audioBase64,
+      questionAudioCacheStatus: questionAudio?.cacheStatus,
+      questionAudioMimeType: questionAudio ? "audio/mpeg" : undefined,
+      routingReason: decision.routingReason,
+      state: decision.state,
+      targetSkill: decision.targetSkill,
+      transcript: latestTranscript,
+      transcriptMetrics,
+      turnId: turn.id,
+    };
+  }
+
   const coachingChoiceIntent =
     input.turnInput.snapshot.modeKey === "coaching"
       ? await resolveCoachingChoiceIntent({
