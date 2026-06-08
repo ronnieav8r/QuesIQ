@@ -126,9 +126,9 @@ export async function POST(request: Request) {
       const selectedQuestionQueueContext = questions.map(toSelectedQuestionContext);
       snapshot = {
         ...parsedSnapshot,
-        modeKey: "coaching",
+        modeKey: "rapid_fire",
         questionTypeKey: questions[0]?.questionTypeKey ?? parsedSnapshot.questionTypeKey,
-        rapidFireQuestionCount: undefined,
+        rapidFireQuestionCount: selectedQuestionQueueContext.length,
         selectedQuestionContext: selectedQuestionQueueContext[0],
         selectedQuestionQueueContext,
         styleKey: "friendly",

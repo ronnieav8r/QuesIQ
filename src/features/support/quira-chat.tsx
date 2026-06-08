@@ -207,8 +207,8 @@ export function QuiraChatLauncher({
         onClick={openChat}
         type="button"
       >
-        <span aria-hidden="true">Q</span>
-        <small>Quira</small>
+        <span aria-hidden="true">?</span>
+        <small>Help</small>
       </button>
 
       {open && (
@@ -236,9 +236,7 @@ export function QuiraChatLauncher({
 
             <section aria-live="polite" className="quira-thread">
               <article className="quira-bubble-row assistant">
-                <div className="quira-bubble">
-                  Ask me about QuesIQ, this screen, your account, or an issue you are running into.
-                </div>
+                <div className="quira-bubble">Hello, I&apos;m Quira. How can I help?</div>
               </article>
 
               {chatMessages.map((message) => (

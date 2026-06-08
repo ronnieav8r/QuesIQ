@@ -80,8 +80,13 @@ const actionDefinitions: Array<{
     title: "Coaching",
   },
   {
-    basePromptKeys: ["turn_question_planner", "turn_coaching_responder", "session_evaluation"],
-    description: "Turn-based rapid-fire next-turn prompts, archetype routing, and final review prompts.",
+    basePromptKeys: [
+      "turn_question_planner",
+      "turn_coaching_responder",
+      "interview_answer_evaluator_v1",
+      "session_evaluation",
+    ],
+    description: "Turn-based rapid-fire next-turn prompts, answer cards, archetype routing, and final review prompts.",
     key: "rapid_fire",
     modeKey: "rapid_fire",
     questionTypeKey: "behavioral",
@@ -102,7 +107,7 @@ const actionDefinitions: Array<{
   },
   {
     basePromptKeys: ["realtime_interviewer", "session_evaluation"],
-    description: "True Realtime mock interview prompt stack plus post-session evaluation.",
+    description: "Premium Realtime mock interview prompt stack plus post-session evaluation.",
     key: "mock_interview",
     modeKey: "mock_interview",
     questionTypeKey: "behavioral",

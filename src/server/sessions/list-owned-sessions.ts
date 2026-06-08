@@ -3,6 +3,7 @@ import { desc, eq } from "drizzle-orm";
 import type { SessionHistoryItem } from "@/product/interview-types";
 import { getDb } from "@/server/db/client";
 import { evaluations, sessions } from "@/server/db/schema";
+import { listInterviewAnswerEvaluations } from "@/server/interview/answer-evaluations";
 
 export async function listOwnedSessions(
   userId: string,
@@ -29,22 +30,25 @@ export async function listOwnedSessions(
     .orderBy(desc(sessions.createdAt))
     .limit(limit);
 
-  return rows.map((row) => ({
-    contextSnapshot: row.contextSnapshot,
-    createdAt: row.createdAt.toISOString(),
-    durationSeconds: row.voiceArtifact?.durationSeconds,
-    endedAt: row.endedAt?.toISOString(),
-    evaluation: row.evaluationResult ?? undefined,
-    evaluationError: row.evaluationError ?? undefined,
-    evaluationStatus: row.evaluationResult ? "completed" : row.evaluationStatus,
-    hasEvaluation: Boolean(row.evaluationResult),
-    id: row.id,
-    modeKey: row.contextSnapshot.modeKey,
-    questionTypeKey: row.contextSnapshot.questionTypeKey,
-    status: row.status,
-    styleKey: row.contextSnapshot.styleKey,
-    targetCompany: row.contextSnapshot.interviewContext.targetCompany,
-    targetRole: row.contextSnapshot.interviewContext.targetRole || "General practice",
-    transcript: row.voiceArtifact?.transcript ?? [],
-  }));
+  return Promise.all(
+    rows.map(async (row) => ({
+      answerEvaluations: await listInterviewAnswerEvaluations(row.id),
+      contextSnapshot: row.contextSnapshot,
+      createdAt: row.createdAt.toISOString(),
+      durationSeconds: row.voiceArtifact?.durationSeconds,
+      endedAt: row.endedAt?.toISOString(),
+      evaluation: row.evaluationResult ?? undefined,
+      evaluationError: row.evaluationError ?? undefined,
+      evaluationStatus: row.evaluationResult ? "completed" : row.evaluationStatus,
+      hasEvaluation: Boolean(row.evaluationResult),
+      id: row.id,
+      modeKey: row.contextSnapshot.modeKey,
+      questionTypeKey: row.contextSnapshot.questionTypeKey,
+      status: row.status,
+      styleKey: row.contextSnapshot.styleKey,
+      targetCompany: row.contextSnapshot.interviewContext.targetCompany,
+      targetRole: row.contextSnapshot.interviewContext.targetRole || "General practice",
+      transcript: row.voiceArtifact?.transcript ?? [],
+    })),
+  );
 }

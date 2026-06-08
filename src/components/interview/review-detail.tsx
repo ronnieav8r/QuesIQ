@@ -7,6 +7,7 @@ import {
   TurnSpeechMetric,
 } from "@/components/interview/speech-metrics-summary";
 import type {
+  InterviewAnswerEvaluationRecord,
   InterviewCatalog,
   SessionEvaluationResult,
   SessionHistoryItem,
@@ -24,6 +25,54 @@ type ReviewDetailProps = {
   onPracticeQuestion?: (questionId: string) => void;
   session: SessionHistoryItem;
 };
+
+function answerVerdictLabel(verdict: InterviewAnswerEvaluationRecord["evaluation"]["verdict"]) {
+  if (verdict === "meets_standard") return "Meets standard";
+  if (verdict === "below_standard") return "Below standard";
+  return "Partial";
+}
+
+function AnswerEvaluationCards({
+  evaluations,
+}: {
+  evaluations?: InterviewAnswerEvaluationRecord[];
+}) {
+  if (!evaluations?.length) {
+    return null;
+  }
+
+  return (
+    <section className="rapid-review-cards" aria-label="Per-question review">
+      <div className="section-head">
+        <h3>Question Results</h3>
+        <span>{evaluations.length} answered</span>
+      </div>
+      {evaluations.map((answer, index) => (
+        <article
+          className={`rapid-review-card verdict-${answer.evaluation.verdict}`}
+          key={answer.id}
+        >
+          <div className="section-head">
+            <strong>Question {index + 1}</strong>
+            <span>{answerVerdictLabel(answer.evaluation.verdict)}</span>
+          </div>
+          <p>{answer.question}</p>
+          <p>{answer.evaluation.result}</p>
+          {answer.evaluation.tightenUpAdvice.length > 0 && (
+            <ul>
+              {answer.evaluation.tightenUpAdvice.map((advice) => (
+                <li key={advice}>{advice}</li>
+              ))}
+            </ul>
+          )}
+          {answer.evaluation.missingAnswerElements.length > 0 && (
+            <small>Missing: {answer.evaluation.missingAnswerElements.join(", ")}</small>
+          )}
+        </article>
+      ))}
+    </section>
+  );
+}
 
 export function ReviewDetail({
   adminAccess = false,
@@ -156,6 +205,7 @@ export function ReviewDetail({
         detail?: string;
         error?: string;
         evaluation?: {
+          answerEvaluations?: InterviewAnswerEvaluationRecord[];
           result: SessionEvaluationResult;
         };
       };
@@ -166,6 +216,7 @@ export function ReviewDetail({
 
       setCurrentSession((current) => ({
         ...current,
+        answerEvaluations: body.evaluation?.answerEvaluations ?? current.answerEvaluations,
         evaluation: body.evaluation?.result,
         evaluationError: undefined,
         evaluationStatus: "completed",
@@ -264,6 +315,7 @@ export function ReviewDetail({
         {currentSession.evaluation ? (
           <div className="review-body">
             <p>{currentSession.evaluation.summary}</p>
+            <AnswerEvaluationCards evaluations={currentSession.answerEvaluations} />
             <SessionSpeechMetrics artifact={currentSession} />
             <ReviewScoreSummary evaluation={currentSession.evaluation} />
             <div className="review-callout">

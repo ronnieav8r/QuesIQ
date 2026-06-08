@@ -347,6 +347,7 @@ type PromptPlaybook = {
 
 const promptLabels: Record<PromptConfigKey, string> = {
   dpe_answer_evaluator_v1: "DPE Answer Evaluator V1",
+  interview_answer_evaluator_v1: "Interview Answer Evaluator V1",
   introduction_draft: "Introduction Draft",
   quira_support_chat: "Quira Support Chat",
   resume_summary: "Interview Resume Summary",
@@ -378,10 +379,15 @@ const promptPlaybooks: PromptPlaybook[] = [
     title: "Hands-Free Coaching",
   },
   {
-    basePromptKeys: ["realtime_interviewer", "session_evaluation"],
+    basePromptKeys: [
+      "turn_question_planner",
+      "turn_coaching_responder",
+      "interview_answer_evaluator_v1",
+      "session_evaluation",
+    ],
     componentModeKeys: ["rapid_fire"],
     description:
-      "Paced interview repetition. Que asks one fresh question at a time and saves feedback for review.",
+      "Paced interview repetition. Que asks one fresh question at a time, stores answer cards, and saves feedback for review.",
     includeAllQuestionTypes: true,
     includeAllStyles: true,
     includeFirstTurn: true,
@@ -411,7 +417,7 @@ const promptPlaybooks: PromptPlaybook[] = [
     basePromptKeys: ["realtime_interviewer", "session_evaluation"],
     componentModeKeys: ["mock_interview"],
     description:
-      "Realistic interview simulation. Coaching stays out of the live session unless the candidate asks to pause.",
+      "Premium realtime interview simulation. Coaching stays out of the live session unless the candidate asks to pause.",
     includeAllQuestionTypes: true,
     includeAllStyles: true,
     includeFirstTurn: true,

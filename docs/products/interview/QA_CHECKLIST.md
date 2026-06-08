@@ -40,6 +40,7 @@ with production or static checks.
 - Practice setup does not show retired First Impression as a normal Practice
   mode.
 - Coaching, Rapid Fire, and Mock Interview are selectable.
+- Mock Interview shows a Premium pill because it uses realtime ChatGPT/audio.
 - Hands-Free Coaching is visible with a Premium pill only for admins while
   `INTERVIEW_HANDS_FREE_COACHING_ENABLED` is off.
 - Question focus and interviewer style selections persist into a session.
@@ -50,10 +51,13 @@ with production or static checks.
 
 - User can choose question count with the mobile-friendly stepper.
 - Available count range is 1 to 10.
-- Session starts hands-free after the first Que question.
+- Session uses button-driven voice controls: Record answer, Stop recording,
+  Record again, and Submit answer.
 - Each selected question is a separate question, not repeated follow-ups.
 - Que does not ask recovery/follow-up questions in Rapid Fire unless explicitly
   designed for that mode.
+- Per-answer evaluations are created quietly and shown as result cards at the
+  end, not between questions.
 - Each answer has a 65-second cap.
 - 10-second answer warning appears before cutoff.
 - Warning timers stop when the session ends.
@@ -61,6 +65,18 @@ with production or static checks.
 - Review is generated when at least one answer was received.
 - Review copy identifies Rapid Fire behavior correctly and does not rely on the
   old 120-second minimum.
+
+## Question Queue
+
+- Selected questions are shown as an obvious active queue.
+- Queued questions can be moved up/down and removed on mobile.
+- Already-queued Practice Again items are hidden, not displayed as disabled rows.
+- Target skill filters use preset pills from the question bank.
+- Custom questions require a preset target skill, not free text.
+- Launch Queue starts a Rapid review session using the exact queued question
+  order.
+- No Coaching menu appears during Question Queue sessions.
+- End review shows per-question result cards.
 
 ## Coaching
 

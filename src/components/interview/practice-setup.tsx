@@ -153,9 +153,9 @@ export function PracticeSetup({
               >
                 <strong>
                   {mode.name}
-                  {mode.key === "hands_free_coaching" && (
-                    <span className="mode-premium-pill">Premium</span>
-                  )}
+                      {(mode.key === "hands_free_coaching" || mode.key === "mock_interview") && (
+                        <span className="mode-premium-pill">Premium</span>
+                      )}
                 </strong>
                 <span>{mode.description}</span>
                 <small>{mode.use}</small>

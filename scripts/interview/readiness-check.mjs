@@ -114,6 +114,7 @@ function run() {
     "src/app/api/admin/interview/test-tunnel/status/route.ts",
     "src/app/api/admin/interview/test-tunnel/turn/route.ts",
     "src/app/api/admin/interview/test-tunnel/finalize/route.ts",
+    "src/app/api/interview/turn-based/answer-evaluation/route.ts",
   ]);
 
   requireFiles("Interview server modules", [
@@ -122,6 +123,7 @@ function run() {
     "src/server/sessions/create-session-evaluation.ts",
     "src/server/sessions/list-owned-sessions.ts",
     "src/server/sessions/get-owned-session.ts",
+    "src/server/interview/answer-evaluations.ts",
     "src/server/stories/stories.ts",
     "src/server/stories/story-ai.ts",
     "src/server/introductions/introductions.ts",
@@ -213,6 +215,26 @@ function run() {
     "Record again",
     "Ask Que",
     "Click Submit answer to transcribe this recording and send it",
+  ]);
+  requireMarkers("Rapid review answer cards", "src/server/interview/answer-evaluations.ts", [
+    "interview_answer_evaluator_v1",
+    "interviewAnswerEvaluations",
+    "ensureInterviewAnswerEvaluations",
+    "runType: \"interview_answer_evaluation\"",
+  ]);
+  requireMarkers("Question Queue Rapid review launch", "src/features/interview/interview-app.tsx", [
+    "modeKey: \"rapid_fire\"",
+    "selectedQuestionQueueContext: selectedQuestions.map",
+  ]);
+  requireMarkers("Question Queue target-skill presets and reorder controls", "src/components/interview/question-bank-picker.tsx", [
+    "targetSkills",
+    "selectedSkill",
+    "moveQueuedQuestion",
+    "All skills",
+  ]);
+  requireMarkers("Realtime modes labeled Premium", "src/components/interview/practice-setup.tsx", [
+    "mode.key === \"hands_free_coaching\" || mode.key === \"mock_interview\"",
+    "mode-premium-pill",
   ]);
   requireMarkers("Turn-based session routing for button-driven modes", "src/components/interview/session-view.tsx", [
     "shouldUseTurnBasedSession",

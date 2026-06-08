@@ -397,7 +397,9 @@ export function TurnBasedVoiceSession({
       return;
     }
     const source = `data:${audioMimeType};base64,${audioBase64}`;
+    audioRef.current.preload = "auto";
     audioRef.current.src = source;
+    audioRef.current.load();
     try {
       await new Promise<void>((resolve) => {
         const audio = audioRef.current;
@@ -405,10 +407,13 @@ export function TurnBasedVoiceSession({
           resolve();
           return;
         }
+        let playbackStarted = false;
 
         function cleanup() {
+          audio?.removeEventListener("canplay", startPlayback);
           audio?.removeEventListener("ended", onEnded);
           audio?.removeEventListener("error", onError);
+          audio?.removeEventListener("loadeddata", startPlayback);
         }
 
         function onEnded() {
@@ -422,13 +427,39 @@ export function TurnBasedVoiceSession({
           resolve();
         }
 
-        audio.addEventListener("ended", onEnded, { once: true });
+        function startPlayback() {
+          if (!audio) {
+            resolve();
+            return;
+          }
+          if (playbackStarted) {
+            return;
+          }
+          playbackStarted = true;
+          audio.removeEventListener("canplay", startPlayback);
+          audio.removeEventListener("loadeddata", startPlayback);
+          audio.addEventListener("ended", onEnded, { once: true });
+          audio.addEventListener("error", onError, { once: true });
+          window.setTimeout(() => {
+            void audio.play().catch(() => {
+              cleanup();
+              appendEvent("turn_based.question_audio.play_failed");
+              resolve();
+            });
+          }, 60);
+        }
+
+        audio.addEventListener("canplay", startPlayback, { once: true });
+        audio.addEventListener("loadeddata", startPlayback, { once: true });
         audio.addEventListener("error", onError, { once: true });
-        void audio.play().catch(() => {
-          cleanup();
-          appendEvent("turn_based.question_audio.play_failed");
-          resolve();
-        });
+        if (audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+          startPlayback();
+        }
+        window.setTimeout(() => {
+          if (!playbackStarted && audio.paused && isSessionActive(runId)) {
+            startPlayback();
+          }
+        }, 800);
       });
     } catch {
       appendEvent("turn_based.question_audio.play_failed");
@@ -625,6 +656,17 @@ export function TurnBasedVoiceSession({
 
   async function requestTurn(payload: TurnPayload) {
     const runId = sessionRunIdRef.current;
+    const answeredQueuedQuestion =
+      payload.answerAudioBase64 || payload.answerTranscript
+        ? snapshot.selectedQuestionQueueContext?.[payload.turnIndex - 1] ??
+          (snapshot.selectedQuestionContext && payload.turnIndex === 1
+            ? snapshot.selectedQuestionContext
+            : undefined)
+        : undefined;
+    const answeredQuestion =
+      payload.answerAudioBase64 || payload.answerTranscript
+        ? answeredQueuedQuestion?.questionText || currentQuestion
+        : undefined;
     if (
       snapshot.modeKey === "coaching" &&
       ((payload.explicitChoiceIntent ?? payload.coachingChoiceIntent) === "move_on" ||
@@ -660,6 +702,27 @@ export function TurnBasedVoiceSession({
       }
 
       appendEvent("turn_based.next_turn.response");
+      if (
+        body.transcript?.trim() &&
+        answeredQuestion?.trim() &&
+        (snapshot.modeKey === "rapid_fire" || snapshot.selectedQuestionQueueContext?.length)
+      ) {
+        void fetch("/api/interview/turn-based/answer-evaluation", {
+          body: JSON.stringify({
+            answerTranscript: body.transcript,
+            question: answeredQuestion,
+            questionId: answeredQueuedQuestion?.id,
+            sessionId,
+            snapshot,
+            targetSkill: answeredQueuedQuestion?.targetSkill,
+            turnIndex: payload.turnIndex,
+          }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        }).catch(() => {
+          appendEvent("turn_based.answer_evaluation.background_failed");
+        });
+      }
       await applyTurnResponse(body, runId);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
@@ -1017,6 +1080,8 @@ export function TurnBasedVoiceSession({
     phase === "live" &&
     !done &&
     !requesting;
+  const isRapidReviewFlow =
+    snapshot.modeKey === "rapid_fire" || Boolean(snapshot.selectedQuestionQueueContext?.length);
 
   return (
     <section className={surfaceClassName} aria-labelledby="turn-based-session-title">
@@ -1079,6 +1144,12 @@ export function TurnBasedVoiceSession({
           {endingRequested ? "Ending..." : "End Session"}
         </button>
       </div>
+      {isRapidReviewFlow && phase === "live" && !done && (
+        <p className="field-note">
+          Que will move through the questions without coaching. Your feedback appears after
+          the final answer.
+        </p>
+      )}
       {showCoachingAnswerControls && (
         <div className="inline-actions coaching-choice-actions" aria-label="Answer recording">
           {recording ? (

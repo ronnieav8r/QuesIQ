@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { getOpenAiApiKey } from "@/server/openai/keys";
+import {
+  getOpenAiApiKey,
+  getOpenAiInterviewTestTunnelApiKey,
+} from "@/server/openai/keys";
 import { createSessionEvaluation } from "@/server/sessions/create-session-evaluation";
 
 export const runtime = "nodejs";
@@ -29,7 +32,12 @@ export async function POST(_request: Request, context: RouteContext) {
     );
   }
 
-  if (!getOpenAiApiKey("interview")) {
+  const localTestApiKeyOverride =
+    process.env.NODE_ENV !== "production" && !getOpenAiApiKey("interview")
+      ? getOpenAiInterviewTestTunnelApiKey()
+      : undefined;
+
+  if (!getOpenAiApiKey("interview") && !localTestApiKeyOverride) {
     return NextResponse.json(
       {
         detail: "Practice reviews need the Interview OpenAI key configured before evaluation.",
@@ -42,7 +50,9 @@ export async function POST(_request: Request, context: RouteContext) {
   const { sessionId } = await context.params;
 
   try {
-    const evaluation = await createSessionEvaluation(sessionId, appSession.user.id);
+    const evaluation = await createSessionEvaluation(sessionId, appSession.user.id, {
+      apiKeyOverride: localTestApiKeyOverride,
+    });
 
     if (!evaluation) {
       return NextResponse.json({ error: "Session was not found." }, { status: 404 });

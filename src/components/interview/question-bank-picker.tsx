@@ -13,6 +13,7 @@ type QuestionBankPickerProps = {
 type QuestionBankResponse = {
   questions?: InterviewQuestionRecord[];
   recommendations?: InterviewQuestionRecord[];
+  targetSkills?: string[];
 };
 
 const questionTypes: { key: "" | QuestionTypeKey; label: string }[] = [
@@ -40,8 +41,11 @@ export function QuestionBankPicker({
   const [recommendations, setRecommendations] = useState<InterviewQuestionRecord[]>([]);
   const [queue, setQueue] = useState<InterviewQuestionRecord[]>([]);
   const [search, setSearch] = useState("");
+  const [selectedSkill, setSelectedSkill] = useState("");
   const [selectedType, setSelectedType] = useState<"" | QuestionTypeKey>("");
   const [savingCustom, setSavingCustom] = useState(false);
+  const [targetSkills, setTargetSkills] = useState<string[]>([]);
+  const [deletingQuestionId, setDeletingQuestionId] = useState<string>();
 
   async function loadQuestions() {
     setLoading(true);
@@ -50,6 +54,7 @@ export function QuestionBankPicker({
       const params = new URLSearchParams();
       if (search.trim()) params.set("search", search.trim());
       if (selectedType) params.set("type", selectedType);
+      if (selectedSkill) params.set("skill", selectedSkill);
       const response = await fetch(`/api/interview/questions?${params.toString()}`);
       const body = (await response.json()) as QuestionBankResponse & { error?: string };
 
@@ -59,6 +64,8 @@ export function QuestionBankPicker({
 
       setQuestions(body.questions ?? []);
       setRecommendations(body.recommendations ?? []);
+      setTargetSkills(body.targetSkills ?? []);
+      setCustomTargetSkill((current) => current || body.targetSkills?.[0] || "");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Questions could not be loaded.");
     } finally {
@@ -73,7 +80,7 @@ export function QuestionBankPicker({
 
     return () => window.clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, selectedType]);
+  }, [search, selectedSkill, selectedType]);
 
   const queuedIds = useMemo(
     () => new Set(queue.map((question) => question.id)),
@@ -81,8 +88,8 @@ export function QuestionBankPicker({
   );
   const visibleRecommendations = useMemo(() => {
     const ids = new Set(questions.map((question) => question.id));
-    return recommendations.filter((question) => ids.has(question.id));
-  }, [questions, recommendations]);
+    return recommendations.filter((question) => ids.has(question.id) && !queuedIds.has(question.id));
+  }, [questions, queuedIds, recommendations]);
 
   function addToQueue(question: InterviewQuestionRecord) {
     setQueue((current) => {
@@ -98,9 +105,55 @@ export function QuestionBankPicker({
     setQueue((current) => current.filter((question) => question.id !== questionId));
   }
 
+  function moveQueuedQuestion(questionId: string, direction: -1 | 1) {
+    setQueue((current) => {
+      const index = current.findIndex((question) => question.id === questionId);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) {
+        return current;
+      }
+
+      const next = [...current];
+      const [item] = next.splice(index, 1);
+      next.splice(nextIndex, 0, item);
+      return next;
+    });
+  }
+
+  async function deleteCustomQuestion(questionId: string) {
+    setDeletingQuestionId(questionId);
+    setError(undefined);
+    try {
+      const response = await fetch(`/api/interview/questions/${questionId}`, {
+        method: "DELETE",
+      });
+      const body = (await response.json().catch(() => ({}))) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(body.error || "Question could not be deleted.");
+      }
+
+      setQueue((current) => current.filter((question) => question.id !== questionId));
+      setQuestions((current) => current.filter((question) => question.id !== questionId));
+      setRecommendations((current) =>
+        current.filter((question) => question.id !== questionId),
+      );
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error ? deleteError.message : "Question could not be deleted.",
+      );
+    } finally {
+      setDeletingQuestionId(undefined);
+    }
+  }
+
   async function addCustomQuestion() {
     if (!customQuestionText.trim()) {
       setError("Write a question first.");
+      return;
+    }
+    if (!customTargetSkill.trim()) {
+      setError("Choose a target skill for this question.");
       return;
     }
 
@@ -109,7 +162,7 @@ export function QuestionBankPicker({
     try {
       const response = await fetch("/api/interview/questions", {
         body: JSON.stringify({
-          compatibleModes: ["coaching"],
+          compatibleModes: ["coaching", "rapid_fire"],
           questionText: customQuestionText,
           questionTypeKey: selectedType || undefined,
           targetSkill: customTargetSkill,
@@ -127,7 +180,7 @@ export function QuestionBankPicker({
       }
 
       setCustomQuestionText("");
-      setCustomTargetSkill("");
+      setCustomTargetSkill(targetSkills[0] || "");
       setQuestions((current) => [body.question as InterviewQuestionRecord, ...current]);
       addToQueue(body.question);
     } catch (saveError) {
@@ -151,10 +204,11 @@ export function QuestionBankPicker({
 
       <section className="question-queue-summary" aria-label="Queued questions">
         <div>
-          <p className="eyebrow">Friendly Coaching</p>
+          <p className="eyebrow">Active queue</p>
           <h2>{queue.length || "No"} queued {queue.length === 1 ? "question" : "questions"}</h2>
           <p>
-            Que will ask these exact questions in order, then save the session for review.
+            Que will ask these exact questions in order, then show Rapid review results at
+            the end.
           </p>
         </div>
         <div className="stacked-actions">
@@ -177,15 +231,38 @@ export function QuestionBankPicker({
         <ol className="queued-question-list" aria-label="Selected question order">
           {queue.map((question, index) => (
             <li key={question.id}>
-              <span>{index + 1}</span>
-              <p>{question.questionText}</p>
-              <button
-                className="secondary"
-                onClick={() => removeFromQueue(question.id)}
-                type="button"
-              >
-                Remove
-              </button>
+              <span className="queue-order-badge">{index + 1}</span>
+              <div>
+                <p>{question.questionText}</p>
+                <small>{question.targetSkill || questionTypeLabel(question.questionTypeKey)}</small>
+              </div>
+              <div className="queue-order-actions" aria-label="Queue item actions">
+                <button
+                  aria-label={`Move question ${index + 1} up`}
+                  className="secondary"
+                  disabled={index === 0}
+                  onClick={() => moveQueuedQuestion(question.id, -1)}
+                  type="button"
+                >
+                  Up
+                </button>
+                <button
+                  aria-label={`Move question ${index + 1} down`}
+                  className="secondary"
+                  disabled={index === queue.length - 1}
+                  onClick={() => moveQueuedQuestion(question.id, 1)}
+                  type="button"
+                >
+                  Down
+                </button>
+                <button
+                  className="secondary"
+                  onClick={() => removeFromQueue(question.id)}
+                  type="button"
+                >
+                  Remove
+                </button>
+              </div>
             </li>
           ))}
         </ol>
@@ -213,6 +290,29 @@ export function QuestionBankPicker({
             </button>
           ))}
         </div>
+        {targetSkills.length > 0 && (
+          <div className="skill-filter-strip" aria-label="Target skill filter">
+            <button
+              aria-pressed={selectedSkill === ""}
+              className={selectedSkill === "" ? "active" : undefined}
+              onClick={() => setSelectedSkill("")}
+              type="button"
+            >
+              All skills
+            </button>
+            {targetSkills.map((skill) => (
+              <button
+                aria-pressed={selectedSkill === skill}
+                className={selectedSkill === skill ? "active" : undefined}
+                key={skill}
+                onClick={() => setSelectedSkill(skill)}
+                type="button"
+              >
+                {skill}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {visibleRecommendations.length > 0 && (
@@ -220,14 +320,20 @@ export function QuestionBankPicker({
           <strong>Practice again</strong>
           <div className="question-row-list">
             {visibleRecommendations.slice(0, 3).map((question) => (
-              <button
-                disabled={queuedIds.has(question.id)}
-                key={question.id}
-                onClick={() => addToQueue(question)}
-                type="button"
-              >
-                {question.questionText}
-              </button>
+              <article className="question-row compact" key={question.id}>
+                <div>
+                  <strong>{question.questionText}</strong>
+                  <p>{question.targetSkill || questionTypeLabel(question.questionTypeKey)}</p>
+                </div>
+                <button
+                  className="secondary compact-action"
+                  disabled={queue.length >= 10}
+                  onClick={() => addToQueue(question)}
+                  type="button"
+                >
+                  Add
+                </button>
+              </article>
             ))}
           </div>
         </section>
@@ -245,13 +351,27 @@ export function QuestionBankPicker({
         </label>
         <label>
           <span>Target skill</span>
-          <input
-            placeholder="Optional, e.g. conflict, leadership, role fit"
+          <select
+            disabled={targetSkills.length === 0}
             value={customTargetSkill}
             onChange={(event) => setCustomTargetSkill(event.target.value)}
-          />
+          >
+            {targetSkills.length === 0 ? (
+              <option value="">No preset skills available</option>
+            ) : (
+              targetSkills.map((skill) => (
+                <option key={skill} value={skill}>
+                  {skill}
+                </option>
+              ))
+            )}
+          </select>
         </label>
-        <button disabled={savingCustom} onClick={addCustomQuestion} type="button">
+        <button
+          disabled={savingCustom || !customTargetSkill.trim()}
+          onClick={addCustomQuestion}
+          type="button"
+        >
           {savingCustom ? "Saving" : "Add to Queue"}
         </button>
       </details>
@@ -276,13 +396,26 @@ export function QuestionBankPicker({
                 </p>
               </div>
               <span>{question.source === "official" ? question.sourceLabel : "Private"}</span>
-              <button
-                disabled={queued || queue.length >= 10}
-                onClick={() => addToQueue(question)}
-                type="button"
-              >
-                {queued ? "Queued" : "Add"}
-              </button>
+              <div className="question-row-actions">
+                <button
+                  className="secondary compact-action"
+                  disabled={queued || queue.length >= 10}
+                  onClick={() => addToQueue(question)}
+                  type="button"
+                >
+                  {queued ? "Queued" : "Add"}
+                </button>
+                {question.source === "custom" && (
+                  <button
+                    className="secondary compact-action danger"
+                    disabled={deletingQuestionId === question.id}
+                    onClick={() => void deleteCustomQuestion(question.id)}
+                    type="button"
+                  >
+                    {deletingQuestionId === question.id ? "Deleting" : "Delete"}
+                  </button>
+                )}
+              </div>
             </article>
           );
         })}

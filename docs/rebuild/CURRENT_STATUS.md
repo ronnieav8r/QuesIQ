@@ -184,6 +184,11 @@ Last updated: 2026-06-02
 - UI-only onboarding/interview-context flow with a fast path into practice
 - Refactored interview UI components and typed seeded practice data
 - Practice setup wizard with mode-specific question-type routing
+- Question Queue now uses a Rapid Fire-style Rapid review flow with exact
+  queued question order, preset target-skill filters, reorder controls, and
+  end-only per-answer result cards.
+- Realtime ChatGPT/audio modes are Premium-labeled; this includes Mock
+  Interview and Hands-Free Coaching.
 - Seeded backend Interview catalog records for practice modes, question types,
   and interviewer styles, exposed through `/api/catalog` with frontend fallback
   defaults

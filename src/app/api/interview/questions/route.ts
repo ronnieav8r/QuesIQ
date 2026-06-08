@@ -17,6 +17,10 @@ export async function GET(request: Request) {
   }
 
   const params = new URL(request.url).searchParams;
+  const allQuestions = await listInterviewQuestions(appSession.user.id);
+  const targetSkills = Array.from(
+    new Set(allQuestions.map((question) => question.targetSkill.trim()).filter(Boolean)),
+  ).sort((a, b) => a.localeCompare(b));
   const questions = await listInterviewQuestions(appSession.user.id, {
     difficulty: params.get("difficulty") ?? undefined,
     questionTypeKey: params.get("type") ?? undefined,
@@ -27,7 +31,7 @@ export async function GET(request: Request) {
   });
   const recommendations = await listQuestionPracticeRecommendations(appSession.user.id);
 
-  return NextResponse.json({ questions, recommendations });
+  return NextResponse.json({ questions, recommendations, targetSkills });
 }
 
 export async function POST(request: Request) {
@@ -49,6 +53,19 @@ export async function POST(request: Request) {
       tags?: string[];
       targetSkill?: string;
     };
+    const targetSkill = body.targetSkill?.trim() ?? "";
+    if (targetSkill) {
+      const allQuestions = await listInterviewQuestions(appSession.user.id);
+      const targetSkills = new Set(
+        allQuestions.map((question) => question.targetSkill.trim()).filter(Boolean),
+      );
+      if (!targetSkills.has(targetSkill)) {
+        return NextResponse.json(
+          { error: "Choose a target skill from the available list." },
+          { status: 400 },
+        );
+      }
+    }
     const question = await createCustomInterviewQuestion(appSession.user.id, body);
 
     return NextResponse.json({ question }, { status: 201 });

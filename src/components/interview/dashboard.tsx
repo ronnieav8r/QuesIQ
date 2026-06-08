@@ -754,8 +754,8 @@ export function Dashboard({
                 : "Waiting for feedback"
             }
             scores={allTimeScoreAverages}
-            subtitle="Your overall skill performance across all reviews."
-            title="Skill Scores"
+            subtitle="Your overall performance across all reviews."
+            title="Overall Scores"
             titleId="all-time-stats-title"
             type="skills"
           />

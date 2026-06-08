@@ -801,6 +801,7 @@ export const aiRuns = pgTable(
         | "debrief"
         | "dpe_review"
         | "evaluation"
+        | "interview_answer_evaluation"
         | "interview_transcription"
         | "interview_tts"
         | "interview_turn"
@@ -830,6 +831,42 @@ export const aiRuns = pgTable(
     promptConfigIdx: index("ai_runs_prompt_config_idx").on(aiRun.promptConfigId),
     statusIdx: index("ai_runs_status_idx").on(aiRun.status),
     typeIdx: index("ai_runs_type_idx").on(aiRun.runType),
+  }),
+);
+
+export const interviewAnswerEvaluations = pgTable(
+  "interview_answer_evaluations",
+  {
+    aiRunId: uuid("ai_run_id").references(() => aiRuns.id, { onDelete: "set null" }),
+    answerTranscript: text("answer_transcript").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    evaluationJson: jsonb("evaluation_json").$type<Record<string, unknown>>().notNull(),
+    evaluatorModel: text("evaluator_model"),
+    evaluatorPromptKey: text("evaluator_prompt_key").notNull(),
+    evaluatorPromptVersion: integer("evaluator_prompt_version").notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    providerRequestId: text("provider_request_id"),
+    question: text("question").notNull(),
+    questionId: uuid("question_id").references(() => interviewQuestions.id, {
+      onDelete: "set null",
+    }),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    targetSkill: text("target_skill").default("").notNull(),
+    totalTokens: integer("total_tokens"),
+    turnIndex: integer("turn_index").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  },
+  (evaluation) => ({
+    sessionTurnIdx: uniqueIndex("interview_answer_evaluations_session_turn_idx").on(
+      evaluation.sessionId,
+      evaluation.turnIndex,
+    ),
+    userIdx: index("interview_answer_evaluations_user_idx").on(evaluation.userId),
   }),
 );
 

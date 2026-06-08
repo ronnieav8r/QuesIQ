@@ -103,6 +103,12 @@ turn-based engine used by the Admin Prompt Test Tunnel, and
 Rapid Fire, Intro Practice, and Story Practice/TMAAT without adding a Render
 backdoor endpoint.
 
+Question Queue now launches through the Rapid Fire turn-based runtime. Use the
+builder to confirm preset target-skill filters, active queue ordering, up/down
+mobile controls, and end-only per-question Rapid review cards. Per-answer
+evaluation uses `interview_answer_evaluator_v1` and is backfilled during the
+normal session review if a background answer-card request is missed.
+
 ## Hands-Free Coaching QA
 
 Hands-Free Coaching is a separate premium-labeled realtime voice mode. It is

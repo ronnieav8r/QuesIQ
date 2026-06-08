@@ -310,6 +310,7 @@ export type SessionLaunchRecord = {
 };
 
 export type SessionHistoryItem = {
+  answerEvaluations?: InterviewAnswerEvaluationRecord[];
   contextSnapshot?: SessionSetupSnapshot;
   createdAt: string;
   durationSeconds?: number;
@@ -643,8 +644,40 @@ export type VoiceSessionArtifactDraft = {
   transcript: VoiceTranscriptTurn[];
 };
 
+export type InterviewAnswerEvaluationVerdict =
+  | "below_standard"
+  | "meets_standard"
+  | "partial";
+
+export type InterviewAnswerEvaluation = {
+  confidence: number;
+  missingAnswerElements: string[];
+  referenceAnswerElementsMatched: string[];
+  result: string;
+  tightenUpAdvice: string[];
+  verdict: InterviewAnswerEvaluationVerdict;
+};
+
+export type InterviewAnswerEvaluationRecord = {
+  aiRunId?: string;
+  answerTranscript: string;
+  confidence: number;
+  createdAt: string;
+  evaluation: InterviewAnswerEvaluation;
+  evaluatorModel?: string;
+  evaluatorPromptKey: string;
+  evaluatorPromptVersion: number;
+  id: string;
+  question: string;
+  questionId?: string;
+  sessionId: string;
+  targetSkill: string;
+  turnIndex: number;
+};
+
 export type PromptConfigKey =
   | "dpe_answer_evaluator_v1"
+  | "interview_answer_evaluator_v1"
   | "introduction_draft"
   | "quira_support_chat"
   | "resume_summary"
@@ -731,6 +764,7 @@ export type AiRunRecord = {
     | "debrief"
     | "dpe_review"
     | "evaluation"
+    | "interview_answer_evaluation"
     | "interview_transcription"
     | "interview_tts"
     | "interview_turn"

@@ -155,6 +155,19 @@ export const dpeAnswerEvaluatorInstructions = [
   "Verdict must be one of meets_standard, partial, or below_standard.",
 ].join("\n");
 
+export const interviewAnswerEvaluatorInstructions = [
+  "You are Que, QuesIQ Interview's concise answer evaluator.",
+  "Evaluate one submitted spoken interview answer against one interview question and the provided target role/company context.",
+  "Use only the question, transcript, target skill, question focus, selected question context, and candidate context provided by QuesIQ.",
+  "Do not invent candidate facts, company facts, resume facts, metrics, credentials, motivations, or outcomes.",
+  "Return JSON only with verdict, result, tightenUpAdvice, referenceAnswerElementsMatched, missingAnswerElements, and confidence.",
+  "Verdict must be one of meets_standard, partial, or below_standard.",
+  "The result should be one short learner-facing sentence.",
+  "tightenUpAdvice should contain one or two concrete improvements tied to what the candidate actually said or clearly left out.",
+  "For behavioral answers, judge whether the answer includes a real example, personal Action, and Result evidence. Do not require a full STAR bundle in one spoken answer.",
+  "For Rapid Fire and Question Queue, do not coach as if the user can retry immediately; prepare compact feedback for the end-of-session review card.",
+].join("\n");
+
 export const turnQuestionPlannerInstructions = [
   "You are Que's turn-based Coaching question planner.",
   "",
@@ -329,6 +342,15 @@ export const promptConfigFallbacks = {
     target: "evaluation",
     version: 0,
   },
+  interview_answer_evaluator_v1: {
+    active: true,
+    instructions: interviewAnswerEvaluatorInstructions,
+    key: "interview_answer_evaluator_v1",
+    model: process.env.OPENAI_INTERVIEW_ANSWER_EVALUATOR_MODEL || process.env.OPENAI_EVALUATION_MODEL || "gpt-5.4-mini",
+    name: "Interview Answer Evaluator V1",
+    target: "evaluation",
+    version: 0,
+  },
   introduction_draft: {
     active: true,
     instructions: introductionDraftInstructions,
@@ -474,6 +496,7 @@ export const promptConfigFallbacks = {
 export function isPromptConfigKey(value: unknown): value is PromptConfigKey {
   return (
     value === "dpe_answer_evaluator_v1" ||
+    value === "interview_answer_evaluator_v1" ||
     value === "realtime_interviewer" ||
     value === "realtime_hands_free_coach" ||
     value === "introduction_draft" ||

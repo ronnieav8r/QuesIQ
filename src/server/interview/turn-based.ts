@@ -1517,6 +1517,7 @@ async function createTurnPayload(input: {
       ? {
           ...generatedDecision,
           done: false,
+          feedback: undefined,
           question: queuedNextQuestion.questionText,
           routingReason: `Question Queue item ${input.turnIndex + 1} used exactly from the Interview question bank.`,
           state: "move_on" as const,
@@ -2017,6 +2018,7 @@ export async function runTurnBasedInterviewTurn(input: {
       ? {
           ...generatedDecision,
           done: false,
+          feedback: undefined,
           question: queuedNextQuestion.questionText,
           routingReason: `Question Queue item ${input.turnInput.turnIndex + 1} used exactly from the Interview question bank.`,
           state: "move_on" as const,

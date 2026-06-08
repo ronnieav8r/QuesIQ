@@ -8,6 +8,7 @@ import {
 import { getSpeechSummary } from "@/product/speech-metrics";
 import type {
   CoachingMemoryRecord,
+  InterviewAnswerEvaluationRecord,
   SessionEvaluationResult,
   SessionSetupSnapshot,
   VoiceSessionArtifactDraft,
@@ -32,6 +33,7 @@ import {
   getActiveAiPricing,
 } from "@/server/pricing/ai-pricing";
 import { getOpenAiApiKey } from "@/server/openai/keys";
+import { ensureInterviewAnswerEvaluations } from "@/server/interview/answer-evaluations";
 import { markQuestionAttemptReviewed } from "@/server/interview/question-bank";
 import { recordReviewProgression } from "@/server/progression/progression";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
@@ -43,6 +45,7 @@ import {
 import { recordIntroductionPracticeCoaching } from "@/server/introductions/introductions";
 
 type SessionEvaluationRecord = {
+  answerEvaluations?: InterviewAnswerEvaluationRecord[];
   id: string;
   model: string;
   result: SessionEvaluationResult;
@@ -320,6 +323,7 @@ function buildEvaluationInput(
   promptComponents: SessionPromptComponents,
   storyLibrary: StoryLibraryContextItem[],
   turnArchetypes: TurnArchetypeContext[],
+  answerEvaluations: InterviewAnswerEvaluationRecord[],
   memory?: CoachingMemoryRecord,
 ) {
   const speechSummary = getSpeechSummary(artifact);
@@ -388,6 +392,21 @@ function buildEvaluationInput(
             turnIndex: turn.turnIndex,
           }))
         : "No turn archetype metadata was recorded for this session.",
+    answerEvaluations:
+      answerEvaluations.length > 0
+        ? answerEvaluations.map((evaluation) => ({
+            confidence: evaluation.confidence,
+            missingAnswerElements: evaluation.evaluation.missingAnswerElements,
+            question: evaluation.question,
+            referenceAnswerElementsMatched:
+              evaluation.evaluation.referenceAnswerElementsMatched,
+            result: evaluation.evaluation.result,
+            targetSkill: evaluation.targetSkill,
+            tightenUpAdvice: evaluation.evaluation.tightenUpAdvice,
+            turnIndex: evaluation.turnIndex,
+            verdict: evaluation.evaluation.verdict,
+          }))
+        : "No per-answer evaluations were stored for this session.",
     candidateContext: {
       jobDescription: snapshot.interviewContext.jobDescription || "Not provided",
       resumeExcerpt:
@@ -452,6 +471,7 @@ async function requestEvaluation(
   model: string,
   storyLibrary: StoryLibraryContextItem[],
   turnArchetypes: TurnArchetypeContext[],
+  answerEvaluations: InterviewAnswerEvaluationRecord[],
   memory?: CoachingMemoryRecord,
   apiKeyOverride?: string,
 ) {
@@ -476,6 +496,7 @@ async function requestEvaluation(
               promptComponents,
               storyLibrary,
               turnArchetypes,
+              answerEvaluations,
               memory,
             ),
           ),
@@ -678,7 +699,17 @@ export async function createSessionEvaluation(
       existingSession?.voiceArtifact ?? undefined,
     );
 
-    return existing;
+    return {
+      ...existing,
+      answerEvaluations: existingSession
+        ? await ensureInterviewAnswerEvaluations({
+            apiKeyOverride: options.apiKeyOverride,
+            sessionId,
+            snapshot: existingSession.contextSnapshot,
+            userId,
+          })
+        : undefined,
+    };
   }
 
   const [session] = await getDb()
@@ -732,6 +763,12 @@ export async function createSessionEvaluation(
     listStoryLibraryContext(userId),
   ]);
   const turnArchetypes = await listTurnArchetypeContext(sessionId);
+  const answerEvaluations = await ensureInterviewAnswerEvaluations({
+    apiKeyOverride: options.apiKeyOverride,
+    sessionId,
+    snapshot: session.contextSnapshot,
+    userId,
+  });
   const model = promptConfig.model;
   await getDb()
     .update(sessions)
@@ -770,6 +807,7 @@ export async function createSessionEvaluation(
       model,
       storyLibrary,
       turnArchetypes,
+      answerEvaluations,
       memory,
       options.apiKeyOverride,
     );
@@ -895,5 +933,8 @@ export async function createSessionEvaluation(
     });
   }
 
-  return evaluation;
+  return {
+    ...evaluation,
+    answerEvaluations,
+  };
 }

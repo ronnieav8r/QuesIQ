@@ -604,7 +604,7 @@ export default function Home() {
     const targetContext = getPracticeTargetContext(selectedJobTarget ?? activeJobTarget);
     const snapshot: SessionSetupSnapshot = {
       interviewContext: targetContext,
-      modeKey: "coaching",
+      modeKey: "rapid_fire",
       questionTypeKey: selectedQuestions[0]?.questionTypeKey,
       selectedQuestionContext:
         selectedQuestions[0] &&
@@ -654,7 +654,7 @@ export default function Home() {
         throw new Error(body.detail || body.error || "Question queue could not be created.");
       }
 
-      setSelectedModeKey("coaching");
+      setSelectedModeKey("rapid_fire");
       setSelectedQuestionKey(selectedQuestions[0]?.questionTypeKey);
       setSelectedStyleKey("friendly");
       setTurnBasedQuestionCount(selectedQuestions.length);

@@ -12,6 +12,7 @@ import {
   isArtifactTooShortToReview,
 } from "@/product/review-eligibility";
 import type {
+  InterviewAnswerEvaluationRecord,
   InterviewCatalog,
   SessionEvaluationResult,
   SessionLaunchRecord,
@@ -34,6 +35,54 @@ type RuntimeConfig = {
   maxTurns?: number;
 };
 
+function answerVerdictLabel(verdict: InterviewAnswerEvaluationRecord["evaluation"]["verdict"]) {
+  if (verdict === "meets_standard") return "Meets standard";
+  if (verdict === "below_standard") return "Below standard";
+  return "Partial";
+}
+
+function AnswerEvaluationCards({
+  evaluations,
+}: {
+  evaluations: InterviewAnswerEvaluationRecord[];
+}) {
+  if (evaluations.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="rapid-review-cards" aria-label="Per-question review">
+      <div className="section-head">
+        <h3>Question Results</h3>
+        <span>{evaluations.length} answered</span>
+      </div>
+      {evaluations.map((answer, index) => (
+        <article
+          className={`rapid-review-card verdict-${answer.evaluation.verdict}`}
+          key={answer.id}
+        >
+          <div className="section-head">
+            <strong>Question {index + 1}</strong>
+            <span>{answerVerdictLabel(answer.evaluation.verdict)}</span>
+          </div>
+          <p>{answer.question}</p>
+          <p>{answer.evaluation.result}</p>
+          {answer.evaluation.tightenUpAdvice.length > 0 && (
+            <ul>
+              {answer.evaluation.tightenUpAdvice.map((advice) => (
+                <li key={advice}>{advice}</li>
+              ))}
+            </ul>
+          )}
+          {answer.evaluation.missingAnswerElements.length > 0 && (
+            <small>Missing: {answer.evaluation.missingAnswerElements.join(", ")}</small>
+          )}
+        </article>
+      ))}
+    </section>
+  );
+}
+
 export function SessionView({
   catalog,
   onBackToSetup,
@@ -50,6 +99,9 @@ export function SessionView({
     "collecting" | "error" | "saved" | "saving"
   >("collecting");
   const [evaluation, setEvaluation] = useState<SessionEvaluationResult>();
+  const [answerEvaluations, setAnswerEvaluations] = useState<
+    InterviewAnswerEvaluationRecord[]
+  >([]);
   const [evaluationError, setEvaluationError] = useState<string>();
   const [evaluationStatus, setEvaluationStatus] = useState<
     "idle" | "ready" | "reviewing" | "unavailable"
@@ -231,6 +283,7 @@ export function SessionView({
           detail?: string;
           error?: string;
           evaluation?: {
+            answerEvaluations?: InterviewAnswerEvaluationRecord[];
             result: SessionEvaluationResult;
           };
         };
@@ -240,6 +293,7 @@ export function SessionView({
         }
 
         setEvaluation(body.evaluation.result);
+        setAnswerEvaluations(body.evaluation.answerEvaluations ?? []);
         setEvaluationStatus("ready");
       } catch (error) {
         evaluationRequestedRef.current = false;
@@ -306,6 +360,57 @@ export function SessionView({
           snapshot={snapshot}
         />
       )}
+
+      <section className="panel session-review" aria-labelledby="session-review-title">
+        <div className="section-head">
+          <h2 id="session-review-title">Practice Review</h2>
+          <span>
+            {evaluationStatus === "idle" && "Waiting for save"}
+            {evaluationStatus === "reviewing" && "Reviewing"}
+            {evaluationStatus === "ready" && "Ready"}
+            {evaluationStatus === "unavailable" &&
+              (evaluationError === tooShortReviewMessage ? "Too short to score" : "Try again")}
+          </span>
+        </div>
+        {evaluation ? (
+          <div className="review-body">
+            <p>{evaluation.summary}</p>
+            <AnswerEvaluationCards evaluations={answerEvaluations} />
+            <SessionSpeechMetrics artifact={artifactDraft} />
+            <ReviewScoreSummary evaluation={evaluation} />
+            <div className="review-callout">
+              <h3>Coach Note</h3>
+              <p>{evaluation.coachingInsight}</p>
+            </div>
+            <ReviewDetailSections detail={evaluation.reviewDetail} />
+            <div className="review-callout">
+              <h3>Next Move</h3>
+              <p>{evaluation.nextAction}</p>
+            </div>
+          </div>
+        ) : (
+          <p>
+            {evaluationError === tooShortReviewMessage
+              ? snapshot.turnBasedQuestionCount || snapshot.modeKey === "rapid_fire"
+                ? "This session is saved in your history, but Que needs at least one answered question to create a review."
+                : `This session is saved in your history, but it was under ${minimumReviewDurationSeconds} seconds so it will not be scored.`
+              : "After the voice artifact is saved, Que will review the transcript and prepare your practice feedback here."}
+          </p>
+        )}
+        {evaluationError && <p className="form-error">{evaluationError}</p>}
+        {evaluationStatus === "unavailable" && evaluationError !== tooShortReviewMessage && (
+          <button
+            onClick={() => {
+              evaluationRequestedRef.current = false;
+              setEvaluationStatus("reviewing");
+              setReviewAttempt((current) => current + 1);
+            }}
+            type="button"
+          >
+            Retry Review
+          </button>
+        )}
+      </section>
 
       <div className="inline-actions">
         <button
@@ -450,9 +555,9 @@ export function SessionView({
           </div>
         </section>
 
-        <section className="panel session-review" aria-labelledby="session-review-title">
+        <section className="panel session-review" aria-labelledby="admin-session-review-title">
           <div className="section-head">
-            <h2 id="session-review-title">Practice Review</h2>
+            <h2 id="admin-session-review-title">Practice Review</h2>
             <span>
               {evaluationStatus === "idle" && "Waiting for save"}
               {evaluationStatus === "reviewing" && "Reviewing"}
