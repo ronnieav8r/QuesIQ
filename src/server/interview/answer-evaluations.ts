@@ -17,6 +17,7 @@ import { getOpenAiApiKey } from "@/server/openai/keys";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 
 const PROMPT_CONFIG_KEY = "interview_answer_evaluator_v1";
+let answerEvaluationStorageUnavailable = false;
 
 export type InterviewAnswerEvaluationSource = {
   answerTranscript: string;
@@ -25,6 +26,17 @@ export type InterviewAnswerEvaluationSource = {
   targetSkill?: string;
   turnIndex: number;
 };
+
+function isMissingAnswerEvaluationTableError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes("interview_answer_evaluations") &&
+    (message.includes("does not exist") ||
+      message.includes("relation") ||
+      message.includes("no such table") ||
+      message.includes("Failed query"))
+  );
+}
 
 function normalizeStringList(value: unknown) {
   return Array.isArray(value)
@@ -301,6 +313,10 @@ export async function saveInterviewAnswerEvaluation(input: {
   source: InterviewAnswerEvaluationSource;
   userId: string;
 }) {
+  if (answerEvaluationStorageUnavailable) {
+    return undefined;
+  }
+
   if (!input.source.answerTranscript.trim() || input.source.turnIndex <= 0) {
     return undefined;
   }
@@ -312,6 +328,15 @@ export async function saveInterviewAnswerEvaluation(input: {
     .limit(1);
 
   if (!ownedSession) {
+    return undefined;
+  }
+
+  try {
+    await listInterviewAnswerEvaluations(input.sessionId);
+  } catch {
+    return undefined;
+  }
+  if (answerEvaluationStorageUnavailable) {
     return undefined;
   }
 
@@ -332,30 +357,10 @@ export async function saveInterviewAnswerEvaluation(input: {
         promptConfig,
       };
 
-  const [row] = await getDb()
-    .insert(interviewAnswerEvaluations)
-    .values({
-      aiRunId: modelEvaluation.aiRunId,
-      answerTranscript: input.source.answerTranscript,
-      evaluationJson: modelEvaluation.evaluation,
-      evaluatorModel: modelEvaluation.model,
-      evaluatorPromptKey: modelEvaluation.promptConfig.key,
-      evaluatorPromptVersion: modelEvaluation.promptConfig.version,
-      inputTokens: "inputTokens" in modelEvaluation ? modelEvaluation.inputTokens : undefined,
-      outputTokens: "outputTokens" in modelEvaluation ? modelEvaluation.outputTokens : undefined,
-      providerRequestId:
-        "providerRequestId" in modelEvaluation ? modelEvaluation.providerRequestId : undefined,
-      question: input.source.question,
-      questionId: input.source.questionId,
-      sessionId: input.sessionId,
-      targetSkill: input.source.targetSkill || "",
-      totalTokens: "totalTokens" in modelEvaluation ? modelEvaluation.totalTokens : undefined,
-      turnIndex: input.source.turnIndex,
-      updatedAt: new Date(),
-      userId: input.userId,
-    })
-    .onConflictDoUpdate({
-      set: {
+  try {
+    const [row] = await getDb()
+      .insert(interviewAnswerEvaluations)
+      .values({
         aiRunId: modelEvaluation.aiRunId,
         answerTranscript: input.source.answerTranscript,
         evaluationJson: modelEvaluation.evaluation,
@@ -368,25 +373,63 @@ export async function saveInterviewAnswerEvaluation(input: {
           "providerRequestId" in modelEvaluation ? modelEvaluation.providerRequestId : undefined,
         question: input.source.question,
         questionId: input.source.questionId,
+        sessionId: input.sessionId,
         targetSkill: input.source.targetSkill || "",
         totalTokens: "totalTokens" in modelEvaluation ? modelEvaluation.totalTokens : undefined,
+        turnIndex: input.source.turnIndex,
         updatedAt: new Date(),
-      },
-      target: [interviewAnswerEvaluations.sessionId, interviewAnswerEvaluations.turnIndex],
-    })
-    .returning();
+        userId: input.userId,
+      })
+      .onConflictDoUpdate({
+        set: {
+          aiRunId: modelEvaluation.aiRunId,
+          answerTranscript: input.source.answerTranscript,
+          evaluationJson: modelEvaluation.evaluation,
+          evaluatorModel: modelEvaluation.model,
+          evaluatorPromptKey: modelEvaluation.promptConfig.key,
+          evaluatorPromptVersion: modelEvaluation.promptConfig.version,
+          inputTokens: "inputTokens" in modelEvaluation ? modelEvaluation.inputTokens : undefined,
+          outputTokens: "outputTokens" in modelEvaluation ? modelEvaluation.outputTokens : undefined,
+          providerRequestId:
+            "providerRequestId" in modelEvaluation ? modelEvaluation.providerRequestId : undefined,
+          question: input.source.question,
+          questionId: input.source.questionId,
+          targetSkill: input.source.targetSkill || "",
+          totalTokens: "totalTokens" in modelEvaluation ? modelEvaluation.totalTokens : undefined,
+          updatedAt: new Date(),
+        },
+        target: [interviewAnswerEvaluations.sessionId, interviewAnswerEvaluations.turnIndex],
+      })
+      .returning();
 
-  return toRecord(row);
+    return toRecord(row);
+  } catch (error) {
+    if (isMissingAnswerEvaluationTableError(error)) {
+      answerEvaluationStorageUnavailable = true;
+      return undefined;
+    }
+
+    throw error;
+  }
 }
 
 export async function listInterviewAnswerEvaluations(sessionId: string) {
-  const rows = await getDb()
-    .select()
-    .from(interviewAnswerEvaluations)
-    .where(eq(interviewAnswerEvaluations.sessionId, sessionId))
-    .orderBy(asc(interviewAnswerEvaluations.turnIndex));
+  try {
+    const rows = await getDb()
+      .select()
+      .from(interviewAnswerEvaluations)
+      .where(eq(interviewAnswerEvaluations.sessionId, sessionId))
+      .orderBy(asc(interviewAnswerEvaluations.turnIndex));
 
-  return rows.map(toRecord);
+    return rows.map(toRecord);
+  } catch (error) {
+    if (isMissingAnswerEvaluationTableError(error)) {
+      answerEvaluationStorageUnavailable = true;
+      return [];
+    }
+
+    throw error;
+  }
 }
 
 export async function ensureInterviewAnswerEvaluations(input: {

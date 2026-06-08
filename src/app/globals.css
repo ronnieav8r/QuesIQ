@@ -2708,6 +2708,20 @@ label span {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
+.question-bank-filter-group {
+  background: rgba(13, 19, 38, 0.28);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 0.65rem;
+  padding: var(--space-2);
+}
+
+.question-bank-filter-group h3 {
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
 .question-row-actions {
   align-items: center;
   display: flex;
@@ -2815,10 +2829,6 @@ label span {
   display: grid;
   gap: var(--space-2);
   padding: var(--space-3);
-}
-
-.question-bank-recommendations button {
-  text-align: left;
 }
 
 .question-row {

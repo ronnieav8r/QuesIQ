@@ -277,40 +277,46 @@ export function QuestionBankPicker({
             onChange={(event) => setSearch(event.target.value)}
           />
         </label>
-        <div className="component-tabs" aria-label="Question type filter">
-          {questionTypes.map((type) => (
-            <button
-              aria-pressed={selectedType === type.key}
-              className={selectedType === type.key ? "active" : undefined}
-              key={type.key || "all"}
-              onClick={() => setSelectedType(type.key)}
-              type="button"
-            >
-              {type.label}
-            </button>
-          ))}
-        </div>
-        {targetSkills.length > 0 && (
-          <div className="skill-filter-strip" aria-label="Target skill filter">
-            <button
-              aria-pressed={selectedSkill === ""}
-              className={selectedSkill === "" ? "active" : undefined}
-              onClick={() => setSelectedSkill("")}
-              type="button"
-            >
-              All skills
-            </button>
-            {targetSkills.map((skill) => (
+        <div className="question-bank-filter-group">
+          <h3>Question type</h3>
+          <div className="component-tabs" aria-label="Question type filter">
+            {questionTypes.map((type) => (
               <button
-                aria-pressed={selectedSkill === skill}
-                className={selectedSkill === skill ? "active" : undefined}
-                key={skill}
-                onClick={() => setSelectedSkill(skill)}
+                aria-pressed={selectedType === type.key}
+                className={selectedType === type.key ? "active" : undefined}
+                key={type.key || "all"}
+                onClick={() => setSelectedType(type.key)}
                 type="button"
               >
-                {skill}
+                {type.label}
               </button>
             ))}
+          </div>
+        </div>
+        {targetSkills.length > 0 && (
+          <div className="question-bank-filter-group">
+            <h3>Target skill</h3>
+            <div className="skill-filter-strip" aria-label="Target skill filter">
+              <button
+                aria-pressed={selectedSkill === ""}
+                className={selectedSkill === "" ? "active" : undefined}
+                onClick={() => setSelectedSkill("")}
+                type="button"
+              >
+                All skills
+              </button>
+              {targetSkills.map((skill) => (
+                <button
+                  aria-pressed={selectedSkill === skill}
+                  className={selectedSkill === skill ? "active" : undefined}
+                  key={skill}
+                  onClick={() => setSelectedSkill(skill)}
+                  type="button"
+                >
+                  {skill}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -326,7 +332,7 @@ export function QuestionBankPicker({
                   <p>{question.targetSkill || questionTypeLabel(question.questionTypeKey)}</p>
                 </div>
                 <button
-                  className="secondary compact-action"
+                  className="compact-action"
                   disabled={queue.length >= 10}
                   onClick={() => addToQueue(question)}
                   type="button"
@@ -398,7 +404,7 @@ export function QuestionBankPicker({
               <span>{question.source === "official" ? question.sourceLabel : "Private"}</span>
               <div className="question-row-actions">
                 <button
-                  className="secondary compact-action"
+                  className="compact-action"
                   disabled={queued || queue.length >= 10}
                   onClick={() => addToQueue(question)}
                   type="button"
