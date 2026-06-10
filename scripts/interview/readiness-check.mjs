@@ -222,6 +222,13 @@ function run() {
     "ensureInterviewAnswerEvaluations",
     "runType: \"interview_answer_evaluation\"",
   ]);
+  requireMarkers("Turn-based progression cleanup", "src/server/progression/progression.ts", [
+    "core_practice_paths_used",
+    "premium_practice_modes_used",
+    "question_queue_count",
+    "getEffectiveReviewDurationSeconds",
+    "durationSource",
+  ]);
   requireMarkers("Question Queue Rapid review launch", "src/features/interview/interview-app.tsx", [
     "modeKey: \"rapid_fire\"",
     "selectedQuestionQueueContext: selectedQuestions.map",
