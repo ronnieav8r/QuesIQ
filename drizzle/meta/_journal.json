@@ -533,6 +533,13 @@
       "when": 1781136000000,
       "tag": "0076_coaching_meta_input_guardrails",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1781222400000,
+      "tag": "0077_refine_technical_specificity_prompt",
+      "breakpoints": true
     }
   ]
 }

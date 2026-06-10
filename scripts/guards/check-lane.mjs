@@ -46,6 +46,7 @@ const lanes = {
     "drizzle/0073_cleanup_hands_free_coaching_context.sql",
     "drizzle/0075_add_interview_answer_evaluations.sql",
     "drizzle/0076_coaching_meta_input_guardrails.sql",
+    "drizzle/0077_refine_technical_specificity_prompt.sql",
     "drizzle/meta/_journal.json",
     "docs/products/interview/",
     "docs/rebuild/CURRENT_STATUS.md",

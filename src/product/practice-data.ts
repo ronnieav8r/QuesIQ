@@ -54,7 +54,7 @@ export const questionTypes: QuestionType[] = [
     key: "technical",
     label: "Technical",
     promptInstructions:
-      "Focus on role-relevant technical depth and judgment. Ask the candidate to explain systems, tools, procedures, methods, troubleshooting, safety checks, technical decisions, or tradeoffs that fit the target role. Listen for clear reasoning, correct terminology at the right level, awareness of constraints, and the ability to explain complexity plainly. Follow up by asking why they chose an approach, what alternatives they considered, what could go wrong, and how they would verify success. Do not turn this into trivia unless the target role genuinely requires recall.",
+      "Focus on role-relevant technical depth and judgment. Ask the candidate to explain systems, tools, procedures, methods, troubleshooting, safety checks, technical decisions, or tradeoffs that fit the target role. Listen for clear reasoning, correct terminology at the right level, awareness of constraints, and the ability to explain complexity plainly. Follow up by asking why they chose an approach, what alternatives they considered, what could go wrong, and how they would verify success. Do not turn this into trivia unless the target role genuinely requires recall. Do not ask for aircraft-specific, equipment-specific, employer-specific, or system-specific numeric limits, ranges, memory items, performance values, pressurization differentials, or limitation values unless the exact source context is provided. If a technical detail may vary by aircraft, equipment, or employer, ask how the candidate would verify it instead of requiring a specific number.",
   },
   {
     key: "hypothetical",

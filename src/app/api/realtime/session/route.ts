@@ -148,6 +148,20 @@ function formatResumeContext(
   return "No parsed resume summary or resume context was provided.";
 }
 
+function technicalSpecificityGuard(snapshot?: SessionSetupSnapshot) {
+  if (snapshot?.questionTypeKey !== "technical") {
+    return undefined;
+  }
+
+  return [
+    "Technical specificity guard:",
+    "Ask technical questions at the level supported by the provided context.",
+    "Do not ask for aircraft-specific, equipment-specific, employer-specific, or system-specific numeric limits, ranges, memory items, pressurization differentials, performance values, or limitation values unless the exact aircraft/equipment/employer data is provided in session context.",
+    "For aviation technical practice without an aircraft data pack, prefer general systems understanding, indications, failure cues, safety implications, immediate actions, verification steps, and where the candidate would confirm exact limitations.",
+    "If a detail may vary by aircraft or employer, ask how the candidate would verify it rather than requiring a specific number.",
+  ].join(" ");
+}
+
 function buildQueInstructions(
   promptConfig: PromptConfigRecord,
   snapshot?: SessionSetupSnapshot,
@@ -243,6 +257,7 @@ function buildQueInstructions(
       ? `Coaching memory: ${memory.summary} Latest focus: ${memory.latestRecommendation}. Recurring patterns: ${memory.recurringPatterns.join(" | ") || "None yet"}. Use this quietly to tailor coaching and question choice. Do not mention stored memory unless the candidate asks.`
       : "No prior coaching memory was provided.",
     formatResumeContext(snapshot, resumeSummary, resumeSummaryUnavailableReason),
+    technicalSpecificityGuard(snapshot),
     strictSpokenTurnContract(snapshot?.modeKey),
   ]
     .filter(Boolean)
