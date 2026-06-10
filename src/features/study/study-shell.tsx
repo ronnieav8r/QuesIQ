@@ -14,6 +14,7 @@ import {
   History,
   Home,
   Layers,
+  Layers3,
   LogOut,
   Menu,
   Plus,
@@ -57,6 +58,12 @@ const studyNavItems: StudyNavItem[] = [
     icon: Plus,
     label: "New",
     match: (pathname) => pathname === "/study/decks/new",
+  },
+  {
+    href: "/study/stacks",
+    icon: Layers3,
+    label: "Stacks",
+    match: (pathname) => pathname === "/study/stacks" || pathname.startsWith("/study/stacks/"),
   },
   {
     href: "/study/library",

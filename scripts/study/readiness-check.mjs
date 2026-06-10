@@ -59,9 +59,15 @@ function checkPattern(content, pattern, description, blocker = true) {
 const requiredFiles = [
   "src/app/study/page.tsx",
   "src/app/study/decks/page.tsx",
+  "src/app/study/stacks/page.tsx",
+  "src/app/study/stacks/[stackId]/page.tsx",
   "src/app/study/library/page.tsx",
   "src/app/study/history/page.tsx",
+  "src/app/api/study/stacks/route.ts",
+  "src/app/api/study/stacks/[stackId]/route.ts",
+  "src/app/api/study/stacks/[stackId]/items/route.ts",
   "src/app/api/study/content-studio/flashcard-draft/route.ts",
+  "drizzle/0079_add_study_deck_stacks.sql",
   "src/server/study/study-content-studio.ts",
   "src/server/study/study-source-pack-draft-contract.ts",
   "src/server/study/study-source-pack-verification-queue.ts",
@@ -93,6 +99,27 @@ if (exists("src/app/api/study/content-studio/flashcard-draft/route.ts")) {
     "Disabled Publish/Official/Verified boundary messaging present",
     true,
   );
+}
+
+if (exists("drizzle/0079_add_study_deck_stacks.sql")) {
+  const migration = read("drizzle/0079_add_study_deck_stacks.sql");
+  checkPattern(migration, /CREATE TABLE IF NOT EXISTS "study_deck_stacks"/, "Study stack table migration present", true);
+  checkPattern(migration, /CREATE TABLE IF NOT EXISTS "study_deck_stack_items"/, "Study stack items table migration present", true);
+  checkPattern(migration, /ON DELETE CASCADE/, "Study stack item cascade behavior present", true);
+  checkPattern(migration, /"sort_order"/, "Study stack item sort order present", true);
+}
+
+if (exists("src/server/db/schema.ts")) {
+  const schema = read("src/server/db/schema.ts");
+  checkPattern(schema, /export const studyDeckStacks/, "Study deck stacks schema exported", true);
+  checkPattern(schema, /export const studyDeckStackItems/, "Study deck stack items schema exported", true);
+}
+
+if (exists("src/app/api/study/stacks/[stackId]/items/route.ts")) {
+  const route = read("src/app/api/study/stacks/[stackId]/items/route.ts");
+  checkPattern(route, /addDeckToStudyStack/, "Study stack item add route wired", true);
+  checkPattern(route, /removeDeckFromStudyStack/, "Study stack item remove route wired", true);
+  checkPattern(route, /reorderStudyStackDecks/, "Study stack item reorder route wired", true);
 }
 
 if (exists("src/server/study/study-rich-flashcard-import.ts")) {
@@ -161,6 +188,12 @@ if (exists("docs/products/study/README.md")) {
     readme,
     /npm run smoke:study/,
     "Study README documents evaluator smoke command",
+    true,
+  );
+  checkPattern(
+    readme,
+    /Study Deck Stacks|study_deck_stacks/,
+    "Study README documents deck stacks",
     true,
   );
 }

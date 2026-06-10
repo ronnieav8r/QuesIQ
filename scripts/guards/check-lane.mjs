@@ -115,11 +115,15 @@ const lanes = {
     "src/server/support/",
   ],
   study: [
+    "drizzle/0079_add_study_deck_stacks.sql",
+    "drizzle/meta/_journal.json",
     "docs/products/study/",
+    "scripts/guards/check-lane.mjs",
     "scripts/study/",
     "src/app/api/study/",
     "src/app/study/",
     "src/features/study/",
+    "src/server/db/schema.ts",
     "src/server/study/",
   ],
 };
