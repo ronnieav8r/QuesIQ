@@ -547,6 +547,13 @@
       "when": 1781226000000,
       "tag": "0078_turn_based_progression_cleanup",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1781229600000,
+      "tag": "0079_add_study_deck_stacks",
+      "breakpoints": true
     }
   ]
 }

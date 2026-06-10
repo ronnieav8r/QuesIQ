@@ -1,0 +1,102 @@
+.editor,
+.itemManager {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.addRow {
+  align-items: end;
+  justify-content: start;
+}
+
+.addRow select {
+  max-width: min(100%, 26rem);
+}
+
+.list {
+  display: grid;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  align-items: center;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: var(--space-3);
+}
+
+.publicList .item {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: var(--space-4);
+}
+
+.rank {
+  align-items: center;
+  background: var(--focus-soft);
+  border: 1px solid var(--focus);
+  border-radius: var(--radius-full);
+  color: var(--text);
+  display: inline-flex;
+  font-size: var(--font-size-sm);
+  font-weight: 900;
+  height: 2rem;
+  justify-content: center;
+  width: 2rem;
+}
+
+.body,
+.meta {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.body h3,
+.body p {
+  margin: 0;
+}
+
+.meta {
+  gap: var(--space-1);
+}
+
+.meta span,
+.muted {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}
+
+.actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: end;
+}
+
+@media (max-width: 780px) {
+  .item,
+  .publicList .item {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .rank {
+    justify-self: start;
+  }
+
+  .actions {
+    justify-content: start;
+  }
+
+  .addRow {
+    align-items: stretch;
+  }
+}

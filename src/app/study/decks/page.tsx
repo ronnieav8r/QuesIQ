@@ -1,10 +1,10 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { BookOpen, CheckCircle2, History, PencilLine, Plus, ShieldCheck, Sparkles, Upload } from "lucide-react";
+import { BookOpen, CheckCircle2, History, Layers3, PencilLine, Plus, ShieldCheck, Sparkles, Upload } from "lucide-react";
 
 import { auth } from "@/auth";
-import { getStudyDecksWithStats, getStudyFolders } from "@/features/study/study-data";
+import { getStudyDecksWithStats, getStudyFolders, getVisibleStudyStacks } from "@/features/study/study-data";
 import { StudyFolderManager } from "@/features/study/study-folder-manager";
 import { isAdminEmail } from "@/server/admin";
 
@@ -12,13 +12,14 @@ export default async function StudyDecksPage() {
   const session = await auth();
   const userId = session?.user?.id;
   const isAdmin = isAdminEmail(session?.user?.email);
-  const [decks, folders] = userId
-    ? await Promise.all([getStudyDecksWithStats(userId), getStudyFolders(userId)])
-    : [[], []];
+  const [decks, folders, stacks] = userId
+    ? await Promise.all([getStudyDecksWithStats(userId), getStudyFolders(userId), getVisibleStudyStacks(userId)])
+    : [[], [], []];
   const publicDecks = decks.filter((deck) => deck.isPublic).length;
   const fullyVerifiedDecks = decks.filter(
     (deck) => deck.cardCount > 0 && (deck.verifiedCardCount ?? 0) === deck.cardCount,
   ).length;
+  const ownedStacks = userId ? stacks.filter((stack) => stack.userId === userId).length : 0;
   const importHref = decks[0] ? `/study/decks/${decks[0].id}/import` : "/study/decks/new";
 
   return (
@@ -33,6 +34,10 @@ export default async function StudyDecksPage() {
           <Link className="button-link secondary" href="/study/library">
             <BookOpen size={14} aria-hidden="true" />
             Library
+          </Link>
+          <Link className="button-link secondary" href="/study/stacks">
+            <Layers3 size={14} aria-hidden="true" />
+            Stacks
           </Link>
           <Link className="button-link" href="/study/decks/new">
             <Plus size={14} aria-hidden="true" />
@@ -55,6 +60,10 @@ export default async function StudyDecksPage() {
             <div className="study-stat-chip">
               <strong>{decks.length}</strong>
               <span>Mine</span>
+            </div>
+            <div className={ownedStacks > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
+              <strong>{ownedStacks}</strong>
+              <span>Stacks</span>
             </div>
             <div className={publicDecks > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
               <strong>{publicDecks}</strong>
@@ -104,6 +113,18 @@ export default async function StudyDecksPage() {
               </p>
               <div className="study-deck-card__footer">
                 <span>{decks.length > 0 ? "Uses your most recent deck" : "Creates a deck first"}</span>
+              </div>
+            </Link>
+
+            <Link className="study-deck-card" href="/study/stacks/new">
+              <div className="study-deck-card__header">
+                <span className="badge">Stack</span>
+                <Layers3 size={18} aria-hidden="true" />
+              </div>
+              <h3>Curate a stack</h3>
+              <p>Group multiple decks into an ordered learning path without changing folders or tags.</p>
+              <div className="study-deck-card__footer">
+                <span>Best for curricula and exam sequences</span>
               </div>
             </Link>
 

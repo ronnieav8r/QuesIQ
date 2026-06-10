@@ -6,6 +6,8 @@ import {
   studyCardAttempts,
   studyCardSources,
   studyCards,
+  studyDeckStackItems,
+  studyDeckStacks,
   studyDeckAudienceTags,
   studyDecks,
   studyFolders,
@@ -20,6 +22,8 @@ export type StudyLevel = "advanced" | "beginner" | "intermediate";
 export type StudyLibraryScope = "all" | "mine" | "public";
 type StudyVisibleDeck = Awaited<ReturnType<typeof getVisibleStudyLibraryDecks>>[number];
 export type StudyLibraryDeck = StudyVisibleDeck & { audienceTags: string[] };
+export type StudyStack = Awaited<ReturnType<typeof getVisibleStudyStacks>>[number];
+export type StudyStackWithDecks = NonNullable<Awaited<ReturnType<typeof getStudyStackWithDecks>>>;
 
 function isMissingStudyTaxonomyError(error: unknown) {
   if (!(error instanceof Error)) {
@@ -72,6 +76,287 @@ export async function getStudyDecksWithStats(userId: string) {
     .where(eq(studyDecks.userId, userId))
     .groupBy(studyDecks.id)
     .orderBy(desc(studyDecks.updatedAt));
+}
+
+function studyStackVisibilityFilter(userId?: string) {
+  return userId
+    ? or(eq(studyDeckStacks.isPublic, true), eq(studyDeckStacks.userId, userId))
+    : eq(studyDeckStacks.isPublic, true);
+}
+
+function visibleStudyDeckSql(userId?: string) {
+  return userId
+    ? sql<boolean>`(${studyDecks.isPublic} = true OR ${studyDecks.userId} = ${userId})`
+    : sql<boolean>`${studyDecks.isPublic} = true`;
+}
+
+export async function getVisibleStudyStacks(userId?: string) {
+  const deckVisibility = visibleStudyDeckSql(userId);
+
+  return getDb()
+    .select({
+      cardCount: sql<number>`COALESCE(SUM(CASE WHEN ${deckVisibility} THEN ${studyDecks.cardCount} ELSE 0 END), 0)::int`,
+      createdAt: studyDeckStacks.createdAt,
+      deckCount: sql<number>`COUNT(DISTINCT CASE WHEN ${deckVisibility} THEN ${studyDecks.id} END)::int`,
+      description: studyDeckStacks.description,
+      id: studyDeckStacks.id,
+      isOfficial: studyDeckStacks.isOfficial,
+      isPublic: studyDeckStacks.isPublic,
+      subject: studyDeckStacks.subject,
+      title: studyDeckStacks.title,
+      updatedAt: studyDeckStacks.updatedAt,
+      userId: studyDeckStacks.userId,
+    })
+    .from(studyDeckStacks)
+    .leftJoin(studyDeckStackItems, eq(studyDeckStackItems.stackId, studyDeckStacks.id))
+    .leftJoin(studyDecks, eq(studyDecks.id, studyDeckStackItems.deckId))
+    .where(studyStackVisibilityFilter(userId))
+    .groupBy(studyDeckStacks.id)
+    .orderBy(desc(studyDeckStacks.updatedAt), asc(studyDeckStacks.title));
+}
+
+export async function getStudyStack(stackId: string) {
+  const [stack] = await getDb()
+    .select()
+    .from(studyDeckStacks)
+    .where(eq(studyDeckStacks.id, stackId))
+    .limit(1);
+
+  return stack ?? null;
+}
+
+export async function getStudyStackWithDecks(stackId: string, userId?: string) {
+  const [stack] = await getDb()
+    .select()
+    .from(studyDeckStacks)
+    .where(and(eq(studyDeckStacks.id, stackId), studyStackVisibilityFilter(userId)))
+    .limit(1);
+
+  if (!stack) {
+    return null;
+  }
+
+  const deckVisibility = visibleStudyDeckSql(userId);
+  const decks = await getDb()
+    .select({
+      cardCount: studyDecks.cardCount,
+      createdAt: studyDecks.createdAt,
+      deckId: studyDecks.id,
+      description: studyDecks.description,
+      id: studyDeckStackItems.deckId,
+      isOfficial: studyDecks.isOfficial,
+      isPublic: studyDecks.isPublic,
+      sortOrder: studyDeckStackItems.sortOrder,
+      subject: studyDecks.subject,
+      title: studyDecks.title,
+      updatedAt: studyDecks.updatedAt,
+      userId: studyDecks.userId,
+      verifiedCardCount: studyDecks.verifiedCardCount,
+    })
+    .from(studyDeckStackItems)
+    .innerJoin(studyDecks, eq(studyDecks.id, studyDeckStackItems.deckId))
+    .where(and(eq(studyDeckStackItems.stackId, stackId), deckVisibility))
+    .orderBy(asc(studyDeckStackItems.sortOrder), asc(studyDecks.title));
+
+  return {
+    ...stack,
+    cardCount: decks.reduce((sum, deck) => sum + deck.cardCount, 0),
+    deckCount: decks.length,
+    decks,
+  };
+}
+
+export async function createStudyStack(data: {
+  description?: string | null;
+  isOfficial?: boolean;
+  isPublic?: boolean;
+  subject?: string | null;
+  title: string;
+  userId: string;
+}) {
+  const [stack] = await getDb()
+    .insert(studyDeckStacks)
+    .values({
+      description: data.description?.trim() || null,
+      isOfficial: data.isOfficial ?? false,
+      isPublic: data.isPublic ?? false,
+      subject: data.subject?.trim() || null,
+      title: data.title.trim(),
+      userId: data.userId,
+    })
+    .returning();
+
+  return stack;
+}
+
+export async function updateStudyStack(
+  stackId: string,
+  userId: string,
+  data: {
+    description?: string | null;
+    isOfficial?: boolean;
+    isPublic?: boolean;
+    subject?: string | null;
+    title?: string;
+  },
+) {
+  const [stack] = await getDb()
+    .update(studyDeckStacks)
+    .set({ ...data, updatedAt: new Date() })
+    .where(and(eq(studyDeckStacks.id, stackId), eq(studyDeckStacks.userId, userId)))
+    .returning();
+
+  return stack ?? null;
+}
+
+export async function deleteStudyStack(stackId: string, userId: string) {
+  await getDb()
+    .delete(studyDeckStacks)
+    .where(and(eq(studyDeckStacks.id, stackId), eq(studyDeckStacks.userId, userId)));
+}
+
+export async function addDeckToStudyStack(data: {
+  deckId: string;
+  stackId: string;
+  userId: string;
+}) {
+  return getDb().transaction(async (tx) => {
+    const [stack] = await tx
+      .select({ id: studyDeckStacks.id })
+      .from(studyDeckStacks)
+      .where(and(eq(studyDeckStacks.id, data.stackId), eq(studyDeckStacks.userId, data.userId)))
+      .limit(1);
+
+    if (!stack) {
+      return null;
+    }
+
+    const [deck] = await tx
+      .select({ id: studyDecks.id })
+      .from(studyDecks)
+      .where(
+        and(
+          eq(studyDecks.id, data.deckId),
+          or(eq(studyDecks.userId, data.userId), eq(studyDecks.isPublic, true)),
+        ),
+      )
+      .limit(1);
+
+    if (!deck) {
+      return null;
+    }
+
+    const [{ max }] = await tx
+      .select({ max: sql<number>`COALESCE(MAX(${studyDeckStackItems.sortOrder}), -1)` })
+      .from(studyDeckStackItems)
+      .where(eq(studyDeckStackItems.stackId, data.stackId));
+
+    const [item] = await tx
+      .insert(studyDeckStackItems)
+      .values({
+        deckId: data.deckId,
+        sortOrder: max + 1,
+        stackId: data.stackId,
+      })
+      .onConflictDoUpdate({
+        set: { sortOrder: max + 1 },
+        target: [studyDeckStackItems.stackId, studyDeckStackItems.deckId],
+      })
+      .returning();
+
+    await tx
+      .update(studyDeckStacks)
+      .set({ updatedAt: new Date() })
+      .where(eq(studyDeckStacks.id, data.stackId));
+
+    return item;
+  });
+}
+
+export async function removeDeckFromStudyStack(data: {
+  deckId: string;
+  stackId: string;
+  userId: string;
+}) {
+  return getDb().transaction(async (tx) => {
+    const [stack] = await tx
+      .select({ id: studyDeckStacks.id })
+      .from(studyDeckStacks)
+      .where(and(eq(studyDeckStacks.id, data.stackId), eq(studyDeckStacks.userId, data.userId)))
+      .limit(1);
+
+    if (!stack) {
+      return false;
+    }
+
+    await tx
+      .delete(studyDeckStackItems)
+      .where(
+        and(
+          eq(studyDeckStackItems.stackId, data.stackId),
+          eq(studyDeckStackItems.deckId, data.deckId),
+        ),
+      );
+
+    await tx
+      .update(studyDeckStacks)
+      .set({ updatedAt: new Date() })
+      .where(eq(studyDeckStacks.id, data.stackId));
+
+    return true;
+  });
+}
+
+export async function reorderStudyStackDecks(data: {
+  deckIds: string[];
+  stackId: string;
+  userId: string;
+}) {
+  return getDb().transaction(async (tx) => {
+    const [stack] = await tx
+      .select({ id: studyDeckStacks.id })
+      .from(studyDeckStacks)
+      .where(and(eq(studyDeckStacks.id, data.stackId), eq(studyDeckStacks.userId, data.userId)))
+      .limit(1);
+
+    if (!stack) {
+      return false;
+    }
+
+    const currentItems = await tx
+      .select({ deckId: studyDeckStackItems.deckId, sortOrder: studyDeckStackItems.sortOrder })
+      .from(studyDeckStackItems)
+      .where(eq(studyDeckStackItems.stackId, data.stackId))
+      .orderBy(asc(studyDeckStackItems.sortOrder));
+
+    const currentDeckIds = currentItems.map((item) => item.deckId);
+    const requestedDeckIds = data.deckIds.filter((deckId, index, array) =>
+      currentDeckIds.includes(deckId) && array.indexOf(deckId) === index,
+    );
+    const orderedDeckIds = [
+      ...requestedDeckIds,
+      ...currentDeckIds.filter((deckId) => !requestedDeckIds.includes(deckId)),
+    ];
+
+    for (const [index, deckId] of orderedDeckIds.entries()) {
+      await tx
+        .update(studyDeckStackItems)
+        .set({ sortOrder: index })
+        .where(
+          and(
+            eq(studyDeckStackItems.stackId, data.stackId),
+            eq(studyDeckStackItems.deckId, deckId),
+          ),
+        );
+    }
+
+    await tx
+      .update(studyDeckStacks)
+      .set({ updatedAt: new Date() })
+      .where(eq(studyDeckStacks.id, data.stackId));
+
+    return true;
+  });
 }
 
 export async function getVisibleStudyLibraryDecks(limit = 50, userId?: string) {
