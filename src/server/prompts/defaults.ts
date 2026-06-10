@@ -165,6 +165,10 @@ export const interviewAnswerEvaluatorInstructions = [
   "The result should be one short learner-facing sentence.",
   "tightenUpAdvice should contain one or two concrete improvements tied to what the candidate actually said or clearly left out.",
   "For behavioral answers, judge whether the answer includes a real example, personal Action, and Result evidence. Do not require a full STAR bundle in one spoken answer.",
+  "For technical answers, judge correct principles, practical judgment, role relevance, and whether the candidate knows how to verify exact details. Do not require aircraft-specific, employer-specific, system-specific, or numeric limitations unless QuesIQ provided that exact source context.",
+  "For hypothetical answers, judge decision quality, tradeoffs, risk handling, structure, and how directly the candidate answered the scenario.",
+  "For motivational answers, judge specific role fit, credible motivation, company/role alignment, and whether the answer avoids generic interest claims.",
+  "For Impact, do not require business metrics for every question. For technical or judgment prompts, impact may come from correct reasoning, safety awareness, practical application, ownership, and knowing where exact limits come from.",
   "For Rapid Fire and Question Queue, do not coach as if the user can retry immediately; prepare compact feedback for the end-of-session review card.",
 ].join("\n");
 

@@ -17,6 +17,7 @@ import type {
   XpRuleEventType,
 } from "@/product/interview-types";
 import { getOverallScore } from "@/product/scoring";
+import { getSpeechSummary } from "@/product/speech-metrics";
 import { getDb } from "@/server/db/client";
 import {
   debriefs,
@@ -115,12 +116,103 @@ function normalizeQuestScoreThreshold(threshold: number) {
   return threshold > 5 ? threshold / 2 : threshold;
 }
 
-function countBy<T extends string | null>(values: T[], target?: string | null) {
+function countBy<T extends string | null | undefined>(values: T[], target?: string | null) {
   if (!target) {
     return values.filter(Boolean).length;
   }
 
   return values.filter((value) => value === target).length;
+}
+
+function isMetaOrTestInput(text: string) {
+  const normalized = text.trim().toLowerCase();
+
+  if (!normalized) return true;
+
+  const words = normalized.split(/\s+/).filter(Boolean);
+
+  return (
+    words.length < 3 ||
+    (/\b(test|testing|mic check|can you hear|hello)\b/.test(normalized) &&
+      words.length < 12)
+  );
+}
+
+function countAnsweredUserTurns(artifact?: VoiceSessionArtifactDraft | null) {
+  if (!artifact?.transcript?.length) {
+    return 0;
+  }
+
+  return artifact.transcript.filter(
+    (turn) =>
+      (turn.role === "user" || turn.speaker.toLowerCase() === "you") &&
+      !isMetaOrTestInput(turn.text),
+  ).length;
+}
+
+function isQuestionQueueSession(
+  session: Pick<typeof sessions.$inferSelect, "contextSnapshot">,
+) {
+  return Boolean(session.contextSnapshot.selectedQuestionQueueContext?.length);
+}
+
+function isAnsweredPracticeSession(
+  session: Pick<
+    typeof sessions.$inferSelect,
+    "evaluationStatus" | "status" | "voiceArtifact"
+  >,
+) {
+  return (
+    session.evaluationStatus === "completed" ||
+    (session.status !== "created" && countAnsweredUserTurns(session.voiceArtifact) > 0)
+  );
+}
+
+function getPracticePathKey(
+  session: Pick<typeof sessions.$inferSelect, "contextSnapshot" | "modeKey">,
+) {
+  return isQuestionQueueSession(session) ? "question_queue" : session.modeKey;
+}
+
+function requiredPathProgress(paths: string[], requiredPaths: string[]) {
+  const used = new Set(paths);
+
+  return requiredPaths.filter((path) => used.has(path)).length;
+}
+
+function getAnsweredQuestionTypeKeys(
+  session: Pick<
+    typeof sessions.$inferSelect,
+    "contextSnapshot" | "questionTypeKey" | "voiceArtifact"
+  >,
+) {
+  const answeredTurns = Math.max(1, countAnsweredUserTurns(session.voiceArtifact));
+  const queue = session.contextSnapshot.selectedQuestionQueueContext ?? [];
+
+  if (queue.length > 0) {
+    return queue
+      .slice(0, answeredTurns)
+      .map((question) => question.questionTypeKey)
+      .filter((key): key is NonNullable<typeof key> => Boolean(key));
+  }
+
+  return session.questionTypeKey ? [session.questionTypeKey] : [];
+}
+
+function getEffectiveReviewDurationSeconds(artifact?: VoiceSessionArtifactDraft) {
+  const speechSummary = artifact ? getSpeechSummary(artifact) : undefined;
+
+  if (speechSummary) {
+    return {
+      durationSeconds: speechSummary.totalUserAnswerDurationSeconds,
+      source: "answer_time",
+    };
+  }
+
+  return {
+    durationSeconds: artifact?.durationSeconds,
+    source: artifact?.durationSeconds === undefined ? "unavailable" : "session_time",
+  };
 }
 
 function getAverageScore(
@@ -442,9 +534,10 @@ export async function recordReviewProgression(
     .orderBy(asc(progressionXpRules.displayOrder));
   const overallScore = getOverallScore(result.scores) ?? 0;
   const firstPracticeOfDay = await getFirstPracticeOfDay(userId, now);
+  const effectiveDuration = getEffectiveReviewDurationSeconds(artifact);
   const matchingRules = rules.filter((rule) =>
     ruleMatchesReview(rule, {
-      durationSeconds: artifact?.durationSeconds,
+      durationSeconds: effectiveDuration.durationSeconds,
       firstPracticeOfDay,
       overallScore,
     }),
@@ -459,7 +552,8 @@ export async function recordReviewProgression(
     await getDb().insert(progressionEvents).values({
       eventType: "xp_rule_awarded",
       metadata: {
-        durationSeconds: artifact?.durationSeconds,
+        durationSeconds: effectiveDuration.durationSeconds,
+        durationSource: effectiveDuration.source,
         label: rule.label,
         nextAction: result.nextAction,
         overallScore,
@@ -729,9 +823,12 @@ async function getQuestProgress(
   ] = await Promise.all([
     getDb()
       .select({
+        contextSnapshot: sessions.contextSnapshot,
+        evaluationStatus: sessions.evaluationStatus,
         modeKey: sessions.modeKey,
         questionTypeKey: sessions.questionTypeKey,
         status: sessions.status,
+        voiceArtifact: sessions.voiceArtifact,
       })
       .from(sessions)
       .where(eq(sessions.userId, userId)),
@@ -782,10 +879,13 @@ async function getQuestProgress(
       .from(practiceModes)
       .where(eq(practiceModes.enabled, true)),
   ]);
-  const completedSessions = sessionRows.filter((session) => session.status !== "created");
-  const modeKeys = completedSessions.map((session) => session.modeKey);
+  const completedSessions = sessionRows.filter(isAnsweredPracticeSession);
+  const practicePathKeys = completedSessions.map(getPracticePathKey);
+  const modeKeys = completedSessions
+    .filter((session) => !isQuestionQueueSession(session))
+    .map((session) => session.modeKey);
   const enabledModeKeys = new Set(enabledPracticeModeRows.map((mode) => mode.key));
-  const questionTypeKeys = completedSessions.map((session) => session.questionTypeKey);
+  const questionTypeKeys = completedSessions.flatMap(getAnsweredQuestionTypeKeys);
   const threshold = quest.checkThreshold;
   const profile = profileRows[0];
 
@@ -807,6 +907,12 @@ async function getQuestProgress(
         normalizeQuestScoreThreshold(threshold)
         ? threshold
         : 0;
+    case "core_practice_paths_used":
+      return requiredPathProgress(practicePathKeys, [
+        "coaching",
+        "rapid_fire",
+        "question_queue",
+      ]);
     case "debrief_count":
       return legacyDebriefRows.length + voiceDebriefRows.length;
     case "introduction_count":
@@ -817,6 +923,13 @@ async function getQuestProgress(
       return summary.level;
     case "mode_used":
       return countBy(modeKeys, quest.checkDimension);
+    case "premium_practice_modes_used":
+      return requiredPathProgress(practicePathKeys, [
+        "mock_interview",
+        "hands_free_coaching",
+      ]);
+    case "question_queue_count":
+      return completedSessions.filter(isQuestionQueueSession).length;
     case "question_type_used":
       return countBy(questionTypeKeys, quest.checkDimension);
     case "resume_uploaded":

@@ -66,13 +66,15 @@ Current static readiness checklist:
 
 ## Progression Notes (V1)
 
-- Practice mode quest coverage now tracks the active Practice trio:
-  Coaching, Rapid Fire, and Mock Interview.
+- Practice mode quest coverage now tracks the active non-premium Practice set:
+  Coaching, Rapid Fire, and Question Queue.
 - Mock Interview and Hands-Free Coaching are Premium-labeled because they use
-  realtime ChatGPT/audio.
+  realtime ChatGPT/audio, and premium live modes use separate quest coverage.
 - Question Queue launches through Rapid Fire as an end-only Rapid review flow:
   exact queued questions are preserved, answers are evaluated into per-question
   cards, and feedback is shown after the queue ends.
+- Quest and XP progress for button-driven modes uses answered practice turns,
+  not idle session time.
 - Retired First Impression remains disabled for normal Practice questing.
 - Story Lab quest coverage includes first saved Introduction, first saved TMAAT
   story, and a deeper TMAAT story-bank quest at three saved stories.

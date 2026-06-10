@@ -107,6 +107,8 @@ with production or static checks.
 - Que maintains context across turns without exposing hidden prompt/debug text.
 - End session creates transcript artifact and review path.
 - Mock Interview quest/reward feels premium relative to Rapid Fire/Coaching.
+- Mock Interview and Hands-Free Coaching count toward premium live quests, not
+  the core non-premium practice quest.
 
 ## Hands-Free Coaching
 
@@ -146,6 +148,8 @@ with production or static checks.
 - Saved stories and introductions appear in Story Lab history/details.
 - Story Lab quests trigger for first introduction, first story, and three-story
   story bank where applicable.
+- Button-driven quest/XP progress uses real answered turns and summed answer
+  time where available, not idle time while the session screen is open.
 
 ## Reviews And History
 

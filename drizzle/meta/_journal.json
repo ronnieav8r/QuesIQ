@@ -540,6 +540,13 @@
       "when": 1781222400000,
       "tag": "0077_refine_technical_specificity_prompt",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1781226000000,
+      "tag": "0078_turn_based_progression_cleanup",
+      "breakpoints": true
     }
   ]
 }
