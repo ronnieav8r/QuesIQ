@@ -91,6 +91,21 @@ const lanes = {
     "src/server/sessions/",
     "src/server/stories/",
   ],
+  nclex: [
+    "drizzle/0080_add_nclex_baseline.sql",
+    "drizzle/meta/_journal.json",
+    "docs/products/nclex/",
+    "docs/README.md",
+    "package.json",
+    "scripts/guards/check-lane.mjs",
+    "scripts/nclex/",
+    "src/app/admin/nclex/",
+    "src/app/api/nclex/",
+    "src/app/nclex/",
+    "src/features/nclex/",
+    "src/server/db/schema.ts",
+    "src/server/nclex/",
+  ],
   quira: [
     ".env.example",
     "drizzle/0070_expand_quira_hybrid_support.sql",
@@ -125,7 +140,7 @@ const lanes = {
 };
 
 function usage() {
-  console.error("Usage: node scripts/guards/check-lane.mjs <admin|interview|study|dpe|quira> [target-ref] [base-ref]");
+  console.error("Usage: node scripts/guards/check-lane.mjs <admin|interview|study|dpe|quira|nclex> [target-ref] [base-ref]");
   console.error("Examples:");
   console.error("  npm run guard:study");
   console.error("  npm run guard:study -- codex/study");
