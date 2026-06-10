@@ -140,12 +140,25 @@ The first Study slice is imported:
 - `/api/study/folders` and `/api/study/folders/[folderId]` support Study folder
   management data, with deck create/edit assignment and a source-style folder
   manager on `/study/decks`
+- `/study/stacks`, `/study/stacks/new`, and `/study/stacks/[stackId]` support
+  Study Deck Stacks: curated ordered groups of multiple decks for learning
+  paths, curricula, and exam sequences. Stacks are separate from folders and
+  tags: folders remain private loose organization, tags remain metadata, and
+  stacks are intentional deck paths that can be private or public.
+- `/api/study/stacks`, `/api/study/stacks/[stackId]`, and
+  `/api/study/stacks/[stackId]/items` support stack list/detail,
+  create/update/delete for owned stacks, and add/remove/reorder deck items.
+  A deck can belong to multiple stacks; stack items preserve `sort_order`.
+- `drizzle/0079_add_study_deck_stacks.sql` adds `study_deck_stacks` and
+  `study_deck_stack_items` with owner/public/official metadata, ordered deck
+  items, indexes, and cascade cleanup when stacks or decks are deleted.
 - Study uses the shared QuesIQ product shell, Interview-aligned tokens and
   controls, the shared QuesIQ icon, and its own `quesiq-study-logo.png` product
   logo. The platform selector uses `quesiq-main-logo.png`.
 - `/study` now uses an Interview-style Study navigation shell with Home, Decks,
-  New, Library, and History links. The menu appears as a left rail on desktop,
-  a bottom bar on mobile, and can be collapsed with local preference storage.
+  New, Stacks, Library, and History links. The menu appears as a left rail on
+  desktop, a bottom bar on mobile, and can be collapsed with local preference
+  storage.
 - owned deck pages include an inline public/private toggle
 - signed-in users can create/edit decks, add/delete cards manually, and review
   cards with simple recall ratings; card lists now support inline edit/delete

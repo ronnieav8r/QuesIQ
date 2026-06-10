@@ -552,6 +552,13 @@
       "idx": 78,
       "version": "7",
       "when": 1781229600000,
+      "tag": "0079_add_study_deck_stacks",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1781233200000,
       "tag": "0080_add_nclex_baseline",
       "breakpoints": true
     }

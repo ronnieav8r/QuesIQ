@@ -1423,6 +1423,57 @@ export const studyDecks = pgTable("study_decks", {
   verifiedCardCount: integer("verified_card_count").default(0).notNull(),
 });
 
+export const studyDeckStacks = pgTable(
+  "study_deck_stacks",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    description: text("description"),
+    id: uuid("id").defaultRandom().primaryKey(),
+    isOfficial: boolean("is_official").default(false).notNull(),
+    isPublic: boolean("is_public").default(false).notNull(),
+    subject: text("subject"),
+    title: text("title").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  },
+  (stack) => ({
+    officialIdx: index("study_deck_stacks_official_idx").on(stack.isOfficial),
+    publicUpdatedIdx: index("study_deck_stacks_public_updated_idx").on(
+      stack.isPublic,
+      stack.updatedAt,
+    ),
+    subjectIdx: index("study_deck_stacks_subject_idx").on(stack.subject),
+    userUpdatedIdx: index("study_deck_stacks_user_updated_idx").on(
+      stack.userId,
+      stack.updatedAt,
+    ),
+  }),
+);
+
+export const studyDeckStackItems = pgTable(
+  "study_deck_stack_items",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    deckId: uuid("deck_id")
+      .notNull()
+      .references(() => studyDecks.id, { onDelete: "cascade" }),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    stackId: uuid("stack_id")
+      .notNull()
+      .references(() => studyDeckStacks.id, { onDelete: "cascade" }),
+  },
+  (item) => ({
+    deckIdx: index("study_deck_stack_items_deck_idx").on(item.deckId),
+    stackOrderIdx: index("study_deck_stack_items_stack_order_idx").on(
+      item.stackId,
+      item.sortOrder,
+    ),
+    stackDeckKey: primaryKey({
+      columns: [item.stackId, item.deckId],
+    }),
+  }),
+);
+
 export const studyCards = pgTable("study_cards", {
   answer: text("answer").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
