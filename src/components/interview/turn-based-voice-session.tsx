@@ -84,6 +84,7 @@ type PendingRecordedAnswer = {
 type RecordingPurpose = "answer" | "ask_que";
 
 const emptyArtifactDraft: VoiceSessionArtifactDraft = { events: [], transcript: [] };
+const audioLeadInSeconds = 0.5;
 const turnRequestTimeoutMs = 60_000;
 
 function createRecordId(prefix: string) {
@@ -125,6 +126,15 @@ async function blobToBase64(blob: Blob) {
     binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary);
+}
+
+function base64ToArrayBuffer(value: string) {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes.buffer;
 }
 
 function canShowSessionCountdown(phase: TurnBasedPhase) {
@@ -460,6 +470,13 @@ export function TurnBasedVoiceSession({
       return;
     }
     await primeAudioOutput(runId);
+    try {
+      await playBufferedAudioClip(audioBase64, runId);
+      return;
+    } catch {
+      appendEvent("turn_based.question_audio.buffered_play_failed");
+    }
+
     const source = `data:${audioMimeType};base64,${audioBase64}`;
     audioRef.current.preload = "auto";
     audioRef.current.src = source;
@@ -528,6 +545,48 @@ export function TurnBasedVoiceSession({
     } catch {
       appendEvent("turn_based.question_audio.play_failed");
     }
+  }
+
+  async function playBufferedAudioClip(audioBase64: string, runId: number) {
+    if (!isSessionActive(runId)) {
+      return;
+    }
+
+    const AudioContextClass = window.AudioContext;
+    if (!AudioContextClass) {
+      throw new Error("AudioContext is unavailable.");
+    }
+
+    const audioContext = audioContextRef.current ?? new AudioContextClass();
+    audioContextRef.current = audioContext;
+    if (audioContext.state === "suspended") {
+      await audioContext.resume();
+    }
+
+    const decoded = await audioContext.decodeAudioData(base64ToArrayBuffer(audioBase64));
+    const leadInFrames = Math.ceil(decoded.sampleRate * audioLeadInSeconds);
+    const bufferedAudio = audioContext.createBuffer(
+      decoded.numberOfChannels,
+      decoded.length + leadInFrames,
+      decoded.sampleRate,
+    );
+
+    for (let channel = 0; channel < decoded.numberOfChannels; channel += 1) {
+      bufferedAudio.copyToChannel(decoded.getChannelData(channel), channel, leadInFrames);
+    }
+
+    await new Promise<void>((resolve) => {
+      if (!isSessionActive(runId)) {
+        resolve();
+        return;
+      }
+
+      const source = audioContext.createBufferSource();
+      source.buffer = bufferedAudio;
+      source.connect(audioContext.destination);
+      source.onended = () => resolve();
+      source.start();
+    });
   }
 
   async function playQuestionAudio(response: NextTurnResponse, runId: number) {
