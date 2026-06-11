@@ -1,9 +1,8 @@
 import type { SessionSetupSnapshot, VoiceSessionArtifactDraft } from "@/product/interview-types";
 
-export const minimumStandardReviewDurationSeconds = 120;
-export const minimumIntroReviewDurationSeconds = 30;
-export const minimumRapidFireAnsweredTurns = 1;
-export const minimumTurnBasedAnsweredTurns = 1;
+const minimumStandardReviewDurationSeconds = 120;
+const minimumIntroReviewDurationSeconds = 30;
+const minimumTurnBasedAnsweredTurns = 1;
 
 function countUserTranscriptTurns(artifact: Pick<VoiceSessionArtifactDraft, "transcript">) {
   return artifact.transcript.filter(

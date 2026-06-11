@@ -62,43 +62,10 @@ The first Study slice is imported:
   pass marks individual cards verified only when the model returns high
   confidence and no substantive factual or safety issue, updates the deck
   verified-card count, and records Study AI usage as `study_evaluate`
-- `/api/study/content-studio/flashcard-draft` provides a Study-owned
-  Content Studio primitive for reviewable flashcard deck drafts. It accepts
-  source text and prompt instructions, returns deck metadata plus generated
-  card drafts with source notes/confidence/warnings, stable draft id and
-  fingerprint, prompt metadata, card counts, missing-field flags, low-confidence
-  indexes, review checklist flags, and review sections; it never publishes,
-  marks Official, or marks cards Verified.
-- `src/server/study/study-source-pack-draft-contract.ts` now defines and
-  validates a Study-owned source-pack deck draft JSON contract for Content
-  Studio. The contract preserves source pack id, source chunk ids, page
-  anchors, visual asset ids, tags, verification status, and warnings for each
-  card/deck.
-- `src/server/study/study-generation-packet-contract.ts` now defines and
-  validates bounded generation packets with
-  `packetVersion=quesiq.studyGenerationPacket.v1` and
-  `targetContract=study.sourcePackDeckDraft.v1`. The packet parser preserves
-  source pack id/title/page range, deck request title/subject/card target,
-  output restrictions, chunk ids, page anchors, text snippets, tags, and
-  related visual ids.
-- `/api/study/content-studio/flashcard-draft` now supports an admin-only
-  `source_pack_preview` mode that validates source-pack-generated draft JSON and
-  returns review sections. This preview mode is side-effect-free and does not
-  write Study runtime content.
-- `/api/study/content-studio/flashcard-draft` also supports admin-only
-  `source_pack_generation_packet_preview` mode. It validates a posted
-  generation packet and returns preview/review sections only; it does not
-  generate cards, import decks, publish, or write Official/Verified state.
-- `src/server/study/study-source-pack-verification-queue.ts` builds a
-  preview-only verifier queue packet from a validated
-  `study.sourcePackDeckDraft.v1` payload. It summarizes card counts, status
-  counts, source citation coverage, visual coverage, warning counts, and
-  per-card queue recommendations.
-- `/api/study/content-studio/flashcard-draft` supports admin-only
-  `source_pack_verification_queue_preview` mode. It validates
-  `sourcePackDraftJson` using the existing Study draft parser, returns the
-  queue preview and review sections, and does not call AI, import decks, write
-  cards, publish, or mark Official/Verified.
+- `/admin?product=study` includes the standard Study CSV Import tool for admin
+  deck imports. It previews the rich CSV, shows detected headers, lets admins
+  map incoming columns to Study fields, marks the imported deck Public/Official,
+  and optionally adds the imported deck to an existing or new deck stack.
 - `src/server/study/study-rich-flashcard-import.ts` defines a stable rich CSV
   admin import contract for AI-generated Study flashcards with source and
   verification metadata. It exports required headers, parses CSV/TSV
@@ -110,19 +77,16 @@ The first Study slice is imported:
   canonical rich import headers, including deck title/description, subject,
   audience, source-pack title/notes, draft confidence/warnings, and verifier
   fields. When no mapping is sent, the default skill-export headers are used.
-- `/api/study/content-studio/flashcard-draft` now supports
-  `rich_csv_import_preview` and `rich_csv_import_save` for admin/developer
-  import workflows. Preview returns normalized rows and validation summaries
-  without writes. Save imports cards plus `study_card_sources`,
-  `study_verifications`, and `study_deck_imports` metadata for a target deck.
-  Save can create a new Study deck from Admin request fields or from the first
-  parsed row's mapped `deckTitle`, `deckDescription`, `subject`, and `tags`
-  values. This is still separate from Publish/Official controls and broad
-  Verified promotion.
-- `rich_csv_import_preview` and `rich_csv_import_save` accept optional
-  `columnMapping` (`{ [targetField]: sourceHeader }`) and both use the same
-  parser normalization path. Preview returns detected CSV headers, supported
-  target fields, effective mapping, and unmapped required fields.
+- `/api/admin/study/rich-csv-import` supports `preview` and `save` modes for
+  admin import workflows. Preview returns normalized rows and validation
+  summaries without writes. Save imports cards plus `study_card_sources`,
+  `study_verifications`, and `study_deck_imports` metadata, can create a new
+  Study deck, can mark that deck Public/Official, and can attach the deck to a
+  stack.
+- The rich CSV import API accepts optional `columnMapping`
+  (`{ [targetField]: sourceHeader }`) and uses the same parser normalization
+  path for preview/save. Preview returns detected CSV headers, supported target
+  fields, effective mapping, and unmapped required fields.
 - Rich CSV import also accepts the current Study test-bed CSV schema with
   `shortAnswer`, `explanation`, `officialReference`, `officialReferenceUrl`,
   `additionalReferences`, `additionalReferenceUrls`, and optional
@@ -195,6 +159,51 @@ The first Study slice is imported:
   through this import path (`markDeckOfficial` or row-level `official=true`);
   card `isVerified` remains conservative and is only set true when verified
   status plus confidence/verifier policy are satisfied.
+- The preferred admin import endpoint is
+  `/api/admin/study/rich-csv-import`. Use `mode=preview` to validate/match
+  headers and `mode=save` to create or update a deck, mark the deck
+  Public/Official, and attach the imported deck to a stack.
+
+### Admin Rich CSV Format
+
+Use this header row for Study admin imports:
+
+```text
+externalId,deckTitle,deckDescription,subject,audience,question,answer,hint,level,tags,sourcePackId,sourcePackTitle,sourceChunkIds,sourcePages,sourceVisualAssetIds,sourceLabel,sourceUrl,sourceNotes,draftId,draftConfidence,draftWarnings,verificationStatus,verificationConfidence,verificationNotes,verificationEvidence,verifier,isOfficial,isVerified
+```
+
+Required fields:
+
+- `question`
+- `answer`
+
+Operational fields:
+
+- `isOfficial=true` marks the imported deck Official, or admins can use the
+  Study Admin checkbox.
+- `isVerified=true` can infer verified status, but a card is only marked
+  Verified when `verificationStatus=verified`, `verificationConfidence >= 0.8`,
+  and `verifier` is present.
+- list fields such as `tags`, `sourceChunkIds`, `sourcePages`,
+  `sourceVisualAssetIds`, `draftWarnings`, and `verificationEvidence` may use
+  `|`, `;`, `,`, or JSON arrays.
+- `level` accepts `beginner`, `intermediate`, or `advanced`.
+- `verificationStatus` accepts `blocked`, `needs_review`,
+  `ready_for_verifier`, `unverified`, or `verified`.
+
+Minimal official deck import example:
+
+```csv
+deckTitle,subject,question,answer,hint,level,tags,isOfficial
+Private Pilot Airplane - Weather,Private Pilot,What is a METAR?,A routine aviation weather report.,Think current observed weather.,beginner,weather|metar,true
+```
+
+Verified source-backed example:
+
+```csv
+deckTitle,subject,question,answer,sourceLabel,sourceUrl,verificationStatus,verificationConfidence,verificationEvidence,verifier,isOfficial
+Private Pilot Airplane - Weather,Private Pilot,What is a METAR?,A routine aviation weather report.,FAA PHAK,https://example.com,verified,0.91,PHAK weather reference,admin_reviewer,true
+```
 - local Codex skill `quesiq-study-content-pipeline` coordinates the source
   scrubber, Study deck drafter, Study verifier, rich CSV export, and optional
   import smoke checks for raw source-to-Study import work
@@ -227,7 +236,8 @@ Readiness check behavior:
 
 V1 readiness for this lane means:
 
-- Study Content Studio import contract paths are present and admin-gated
+- Study Admin CSV import is present, admin-gated, and exposes header mapping
+  plus deck Official/stack assignment controls
 - rich CSV default headers/mapping/parser and parse-only smoke path are present
 - source/verification metadata and source-pack preview/save scaffolding are
   statically detectable
@@ -257,8 +267,8 @@ The intended path is:
 
 1. reviewed source-pack chunks/assets produce bounded generation packet JSON
 2. generation packet maps to `study.sourcePackDeckDraft.v1` draft JSON
-3. Admin Content Studio review plus verifier checks
-4. later approved Study import step (separate from generation/preview)
+3. source review plus verifier checks
+4. Study Admin CSV import through `/admin?product=study`
 
 The current contract/preview layer intentionally stops before publish, Official,
 Verified, or Study library/runtime writes.

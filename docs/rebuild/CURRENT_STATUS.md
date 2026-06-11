@@ -108,68 +108,25 @@ Last updated: 2026-06-02
     AI runs as `dpe_review`.
   - Real DPE aviation content remains intentionally untouched for a later
     user-guided content curation pass
-- Shared Admin Content Studio:
-  - Admin owns shared Content Studio UI/API work under the protected `/admin`
-    console
-  - `/admin?product=content` supports source intake, pipeline/template
-    selection, custom instructions, Study and DPE draft generation,
-    saved-run review display, and durable reviewer notes/status
-  - Content Studio now includes a read-only Admin-side scaffold for source-pack
-    review. It models manifest metadata, chunk candidates, figure/table
-    candidates, source/page anchors, captions/context, tags/subjects/use cases,
-    review-state filters, reviewed asset ids, a normalized review-run summary,
-    disabled future accept/reject actions, disabled `Generate Study draft from
-    accepted chunks` and `Generate DPE draft later` affordances, and preview
-    asset placeholders without reading local source-pack folders, calling
-    Drive, saving review decisions, sending raw source-pack data to Study/DPE
-    runtime paths, or writing publish state.
-  - Source-pack review now has an Admin-only preview API boundary at
-    `/api/admin/content-studio/source-pack-preview`. It accepts pasted JSON,
-    normalizes manifest/chunk/figure/table candidates in memory, returns review
-    counts and validation notes, and intentionally performs no filesystem
-    reads, Drive calls, durable review writes, product imports, or generation
-    calls.
-  - Previewed source-pack chunks and visuals now have client-local reviewer
-    controls for candidate/accepted/needs-edit/reject/keep decisions and notes.
-    The review summary and copyable export-preview JSON update from local state
-    for future Codex-side Study deck generation tools. The export JSON can now
-    be saved as a durable Admin review artifact in `content_studio_runs` and
-    reopened from run history as artifact JSON/summary. Restoring saved
-    decisions back into editable candidate controls remains future work, and
-    product imports, Publish, Official, and Verified remain disabled.
-  - `/api/admin/content-studio/source-pack-review-runs` validates
-    `source_pack_admin_review_export_preview` payloads and saves them as
-    Study-lane review artifacts without AI calls, source-pack file storage,
-    Drive reads, Study deck writes, DPE runtime writes, or publish-state writes.
-  - `/api/admin/content-studio/runs` orchestrates Study draft generation and
-    DPE content draft generation, then creates durable run records in
-    `content_studio_runs`
-  - `GET/PATCH /api/admin/content-studio/runs/[runId]` reopens saved draft
-    payloads and persists reviewer notes/status changes for Admin review
-  - Content Studio runs store source snapshots, source metadata, template key,
-    draft JSON, confidence, warnings, missing fields, reviewer
-    checklist/summary, admin user, timestamps, and optional `ai_runs` links
-  - Study draft generation is product-owned at
-    `/api/study/content-studio/flashcard-draft` and returns review-ready deck
-    metadata, cards, confidence, warnings, missing fields, and checklist flags
-  - Study source-pack draft flow now includes preview-only packet parsing
-    (`source_pack_generation_packet_preview`), draft-contract parsing
-    (`source_pack_preview`), verifier queue preview
-    (`source_pack_verification_queue_preview`), and durable review-artifact save
-    (`source_pack_draft_run_save`) to `content_studio_runs` using pipeline
-    `study_flashcards`. This save mode stores Admin review artifacts only and
-    keeps Study runtime import, Publish, Official, Verified, source-pack file
-    loading, and verifier AI calls disabled.
+- Study Admin CSV import:
+  - The shared Admin Content Studio UI/API has been retired from runtime.
+  - `/admin?product=study` is the active Study admin import surface. It previews
+    rich CSV files, displays detected headers, supports header mapping, marks
+    imported decks Public/Official, and can attach imported decks to Study deck
+    stacks.
+  - `/api/admin/study/rich-csv-import` owns the admin-gated preview/save path.
+    Save writes cards plus source, verification, and import audit metadata while
+    preserving conservative card Verified policy checks.
+  - Codex-side content skills remain the source-pack/deck-drafting workflow and
+    should export rich CSV artifacts for the app import path.
   - Admin prompt operations now include a local read-only prompt export utility:
     `npm run prompts:export`. It accepts `EXTERNAL_DATABASE_URL` or
     `DATABASE_URL` and writes local JSON/CSV exports under ignored
     `artifacts/prompt-exports/`.
-  - DPE draft generation is product-owned at `/api/dpe/content/draft` and
-    returns certificate, ACS, oral-question, answer-key, rubric, confidence,
-    warning, readiness, and missing-field draft JSON without saving live content
-  - Admin Content Studio and DPE Admin readiness views now carry/display DPE
-    target-track context for the requested MVP tracks without publishing or
-    writing product content
+  - DPE draft generation remains product-owned at `/api/dpe/content/draft` for
+    admin/reviewer preview work and returns certificate, ACS, oral-question,
+    answer-key, rubric, confidence, warning, readiness, and missing-field draft
+    JSON without saving live content
   - Admin has read-only DPE progression visibility through
     `/api/admin/dpe-progression` and the Admin DPE panel: progression user
     summaries, recent events, quest definitions, and XP rule definitions
@@ -234,15 +191,13 @@ Last updated: 2026-06-02
     and can be audited/adjusted over time
   - AI pricing records are editable in Admin under AI Usage > Pricing, and cost
     calculations now read active pricing records instead of hardcoded rates
-  - monthly AI pricing review is triggerable from Admin and through
-    `/api/pricing/review`; it uses OpenAI web search plus structured JSON to
-    compare current app pricing against
+  - manual AI pricing review is triggerable from Admin; it uses OpenAI web
+    search plus structured JSON to compare current app pricing against
     `https://developers.openai.com/api/docs/pricing`
   - pricing review writeback was explored, but pricing updates should remain
     manual for now because live AI review results were inconsistent
-  - Render monthly cron `quesiq-monthly-pricing-review` is suspended/deprecated
-    for now because it was not working cleanly and redeployed after every build;
-    use manual Admin pricing review only if needed
+  - Render monthly pricing cron and the external secret-gated pricing review
+    routes have been removed; use manual Admin pricing review only if needed
 - Admin Diagnostics visibility:
   - client-side diagnostics capture failed same-origin `/api/*` calls, rejected
     fetches, uncaught browser errors, and unhandled promise rejections
@@ -785,9 +740,8 @@ Legacy written-debrief backend pieces still exist (`/api/debriefs` and the
    Progression > Levels shows Rookie through Master, Admin > Progression >
    Quests shows 37 active definitions, Admin level/quest edits save, and Home
    awards quest XP once per quest.
-6. Add/confirm `ADMIN_EMAILS` in Render before QAing Admin; monthly pricing
-   checks are suspended/deprecated, so `PRICING_CHECK_SECRET` is not an active
-   QA blocker unless manual pricing-review endpoint testing resumes.
+6. Add/confirm `ADMIN_EMAILS` in Render before QAing Admin; scheduled pricing
+   checks were removed and no pricing-check secret is required.
 7. Keep pricing updates manual until candidate preview/writeback or a
    deterministic pricing parser is built.
 8. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,

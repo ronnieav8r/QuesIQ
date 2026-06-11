@@ -235,7 +235,7 @@ AI pricing belongs in editable app-owned pricing records. Cost calculations
 should read active pricing records and store the pricing version used on derived
 usage rows where practical.
 
-A monthly AI pricing review can use OpenAI web search and structured JSON to
+Manual Admin AI pricing review can use OpenAI web search and structured JSON to
 compare current app pricing against
 `https://developers.openai.com/api/docs/pricing`, which is the source of truth
 for pricing review. Treat that output as a candidate report for admin approval.
@@ -244,10 +244,9 @@ records. Acceptance must only apply verified candidates for exact existing model
 and modality pairs; audio pricing must never be replaced by text-token pricing
 for the same model name.
 
-As of the latest Render QA, the monthly pricing-check cron is suspended and
-deprecated for now because it was not working cleanly and redeployed after every
-build. Keep pricing review manual until a more reliable parser/preview workflow
-is intentionally rebuilt.
+The monthly pricing-check cron and external secret-gated pricing routes are
+retired. Keep pricing review manual until a more reliable parser/preview
+workflow is intentionally rebuilt.
 
 ### Persist Profile Context Separately From Session Snapshots
 

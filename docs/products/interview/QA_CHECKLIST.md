@@ -16,6 +16,10 @@ with production or static checks.
   migrations are applied, and an Interview test-tunnel OpenAI key or accepted
   fallback key is configured. This model-backed smoke covers Rapid Fire,
   Intro Practice, and Story Practice/TMAAT through the backend turn engine.
+- Run `npm run test:e2e` when local Postgres is running and Playwright browsers
+  are installed. This browser smoke checks public navigation, authenticated app
+  routing, Quira chat UI, and shared admin surfaces without using real mic
+  hardware.
 - Run `npm run typecheck`.
 - Run `npm run lint`.
 - Run `npm run build`.

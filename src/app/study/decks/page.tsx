@@ -141,16 +141,16 @@ export default async function StudyDecksPage() {
             </div>
 
             {isAdmin && (
-              <Link className="study-deck-card" href="/admin?product=content">
+              <Link className="study-deck-card" href="/admin?product=study">
                 <div className="study-deck-card__header">
                   <span className="badge">Official</span>
                   <ShieldCheck size={18} aria-hidden="true" />
                 </div>
-                <h3>Admin content workflow</h3>
-                <p>Create review-ready Study drafts in Content Studio. Curation decides Official and Verified later.</p>
+                <h3>Admin CSV import</h3>
+                <p>Import source-reviewed CSV decks, mark them Official, and add them to deck stacks.</p>
                 <div className="study-deck-card__footer">
                   <CheckCircle2 size={14} aria-hidden="true" />
-                  <span>Admin only - generation does not publish</span>
+                  <span>Admin only - preview before save</span>
                 </div>
               </Link>
             )}

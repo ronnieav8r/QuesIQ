@@ -615,6 +615,7 @@ export async function updateStudyDeck(
     examDate?: Date | null;
     examName?: string | null;
     folderId?: string | null;
+    isOfficial?: boolean;
     isPublic?: boolean;
     subject?: string | null;
     tags?: string[] | null;

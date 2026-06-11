@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import {
-  generateDpeContentStudioDraft,
+  generateDpeContentDraft,
   parseDpeContentDraftInput,
 } from "@/server/dpe/content-draft";
 import { parseDpeReferencePacketPreview } from "@/server/dpe/draft-reference";
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const draft = await generateDpeContentStudioDraft({
+    const draft = await generateDpeContentDraft({
       ...parsed.value,
       userId: session.user.id,
     });

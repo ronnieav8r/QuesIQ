@@ -29,7 +29,7 @@ export type DpeContentDraftInput = {
   sourceText: string;
 };
 
-export type DpeContentStudioDraft = {
+export type DpeContentDraft = {
   acs: DpeContentDraftAcs;
   answerKey: {
     acceptableVariations: string[];
@@ -78,11 +78,11 @@ export type DpeContentStudioDraft = {
 
 type RawDraft = {
   acs?: Partial<DpeContentDraftAcs>;
-  answerKey?: Partial<DpeContentStudioDraft["answerKey"]>;
+  answerKey?: Partial<DpeContentDraft["answerKey"]>;
   certificate?: Partial<DpeContentDraftCertificate>;
   confidence?: unknown;
-  oralQuestion?: Partial<DpeContentStudioDraft["oralQuestion"]>;
-  rubric?: Partial<DpeContentStudioDraft["rubric"]>;
+  oralQuestion?: Partial<DpeContentDraft["oralQuestion"]>;
+  rubric?: Partial<DpeContentDraft["rubric"]>;
   sourceSummary?: unknown;
   warnings?: unknown;
 };
@@ -257,7 +257,7 @@ function missingFields(args: {
   answerKeyElements: string[];
   certificate: DpeContentDraftCertificate;
   questionText: string;
-  rubric: DpeContentStudioDraft["rubric"];
+  rubric: DpeContentDraft["rubric"];
 }) {
   const missing: string[] = [];
 
@@ -284,7 +284,7 @@ function buildReadiness(args: {
   answerKeyElements: string[];
   certificate: DpeContentDraftCertificate;
   questionText: string;
-  rubric: DpeContentStudioDraft["rubric"];
+  rubric: DpeContentDraft["rubric"];
 }) {
   const missing = missingFields(args);
 
@@ -307,7 +307,7 @@ function fallbackDraft(args: {
   promptInstructions?: string;
   sourceText: string;
   warnings?: string[];
-}): DpeContentStudioDraft {
+}): DpeContentDraft {
   const sentences = sourceSentences(args.sourceText);
   const answerElements = (sentences.length > 0 ? sentences : [args.sourceText.slice(0, 360)]).slice(0, 5);
   const subject = args.acs.reference ?? args.acs.task ?? args.acs.area ?? "this ACS topic";
@@ -381,7 +381,7 @@ function normalizeDraft(raw: RawDraft, args: {
   certificate: DpeContentDraftCertificate;
   draftReferenceItems?: DpeDraftReferenceItem[];
   sourceText: string;
-}): DpeContentStudioDraft {
+}): DpeContentDraft {
   const fallback = fallbackDraft({
     acs: args.acs,
     certificate: args.certificate,
@@ -451,7 +451,7 @@ function normalizeDraft(raw: RawDraft, args: {
 }
 
 function buildPrompt(args: DpeContentDraftInput) {
-  return `Create a reviewable QuesIQ DPE Content Studio draft from the source text.
+  return `Create a reviewable QuesIQ DPE content draft from the source text.
 
 This is a controlled DPE generation step only. Do not claim the content is published, ready, official, or saved.
 Return a draft for admin review using this flow:
@@ -521,9 +521,9 @@ Source text:
 ${args.sourceText.slice(0, MAX_SOURCE_CHARS)}`;
 }
 
-export async function generateDpeContentStudioDraft(args: DpeContentDraftInput & {
+export async function generateDpeContentDraft(args: DpeContentDraftInput & {
   userId?: string;
-}): Promise<DpeContentStudioDraft> {
+}): Promise<DpeContentDraft> {
   const sourceText = args.sourceText.trim().slice(0, MAX_SOURCE_CHARS);
   const promptInstructions = args.promptInstructions?.trim().slice(0, MAX_INSTRUCTION_CHARS) || undefined;
 

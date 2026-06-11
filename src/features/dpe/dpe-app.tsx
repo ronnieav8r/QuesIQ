@@ -25,7 +25,6 @@ import Link from "next/link";
 import { signIn, signOut } from "next-auth/react";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
-import { inferDpeTargetTrackKeyFromCertificate } from "@/features/admin/dpe-target-tracks";
 import { ProductUsageTracker } from "@/features/platform/product-usage-tracker";
 import { QuiraChatLauncher } from "@/features/support/quira-chat";
 import type { VoiceSessionArtifactDraft } from "@/product/interview-types";
@@ -213,9 +212,6 @@ type ContentSummary = {
     }[];
   }[];
 };
-
-type DpeContentCertificateSummary = ContentSummary["certificateTypes"][number];
-type DpeContentQuestionSummary = DpeContentCertificateSummary["questions"][number];
 
 type ContentReadiness = {
   answerKeysReady: number;
@@ -4577,12 +4573,7 @@ function ContentScreen({ summary }: { summary: ContentSummary }) {
                   </div>
                   <strong>{question.questionText}</strong>
                   <div className="inline-actions mt-4">
-                    <Link
-                      className="button"
-                      href={buildDpeContentStudioHref(certificateType, question)}
-                    >
-                      Open in Content Studio
-                    </Link>
+                    <span className="pill">Content curation pending</span>
                   </div>
                 </article>
               ))}
@@ -4604,44 +4595,6 @@ function ContentScreen({ summary }: { summary: ContentSummary }) {
       </div>
     </section>
   );
-}
-
-function buildDpeContentStudioHref(
-  certificateType: DpeContentCertificateSummary,
-  question: DpeContentQuestionSummary,
-) {
-  const params = new URLSearchParams({
-    acsArea: question.acsArea,
-    acsElementType: inferDpeAcsElementType(question.acsElementReference),
-    acsReference: question.acsElementReference,
-    acsTask: question.acsTask,
-    acsTitle: areaLabels[question.acsArea] ?? "",
-    certificateCode: certificateType.code,
-    certificateId: certificateType.id,
-    certificateTitle: certificateType.title,
-    pipeline: "dpe_content",
-    product: "content",
-    sourceText: question.questionText,
-  });
-  const trackKey = inferDpeTargetTrackKeyFromCertificate({
-    code: certificateType.code,
-    id: certificateType.id,
-    title: certificateType.title,
-  });
-
-  if (trackKey) {
-    params.set("dpeTrackKey", trackKey);
-  }
-
-  return `/admin?${params.toString()}`;
-}
-
-function inferDpeAcsElementType(reference: string) {
-  const normalized = reference.toUpperCase();
-  if (/(^|[.\s-])K\d*/.test(normalized)) return "Knowledge";
-  if (/(^|[.\s-])R\d*/.test(normalized)) return "Risk Management";
-  if (/(^|[.\s-])S\d*/.test(normalized)) return "Skill";
-  return "";
 }
 
 function HistoryScreen({

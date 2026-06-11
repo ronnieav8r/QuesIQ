@@ -50,7 +50,8 @@ Automated checks should cover:
 - core Study routes, API routes, and server modules
 - rich CSV import parser, default mapping, mapped-header support, and parser
   smoke test
-- Content Studio preview/save modes for Study import review
+- Study Admin CSV import preview/save, Official deck marking, and stack
+  assignment controls
 - source and verification metadata display
 - admin/auth guard markers
 - disabled Publish, Official, and broad Verified boundaries

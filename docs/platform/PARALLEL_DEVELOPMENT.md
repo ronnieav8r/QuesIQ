@@ -38,12 +38,11 @@ manager assigns it:
 - Admin/platform direction docs under `docs/platform`
 - Lane guard updates under `scripts/guards`
 
-Admin Content Studio starts as a protected `/admin` UI for source intake,
-pipeline selection, reusable prompt/template selection, custom instructions,
-and staged scrub/generate/verify/review/publish framing. Study flashcard sets
-and DPE content are first-priority pipelines. Generation and verification must
-remain distinct stages, and publishing should stay disabled until product-owned
-backend controls and audit storage are ready.
+Admin product work starts from product-specific panels under `/admin`. Study
+content import currently lives in `/admin?product=study` through the rich CSV
+import tool. Generation and verification remain Codex-side/content-ops stages,
+and publishing should stay disabled until product-owned backend controls and
+audit storage are ready.
 
 ## Shared Lanes
 

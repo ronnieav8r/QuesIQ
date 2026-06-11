@@ -1876,7 +1876,7 @@ export async function consumeTurnBasedInterviewPrefetch(input: {
   };
 }
 
-export async function consumeReadyTurnBasedInterviewPrefetch(input: {
+async function consumeReadyTurnBasedInterviewPrefetch(input: {
   prefetchKind: TurnPrefetchKind;
   sessionId: string;
   transcript?: string;

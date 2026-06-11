@@ -508,22 +508,6 @@ export async function saveInterviewQuestionImport(input: {
   return { createdCount, importId: importRecord.id, parsed, updatedCount };
 }
 
-export async function markQuestionAttemptStarted(input: {
-  questionId: string;
-  sessionId: string;
-  userId: string;
-}) {
-  await getDb()
-    .insert(interviewQuestionPracticeAttempts)
-    .values({
-      questionId: input.questionId,
-      sessionId: input.sessionId,
-      updatedAt: new Date(),
-      userId: input.userId,
-    })
-    .onConflictDoNothing();
-}
-
 export async function markQuestionAttemptsStarted(input: {
   questionIds: string[];
   sessionId: string;

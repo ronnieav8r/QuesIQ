@@ -1,26 +1,33 @@
 import Link from "next/link";
 
-import { ContentStudio } from "@/features/admin/content-studio";
 import {
   dpeTargetTracks,
   inferDpeTargetTrackKeyFromCertificate,
 } from "@/features/admin/dpe-target-tracks";
 import { AdminView } from "@/components/interview/admin-view";
-import { getStudyLibraryDecks } from "@/features/study/study-data";
+import { StudyAdminCsvImport } from "@/features/admin/study-admin-csv-import";
+import { getStudyLibraryDecks, getVisibleStudyStacks } from "@/features/study/study-data";
+import { auth } from "@/auth";
 import { getAdminDpePreflightSnapshot } from "@/server/admin-data/dpe-preflight";
 import { listAdminDpeReviewDiagnostics } from "@/server/admin-data/dpe-diagnostics";
 import { listAdminDpeProgressionSnapshot } from "@/server/admin-data/dpe-progression";
 import { listDpeContentSummary } from "@/server/dpe/dpe-data";
 import { promptConfigFallbacks } from "@/server/prompts/defaults";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
+import {
+  STUDY_RICH_IMPORT_HEADERS,
+  STUDY_RICH_IMPORT_SAMPLE_CSV,
+} from "@/server/study/study-rich-flashcard-import";
 import { listQuiraAdminSupportData } from "@/server/support/quira-support";
 import type { PromptConfigRecord } from "@/product/interview-types";
 
-type AdminProduct = "content" | "dpe" | "interview" | "overview" | "quira" | "study";
+type AdminProduct = "dpe" | "interview" | "overview" | "quira" | "study";
+type DpeContentSummary = Awaited<ReturnType<typeof listDpeContentSummary>>;
+type DpeCertificateSummary = DpeContentSummary["certificateTypes"][number];
+type DpeQuestionSummary = DpeCertificateSummary["questions"][number];
 
 const adminProducts: { key: AdminProduct; label: string }[] = [
   { key: "overview", label: "Overview" },
-  { key: "content", label: "Content Studio" },
   { key: "quira", label: "Quira" },
   { key: "interview", label: "Interview" },
   { key: "study", label: "Study" },
@@ -73,7 +80,6 @@ export async function AdminConsole({ product }: { product?: string }) {
       </nav>
 
       {activeProduct === "overview" && <AdminOverview />}
-      {activeProduct === "content" && <ContentStudio />}
       {activeProduct === "quira" && <QuiraAdminPanel />}
       {activeProduct === "interview" && <AdminView eyebrow="Interview" title="Interview" />}
       {activeProduct === "study" && <StudyAdminPanel />}
@@ -98,9 +104,6 @@ function AdminOverview() {
       <div className="prompt-version-list">
         <Link className="button-link secondary" href="/admin?product=interview">
           Interview
-        </Link>
-        <Link className="button-link secondary" href="/admin?product=content">
-          Content Studio
         </Link>
         <Link className="button-link secondary" href="/admin?product=quira">
           Quira admin
@@ -416,10 +419,15 @@ async function QuiraAdminPanel() {
 
 async function StudyAdminPanel() {
   let decks: Awaited<ReturnType<typeof getStudyLibraryDecks>> = [];
+  let stacks: Awaited<ReturnType<typeof getVisibleStudyStacks>> = [];
   let unavailable = false;
+  const session = await auth();
 
   try {
-    decks = await getStudyLibraryDecks();
+    [decks, stacks] = await Promise.all([
+      getStudyLibraryDecks({ userId: session?.user?.id }),
+      getVisibleStudyStacks(session?.user?.id),
+    ]);
   } catch (error) {
     unavailable = true;
     console.error("Study admin deck summary unavailable.", error);
@@ -447,6 +455,29 @@ async function StudyAdminPanel() {
           Open library
         </Link>
       </div>
+
+      <StudyAdminCsvImport
+        decks={decks.map((deck) => ({
+          cardCount: deck.cardCount,
+          id: deck.id,
+          isOfficial: deck.isOfficial,
+          isPublic: deck.isPublic,
+          subject: deck.subject,
+          title: deck.title,
+          verifiedCardCount: deck.verifiedCardCount,
+        }))}
+        headers={[...STUDY_RICH_IMPORT_HEADERS]}
+        sampleCsv={STUDY_RICH_IMPORT_SAMPLE_CSV}
+        stacks={stacks.map((stack) => ({
+          cardCount: stack.cardCount,
+          deckCount: stack.deckCount,
+          id: stack.id,
+          isOfficial: stack.isOfficial,
+          isPublic: stack.isPublic,
+          subject: stack.subject,
+          title: stack.title,
+        }))}
+      />
 
       <div className="study-stat-strip" aria-label="Study admin summary">
         <div className="study-stat-chip">
@@ -1073,12 +1104,7 @@ async function DpeAdminPanel() {
                                   ))}
                                 </div>
                                 <p>{getDpeQuestionNextAction(question)}</p>
-                                <Link
-                                  className="button"
-                                  href={buildDpeContentStudioHref(certificateType, question)}
-                                >
-                                  Open in Content Studio
-                                </Link>
+                                <span className="pill">DPE content editor pending</span>
                               </div>
                             </div>
                           ))}
@@ -1102,38 +1128,6 @@ async function DpeAdminPanel() {
       </div>
     </section>
   );
-}
-
-type DpeContentSummary = Awaited<ReturnType<typeof listDpeContentSummary>>;
-type DpeCertificateSummary = DpeContentSummary["certificateTypes"][number];
-type DpeQuestionSummary = DpeCertificateSummary["questions"][number];
-
-function buildDpeContentStudioHref(
-  certificateType: DpeCertificateSummary,
-  question: DpeQuestionSummary,
-) {
-  const params = new URLSearchParams({
-    acsArea: question.acsArea,
-    acsReference: question.acsElementReference,
-    acsTask: question.acsTask,
-    certificateCode: certificateType.code,
-    certificateId: certificateType.id,
-    certificateTitle: certificateType.title,
-    pipeline: "dpe_content",
-    product: "content",
-    sourceText: question.questionText,
-  });
-  const trackKey = inferDpeTargetTrackKeyFromCertificate({
-    code: certificateType.code,
-    id: certificateType.id,
-    title: certificateType.title,
-  });
-
-  if (trackKey) {
-    params.set("dpeTrackKey", trackKey);
-  }
-
-  return `/admin?${params.toString()}`;
 }
 
 function calculateDpeReadiness(

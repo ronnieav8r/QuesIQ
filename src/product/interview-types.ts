@@ -331,7 +331,7 @@ export type SessionHistoryItem = {
 
 export type SessionStatus = "artifact_saved" | "created" | "evaluated";
 
-export type EvaluationStatus =
+type EvaluationStatus =
   | "completed"
   | "failed"
   | "not_started"
@@ -647,7 +647,7 @@ export type VoiceSessionArtifactDraft = {
   transcript: VoiceTranscriptTurn[];
 };
 
-export type InterviewAnswerEvaluationVerdict =
+type InterviewAnswerEvaluationVerdict =
   | "below_standard"
   | "meets_standard"
   | "partial";
@@ -827,16 +827,6 @@ export type AiPricingRecord = {
   unit: "per_1m_tokens";
   updatedAt: string;
   version: string;
-};
-
-export type PricingCheckRecord = {
-  checkedAt: string;
-  detectedChange: boolean;
-  id: string;
-  sourceHash?: string;
-  sourceUrl: string;
-  status: "failed" | "succeeded";
-  summary: string;
 };
 
 export type PricingReviewResult = {

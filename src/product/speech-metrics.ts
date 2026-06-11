@@ -1,6 +1,6 @@
 import type { VoiceSessionArtifactDraft, VoiceTranscriptTurn } from "@/product/interview-types";
 
-export const turnBasedRecordingTimingSource = "turn_based_recording_window" as const;
+const turnBasedRecordingTimingSource = "turn_based_recording_window" as const;
 
 export type SpeechSummary = {
   answeredTurnCountWithWpm: number;
@@ -16,7 +16,7 @@ function isUserTurn(turn: Pick<VoiceTranscriptTurn, "role" | "speaker">) {
   return turn.role === "user" || turn.speaker === "You";
 }
 
-export function countSpokenWords(text: string) {
+function countSpokenWords(text: string) {
   const matches = text
     .trim()
     .match(/[A-Za-z0-9]+(?:['-][A-Za-z0-9]+)*/g);

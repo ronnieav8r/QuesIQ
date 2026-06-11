@@ -74,9 +74,9 @@ through a deliberate content-import slice.
 4. Build the real aviation content curation/import path from the DPE source
    workbook/PDF material. Keep placeholder content clearly marked until final
    answer keys and rubrics are authored.
-5. Add durable Content Studio run storage and publish/audit workflow only from
-   the Admin/platform lane; DPE currently treats generated drafts as review
-   inputs, not published content.
+5. Add a product-owned DPE content editor/import path and publish/audit workflow
+   only after the aviation content curation process is settled; DPE currently
+   treats generated drafts as review inputs, not published content.
 
 ## Draft Reference Path From Reviewed Source Packs
 
@@ -855,53 +855,14 @@ This slice adds Admin visibility for local-only learner recovery safeguards:
 3. This is source-contract visibility only; it does not add schema, content,
    publish, Official, or Verified state.
 
-## MVP Learner Polish Slice 48 (DPE Content Studio Routing)
+## MVP Learner Polish Slice 48-51 (Retired DPE Content Studio Routing)
 
-This slice improves admin-only DPE content workflow routing without changing
-content:
-
-1. The DPE app's admin-only Content screen now links each visible prompt to
-   Content Studio with DPE pipeline context, certificate metadata, ACS area,
-   ACS task, ACS reference, and source question text.
-2. This mirrors the Admin DPE gap routing pattern and keeps publish, Official,
-   and Verified controls disabled.
-3. No aviation content, schema, publish, Official, or Verified state changed.
-
-## MVP Learner Polish Slice 49 (Admin DPE Content Routing Contract)
-
-This slice adds Admin preflight visibility for the DPE app's content-routing
-surface:
-
-1. Admin DPE preflight now checks that the DPE app's admin-only Content screen
-   still has Content Studio routing markers.
-2. The runtime signal list includes `DPE app content routing`, separate from
-   the existing Admin gap-card routing signal.
-3. This is source-contract visibility only; it does not add content, schema,
-   publish, Official, or Verified state.
-
-## MVP Learner Polish Slice 50 (DPE Content Track Routing)
-
-This slice makes DPE app Content Studio links more target-aware:
-
-1. The DPE app's admin-only Content screen now infers `dpeTrackKey` from the
-   visible certificate metadata when building Content Studio links.
-2. Admin DPE preflight now checks that the DPE app content-routing contract
-   includes target-track inference and `dpeTrackKey` propagation.
-3. No aviation content, schema, publish, Official, or Verified state changed.
-
-## MVP Learner Polish Slice 51 (DPE Content ACS Context Routing)
-
-This slice completes DPE app Content Studio routing context without changing
-content:
-
-1. DPE app Content Studio links now include ACS title and inferred ACS element
-   type alongside ACS area, task, reference, certificate metadata, and
-   `dpeTrackKey`.
-2. The element type is inferred only from the visible ACS reference suffix
-   (`K`, `R`, or `S`) and remains blank when it cannot be inferred.
-3. Admin DPE preflight now checks that the DPE app content-routing contract
-   includes ACS title and element-type propagation.
-4. No aviation content, schema, publish, Official, or Verified state changed.
+These slices previously routed DPE content gaps into the shared Admin Content
+Studio surface. That shared runtime surface has since been retired. DPE now
+shows content curation as pending in the learner/admin content views, while the
+product-owned `/api/dpe/content/draft` preview primitive remains available for
+future admin/reviewer content work. No aviation content, schema, publish,
+Official, or Verified state changed.
 
 ## MVP Learner Polish Slice 52 (Signed-In Target Readiness)
 
@@ -954,7 +915,7 @@ practice:
 This slice removes a dead learner control without changing content:
 
 1. The DPE header settings button now opens the Me/profile setup screen.
-2. The button has an explicit `Open profile settings` label and tooltip so the
+2. The button has an explicit `Open Me` label and tooltip so the
    settings affordance has a real destination for target setup.
 3. Admin DPE preflight now checks that learner target-aware chrome includes the
    settings route marker.

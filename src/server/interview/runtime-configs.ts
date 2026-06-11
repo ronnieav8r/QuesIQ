@@ -3,8 +3,8 @@ import { asc, eq } from "drizzle-orm";
 import { getDb } from "@/server/db/client";
 import { interviewRuntimeConfigs } from "@/server/db/schema";
 
-export type InterviewModeEngine = "realtime" | "turn_based";
-export type InterviewFeedbackDepth = "brief" | "coaching" | "review_only";
+type InterviewModeEngine = "realtime" | "turn_based";
+type InterviewFeedbackDepth = "brief" | "coaching" | "review_only";
 
 export type InterviewRuntimeConfigRecord = {
   enabled: boolean;

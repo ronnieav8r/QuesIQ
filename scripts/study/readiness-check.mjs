@@ -66,13 +66,11 @@ const requiredFiles = [
   "src/app/api/study/stacks/route.ts",
   "src/app/api/study/stacks/[stackId]/route.ts",
   "src/app/api/study/stacks/[stackId]/items/route.ts",
-  "src/app/api/study/content-studio/flashcard-draft/route.ts",
+  "src/app/api/admin/study/rich-csv-import/route.ts",
   "drizzle/0079_add_study_deck_stacks.sql",
-  "src/server/study/study-content-studio.ts",
-  "src/server/study/study-source-pack-draft-contract.ts",
-  "src/server/study/study-source-pack-verification-queue.ts",
   "src/server/study/study-answer-evaluator.ts",
   "src/server/study/study-rich-flashcard-import.ts",
+  "src/features/admin/study-admin-csv-import.tsx",
   "scripts/study/evaluate-smoke.ts",
   "scripts/study/rich-csv-import-smoke.ts",
   "docs/products/study/README.md",
@@ -83,22 +81,21 @@ for (const file of requiredFiles) {
   checkFile(file, true);
 }
 
-if (exists("src/app/api/study/content-studio/flashcard-draft/route.ts")) {
-  const route = read("src/app/api/study/content-studio/flashcard-draft/route.ts");
-  checkPattern(route, /requireAdminSession/, "Admin guard in Study content-studio route", true);
-  checkPattern(route, /Admin access required\./, "Admin access response in Study content-studio route", true);
-  checkPattern(route, /mode === "rich_csv_import_preview"/, "Rich CSV preview mode wired", true);
-  checkPattern(route, /mode === "rich_csv_import_save"/, "Rich CSV save mode wired", true);
-  checkPattern(route, /mode === "source_pack_generation_packet_preview"/, "Generation packet preview mode wired", true);
-  checkPattern(route, /mode === "source_pack_preview"/, "Source-pack draft preview mode wired", true);
-  checkPattern(route, /mode === "source_pack_verification_queue_preview"/, "Verifier queue preview mode wired", true);
-  checkPattern(route, /mode === "source_pack_draft_run_save"/, "Source-pack draft run save mode wired", true);
-  checkPattern(
-    route,
-    /Publish, Official, and broad Verified flows remain disabled|does not call AI verifier, import Study decks, publish, or mark Official\/Verified/,
-    "Disabled Publish/Official/Verified boundary messaging present",
-    true,
-  );
+if (exists("src/app/api/admin/study/rich-csv-import/route.ts")) {
+  const route = read("src/app/api/admin/study/rich-csv-import/route.ts");
+  checkPattern(route, /requireAdminSession/, "Admin guard in Study admin CSV import route", true);
+  checkPattern(route, /parseStudyRichFlashcardImportText/, "Study admin CSV route uses rich parser", true);
+  checkPattern(route, /saveStudyRichFlashcardImport/, "Study admin CSV route saves rich import", true);
+  checkPattern(route, /markDeckOfficial/, "Study admin CSV route can mark deck Official", true);
+  checkPattern(route, /addDeckToStudyStack/, "Study admin CSV route can attach decks to stacks", true);
+}
+
+if (exists("src/features/admin/study-admin-csv-import.tsx")) {
+  const component = read("src/features/admin/study-admin-csv-import.tsx");
+  checkPattern(component, /Header mapping/, "Study admin CSV UI exposes header mapping", true);
+  checkPattern(component, /Mark deck Official/, "Study admin CSV UI exposes Official deck control", true);
+  checkPattern(component, /Stack assignment/, "Study admin CSV UI exposes stack assignment", true);
+  checkPattern(component, /Exact CSV headers/, "Study admin CSV UI documents exact headers", true);
 }
 
 if (exists("drizzle/0079_add_study_deck_stacks.sql")) {
@@ -174,14 +171,14 @@ if (exists("docs/products/study/README.md")) {
   const readme = read("docs/products/study/README.md");
   checkPattern(
     readme,
-    /rich_csv_import_preview|rich_csv_import_save/,
-    "Study README references rich CSV import preview/save modes",
+    /\/api\/admin\/study\/rich-csv-import/,
+    "Study README references Study admin CSV import route",
     true,
   );
   checkPattern(
     readme,
-    /The current contract\/preview layer intentionally stops before publish, Official,\s*Verified/,
-    "Study README preserves publish/official/verified boundaries",
+    /The preferred admin import endpoint is\s*`\/api\/admin\/study\/rich-csv-import`/,
+    "Study README documents preferred admin import endpoint",
     true,
   );
   checkPattern(

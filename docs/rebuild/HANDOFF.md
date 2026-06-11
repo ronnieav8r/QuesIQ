@@ -22,7 +22,7 @@ Last updated: 2026-06-05
 - Perpetual lane-specific worker chats are deprecated. The manager may dispatch
   objective-scoped subagents into the existing lane clones when parallel work,
   lane-local implementation, or independent review is useful. Admin owns shared
-  `/admin` and Content Studio work; product lanes own their product files.
+  `/admin` surfaces; product lanes own their product files.
   Subagents must stay within the assigned clone/branch/path scope and must not
   merge or push `main`.
 - Interview Admin Prompt Test Tunnel is the standard backend text-clone QA path
@@ -36,28 +36,19 @@ Last updated: 2026-06-05
   chatbot work: `QuesIQ-quira` on `codex/quira`. The first slice adds the
   Quira storage/API/prompt/Admin-review foundation and replaces the
   Interview-only static help launcher with a shared support chat UI.
-- Admin Content Studio now has the first usable run/review slice:
-  `/admin?product=content` can submit Study flashcard source material or DPE
-  content source material through `/api/admin/content-studio/runs`, call the
-  product-owned draft generators, and save durable review state in
-  `content_studio_runs`. Saved runs can be reopened in the Admin review panel,
-  and reviewer notes/status changes persist. Publish, Official, and Verified
-  state changes remain disabled.
-- Study Content Studio draft generation is product-owned at
-  `/api/study/content-studio/flashcard-draft`. Draft responses include stable
-  draft/fingerprint metadata, card count, confidence summary, warning severity,
-  missing fields, and review checklist sections for Admin review.
-- DPE Content Studio draft generation is product-owned at
-  `/api/dpe/content/draft`. It returns certificate, ACS, oral-question,
-  answer-key, rubric, confidence, warning, readiness, and missing-field draft
-  JSON without writing to DPE content tables. This endpoint is now wired into
-  the Admin Content Studio run/review flow.
+- Study Admin CSV import is now the active admin content path:
+  `/admin?product=study` can preview rich CSV files, map incoming headers, mark
+  imported decks Public/Official, and add them to Study deck stacks through
+  `/api/admin/study/rich-csv-import`.
+- The old shared Admin Content Studio UI/routes have been retired from the app.
+  Codex-side content skills still create reviewed rich CSV artifacts, and DPE
+  keeps its product-owned `/api/dpe/content/draft` preview primitive for future
+  admin/reviewer content work.
 - QuesIQ DPE now has an MVP-readiness scaffold without expanding content:
   target-track metadata and DPE Me/Profile support for Private Pilot ASEL plus
   Instrument Airplane, Commercial Airplane Land, CFI Airplane, CFII Airplane,
   Multi-Engine Land, and MEI Airplane; track-aware Home/Practice empty states;
-  Admin Content Studio DPE run metadata for those tracks; Admin DPE readiness
-  visibility by configured/no-content/needs-work/review-ready track; and
+  Admin DPE readiness visibility by configured/no-content/needs-work/review-ready track; and
   DPE-owned persistent progression tables/API hooked to session completion,
   voice artifact completion, and readiness review completion.
 - DPE learner polish now includes a Home MVP readiness checklist, clearer
@@ -68,10 +59,9 @@ Last updated: 2026-06-05
   `/api/admin/dpe-progression` and in the Admin DPE panel: recent progression
   users, recent XP/quest events, enabled quests, and active XP rules. This is
   visibility only; DPE quest/rule editing remains future work.
-- Dedicated durable Content Studio run storage now exists in migration
-  `0051_add_content_studio_runs.sql`. Existing `ai_runs` remains AI-call audit
-  history and may be linked from a Content Studio run when available. Product
-  table publish controls and publish audit events remain future work.
+- Migration `0051_add_content_studio_runs.sql` remains historical. The runtime
+  Content Studio UI/API has been removed, and active Study admin imports now use
+  the Study-owned rich CSV import endpoint.
 - Latest local work is the QuesIQ marketing homepage regeneration plus recent
   platform/DPE import work. It is locally verified but not yet visually
   user-confirmed in production.
@@ -80,9 +70,9 @@ Last updated: 2026-06-05
   generated references: dark navy/purple/orange QuesIQ brand, hero CTA,
   product previews for Interview/Study/DPE, dashboard-style visual, trust
   section, and stats row.
-- The old root page export was replaced in `src/app/page.tsx`. Shared platform
-  product routing still exists in `src/features/platform/platform-home.tsx`,
-  but the public homepage is now marketing-first.
+- The old root page export was replaced in `src/app/page.tsx`; the public
+  homepage is now marketing-first and signed-in product routing lives under
+  `/apps`.
 - Site metadata now presents the broader platform, not only Interview:
   `src/app/layout.tsx` title is `QuesIQ | AI Practice Platform`, with dark
   theme color.
@@ -313,19 +303,12 @@ path until Phase 2 navigation is completed unless the product direction changes.
 - Added editable Admin AI pricing records and advisory pricing reviews: API and
   Realtime cost calculations now read active pricing rows, admins can edit/add
   pricing under AI Usage > Pricing, and AI pricing reviews compare app pricing
-  against `https://developers.openai.com/api/docs/pricing` using
-  `PRICING_CHECK_SECRET` for scheduled runs.
-- Added monthly AI pricing review support: Admin can trigger a structured
-  OpenAI web-search review, and `/api/pricing/review` can be called by the
-  Render monthly cron with `PRICING_CHECK_SECRET`. Leave pricing updates manual
-  for now; AI acceptance/writeback was explored but is not trusted enough for
-  cost accounting without a candidate preview or deterministic parser. As of
-  the latest QA, Ronnie suspended the monthly Render pricing-check cron because
-  it was not working cleanly and redeployed after every build; treat scheduled
-  pricing checks as deprecated/paused for now.
+  against `https://developers.openai.com/api/docs/pricing` from the Admin panel.
+  Scheduled pricing checks and the external `/api/pricing/*` cron routes have
+  been removed; pricing updates remain manual.
 - Added Admin AI Usage organization with spreadsheet-style API call and
   Realtime session tables, per-row estimated costs, editable pricing records,
-  and a Render cron runner script for monthly advisory pricing reviews. The
+  and manual Admin advisory pricing reviews. The
   runner is reference material while the scheduled cron remains suspended.
 - Added a local global feedback/bug-reporting slice: signed-in users can open a
   Feedback button from any screen, send a 1-5 rating and/or short bug/feedback
@@ -670,8 +653,8 @@ path until Phase 2 navigation is completed unless the product direction changes.
    awards quest XP only once per quest.
 4. User-confirm QA the Admin tab: Prompts, Modes, Questions, Styles, API Calls,
    Realtime Sessions, Pricing, Feedback/Bugs, Progression, Levels, and Data.
-5. Keep monthly/scheduled pricing checks paused; use manual Admin pricing review
-   only if needed.
+5. Scheduled pricing checks are retired; use manual Admin pricing review only
+   if needed.
 6. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
    new completed reviews award XP once, Home shows saved streak/level/latest
    next action, level thresholds load from Admin, and retry/reopen does not

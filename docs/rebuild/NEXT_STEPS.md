@@ -56,9 +56,8 @@ Last updated: 2026-05-27
   method.
 - AI pricing records are editable in Admin, and both exact-token API call costs
   and estimated Realtime costs use active pricing records.
-- Monthly AI pricing reviews are triggerable from Admin and schedulable through
-  `/api/pricing/review` with `PRICING_CHECK_SECRET`. They should be treated as
-  advisory only for now; pricing edits stay manual.
+- AI pricing reviews are triggerable from Admin only. They should be treated as
+  advisory; pricing edits stay manual.
 - A direct OpenAI Realtime browser voice slice is wired into that session screen
   with client artifact drafting and passed its first manual test.
 - Ended direct voice attempts now save transcript/event artifacts and Realtime
@@ -134,8 +133,8 @@ Last updated: 2026-05-27
   count, last-practiced date, and recent coaching.
 - Add daily Google Sheets export for AI run rows once the Admin run data is
   confirmed useful
-- Keep the Render monthly pricing-review cron suspended unless manual pricing
-  review is deliberately resumed
+- Keep scheduled pricing review retired unless a new deterministic parser or
+  preview workflow is deliberately rebuilt
 - Add candidate preview/checkboxes before allowing AI pricing-review writeback,
   or replace the AI review with a deterministic parser for the developer pricing
   page

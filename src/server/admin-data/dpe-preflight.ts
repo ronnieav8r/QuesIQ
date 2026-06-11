@@ -120,7 +120,6 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
     realtimeRouteSource,
     dpeTrackSource,
     adminConsoleSource,
-    contentStudioSource,
     publicStatusSource,
     runtimeCheckSource,
     dpeMeSource,
@@ -134,7 +133,6 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       readFile(path.join(process.cwd(), "src/app/api/dpe/realtime/session/route.ts"), "utf8"),
       readFile(path.join(process.cwd(), "src/features/dpe/target-tracks.ts"), "utf8"),
       readFile(path.join(process.cwd(), "src/features/admin/admin-console.tsx"), "utf8"),
-      readFile(path.join(process.cwd(), "src/features/admin/content-studio.tsx"), "utf8"),
       readFile(path.join(process.cwd(), "src/app/api/dpe/status/route.ts"), "utf8"),
       readFile(path.join(process.cwd(), "src/app/api/dpe/runtime-check/route.ts"), "utf8"),
       readFile(path.join(process.cwd(), "src/app/api/dpe/me/route.ts"), "utf8"),
@@ -170,8 +168,6 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
   const dpeTrackText = dpeTrackSource.status === "fulfilled" ? dpeTrackSource.value : "";
   const adminConsoleText =
     adminConsoleSource.status === "fulfilled" ? adminConsoleSource.value : "";
-  const contentStudioText =
-    contentStudioSource.status === "fulfilled" ? contentStudioSource.value : "";
   const publicStatusText =
     publicStatusSource.status === "fulfilled" ? publicStatusSource.value : "";
   const runtimeCheckText =
@@ -191,36 +187,25 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
       "Signing out...",
       "signIn(\"github\"",
     ]),
-    adminGapContentStudioRoutingVisible: hasAll(adminConsoleText, [
-      "Open in Content Studio",
-      "buildDpeContentStudioHref",
-      'pipeline: "dpe_content"',
-    ]) && hasAll(contentStudioText, [
-      "dpeContextFromSearchParams",
-      'params.get("pipeline") !== "dpe_content"',
-      "initialContentStudioUrlState",
+    adminGapContentEditorPendingVisible: hasAll(adminConsoleText, [
+      "Creation pipeline",
+      "DPE content editor pending",
+      "getDpeQuestionNextAction",
     ]),
     contentPendingMessagingVisible: hasAll(dpeAppText, [
       "Content remains pending for this track",
       "available Private Pilot demo prompts",
       "Selected target is scaffolded; demo prompt lane is active",
     ]),
-    dpeAppContentStudioRoutingVisible: hasAll(dpeAppText, [
+    dpeAppContentCurationPendingVisible: hasAll(dpeAppText, [
       "ContentScreen",
-      "buildDpeContentStudioHref",
-      "inferDpeTargetTrackKeyFromCertificate",
-      "inferDpeAcsElementType",
-      "acsElementType",
-      "acsTitle",
-      "dpeTrackKey",
-      "Open in Content Studio",
-      'pipeline: "dpe_content"',
+      "Content curation pending",
+      "formatQuestionContentReadiness",
     ]),
     learnerTargetAwareChromeVisible: hasAll(dpeAppText, [
       "Target-track oral prep",
       "MVP readiness checklist",
       "Readiness quest track (preview)",
-      "Open profile settings",
       "Target readiness",
       "Profile target setup incomplete",
       "Profile target ready",
@@ -377,8 +362,8 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
   if (!runtimeSignals.contentPendingMessagingVisible) {
     warnings.push("Content-pending non-Private track messaging markers were not detected.");
   }
-  if (!runtimeSignals.dpeAppContentStudioRoutingVisible) {
-    warnings.push("DPE app Content screen routing markers were not detected.");
+  if (!runtimeSignals.dpeAppContentCurationPendingVisible) {
+    warnings.push("DPE app Content screen curation-pending markers were not detected.");
   }
   if (!runtimeSignals.requestedTracksConfigured) {
     warnings.push("One or more requested airplane-land target track codes are missing.");
@@ -389,8 +374,8 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
   if (!runtimeSignals.voiceTargetSnapshotContractVisible) {
     warnings.push("DPE realtime target snapshot markers were not detected.");
   }
-  if (!runtimeSignals.adminGapContentStudioRoutingVisible) {
-    warnings.push("Admin DPE gap cards do not confirm Content Studio routing markers.");
+  if (!runtimeSignals.adminGapContentEditorPendingVisible) {
+    warnings.push("Admin DPE gap cards do not confirm pending editor markers.");
   }
   if (!runtimeSignals.publicStatusProbeVisible) {
     warnings.push("DPE public status probe markers were not detected.");
@@ -578,11 +563,11 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
         value: runtimeSignals.contentPendingMessagingVisible ? "Visible" : "Not detected",
       },
       {
-        detail: "DPE app admin-only Content screen routes visible prompts into Content Studio with DPE pipeline context.",
-        key: "dpe_app_content_studio_routing",
+        detail: "DPE app admin-only Content screen shows content curation as pending without routing to a retired tool.",
+        key: "dpe_app_content_curation_pending",
         label: "DPE app content routing",
-        status: warningStatusFrom(runtimeSignals.dpeAppContentStudioRoutingVisible),
-        value: runtimeSignals.dpeAppContentStudioRoutingVisible ? "Visible" : "Not detected",
+        status: warningStatusFrom(runtimeSignals.dpeAppContentCurationPendingVisible),
+        value: runtimeSignals.dpeAppContentCurationPendingVisible ? "Visible" : "Not detected",
       },
       {
         detail: "Realtime session endpoint shows expected DPE key-lookup contract markers.",
@@ -599,11 +584,11 @@ export async function getAdminDpePreflightSnapshot(): Promise<AdminDpePreflightS
         value: runtimeSignals.voiceTargetSnapshotContractVisible ? "Visible" : "Not detected",
       },
       {
-        detail: "Admin gap cards route into Content Studio with DPE context instead of a disabled placeholder.",
-        key: "admin_gap_content_studio_routing",
+        detail: "Admin gap cards show the DPE creation pipeline and keep editor launch pending until a dedicated DPE editor exists.",
+        key: "admin_gap_content_editor_pending",
         label: "Admin gap routing",
-        status: warningStatusFrom(runtimeSignals.adminGapContentStudioRoutingVisible),
-        value: runtimeSignals.adminGapContentStudioRoutingVisible ? "Visible" : "Not detected",
+        status: warningStatusFrom(runtimeSignals.adminGapContentEditorPendingVisible),
+        value: runtimeSignals.adminGapContentEditorPendingVisible ? "Visible" : "Not detected",
       },
       {
         detail: "Public DPE status route exposes safe target-track and content-table reachability signals.",

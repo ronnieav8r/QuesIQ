@@ -13,7 +13,7 @@ export const initialInterviewContext: InterviewContext = {
   targetRole: "",
 };
 
-export const practiceModes: PracticeMode[] = [
+const practiceModes: PracticeMode[] = [
   {
     description: "Work through answers with Que coaching in the moment.",
     key: "coaching",
@@ -43,7 +43,7 @@ export const practiceModes: PracticeMode[] = [
   },
 ];
 
-export const questionTypes: QuestionType[] = [
+const questionTypes: QuestionType[] = [
   {
     key: "behavioral",
     label: "Behavioral",
@@ -70,7 +70,7 @@ export const questionTypes: QuestionType[] = [
   },
 ];
 
-export const interviewStyles: InterviewStyle[] = [
+const interviewStyles: InterviewStyle[] = [
   {
     description: "Supportive, warm, and encouraging.",
     key: "friendly",

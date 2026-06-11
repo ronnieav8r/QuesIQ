@@ -715,27 +715,6 @@ p {
   align-content: start;
 }
 
-.platform-home-screen {
-  align-content: start;
-  gap: var(--space-6);
-}
-
-.platform-home-header {
-  align-items: center;
-  display: flex;
-  gap: var(--space-4);
-  justify-content: space-between;
-}
-
-.platform-home-logo {
-  display: block;
-  height: 3.2rem;
-  max-width: min(20rem, 58vw);
-  object-fit: contain;
-  object-position: left center;
-  width: auto;
-}
-
 .product-picker-grid {
   display: grid;
   gap: var(--space-4);
@@ -5396,15 +5375,6 @@ textarea::placeholder {
   .dpe-shell .brand-lockup {
     justify-self: center;
     text-align: center;
-  }
-
-  .platform-home-header {
-    align-items: start;
-    flex-direction: column;
-  }
-
-  .platform-home-header .auth-control {
-    justify-content: start;
   }
 
   .product-picker-grid {

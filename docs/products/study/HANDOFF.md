@@ -153,7 +153,6 @@ Current imported Study feature files:
 - `src/features/study/study-picker.tsx`
 - `src/features/study/study-public-toggle.tsx`
 - `src/features/study/study-quiz.tsx`
-- `src/features/study/study-resume-card.tsx`
 - `src/features/study/study-srs.ts`
 - `src/features/study/study-test.tsx`
 - `src/features/study/study-verbal.tsx`
@@ -250,38 +249,6 @@ the visual/UI level during the conversation:
   create, rename, delete, collapse/expand, and per-deck move controls
 - deck-first creation surface on `/study/decks` with Manual, Import, AI
   Generate placeholder, and admin-only Official generation entry points
-- Study-owned Content Studio flashcard draft primitive at
-  `/api/study/content-studio/flashcard-draft`; it returns reviewable deck
-  title/description/subject/tags, card drafts with hints/levels/source
-  notes/confidence, generation warnings with severity, stable draft id and
-  fingerprint, prompt metadata, card counts, low-confidence indexes,
-  missing-field flags, review checklist flags, and review sections without
-  publishing, marking Official, or marking cards Verified
-- Study-owned source-pack deck draft JSON contract and parser at
-  `src/server/study/study-source-pack-draft-contract.ts`; it preserves source
-  pack id, source chunk ids, page anchors, visual asset ids, tags, verification
-  status, and warnings across deck/card draft payloads
-- Study-owned generation packet contract and parser at
-  `src/server/study/study-generation-packet-contract.ts`; it validates bounded
-  `quesiq.studyGenerationPacket.v1` packets targeting
-  `study.sourcePackDeckDraft.v1` and preserves source pack metadata, deck
-  request metadata, output restrictions, chunk anchors/snippets/tags, and
-  related visual ids
-- `/api/study/content-studio/flashcard-draft` now includes a side-effect-free
-  admin-only `source_pack_preview` mode that validates source-pack-generated
-  Study draft JSON and returns review sections without Study runtime writes
-- `/api/study/content-studio/flashcard-draft` now also includes side-effect-free
-  admin-only `source_pack_generation_packet_preview` mode that validates posted
-  generation packets and returns packet review sections without generating
-  cards, importing decks, publishing, or writing Official/Verified state
-- `src/server/study/study-source-pack-verification-queue.ts` now provides a
-  preview-only verification queue contract from a validated
-  `study.sourcePackDeckDraft.v1` payload, including source citation coverage,
-  warning/status counts, and per-card queued/blocked recommendations
-- `/api/study/content-studio/flashcard-draft` now includes side-effect-free
-  admin-only `source_pack_verification_queue_preview` mode that validates a
-  source-pack draft and returns verifier queue review data only; it does not
-  call AI, import Study decks, write cards, publish, or mark Official/Verified
 - `src/server/study/study-rich-flashcard-import.ts` now provides a Study-owned
   rich CSV contract/parser for admin imports of AI-generated flashcards with
   source and verification metadata (deck title/description, subject, audience,
@@ -294,12 +261,12 @@ the visual/UI level during the conversation:
   `STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING`. Create-new-deck saves can use the
   first parsed row's mapped deck title/description/subject/tags when Admin does
   not supply separate deck fields.
-- `/api/study/content-studio/flashcard-draft` now supports
-  `rich_csv_import_preview` (no writes) and `rich_csv_import_save` (admin-only
-  target-deck import). Save writes cards plus `study_card_sources`,
-  `study_verifications`, and `study_deck_imports` metadata while keeping
-  Publish/Official controls disabled and keeping conservative Verified policy
-  checks (status must be `verified`, confidence >= 0.8, verifier present)
+- `/admin?product=study` now exposes the active Study Admin CSV import tool.
+  `/api/admin/study/rich-csv-import` supports `preview` and `save`; save writes
+  cards plus `study_card_sources`, `study_verifications`, and
+  `study_deck_imports` metadata, can mark the deck Public/Official, and can add
+  the deck to a Study stack while keeping conservative card Verified policy
+  checks (status must be `verified`, confidence >= 0.8, verifier present).
 - `drizzle/0054_add_study_source_verification_metadata.sql` adds structured
   metadata storage for rich admin imports: `study_card_sources.source_metadata`
   and `study_verifications.verification_status`, `evidence`, and `verifier`.

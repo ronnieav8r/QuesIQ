@@ -61,6 +61,50 @@ Open:
 http://127.0.0.1:3100
 ```
 
+## Browser E2E QA
+
+Playwright is the standard browser automation harness for local UI regression
+checks. It is additive to the backend smoke tests: Playwright verifies page
+flow, auth, navigation, Quira UI, and admin controls; the smoke scripts verify
+model-backed backend behavior.
+
+One-time browser install:
+
+```powershell
+npm run playwright:install
+```
+
+Run browser E2E from the repo root after local Postgres is running, migrations
+are applied, and `.env.local` points at the local database:
+
+```powershell
+npm run test:e2e
+```
+
+The test harness starts `http://127.0.0.1:3100` automatically unless
+`PLAYWRIGHT_SKIP_WEB_SERVER=1` is set. It seeds a verified local admin test
+account with:
+
+```text
+quesiq-e2e-admin@example.com
+```
+
+Override with `E2E_TEST_EMAIL` and `E2E_TEST_PASSWORD` when needed. The seeded
+account is added to the local Playwright server `ADMIN_EMAILS` environment so
+admin UI checks can run without changing production access rules.
+
+Use headed/debug runs when inspecting UI behavior:
+
+```powershell
+npm run test:e2e:headed
+npm run test:e2e:ui
+```
+
+Automated browser tests can stub microphone APIs for button-flow coverage, but
+they do not validate real AirPods behavior, mic device switching, audio
+clipping, speaker output, or realtime voice quality. Those remain manual QA
+items.
+
 ## Admin Prompt Test Tunnel
 
 The backend text-clone path for Interview QA is the Admin Prompt Test Tunnel.

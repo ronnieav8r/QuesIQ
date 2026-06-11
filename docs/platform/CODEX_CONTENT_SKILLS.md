@@ -3,7 +3,7 @@
 These are local Codex skills used to prepare source material, draft Study
 decks, verify cards, and create DPE reference packets. They are not app
 features by themselves. They are reusable Codex workflows that create reviewed
-artifacts for Admin Content Studio and product import flows.
+artifacts for product import flows.
 
 ## How To Call A Skill
 
@@ -16,7 +16,7 @@ Example:
 ```text
 Use quesiq-study-content-pipeline on the PHAK source pack. Create a reviewed
 Study deck draft for Chapter 2, include source chunks/pages/visuals, run source
-verification, and export a rich Admin CSV for Content Studio import.
+verification, and export a rich Admin CSV for Study Admin import.
 ```
 
 For full handbook work, prefer a separate Codex thread using a stronger model
@@ -46,9 +46,9 @@ draftConfidence, draftWarnings, verificationStatus, verificationConfidence,
 verificationNotes, verificationEvidence, verifier
 ```
 
-Admin Content Studio's Study import defaults should match these headers. If a
-CSV uses different column names, the Admin mapping UI should map those columns
-back to the same target fields before preview/save.
+The Study Admin CSV import defaults should match these headers. If a CSV uses
+different column names, the Admin mapping UI should map those columns back to
+the same target fields before preview/save.
 
 ## PHAK Deck Strategy
 

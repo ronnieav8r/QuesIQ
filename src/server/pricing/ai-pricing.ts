@@ -2,12 +2,11 @@ import { desc, eq, and } from "drizzle-orm";
 
 import type {
   AiPricingRecord,
-  PricingCheckRecord,
   PricingReviewRecord,
   PricingReviewResult,
 } from "@/product/interview-types";
 import { getDb } from "@/server/db/client";
-import { aiPricing, pricingChecks, pricingReviews } from "@/server/db/schema";
+import { aiPricing, pricingReviews } from "@/server/db/schema";
 import { getOpenAiApiKey } from "@/server/openai/keys";
 
 const sourceUrl = "https://developers.openai.com/api/docs/pricing";
@@ -38,18 +37,6 @@ function toPricingRecord(row: typeof aiPricing.$inferSelect): AiPricingRecord {
     unit: "per_1m_tokens",
     updatedAt: row.updatedAt.toISOString(),
     version: row.version,
-  };
-}
-
-function toCheckRecord(row: typeof pricingChecks.$inferSelect): PricingCheckRecord {
-  return {
-    checkedAt: row.checkedAt.toISOString(),
-    detectedChange: row.detectedChange,
-    id: row.id,
-    sourceHash: row.sourceHash ?? undefined,
-    sourceUrl: row.sourceUrl,
-    status: row.status,
-    summary: row.summary,
   };
 }
 
@@ -260,16 +247,6 @@ export async function updateAiPricing(id: string, input: PricingInput) {
     .returning();
 
   return row ? toPricingRecord(row) : undefined;
-}
-
-export async function listPricingChecks(limit = 20) {
-  const rows = await getDb()
-    .select()
-    .from(pricingChecks)
-    .orderBy(desc(pricingChecks.checkedAt))
-    .limit(limit);
-
-  return rows.map(toCheckRecord);
 }
 
 export async function listPricingReviews(limit = 20) {
@@ -505,39 +482,4 @@ export async function runPricingReview() {
 
     return toReviewRecord(updated);
   }
-}
-
-export async function runPricingCheck() {
-  const response = await fetch(sourceUrl, { cache: "no-store" });
-  const text = await response.text();
-  const hashBuffer = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(text),
-  );
-  const sourceHash = Array.from(new Uint8Array(hashBuffer))
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-  const [previous] = await getDb()
-    .select()
-    .from(pricingChecks)
-    .where(eq(pricingChecks.status, "succeeded"))
-    .orderBy(desc(pricingChecks.checkedAt))
-    .limit(1);
-  const detectedChange = Boolean(previous?.sourceHash && previous.sourceHash !== sourceHash);
-  const [row] = await getDb()
-    .insert(pricingChecks)
-    .values({
-      detectedChange,
-      sourceHash,
-      sourceUrl,
-      status: response.ok ? "succeeded" : "failed",
-      summary: response.ok
-        ? detectedChange
-          ? "Official pricing page content changed since the last successful check."
-          : "Official pricing page content matched the last successful check."
-        : `Official pricing page returned HTTP ${response.status}.`,
-    })
-    .returning();
-
-  return toCheckRecord(row);
 }
