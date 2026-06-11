@@ -1,5 +1,6 @@
 "use client";
 
+import { Bug, MessageSquare } from "lucide-react";
 import { useRef, useState, type KeyboardEvent } from "react";
 
 type SupportChatLauncherProps = {
@@ -17,6 +18,8 @@ type ChatMessage = {
   role: "assistant" | "user";
 };
 
+type QuickReportMode = "bug" | "feedback";
+
 type SupportChatResponse = {
   assistant?: {
     message?: string;
@@ -29,6 +32,14 @@ type SupportChatResponse = {
     content?: string;
   };
   reply?: string;
+};
+
+type SupportReportResponse = {
+  detail?: string;
+  error?: string;
+  report?: {
+    conversationId?: string;
+  };
 };
 
 async function readJsonBody<T>(response: Response) {
@@ -95,9 +106,18 @@ export function QuiraChatLauncher({
   const [error, setError] = useState<string>();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
+  const [quickMode, setQuickMode] = useState<QuickReportMode>();
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const messageIdRef = useRef(0);
   const chatLocked = !authLoaded;
+  const composerPlaceholder =
+    quickMode === "bug"
+      ? "Describe the bug, what you expected, and what happened."
+      : quickMode === "feedback"
+        ? "Share feedback, confusion, or an improvement idea."
+        : authLoaded
+          ? "Message Quira"
+          : "Checking support access...";
 
   function openChat() {
     setOpen(true);
@@ -114,6 +134,7 @@ export function QuiraChatLauncher({
     setConversationId(undefined);
     setDraft("");
     setError(undefined);
+    setQuickMode(undefined);
     window.setTimeout(() => composerRef.current?.focus(), 0);
   }
 
@@ -123,21 +144,28 @@ export function QuiraChatLauncher({
     return `${prefix}-${messageIdRef.current}`;
   }
 
-  async function sendChatMessage() {
+  function setQuickReportMode(mode: QuickReportMode) {
+    setQuickMode((current) => (current === mode ? undefined : mode));
+    setError(undefined);
+    window.setTimeout(() => composerRef.current?.focus(), 0);
+  }
+
+  async function sendChatMessage(messageOverride?: string) {
     const nextMessage = draft.trim();
+    const messageToSend = messageOverride?.trim() || nextMessage;
 
     if (!authLoaded) {
       setError("Quira is still checking support access.");
       return;
     }
 
-    if (!nextMessage) {
+    if (!messageToSend) {
       setError("Write a message first.");
       return;
     }
 
     const userMessage: ChatMessage = {
-      body: nextMessage,
+      body: messageToSend,
       id: nextMessageId("user"),
       role: "user",
     };
@@ -152,7 +180,7 @@ export function QuiraChatLauncher({
         body: JSON.stringify({
           browserContext: getBrowserContext(contextDetails),
           conversationId,
-          message: nextMessage,
+          message: messageToSend,
           product,
           screen,
           sessionId,
@@ -193,6 +221,92 @@ export function QuiraChatLauncher({
     }
   }
 
+  async function sendDirectReport(mode: QuickReportMode, message: string) {
+    const userMessage: ChatMessage = {
+      body: message,
+      id: nextMessageId("user"),
+      role: "user",
+    };
+
+    setPending(true);
+    setError(undefined);
+    setDraft("");
+    setChatMessages((current) => [...current, userMessage]);
+
+    try {
+      const response = await fetch("/api/support/report", {
+        body: JSON.stringify({
+          browserContext: getBrowserContext(contextDetails),
+          conversationId,
+          kind: mode,
+          message,
+          product,
+          screen,
+          sessionId,
+          urgency: mode === "bug" ? "high" : "normal",
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const body = await readJsonBody<SupportReportResponse>(response);
+
+      if (!response.ok) {
+        throw new Error(body.detail || body.error || "Quira could not save this report.");
+      }
+
+      setConversationId(body.report?.conversationId ?? conversationId);
+      setQuickMode(undefined);
+      setChatMessages((current) => [
+        ...current,
+        {
+          body:
+            mode === "bug"
+              ? "I saved this as a bug report for review."
+              : "I saved this as product feedback for review.",
+          id: nextMessageId("assistant"),
+          role: "assistant",
+        },
+      ]);
+    } catch (reportError) {
+      setError(
+        reportError instanceof Error ? reportError.message : "Quira could not save this report.",
+      );
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function submitComposer() {
+    const nextMessage = draft.trim();
+
+    if (!quickMode) {
+      await sendChatMessage();
+      return;
+    }
+
+    if (!authLoaded) {
+      setError("Quira is still checking support access.");
+      return;
+    }
+
+    if (!nextMessage) {
+      setError(quickMode === "bug" ? "Describe the bug first." : "Write your feedback first.");
+      return;
+    }
+
+    if (signedIn) {
+      await sendDirectReport(quickMode, nextMessage);
+      return;
+    }
+
+    await sendChatMessage(
+      quickMode === "bug" ? `Bug report: ${nextMessage}` : `Feedback: ${nextMessage}`,
+    );
+    setQuickMode(undefined);
+  }
+
   function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key !== "Enter" || event.shiftKey) {
       return;
@@ -200,7 +314,7 @@ export function QuiraChatLauncher({
 
     event.preventDefault();
     if (!pending && !chatLocked && draft.trim()) {
-      void sendChatMessage();
+      void submitComposer();
     }
   }
 
@@ -265,26 +379,51 @@ export function QuiraChatLauncher({
             {error && <p className="form-error">{error}</p>}
 
             <footer className="quira-composer">
+              <div className="quira-quick-actions" aria-label="Quick support actions">
+                <button
+                  aria-pressed={quickMode === "bug"}
+                  className={quickMode === "bug" ? "active" : undefined}
+                  disabled={pending || chatLocked}
+                  onClick={() => setQuickReportMode("bug")}
+                  type="button"
+                >
+                  <Bug size={14} aria-hidden="true" />
+                  Bug
+                </button>
+                <button
+                  aria-pressed={quickMode === "feedback"}
+                  className={quickMode === "feedback" ? "active" : undefined}
+                  disabled={pending || chatLocked}
+                  onClick={() => setQuickReportMode("feedback")}
+                  type="button"
+                >
+                  <MessageSquare size={14} aria-hidden="true" />
+                  Feedback
+                </button>
+              </div>
+              {quickMode && (
+                <div className="quira-mode-note">
+                  {quickMode === "bug"
+                    ? "Bug report mode"
+                    : "Feedback mode"}
+                </div>
+              )}
               <textarea
                 aria-label="Message Quira"
                 disabled={pending || chatLocked}
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={handleComposerKeyDown}
-                placeholder={
-                  authLoaded
-                    ? "Message Quira"
-                    : "Checking support access..."
-                }
+                placeholder={composerPlaceholder}
                 ref={composerRef}
                 rows={1}
                 value={draft}
               />
               <button
                 disabled={pending || chatLocked || !draft.trim()}
-                onClick={() => void sendChatMessage()}
+                onClick={() => void submitComposer()}
                 type="button"
               >
-                Send
+                {quickMode ? "Save" : "Send"}
               </button>
             </footer>
           </section>

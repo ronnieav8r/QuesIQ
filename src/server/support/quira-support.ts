@@ -741,6 +741,21 @@ function toolDefinitions() {
       type: "function",
     },
     {
+      description: "Record product feedback as a Quira feedback case for admin review.",
+      name: "record_feedback",
+      parameters: {
+        additionalProperties: false,
+        properties: {
+          summary: { type: "string" },
+          title: { type: "string" },
+          urgency: { enum: ["low", "normal", "high"], type: "string" },
+        },
+        required: ["title", "summary"],
+        type: "object",
+      },
+      type: "function",
+    },
+    {
       description: "Get safe status fields for a signed-in user's session.",
       name: "get_session_support_snapshot",
       parameters: {
@@ -836,11 +851,20 @@ async function runTool(input: {
     return { leadId: lead.id, status: lead.status };
   }
 
-  if (input.name === "create_support_case" || input.name === "record_bug_report") {
+  if (
+    input.name === "create_support_case" ||
+    input.name === "record_bug_report" ||
+    input.name === "record_feedback"
+  ) {
     const supportCase = await createSupportCase({
       conversationId: input.conversationId,
       details: { browserContext: input.browserContext, tool: input.name },
-      kind: input.name === "record_bug_report" ? "bug" : "support",
+      kind:
+        input.name === "record_bug_report"
+          ? "bug"
+          : input.name === "record_feedback"
+            ? "feedback"
+            : "support",
       product: input.product,
       screen: input.screen,
       sessionId: input.sessionId,
