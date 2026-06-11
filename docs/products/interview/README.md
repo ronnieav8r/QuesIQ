@@ -3,6 +3,11 @@
 QuesIQ Interview is the current lead coded product and should remain stable
 while the repository becomes the shared QuesIQ platform tree.
 
+Planning notes:
+
+- `docs/products/interview/INDUSTRY_CONTEXT_SPIKE.md` covers exploratory
+  groundwork for industry, role-family, and employer-specific context packs.
+
 ## Current Code
 
 Most current Interview code still lives in the original rebuild paths:
