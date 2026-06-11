@@ -3,13 +3,16 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+import { StudyCardBack, type StudyCardSourceForBack } from "@/features/study/study-card-back";
 import type { StudyVerdict } from "@/features/study/study-srs";
 
 type StudyVisualCard = {
   answer: string;
+  explanation: string | null;
   hint: string | null;
   id: string;
   question: string;
+  sources?: StudyCardSourceForBack[];
 };
 
 type StudyVisualProps = {
@@ -241,16 +244,23 @@ export function StudyVisual({ cards, deckId, filter, resume, srs }: StudyVisualP
         </button>
       </div>
 
-      <button
-        className={flipped ? "study-flip-card flipped" : "study-flip-card"}
-        onClick={() => setFlipped(true)}
-        type="button"
-      >
-        <span className="study-card-label">{flipped ? "Answer" : "Question"}</span>
-        <span className="study-card-text">{flipped ? card.answer : card.question}</span>
-        {flipped && card.hint && <span className="study-card-hint">{card.hint}</span>}
-        {!flipped && <span className="study-card-tap">Tap to reveal answer</span>}
-      </button>
+      {flipped ? (
+        <div className="study-flip-card flipped">
+          <span className="study-card-label">Answer</span>
+          <StudyCardBack
+            answer={card.answer}
+            explanation={card.explanation}
+            sources={card.sources}
+          />
+          {card.hint && <span className="study-card-hint">{card.hint}</span>}
+        </div>
+      ) : (
+        <button className="study-flip-card" onClick={() => setFlipped(true)} type="button">
+          <span className="study-card-label">Question</span>
+          <span className="study-card-text">{card.question}</span>
+          <span className="study-card-tap">Tap to reveal answer</span>
+        </button>
+      )}
 
       <div className={flipped ? "study-ratings visible" : "study-ratings"} aria-hidden={!flipped}>
         {selfRate ? (

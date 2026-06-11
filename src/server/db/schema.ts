@@ -1482,6 +1482,7 @@ export const studyCards = pgTable("study_cards", {
     .references(() => studyDecks.id, { onDelete: "cascade" }),
   dueAt: timestamp("due_at", { withTimezone: true }),
   easeFactor: real("ease_factor").default(2.5).notNull(),
+  explanation: text("explanation"),
   hint: text("hint"),
   id: uuid("id").defaultRandom().primaryKey(),
   interval: integer("interval").default(1).notNull(),

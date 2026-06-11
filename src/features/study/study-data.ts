@@ -720,6 +720,7 @@ export async function forkStudyDeck(data: {
         sourceCards.map((card, index) => ({
           answer: card.answer,
           deckId: newDeck.id,
+          explanation: card.explanation,
           hint: card.hint,
           level: card.level,
           position: index,
@@ -732,13 +733,7 @@ export async function forkStudyDeck(data: {
   });
 }
 
-export async function getStudyDeckCards(deckId: string) {
-  const cards = await getDb()
-    .select()
-    .from(studyCards)
-    .where(eq(studyCards.deckId, deckId))
-    .orderBy(asc(studyCards.position));
-
+async function attachStudyCardDetails(cards: Array<typeof studyCards.$inferSelect>) {
   if (cards.length === 0) {
     return [];
   }
@@ -792,8 +787,18 @@ export async function getStudyDeckCards(deckId: string) {
   }));
 }
 
+export async function getStudyDeckCards(deckId: string) {
+  const cards = await getDb()
+    .select()
+    .from(studyCards)
+    .where(eq(studyCards.deckId, deckId))
+    .orderBy(asc(studyCards.position));
+
+  return attachStudyCardDetails(cards);
+}
+
 export async function getStudyDueCards(deckId: string) {
-  return getDb()
+  const cards = await getDb()
     .select()
     .from(studyCards)
     .where(
@@ -803,10 +808,12 @@ export async function getStudyDueCards(deckId: string) {
       ),
     )
     .orderBy(asc(studyCards.position));
+
+  return attachStudyCardDetails(cards);
 }
 
 export async function getStudyWeakCards(deckId: string) {
-  return getDb()
+  const cards = await getDb()
     .select()
     .from(studyCards)
     .where(
@@ -817,6 +824,8 @@ export async function getStudyWeakCards(deckId: string) {
       ),
     )
     .orderBy(asc(studyCards.easeFactor));
+
+  return attachStudyCardDetails(cards);
 }
 
 export async function getStudyDeckStats(deckId: string) {
@@ -957,6 +966,7 @@ async function refreshStudyDeckVerifiedCount(deckId: string) {
 export async function createStudyCard(data: {
   answer: string;
   deckId: string;
+  explanation?: string | null;
   hint?: string;
   question: string;
 }) {
@@ -966,6 +976,7 @@ export async function createStudyCard(data: {
     .values({
       answer: data.answer,
       deckId: data.deckId,
+      explanation: data.explanation?.trim() || null,
       hint: data.hint ?? null,
       position,
       question: data.question,
@@ -985,7 +996,7 @@ export async function createStudyCard(data: {
 
 export async function bulkCreateStudyCards(
   deckId: string,
-  drafts: Array<{ answer: string; hint?: string | null; question: string }>,
+  drafts: Array<{ answer: string; explanation?: string | null; hint?: string | null; question: string }>,
 ) {
   if (drafts.length === 0) {
     return [];
@@ -998,6 +1009,7 @@ export async function bulkCreateStudyCards(
       drafts.map((draft, index) => ({
         answer: draft.answer,
         deckId,
+        explanation: draft.explanation?.trim() || null,
         hint: draft.hint ?? null,
         position: position + index,
         question: draft.question,
@@ -1020,11 +1032,13 @@ export async function updateStudyCard(
   cardId: string,
   data: {
     answer?: string;
+    explanation?: string | null;
     hint?: string | null;
     question?: string;
   },
 ) {
-  const clearsVerification = data.answer !== undefined || data.question !== undefined;
+  const clearsVerification =
+    data.answer !== undefined || data.explanation !== undefined || data.question !== undefined;
   const [card] = await getDb()
     .update(studyCards)
     .set({

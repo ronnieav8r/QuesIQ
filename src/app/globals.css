@@ -996,6 +996,50 @@ p {
   font-weight: 700;
 }
 
+.study-card-back {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.study-card-back section {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.study-card-back__label,
+.study-card-additional-references > span {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.study-card-back__answer {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.study-card-reference-group {
+  background: rgba(109, 59, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+}
+
+.study-card-reference-group a {
+  color: var(--brand-strong);
+  font-weight: 800;
+}
+
+.study-card-additional-references ul {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+}
+
 .study-card-hint {
   color: var(--muted);
   font-size: var(--font-size-sm);
@@ -1525,6 +1569,10 @@ p {
   font-size: clamp(1.25rem, 2vw, 1.75rem);
   font-weight: 700;
   line-height: 1.3;
+}
+
+.study-flip-card .study-card-back {
+  text-align: left;
 }
 
 .study-card-tap,
@@ -5906,7 +5954,8 @@ textarea::placeholder {
 }
 
 .feedback-preview,
-.dpe-preview {
+.dpe-preview,
+.nclex-preview {
   display: grid;
   gap: 0.9rem;
 }
@@ -6040,7 +6089,7 @@ textarea::placeholder {
 .marketing-status-grid {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
 }
 
 .marketing-status-card {
@@ -6073,6 +6122,10 @@ textarea::placeholder {
 
 .marketing-status-card.dpe::before {
   background: linear-gradient(90deg, #ff7a18, #f2d35e, #51d36a);
+}
+
+.marketing-status-card.nclex::before {
+  background: linear-gradient(90deg, #19c5a7, #4fa8ff, #8c52ff);
 }
 
 .status-card-top {
@@ -6139,6 +6192,12 @@ textarea::placeholder {
   background:
     radial-gradient(circle at center, #0b1124 58%, transparent 60%),
     conic-gradient(#ff7a18 0 25%, #f2d35e 52%, #51d36a var(--status-score), rgba(255, 255, 255, 0.13) var(--status-score) 100%);
+}
+
+.marketing-status-card.nclex .status-score-ring {
+  background:
+    radial-gradient(circle at center, #0b1124 58%, transparent 60%),
+    conic-gradient(#19c5a7 0 24%, #4fa8ff 50%, #8c52ff var(--status-score), rgba(255, 255, 255, 0.13) var(--status-score) 100%);
 }
 
 .status-score-ring strong {
@@ -6532,7 +6591,7 @@ textarea::placeholder {
 .apps-card-grid {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
 }
 
 .apps-product-card {
@@ -6566,6 +6625,10 @@ textarea::placeholder {
 
 .apps-product-card.dpe::before {
   background: linear-gradient(90deg, #ff7a18, #f2d35e);
+}
+
+.apps-product-card.nclex::before {
+  background: linear-gradient(90deg, #19c5a7, #4fa8ff);
 }
 
 .apps-product-card:hover {

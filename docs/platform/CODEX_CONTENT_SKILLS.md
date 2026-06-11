@@ -39,16 +39,21 @@ PHAK deck in one pass.
 The Study deck drafter exports rich Admin CSV using these headers:
 
 ```text
-externalId, deckTitle, deckDescription, subject, audience, question, answer,
-hint, level, tags, sourcePackId, sourcePackTitle, sourceChunkIds, sourcePages,
-sourceVisualAssetIds, sourceLabel, sourceUrl, sourceNotes, draftId,
-draftConfidence, draftWarnings, verificationStatus, verificationConfidence,
-verificationNotes, verificationEvidence, verifier
+externalId, deckTitle, deckDescription, industry, role, certification,
+examOrStandard, version, subject, topic, audience, question, answer,
+explanation, hint, level, tags, sourcePackId, sourcePackTitle,
+sourceChunkIds, sourcePages, sourceVisualAssetIds, sourceLabel, sourceUrl,
+additionalReferenceLabels, additionalReferenceUrls, referenceNote,
+sourceNotes, draftId, draftConfidence, draftWarnings, verificationStatus,
+verificationConfidence, verificationNotes, verificationEvidence, verifier,
+isOfficial, isVerified
 ```
 
 The Study Admin CSV import defaults should match these headers. If a CSV uses
 different column names, the Admin mapping UI should map those columns back to
-the same target fields before preview/save.
+the same target fields before preview/save. `answer` is the short memory target;
+`explanation` is a learner-facing expanded explanation and must not be mapped to
+`hint` or `sourceNotes`.
 
 ## PHAK Deck Strategy
 

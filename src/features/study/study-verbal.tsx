@@ -3,13 +3,16 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { StudyCardBack, type StudyCardSourceForBack } from "@/features/study/study-card-back";
 import type { StudyVerdict } from "@/features/study/study-srs";
 
 type StudyVerbalCard = {
   answer: string;
+  explanation: string | null;
   hint: string | null;
   id: string;
   question: string;
+  sources?: StudyCardSourceForBack[];
 };
 
 type Result = {
@@ -625,7 +628,11 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, resume, srs 
         <div className="panel">
           <p className="eyebrow">{feedbackVerdict.toUpperCase()}</p>
           <p>{feedback}</p>
-          <p className="study-card-hint">Correct answer: {card.answer}</p>
+          <StudyCardBack
+            answer={card.answer}
+            explanation={card.explanation}
+            sources={card.sources}
+          />
         </div>
       )}
       <div className="inline-actions">

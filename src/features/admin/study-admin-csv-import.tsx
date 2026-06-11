@@ -8,10 +8,17 @@ type StudyImportField =
   | "externalId"
   | "deckTitle"
   | "deckDescription"
+  | "industry"
+  | "role"
+  | "certification"
+  | "examOrStandard"
+  | "version"
   | "subject"
+  | "topic"
   | "audience"
   | "question"
   | "answer"
+  | "explanation"
   | "hint"
   | "level"
   | "tags"
@@ -22,6 +29,9 @@ type StudyImportField =
   | "sourceVisualAssetIds"
   | "sourceLabel"
   | "sourceUrl"
+  | "additionalReferenceLabels"
+  | "additionalReferenceUrls"
+  | "referenceNote"
   | "sourceNotes"
   | "draftId"
   | "draftConfidence"
@@ -63,6 +73,7 @@ type ParseIssue = {
 type PreviewRow = {
   answer: string;
   deckTitle?: string;
+  explanation: string;
   isOfficial?: boolean;
   question: string;
   source?: {
@@ -107,7 +118,7 @@ type Props = {
   stacks: StudyStackOption[];
 };
 
-const requiredFields = new Set<StudyImportField>(["question", "answer"]);
+const requiredFields = new Set<StudyImportField>(["question", "answer", "explanation"]);
 
 function detectHeaders(csvText: string) {
   const firstLine = csvText.trim().split(/\r?\n/, 1)[0] ?? "";
@@ -133,15 +144,25 @@ function detectHeaders(csvText: string) {
 
 function fieldHelp(field: StudyImportField) {
   const help: Partial<Record<StudyImportField, string>> = {
+    additionalReferenceLabels: "Supporting learner-visible source labels, pipe-separated.",
+    additionalReferenceUrls: "Supporting learner-visible source URLs, pipe-separated.",
     answer: "Required. Back of the card.",
+    certification: "Credential or course, such as Private Pilot or NCLEX-PN.",
+    examOrStandard: "Exam, standard, ACS, test plan, or framework.",
+    explanation: "Required. Expanded learner-facing explanation shown after the short answer.",
     hint: "Optional learner hint.",
+    industry: "Broad field, such as Aviation, Healthcare, Real Estate, or IT.",
     isOfficial: "Marks the imported deck Official when true.",
     isVerified: "Can infer verified status, but verification policy still applies.",
     question: "Required. Front of the card.",
+    referenceNote: "Learner-visible note about what the official source supports.",
+    role: "Learner role, such as Pilot, Nurse, or Texas Real Estate Sales Agent.",
     sourceLabel: "Citation or source name shown in admin/source metadata.",
     sourcePages: "Use 12|13 or 18-19.",
     sourceUrl: "Source URL for audit trail.",
     tags: "Use weather|metar or comma/semicolon lists.",
+    topic: "Specific topic or subtopic for the card.",
+    version: "Source or standard version/date.",
     verificationConfidence: "0.0 to 1.0. Verified cards require 0.8+.",
     verificationEvidence: "Evidence notes or citations.",
     verificationStatus: "verified, needs_review, ready_for_verifier, blocked, or unverified.",
@@ -452,6 +473,7 @@ export function StudyAdminCsvImport({ decks, headers, sampleCsv, stacks }: Props
                 <div>
                   <strong>{row.question}</strong>
                   <p>{row.answer}</p>
+                  <p className="field-note">{row.explanation}</p>
                   <p className="field-note">
                     {row.deckTitle || "Deck title from form"} | {row.subject || "No subject"} |{" "}
                     {row.isOfficial ? "Official" : "Not official"} | {row.verification.status || "unverified"}

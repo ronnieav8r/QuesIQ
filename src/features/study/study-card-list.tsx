@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 
+import { StudyCardBack } from "@/features/study/study-card-back";
 import { StudyTrustBadge } from "@/features/study/study-trust-badge";
 
 type StudyCardSource = {
@@ -16,6 +17,7 @@ type StudyCard = {
   answer: string;
   dueAt?: Date | null;
   easeFactor?: number | null;
+  explanation: string | null;
   hint: string | null;
   id: string;
   interval?: number | null;
@@ -38,6 +40,7 @@ type StudyCard = {
 
 type EditingCardState = {
   answer: string;
+  explanation: string;
   hint: string;
   question: string;
 };
@@ -53,6 +56,7 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
   const [addError, setAddError] = useState<string>();
   const [answer, setAnswer] = useState("");
   const [cards, setCards] = useState(initialCards);
+  const [explanation, setExplanation] = useState("");
   const [hint, setHint] = useState("");
   const [pending, setPending] = useState(false);
   const [question, setQuestion] = useState("");
@@ -60,6 +64,7 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
   const [nowMs] = useState(() => Date.now());
   const [editingValues, setEditingValues] = useState<EditingCardState>({
     answer: "",
+    explanation: "",
     hint: "",
     question: "",
   });
@@ -81,6 +86,7 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
     const response = await fetch(`/api/study/decks/${deckId}/cards`, {
       body: JSON.stringify({
         answer: answer.trim(),
+        explanation: explanation.trim() || undefined,
         hint: hint.trim() || undefined,
         question: question.trim(),
       }),
@@ -99,6 +105,7 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
     setCards((current) => [...current, data.card as StudyCard]);
     setQuestion("");
     setAnswer("");
+    setExplanation("");
     setHint("");
     setAddingCard(false);
   }
@@ -118,6 +125,7 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
     setEditError(undefined);
     setEditingValues({
       answer: card.answer,
+      explanation: card.explanation ?? "",
       hint: card.hint ?? "",
       question: card.question,
     });
@@ -128,6 +136,7 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
     setEditError(undefined);
     setEditingValues({
       answer: "",
+      explanation: "",
       hint: "",
       question: "",
     });
@@ -143,6 +152,7 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
     const response = await fetch(`/api/study/decks/${deckId}/cards/${cardId}`, {
       body: JSON.stringify({
         answer: editingValues.answer.trim(),
+        explanation: editingValues.explanation.trim() || null,
         hint: editingValues.hint.trim() || null,
         question: editingValues.question.trim(),
       }),
@@ -223,6 +233,16 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
                 />
               </label>
               <label>
+                <span>Explanation</span>
+                <textarea
+                  onChange={(event) =>
+                    setEditingValues((current) => ({ ...current, explanation: event.target.value }))
+                  }
+                  rows={4}
+                  value={editingValues.explanation}
+                />
+              </label>
+              <label>
                 <span>Hint</span>
                 <input
                   onChange={(event) =>
@@ -250,15 +270,19 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
                 {card.isVerified && <StudyTrustBadge compact type="verified" />}
               </div>
               <p className="study-card-question">{card.question}</p>
-              <p>{card.answer}</p>
+              <StudyCardBack
+                answer={card.answer}
+                explanation={card.explanation}
+                sources={card.sources}
+              />
               {card.hint && <p className="study-card-hint">Hint: {card.hint}</p>}
               <p className="study-card-schedule">
                 {formatDue(card)}
                 {typeof card.easeFactor === "number" && ` - ease ${card.easeFactor.toFixed(2)}`}
               </p>
-              {((card.sources?.length ?? 0) > 0 || (card.verifications?.length ?? 0) > 0) && (
+              {isOwner && ((card.sources?.length ?? 0) > 0 || (card.verifications?.length ?? 0) > 0) && (
                 <details className="study-card-hint">
-                  <summary>Sources and verification</summary>
+                  <summary>Admin source and verification details</summary>
                   {(card.sources?.length ?? 0) > 0 && (
                     <div>
                       <strong>Source material</strong>
@@ -361,6 +385,15 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
                   placeholder="The correct answer"
                   rows={3}
                   value={answer}
+                />
+              </label>
+              <label>
+                <span>Explanation</span>
+                <textarea
+                  onChange={(event) => setExplanation(event.target.value)}
+                  placeholder="Expanded learner-facing explanation"
+                  rows={4}
+                  value={explanation}
                 />
               </label>
               <label>
