@@ -7,12 +7,14 @@ import { auth } from "@/auth";
 import {
   getStudyAudienceTags,
   getStudyLibraryDecks,
+  getStudyStackCardStatsForStacks,
   getStudySubjectOptions,
   getVisibleStudyStackDeckIds,
   getVisibleStudyStacks,
   type StudyLibraryScope,
 } from "@/features/study/study-data";
 import { StudyDeckCard } from "@/features/study/study-deck-card";
+import styles from "@/features/study/study-library.module.css";
 import { StudyStackCard } from "@/features/study/study-stack-card";
 
 type Props = {
@@ -86,8 +88,16 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
     ),
   ).sort((a, b) => a.localeCompare(b));
 
+  const stackStatsById = await getStudyStackCardStatsForStacks(
+    stacks.map((stack) => stack.id),
+    userId,
+  );
+  const stacksWithStats = stacks.map((stack) => ({
+    ...stack,
+    stats: stackStatsById.get(stack.id),
+  }));
   const stackedDeckIdSet = new Set(stackedDeckIds);
-  const filteredStacks = stacks.filter((stack) => {
+  const filteredStacks = stacksWithStats.filter((stack) => {
     if (scopeFilter === "mine" && (!userId || stack.userId !== userId)) {
       return false;
     }
@@ -121,12 +131,17 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
     ...subjectTaxonomyOptions.map((value) => ({ label: value.label, value: value.name })),
     ...extraDeckSubjects.map((value) => ({ label: value, value })),
   ];
-  const tagOptions = [
-    ...audienceTags.map((value) => ({ label: value.label, value: value.label })),
-    ...tags
-      .filter((value) => !audienceTags.some((audienceTag) => audienceTag.label.toLowerCase() === value.toLowerCase()))
-      .map((value) => ({ label: value, value })),
-  ];
+  const audienceTagOptions = audienceTags.map((value) => ({ label: value.label, value: value.label }));
+  const deckTagOptions = tags
+    .filter((value) => !audienceTags.some((audienceTag) => audienceTag.label.toLowerCase() === value.toLowerCase()))
+    .map((value) => ({ label: value, value }));
+  const primaryAudienceTagOptions = audienceTagOptions.slice(0, 8);
+  const overflowAudienceTagOptions = audienceTagOptions.slice(8);
+  const tagOptions = [...audienceTagOptions, ...deckTagOptions];
+  const activeTagOption = tagFilter
+    ? tagOptions.find((value) => value.value.toLowerCase() === tagFilter)
+    : undefined;
+  const moreTagCount = overflowAudienceTagOptions.length + deckTagOptions.length;
 
   function libraryHref(next: {
     official?: string | null;
@@ -183,7 +198,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
         <BookOpen size={20} aria-hidden="true" />
         <div>
           <h2>
-            {filteredStacks.length} stack{filteredStacks.length === 1 ? "" : "s"} · {standaloneDecks.length} standalone deck{standaloneDecks.length === 1 ? "" : "s"}
+            {filteredStacks.length} stack{filteredStacks.length === 1 ? "" : "s"} - {standaloneDecks.length} standalone deck{standaloneDecks.length === 1 ? "" : "s"}
           </h2>
           <p>Open a stack to study all included decks together, or open a standalone deck directly.</p>
         </div>
@@ -265,12 +280,12 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
           </div>
 
           <div className="study-library-filter-group">
-            <span>Audience & Tags</span>
+            <span>Audience / Exam</span>
             <div className="study-filter-pills">
               <Link className={!tagFilter ? "active" : ""} href={libraryHref({ tag: null })}>
                 All
               </Link>
-              {tagOptions.map((value) => (
+              {primaryAudienceTagOptions.map((value) => (
                 <Link
                   className={tagFilter === value.value.toLowerCase() ? "active" : ""}
                   href={libraryHref({ tag: value.value })}
@@ -279,8 +294,58 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
                   {value.label}
                 </Link>
               ))}
+              {activeTagOption &&
+                !primaryAudienceTagOptions.some((value) => value.value.toLowerCase() === activeTagOption.value.toLowerCase()) && (
+                  <Link className="active" href={libraryHref({ tag: activeTagOption.value })}>
+                    {activeTagOption.label}
+                  </Link>
+                )}
             </div>
           </div>
+
+          {moreTagCount > 0 && (
+            <details className={styles.filterMore} open={Boolean(tagFilter)}>
+              <summary>
+                <span>More audience and tags</span>
+                <small>{moreTagCount} filters</small>
+              </summary>
+              <div className={styles.filterMoreBody}>
+                {overflowAudienceTagOptions.length > 0 && (
+                  <div className="study-library-filter-group">
+                    <span>Additional Audience / Exam</span>
+                    <div className="study-filter-pills">
+                      {overflowAudienceTagOptions.map((value) => (
+                        <Link
+                          className={tagFilter === value.value.toLowerCase() ? "active" : ""}
+                          href={libraryHref({ tag: value.value })}
+                          key={value.value}
+                        >
+                          {value.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {deckTagOptions.length > 0 && (
+                  <div className="study-library-filter-group">
+                    <span>Topic Tags</span>
+                    <div className={`study-filter-pills ${styles.compactPills}`}>
+                      {deckTagOptions.map((value) => (
+                        <Link
+                          className={tagFilter === value.value.toLowerCase() ? "active" : ""}
+                          href={libraryHref({ tag: value.value })}
+                          key={value.value}
+                        >
+                          {value.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </details>
+          )}
         </div>
       </section>
 

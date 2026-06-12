@@ -1,6 +1,8 @@
 import Link from "next/link";
 
+import styles from "@/features/study/study-library.module.css";
 import { StudyTrustBadge } from "@/features/study/study-trust-badge";
+import type { StudyStackCardStats } from "@/features/study/study-data";
 
 type StudyStackCardProps = {
   currentUserId?: string;
@@ -14,6 +16,7 @@ type StudyStackCardProps = {
     subject: string | null;
     title: string;
     userId: string | null;
+    stats?: StudyStackCardStats;
     verifiedCardCount?: number;
   };
 };
@@ -37,6 +40,13 @@ export function StudyStackCard({ currentUserId, stack }: StudyStackCardProps) {
         <span>{stack.deckCount} decks</span>
         <span>{stack.cardCount} cards</span>
       </div>
+      {stack.stats && stack.stats.total > 0 && (
+        <div className={styles.stackCardStats} aria-label="Stack card health">
+          <span>{stack.stats.due} due</span>
+          <span>{stack.stats.weak} weak</span>
+          <span>{stack.stats.mastered} mastered</span>
+        </div>
+      )}
     </Link>
   );
 }

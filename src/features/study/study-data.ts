@@ -20,6 +20,15 @@ import { computeNextStudyReview, type StudyVerdict } from "@/features/study/stud
 
 export type StudyLevel = "advanced" | "beginner" | "intermediate";
 export type StudyLibraryScope = "all" | "mine" | "public";
+export type StudyStackCardStats = {
+  due: number;
+  fluencyScore: number | null;
+  mastered: number;
+  seen: number;
+  total: number;
+  verified: number;
+  weak: number;
+};
 type StudyVisibleDeck = Awaited<ReturnType<typeof getVisibleStudyLibraryDecks>>[number];
 export type StudyLibraryDeck = StudyVisibleDeck & { audienceTags: string[] };
 export type StudyStack = Awaited<ReturnType<typeof getVisibleStudyStacks>>[number];
@@ -88,6 +97,70 @@ function visibleStudyDeckSql(userId?: string) {
   return userId
     ? sql<boolean>`(${studyDecks.isPublic} = true OR ${studyDecks.userId} = ${userId})`
     : sql<boolean>`${studyDecks.isPublic} = true`;
+}
+
+function toFluencyScore(avgEase: number | null | undefined) {
+  if (avgEase === null || avgEase === undefined) {
+    return null;
+  }
+  return Math.round(Math.min(100, Math.max(0, ((avgEase - 1.3) / (3.5 - 1.3)) * 100)));
+}
+
+function emptyStudyStackCardStats(): StudyStackCardStats {
+  return {
+    due: 0,
+    fluencyScore: null,
+    mastered: 0,
+    seen: 0,
+    total: 0,
+    verified: 0,
+    weak: 0,
+  };
+}
+
+export async function getStudyStackCardStatsForStacks(stackIds: string[], userId?: string) {
+  if (stackIds.length === 0) {
+    return new Map<string, StudyStackCardStats>();
+  }
+
+  const deckVisibility = visibleStudyDeckSql(userId);
+  const rows = await getDb()
+    .select({
+      avgEase: sql<number | null>`AVG(CASE WHEN ${studyCards.dueAt} IS NOT NULL THEN ${studyCards.easeFactor} END)`,
+      due: sql<number>`COUNT(CASE WHEN ${studyCards.dueAt} IS NULL OR ${studyCards.dueAt} <= NOW() THEN 1 END)::int`,
+      mastered: sql<number>`COUNT(CASE WHEN ${studyCards.interval} >= 21 AND ${studyCards.lapses} = 0 AND ${studyCards.dueAt} IS NOT NULL THEN 1 END)::int`,
+      seen: sql<number>`COUNT(${studyCards.dueAt})::int`,
+      stackId: studyDeckStackItems.stackId,
+      total: sql<number>`COUNT(*)::int`,
+      verified: sql<number>`COUNT(CASE WHEN ${studyCards.isVerified} = true THEN 1 END)::int`,
+      weak: sql<number>`COUNT(CASE WHEN ${studyCards.dueAt} IS NOT NULL AND (${studyCards.lapses} > 0 OR ${studyCards.easeFactor} < 2.0) THEN 1 END)::int`,
+    })
+    .from(studyDeckStackItems)
+    .innerJoin(studyDeckStacks, eq(studyDeckStacks.id, studyDeckStackItems.stackId))
+    .innerJoin(studyDecks, eq(studyDecks.id, studyDeckStackItems.deckId))
+    .innerJoin(studyCards, eq(studyCards.deckId, studyDecks.id))
+    .where(and(inArray(studyDeckStackItems.stackId, stackIds), studyStackVisibilityFilter(userId), deckVisibility))
+    .groupBy(studyDeckStackItems.stackId);
+
+  return new Map(
+    rows.map((row) => [
+      row.stackId,
+      {
+        due: row.due ?? 0,
+        fluencyScore: toFluencyScore(row.avgEase),
+        mastered: row.mastered ?? 0,
+        seen: row.seen ?? 0,
+        total: row.total ?? 0,
+        verified: row.verified ?? 0,
+        weak: row.weak ?? 0,
+      },
+    ]),
+  );
+}
+
+export async function getStudyStackCardStats(stackId: string, userId?: string) {
+  const stats = await getStudyStackCardStatsForStacks([stackId], userId);
+  return stats.get(stackId) ?? emptyStudyStackCardStats();
 }
 
 export async function getVisibleStudyStacks(userId?: string) {
@@ -910,10 +983,7 @@ export async function getStudyDeckStats(deckId: string) {
     .where(eq(studyCards.deckId, deckId));
 
   const avgEase = row?.avgEase ?? null;
-  const fluencyScore =
-    avgEase === null
-      ? null
-      : Math.round(Math.min(100, Math.max(0, ((avgEase - 1.3) / (3.5 - 1.3)) * 100)));
+  const fluencyScore = toFluencyScore(avgEase);
 
   return {
     due: row?.due ?? 0,

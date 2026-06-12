@@ -7,6 +7,7 @@ import { BookOpen, ChevronLeft, Play } from "lucide-react";
 import { auth } from "@/auth";
 import {
   getStudyDecksWithStats,
+  getStudyStackCardStats,
   getStudyStackWithDecks,
 } from "@/features/study/study-data";
 import { StudyStackEditor } from "@/features/study/study-stack-editor";
@@ -23,7 +24,10 @@ export default async function StudyStackPage({ params }: Props) {
   const session = await auth();
   const userId = session?.user?.id;
   const isAdmin = isAdminEmail(session?.user?.email);
-  const stack = await getStudyStackWithDecks(stackId, userId);
+  const [stack, stats] = await Promise.all([
+    getStudyStackWithDecks(stackId, userId),
+    getStudyStackCardStats(stackId, userId),
+  ]);
 
   if (!stack) {
     notFound();
@@ -87,6 +91,22 @@ export default async function StudyStackPage({ params }: Props) {
         <div className={stack.isPublic ? "study-stat-chip highlight" : "study-stat-chip"}>
           <strong>{stack.isPublic ? "On" : "Off"}</strong>
           <span>Public</span>
+        </div>
+        <div className={stats.due > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
+          <strong>{stats.due}</strong>
+          <span>Due</span>
+        </div>
+        <div className={stats.weak > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
+          <strong>{stats.weak}</strong>
+          <span>Weak</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{stats.mastered}</strong>
+          <span>Mastered</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{stats.verified}</strong>
+          <span>Verified</span>
         </div>
       </section>
 
