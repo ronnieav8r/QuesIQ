@@ -47,6 +47,7 @@ function richCsvResponse(parsed: ReturnType<typeof parseStudyRichFlashcardImport
     delimiter: parsed.delimiter,
     detectedHeaders: parsed.detectedHeaders,
     effectiveMapping: parsed.effectiveMapping,
+    expertReviewStatusCounts: parsed.expertReviewStatusCounts,
     rowCount: parsed.rowCount,
     rows: parsed.rows,
     sourceCoverage: parsed.sourceCoverage,
@@ -176,7 +177,7 @@ export async function POST(request: Request) {
     stackResult,
     storage: {
       detail:
-        "Study admin CSV import saved cards plus source and verification metadata. Official is deck/stack level; Verified is card level.",
+        "Study admin CSV import saved cards plus source verification and separate expert review metadata. Official is deck/stack level; Verified is source/fact verification only.",
       durableReviewState: true,
     },
   });

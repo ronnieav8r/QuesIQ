@@ -9,8 +9,8 @@ import {
   STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING,
 } from "@/server/study/study-rich-flashcard-import";
 
-const sampleCsv = `card_id,question,answer,explanation,hint,tags,source_pack_id,source_chunk_ids,source_page_anchors,source_visual_ids,verification_status,verification_confidence,verification_notes,verification_evidence,verifier
-sample-001,What is trim?,Relieves control pressure in steady flight.,Trim reduces the continuous force needed to hold the selected attitude.,Set pitch first then trim.,fundamentals|controls,phak-25c,chunk-001|chunk-002,page=12;page=13,figure-12-a,verified,0.91,Checked against source chunks,chunk-001|chunk-002,admin_review`;
+const sampleCsv = `card_id,question,answer,explanation,hint,tags,source_pack_id,source_chunk_ids,source_page_anchors,source_visual_ids,verification_status,verification_confidence,verification_notes,verification_evidence,verifier,isVerified,expertReviewStatus,expertReviewType,expertReviewer,expertReviewDate,expertReviewNotes
+sample-001,What is trim?,Relieves control pressure in steady flight.,Trim reduces the continuous force needed to hold the selected attitude.,Set pitch first then trim.,fundamentals|controls,phak-25c,chunk-001|chunk-002,page=12;page=13,figure-12-a,verified,0.91,Checked against source chunks,chunk-001|chunk-002,admin_review,true,needs_expert_review,flight_instructor,,,Awaiting instructor signoff`;
 
 const mappedCsv = `Prompt,Response,Explanation,Memo,Difficulty,CategoryTags,PackIdentifier,ChunkRefs,PageRefs,VisualRefs,ReviewState,ReviewConfidence,ReviewNotes,EvidenceRows,Reviewer,DraftRef,ExternalRef
 "When do you re-trim?","After any sustained pitch or power change.","Use trim after changing pitch or power because the required control force changes.","Trim removes control pressure.","beginner","fundamentals|trim","phak-25c","chunk-010|chunk-011","14|15","figure-14-a","needs_review","0.73","Needs follow-up","chunk-010|chunk-011","admin_qc","draft-abc","row-abc"`;
@@ -88,13 +88,17 @@ async function runParseOnly() {
 
   assert(parsed.errors.length === 0, `Expected no parse errors, got ${JSON.stringify(parsed.errors)}`);
   assert(parsed.rowCount === 1, `Expected one row, got ${parsed.rowCount}`);
-  assert(parsed.rows[0].explanation.startsWith("Trim reduces"), "Expected explanation to parse separately.");
+  assert(parsed.rows[0].explanation?.startsWith("Trim reduces"), "Expected explanation to parse separately.");
   assert(parsed.rows[0].hint === "Set pitch first then trim.", "Expected hint to stay separate from explanation.");
   assert(parsed.sourceCoverage.sourcePackIds.includes("phak-25c"), "Expected source pack id coverage.");
   assert(parsed.sourceCoverage.uniqueChunkIds === 2, "Expected two unique source chunks.");
   assert(parsed.sourceCoverage.uniquePages === 2, "Expected two unique source pages.");
   assert(parsed.sourceCoverage.uniqueVisualAssetIds === 1, "Expected one visual asset id.");
   assert(parsed.verificationStatusCounts.verified === 1, "Expected one verified row.");
+  assert(parsed.expertReviewStatusCounts.needs_expert_review === 1, "Expected one expert review status count.");
+  assert(parsed.rows[0].expertReview.status === "needs_expert_review", "Expected expert review status to parse.");
+  assert(parsed.rows[0].isVerified === true, "Expected explicit isVerified to parse.");
+  assert(parsed.rows[0].rawFields.card_id === "sample-001", "Expected raw CSV fields to be preserved.");
   assert(parsed.unmappedRequiredFields.length === 0, "Expected no unmapped required fields with default headers.");
 
   const mappedParsed = parseStudyRichFlashcardImportText(mappedCsv, {
@@ -104,7 +108,7 @@ async function runParseOnly() {
   assert(mappedParsed.rowCount === 1, `Expected one mapped row, got ${mappedParsed.rowCount}`);
   assert(mappedParsed.rows[0].question === "When do you re-trim?", "Expected mapped question value.");
   assert(mappedParsed.rows[0].answer.startsWith("After any sustained"), "Expected mapped answer value.");
-  assert(mappedParsed.rows[0].explanation.startsWith("Use trim"), "Expected mapped explanation value.");
+  assert(mappedParsed.rows[0].explanation?.startsWith("Use trim"), "Expected mapped explanation value.");
   assert(mappedParsed.rows[0].hint === "Trim removes control pressure.", "Expected mapped hint value.");
   assert(mappedParsed.rows[0].source.sourcePackId === "phak-25c", "Expected mapped source pack id.");
   assert(mappedParsed.verificationStatusCounts.needs_review === 1, "Expected mapped needs_review count.");
@@ -115,7 +119,7 @@ async function runParseOnly() {
   assert(officialSchemaParsed.rowCount === 1, `Expected one official-schema row, got ${officialSchemaParsed.rowCount}`);
   assert(officialSchemaParsed.rows[0].answer.startsWith("Be 17"), "Expected shortAnswer to map into answer.");
   assert(
-    officialSchemaParsed.rows[0].explanation.startsWith("14 CFR 61.103"),
+    officialSchemaParsed.rows[0].explanation?.startsWith("14 CFR 61.103"),
     "Expected explanation to map into its own learner-facing field.",
   );
   assert(officialSchemaParsed.rows[0].hint === undefined, "Expected explanation not to map into hint.");
@@ -137,9 +141,10 @@ async function runParseOnly() {
 
   const explicitOfficialVerifiedParsed = parseStudyRichFlashcardImportText(explicitOfficialVerifiedCsv);
   assert(
-    explicitOfficialVerifiedParsed.rows[0].verification.status === "verified",
-    "Expected explicit verified boolean to map into verification status.",
+    explicitOfficialVerifiedParsed.rows[0].verification.status === undefined,
+    "Expected explicit verified boolean not to infer verification status.",
   );
+  assert(explicitOfficialVerifiedParsed.rows[0].isVerified === true, "Expected explicit verified boolean to parse.");
 
   console.log("rich CSV parser smoke passed (default + mapped + official-schema headers)");
 }
@@ -205,6 +210,7 @@ async function runDbSmoke() {
   );
   assert(verification?.verificationStatus === "verified", "Expected verification status to be saved.");
   assert(verification?.evidence?.includes("chunk-001"), "Expected verification evidence to be saved.");
+  assert(source.sourceMetadata?.expertReview, "Expected expert review metadata to be saved.");
 
   if (process.argv.includes("--cleanup")) {
     await db.delete(studyDecks).where(eq(studyDecks.id, deck.id));

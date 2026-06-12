@@ -197,6 +197,21 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
     return value.map((item) => String(item)).filter(Boolean);
   }
 
+  function expertReviewMetadata(source: StudyCardSource) {
+    const value = source.sourceMetadata?.expertReview;
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return undefined;
+    }
+    const review = value as Record<string, unknown>;
+    return {
+      date: typeof review.date === "string" ? review.date : undefined,
+      notes: typeof review.notes === "string" ? review.notes : undefined,
+      reviewer: typeof review.reviewer === "string" ? review.reviewer : undefined,
+      status: typeof review.status === "string" ? review.status : undefined,
+      type: typeof review.type === "string" ? review.type : undefined,
+    };
+  }
+
   return (
     <section className="study-card-list">
       {cards.length === 0 && !addingCard && (
@@ -313,6 +328,26 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
                                 </span>
                               )}
                             </div>
+                            {expertReviewMetadata(source) && (
+                              <div className="status-callout">
+                                <strong>
+                                  Expert review:{" "}
+                                  {expertReviewMetadata(source)?.status?.replaceAll("_", " ") ?? "not provided"}
+                                </strong>
+                                <span>
+                                  {[
+                                    expertReviewMetadata(source)?.type,
+                                    expertReviewMetadata(source)?.reviewer,
+                                    expertReviewMetadata(source)?.date,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" | ") || "No expert review lane, reviewer, or date provided."}
+                                </span>
+                                {expertReviewMetadata(source)?.notes && (
+                                  <span>{expertReviewMetadata(source)?.notes}</span>
+                                )}
+                              </div>
+                            )}
                           </li>
                         ))}
                       </ul>

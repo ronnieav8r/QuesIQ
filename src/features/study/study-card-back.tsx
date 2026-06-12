@@ -63,7 +63,7 @@ export function StudyCardBack({
 
       {publicSources.length > 0 && (
         <section className="study-card-references">
-          <span className="study-card-back__label">Official Reference</span>
+          <span className="study-card-back__label">Sources</span>
           {publicSources.map((source) => {
             const referenceNote = stringValue(source.sourceMetadata?.referenceNote);
             const refs = additionalReferences(source);

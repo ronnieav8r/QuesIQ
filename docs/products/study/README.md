@@ -172,30 +172,37 @@ The first Study slice is imported:
 Use this header row for Study admin imports:
 
 ```text
-externalId,deckTitle,deckDescription,industry,role,certification,examOrStandard,version,subject,topic,audience,question,answer,explanation,hint,level,tags,sourcePackId,sourcePackTitle,sourceChunkIds,sourcePages,sourceVisualAssetIds,sourceLabel,sourceUrl,additionalReferenceLabels,additionalReferenceUrls,referenceNote,sourceNotes,draftId,draftConfidence,draftWarnings,verificationStatus,verificationConfidence,verificationNotes,verificationEvidence,verifier,isOfficial,isVerified
+externalId,deckTitle,deckDescription,industry,role,certification,examOrStandard,version,subject,topic,audience,question,answer,explanation,hint,level,tags,sourceLabel,sourceUrl,additionalReferenceLabels,additionalReferenceUrls,referenceNote,sourcePackId,sourcePackTitle,sourceChunkIds,sourcePages,sourceVisualAssetIds,sourceNotes,draftId,draftConfidence,draftWarnings,verificationStatus,verificationConfidence,verificationNotes,verificationEvidence,verifier,isOfficial,isVerified,expertReviewStatus,expertReviewType,expertReviewer,expertReviewDate,expertReviewNotes
 ```
 
 Required fields:
 
 - `question`
 - `answer`
-- `explanation`
 
 Operational fields:
 
 - `answer` should be the short memory target; `explanation` is the expanded
   learner-facing context shown after the answer.
-- `sourceLabel`/`sourceUrl` are the primary Official Reference shown to
-  learners. `additionalReferenceLabels` and `additionalReferenceUrls` are
+- `sourceLabel`/`sourceUrl` are the primary source shown to learners.
+  `additionalReferenceLabels` and `additionalReferenceUrls` are
   pipe-separated supporting references. `referenceNote` is learner-visible.
 - `sourceNotes`, `draftWarnings`, `verificationNotes`, and
   `verificationEvidence` are internal/admin metadata and should not be used as
   the learner explanation.
 - `isOfficial=true` marks the imported deck Official, or admins can use the
   Study Admin checkbox.
-- `isVerified=true` can infer verified status, but a card is only marked
-  Verified when `verificationStatus=verified`, `verificationConfidence >= 0.8`,
-  and `verifier` is present.
+- `isVerified=true` is source/fact verification only. It is not expert review.
+  A card is only marked Verified when the CSV explicitly sets
+  `isVerified=true`, `verificationStatus=verified`,
+  `verificationConfidence >= 0.8`, and `verifier` is present.
+- `expertReviewStatus` is a separate human/expert review layer. It accepts
+  `not_required`, `needs_expert_review`, `expert_reviewed`, or `rejected`.
+  Do not use `isVerified=true` as a substitute for expert review.
+- `expertReviewType` identifies the review lane, such as `clinical`,
+  `flight_instructor`, `broker`, `legal`, or `finance`.
+  `expertReviewer`, `expertReviewDate`, and `expertReviewNotes` preserve the
+  human signoff metadata.
 - list fields such as `tags`, `sourceChunkIds`, `sourcePages`,
   `sourceVisualAssetIds`, `additionalReferenceLabels`,
   `additionalReferenceUrls`, `draftWarnings`, and `verificationEvidence` may
@@ -214,8 +221,8 @@ Private Pilot Airplane - Weather,Private Pilot,What is a METAR?,A routine aviati
 Verified source-backed example:
 
 ```csv
-deckTitle,subject,question,answer,sourceLabel,sourceUrl,verificationStatus,verificationConfidence,verificationEvidence,verifier,isOfficial
-Private Pilot Airplane - Weather,Private Pilot,What is a METAR?,A routine aviation weather report.,FAA PHAK,https://example.com,verified,0.91,PHAK weather reference,admin_reviewer,true
+deckTitle,subject,question,answer,sourceLabel,sourceUrl,verificationStatus,verificationConfidence,verificationEvidence,verifier,isOfficial,isVerified,expertReviewStatus,expertReviewType
+Private Pilot Airplane - Weather,Private Pilot,What is a METAR?,A routine aviation weather report.,FAA PHAK,https://example.com,verified,0.91,PHAK weather reference,admin_reviewer,true,true,needs_expert_review,flight_instructor
 ```
 - local Codex skill `quesiq-study-content-pipeline` coordinates the source
   scrubber, Study deck drafter, Study verifier, rich CSV export, and optional

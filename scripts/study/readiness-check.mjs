@@ -125,7 +125,10 @@ if (exists("src/server/study/study-rich-flashcard-import.ts")) {
   checkPattern(richImport, /export const STUDY_RICH_IMPORT_HEADERS/, "Rich CSV header contract exported", true);
   checkPattern(richImport, /"explanation"/, "Rich CSV header includes learner explanation field", true);
   checkPattern(richImport, /additionalReferenceLabels/, "Rich CSV header includes additional reference labels", true);
-  checkPattern(richImport, /"question", "answer", "explanation"/, "Rich CSV requires question, answer, and explanation", true);
+  checkPattern(richImport, /expertReviewStatus/, "Rich CSV header includes expert review status", true);
+  checkPattern(richImport, /type StudyRichExpertReviewStatus/, "Rich CSV validates expert review status", true);
+  checkPattern(richImport, /const requiredFields: StudyRichImportTargetField\[\] = \["question", "answer"\]/, "Rich CSV requires question and answer", true);
+  checkPattern(richImport, /rawFields/, "Rich CSV preserves raw expanded fields", true);
   checkPattern(richImport, /export const STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING/, "Default rich CSV mapping exported", true);
   checkPattern(richImport, /export function parseStudyRichFlashcardImportText\(/, "Rich CSV parser exported", true);
   checkPattern(richImport, /columnMapping\?: StudyRichImportColumnMapping/, "Rich CSV parser accepts optional mapping", true);
@@ -160,6 +163,7 @@ if (exists("src/features/study/study-card-list.tsx")) {
   const cardList = read("src/features/study/study-card-list.tsx");
   checkPattern(cardList, /verificationStatus/, "Study card list references verification status metadata", false);
   checkPattern(cardList, /sourcePackId|sourceChunkIds|sourceVisualAssetIds/, "Study card list references source metadata", false);
+  checkPattern(cardList, /expertReviewMetadata/, "Study card list references expert review metadata", false);
 } else {
   warn("Study card list file not present for source/verification metadata display marker checks.");
 }

@@ -36,6 +36,11 @@ type StudyImportField =
   | "draftId"
   | "draftConfidence"
   | "draftWarnings"
+  | "expertReviewStatus"
+  | "expertReviewType"
+  | "expertReviewer"
+  | "expertReviewDate"
+  | "expertReviewNotes"
   | "verificationStatus"
   | "verificationConfidence"
   | "verificationNotes"
@@ -73,7 +78,14 @@ type ParseIssue = {
 type PreviewRow = {
   answer: string;
   deckTitle?: string;
-  explanation: string;
+  expertReview: {
+    date?: string;
+    notes?: string;
+    reviewer?: string;
+    status?: string;
+    type?: string;
+  };
+  explanation?: string;
   isOfficial?: boolean;
   question: string;
   source?: {
@@ -108,6 +120,7 @@ type PreviewResponse = {
   supportedTargetFields: StudyImportField[];
   validationErrors: ParseIssue[];
   validationWarnings: ParseIssue[];
+  expertReviewStatusCounts: Record<string, number>;
   verificationStatusCounts: Record<string, number>;
 };
 
@@ -118,7 +131,7 @@ type Props = {
   stacks: StudyStackOption[];
 };
 
-const requiredFields = new Set<StudyImportField>(["question", "answer", "explanation"]);
+const requiredFields = new Set<StudyImportField>(["question", "answer"]);
 
 function detectHeaders(csvText: string) {
   const firstLine = csvText.trim().split(/\r?\n/, 1)[0] ?? "";
@@ -149,11 +162,16 @@ function fieldHelp(field: StudyImportField) {
     answer: "Required. Back of the card.",
     certification: "Credential or course, such as Private Pilot or NCLEX-PN.",
     examOrStandard: "Exam, standard, ACS, test plan, or framework.",
-    explanation: "Required. Expanded learner-facing explanation shown after the short answer.",
+    expertReviewDate: "ISO date for human/expert review, such as 2026-06-12.",
+    expertReviewer: "Human reviewer name, credential, or reviewer identifier.",
+    expertReviewNotes: "Human reviewer notes, scope, or signoff comments.",
+    expertReviewStatus: "not_required, needs_expert_review, expert_reviewed, or rejected.",
+    expertReviewType: "Review lane, such as clinical, flight_instructor, broker, legal, or finance.",
+    explanation: "Expanded learner-facing explanation shown after the short answer.",
     hint: "Optional learner hint.",
     industry: "Broad field, such as Aviation, Healthcare, Real Estate, or IT.",
     isOfficial: "Marks the imported deck Official when true.",
-    isVerified: "Can infer verified status, but verification policy still applies.",
+    isVerified: "Source/fact Verified only. This is separate from expert review and still requires verification policy.",
     question: "Required. Front of the card.",
     referenceNote: "Learner-visible note about what the official source supports.",
     role: "Learner role, such as Pilot, Nurse, or Texas Real Estate Sales Agent.",
@@ -166,7 +184,7 @@ function fieldHelp(field: StudyImportField) {
     verificationConfidence: "0.0 to 1.0. Verified cards require 0.8+.",
     verificationEvidence: "Evidence notes or citations.",
     verificationStatus: "verified, needs_review, ready_for_verifier, blocked, or unverified.",
-    verifier: "Required for a card to become Verified.",
+    verifier: "Required with verified status/confidence for source/fact verification.",
   };
   return help[field] ?? "Optional metadata.";
 }
@@ -264,7 +282,7 @@ export function StudyAdminCsvImport({ decks, headers, sampleCsv, stacks }: Props
         <div className="section-head">
           <div>
             <strong>Exact CSV headers</strong>
-            <p>Required fields are `question` and `answer`. Keep the rest when you have source or verification metadata.</p>
+            <p>Required fields are `question` and `answer`. Source verification and expert review are separate metadata layers.</p>
           </div>
           <span className="pill">{headers.length} columns</span>
         </div>
@@ -478,6 +496,12 @@ export function StudyAdminCsvImport({ decks, headers, sampleCsv, stacks }: Props
                     {row.deckTitle || "Deck title from form"} | {row.subject || "No subject"} |{" "}
                     {row.isOfficial ? "Official" : "Not official"} | {row.verification.status || "unverified"}
                     {typeof row.verification.confidence === "number" ? ` (${row.verification.confidence})` : ""}
+                  </p>
+                  <p className="field-note">
+                    Expert review: {row.expertReview.status?.replaceAll("_", " ") || "not provided"}
+                    {row.expertReview.type ? ` | ${row.expertReview.type}` : ""}
+                    {row.expertReview.reviewer ? ` | ${row.expertReview.reviewer}` : ""}
+                    {row.expertReview.date ? ` | ${row.expertReview.date}` : ""}
                   </p>
                 </div>
               </article>
