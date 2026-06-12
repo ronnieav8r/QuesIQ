@@ -168,6 +168,18 @@ export async function getStudyStackWithDecks(stackId: string, userId?: string) {
   };
 }
 
+export async function getVisibleStudyStackDeckIds(userId?: string) {
+  const deckVisibility = visibleStudyDeckSql(userId);
+  const rows = await getDb()
+    .select({ deckId: studyDeckStackItems.deckId })
+    .from(studyDeckStackItems)
+    .innerJoin(studyDeckStacks, eq(studyDeckStacks.id, studyDeckStackItems.stackId))
+    .innerJoin(studyDecks, eq(studyDecks.id, studyDeckStackItems.deckId))
+    .where(and(studyStackVisibilityFilter(userId), deckVisibility));
+
+  return Array.from(new Set(rows.map((row) => row.deckId)));
+}
+
 export async function createStudyStack(data: {
   description?: string | null;
   isOfficial?: boolean;
@@ -826,6 +838,60 @@ export async function getStudyWeakCards(deckId: string) {
       ),
     )
     .orderBy(asc(studyCards.easeFactor));
+
+  return attachStudyCardDetails(cards);
+}
+
+export async function getStudyStackCards(
+  stackId: string,
+  userId?: string,
+  filter: "all" | "due" | "weak" = "all",
+) {
+  const deckVisibility = visibleStudyDeckSql(userId);
+  const filterCondition =
+    filter === "due"
+      ? or(isNull(studyCards.dueAt), lte(studyCards.dueAt, new Date()))
+      : filter === "weak"
+        ? and(
+            gt(studyCards.dueAt, new Date(0)),
+            or(gt(studyCards.lapses, 0), lt(studyCards.easeFactor, 2.0)),
+          )
+        : undefined;
+  const conditions = [eq(studyDeckStackItems.stackId, stackId), deckVisibility];
+  if (filterCondition) {
+    conditions.push(filterCondition);
+  }
+
+  const cards = await getDb()
+    .select({
+      answer: studyCards.answer,
+      createdAt: studyCards.createdAt,
+      deckId: studyCards.deckId,
+      dueAt: studyCards.dueAt,
+      easeFactor: studyCards.easeFactor,
+      explanation: studyCards.explanation,
+      hint: studyCards.hint,
+      id: studyCards.id,
+      interval: studyCards.interval,
+      isVerified: studyCards.isVerified,
+      lapses: studyCards.lapses,
+      level: studyCards.level,
+      position: studyCards.position,
+      question: studyCards.question,
+      questionAudioUrl: studyCards.questionAudioUrl,
+      quizMcAudioUrl: studyCards.quizMcAudioUrl,
+      tfFalseAudioUrl: studyCards.tfFalseAudioUrl,
+      tfFoilCardId: studyCards.tfFoilCardId,
+      tfTrueAudioUrl: studyCards.tfTrueAudioUrl,
+      updatedAt: studyCards.updatedAt,
+      verifiedAt: studyCards.verifiedAt,
+      verifiedBy: studyCards.verifiedBy,
+    })
+    .from(studyDeckStackItems)
+    .innerJoin(studyDecks, eq(studyDecks.id, studyDeckStackItems.deckId))
+    .innerJoin(studyCards, eq(studyCards.deckId, studyDecks.id))
+    .where(and(...conditions))
+    .orderBy(asc(studyDeckStackItems.sortOrder), asc(studyCards.position));
 
   return attachStudyCardDetails(cards);
 }

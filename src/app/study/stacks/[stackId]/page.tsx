@@ -36,14 +36,11 @@ export default async function StudyStackPage({ params }: Props) {
   return (
     <div className="screen study-dashboard-screen">
       <div className="screen-toolbar">
-        <Link className="back-button" href="/study/stacks">
+        <Link className="back-button" href="/study/library">
           <ChevronLeft size={16} aria-hidden="true" />
-          Stacks
+          Library
         </Link>
         <div className="inline-actions">
-          <Link className="button-link secondary" href="/study/decks">
-            Decks
-          </Link>
           {isOwner && (
             <Link className="button-link secondary" href="/study/stacks/new">
               New Stack
@@ -56,6 +53,17 @@ export default async function StudyStackPage({ params }: Props) {
         <p className="eyebrow">Study Stack</p>
         <h1>{stack.title}</h1>
         {stack.description && <p>{stack.description}</p>}
+        {stack.cardCount > 0 && (
+          <div className="inline-actions">
+            <Link className="button-link" href={`/study/stacks/${stack.id}/study?order=random`}>
+              <Play size={14} aria-hidden="true" />
+              Study Stack Random
+            </Link>
+            <Link className="button-link secondary" href={`/study/stacks/${stack.id}/study?order=ordered`}>
+              Study Stack Ordered
+            </Link>
+          </div>
+        )}
         <div className="study-deck-card__footer">
           {isOwner && <span className="badge">Mine</span>}
           {stack.isPublic && <span className="badge">Public</span>}

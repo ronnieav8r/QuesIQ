@@ -18,6 +18,7 @@ import {
 
 type Filter = "all" | "due" | "weak";
 type Modality = "handsfree" | "visual";
+type OrderMode = "ordered" | "random";
 type QueueMode = "once" | "srs";
 type Level = "all" | "beginner" | "intermediate" | "advanced";
 
@@ -41,6 +42,7 @@ function buildUrl(
   deckId: string,
   filter: Filter,
   modality: Modality,
+  orderMode: OrderMode,
   queueMode: QueueMode,
   level: Level,
   mode: "flashcards" | "match" | "quiz" | "test" | "truefalse" | "written",
@@ -52,6 +54,9 @@ function buildUrl(
   }
   if (level !== "all") {
     search.set("level", level);
+  }
+  if (orderMode === "ordered") {
+    search.set("order", "ordered");
   }
 
   if (mode === "flashcards") {
@@ -75,6 +80,7 @@ export function StudyPicker({ deckId, dueCount, levelCounts, totalCount, weakCou
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<Filter>(dueCount > 0 ? "due" : "all");
   const [modality, setModality] = useState<Modality | null>(null);
+  const [orderMode, setOrderMode] = useState<OrderMode>("random");
   const [queueMode, setQueueMode] = useState<QueueMode>("once");
   const [level, setLevel] = useState<Level>("all");
   const [resumeInfo] = useState<ResumeInfo | null>(() => {
@@ -162,6 +168,10 @@ export function StudyPicker({ deckId, dueCount, levelCounts, totalCount, weakCou
         <button className={queueMode === "once" ? "active" : ""} onClick={() => setQueueMode("once")} type="button">Once</button>
         <button className={queueMode === "srs" ? "active" : ""} onClick={() => setQueueMode("srs")} type="button">SRS</button>
       </div>
+      <div className="study-picker__queue-toggle segmented-control" aria-label="Card order">
+        <button className={orderMode === "random" ? "active" : ""} onClick={() => setOrderMode("random")} type="button">Random</button>
+        <button className={orderMode === "ordered" ? "active" : ""} onClick={() => setOrderMode("ordered")} type="button">Deck order</button>
+      </div>
       {hasLevels && (
         <div className="study-picker__filters pill-grid">
           {(["all", "beginner", "intermediate", "advanced"] as const).map((option) => (
@@ -175,7 +185,7 @@ export function StudyPicker({ deckId, dueCount, levelCounts, totalCount, weakCou
         {visibleModes.map((mode) => (
           <Link
             className="study-picker__mode-card"
-            href={buildUrl(deckId, filter, modality, queueMode, level, mode.key)}
+            href={buildUrl(deckId, filter, modality, orderMode, queueMode, level, mode.key)}
             key={mode.key}
             onClick={() => { setOpen(false); setModality(null); }}
           >

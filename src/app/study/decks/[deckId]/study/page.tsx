@@ -17,7 +17,7 @@ import { StudyVisual } from "@/features/study/study-visual";
 
 type Props = {
   params: Promise<{ deckId: string }>;
-  searchParams: Promise<{ filter?: string; hf?: string; level?: string; resume?: string; srs?: string }>;
+  searchParams: Promise<{ filter?: string; hf?: string; level?: string; order?: string; resume?: string; srs?: string }>;
 };
 
 function resolveLevel(value: string | undefined): StudyLevel | undefined {
@@ -29,8 +29,9 @@ function resolveLevel(value: string | undefined): StudyLevel | undefined {
 
 export default async function StudySessionPage({ params, searchParams }: Props) {
   const { deckId } = await params;
-  const { filter, level: rawLevel, resume, srs } = await searchParams;
+  const { filter, level: rawLevel, order: rawOrder, resume, srs } = await searchParams;
   const level = resolveLevel(rawLevel);
+  const order = rawOrder === "ordered" ? "ordered" : "random";
   const session = await auth();
   const userId = session?.user?.id;
   const deck = await getStudyDeck(deckId);
@@ -70,13 +71,14 @@ export default async function StudySessionPage({ params, searchParams }: Props) 
           {deck.title}
         </Link>
         <span className="text-muted">
-          {filterLabel} · {cards.length}
+          {filterLabel} - {cards.length}
         </span>
       </div>
       <StudyVisual
         cards={cards}
         deckId={deckId}
         filter={filter}
+        order={order}
         resume={resume === "1"}
         srs={srs === "1"}
       />
