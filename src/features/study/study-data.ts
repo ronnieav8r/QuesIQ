@@ -106,6 +106,7 @@ export async function getVisibleStudyStacks(userId?: string) {
       title: studyDeckStacks.title,
       updatedAt: studyDeckStacks.updatedAt,
       userId: studyDeckStacks.userId,
+      verifiedCardCount: sql<number>`COALESCE(SUM(CASE WHEN ${deckVisibility} THEN ${studyDecks.verifiedCardCount} ELSE 0 END), 0)::int`,
     })
     .from(studyDeckStacks)
     .leftJoin(studyDeckStackItems, eq(studyDeckStackItems.stackId, studyDeckStacks.id))
@@ -163,6 +164,7 @@ export async function getStudyStackWithDecks(stackId: string, userId?: string) {
     cardCount: decks.reduce((sum, deck) => sum + deck.cardCount, 0),
     deckCount: decks.length,
     decks,
+    verifiedCardCount: decks.reduce((sum, deck) => sum + (deck.verifiedCardCount ?? 0), 0),
   };
 }
 

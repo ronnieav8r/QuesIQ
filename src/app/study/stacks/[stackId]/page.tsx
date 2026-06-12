@@ -30,6 +30,7 @@ export default async function StudyStackPage({ params }: Props) {
   }
 
   const isOwner = stack.userId === userId;
+  const isFullyVerified = stack.cardCount > 0 && stack.verifiedCardCount === stack.cardCount;
   const userDecks = isOwner && userId ? await getStudyDecksWithStats(userId) : [];
 
   return (
@@ -59,6 +60,7 @@ export default async function StudyStackPage({ params }: Props) {
           {isOwner && <span className="badge">Mine</span>}
           {stack.isPublic && <span className="badge">Public</span>}
           {stack.isOfficial && <StudyTrustBadge type="official" />}
+          {isFullyVerified && <StudyTrustBadge type="verified" />}
           {stack.subject && <span className="badge">{stack.subject}</span>}
           <span className="badge">{stack.deckCount} decks</span>
           <span className="badge">{stack.cardCount} cards</span>
