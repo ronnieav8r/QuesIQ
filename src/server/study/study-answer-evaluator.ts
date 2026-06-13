@@ -15,7 +15,7 @@ export type StudyAnswerEvaluation = {
 };
 
 const PROMPT_CONFIG_KEY = "study_answer_evaluator_v1";
-const PROMPT_CONFIG_VERSION = 1;
+const PROMPT_CONFIG_VERSION = 2;
 
 function normalizeVerdict(value: string | undefined): StudyAnswerVerdict {
   return value === "correct" || value === "good" || value === "almost" || value === "missed"
@@ -68,7 +68,7 @@ Student's Answer: ${input.userAnswer}
 
 Return JSON with exactly two fields:
 - "verdict": one of "correct", "good", "almost", or "missed"
-- "feedback": 1-2 sentences with concrete guidance.
+- "feedback": 1-2 concise spoken-coaching sentences. Say what the learner included or left out. If the answer is incomplete or wrong, include the correct answer or the missing key detail.
 `,
             role: "user",
           },

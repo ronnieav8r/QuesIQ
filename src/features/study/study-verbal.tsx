@@ -50,6 +50,15 @@ type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 type VerbalPhase = "answering" | "evaluating" | "feedback" | "ready" | "recording" | "start" | "summary";
 
 const SILENCE_OPTIONS = [1000, 1500, 2000, 3000];
+const VERDICT_LABELS: Record<StudyVerdict, string> = {
+  again: "Again",
+  almost: "Almost",
+  correct: "Correct",
+  easy: "Easy",
+  good: "Good",
+  hard: "Hard",
+  missed: "Missed",
+};
 
 function shuffle<T>(items: T[]) {
   const next = [...items];
@@ -68,14 +77,8 @@ function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
   return maybe.SpeechRecognition ?? maybe.webkitSpeechRecognition ?? null;
 }
 
-function speakNative(text: string, onEnd: () => void) {
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = "en-US";
-  utter.rate = 0.92;
-  utter.onend = onEnd;
-  utter.onerror = onEnd;
-  window.speechSynthesis.speak(utter);
-  return () => window.speechSynthesis.cancel();
+function trimSpokenFeedback(text: string) {
+  return text.replace(/\s+/g, " ").trim().slice(0, 420);
 }
 
 export function StudyVerbal({
@@ -120,7 +123,6 @@ export function StudyVerbal({
   const [mode, setMode] = useState<"handsfree" | "manual">(hf ? "handsfree" : "manual");
   const [phase, setPhase] = useState<VerbalPhase>("start");
   const [silenceMs, setSilenceMs] = useState(1500);
-  const [usePremiumTts, setUsePremiumTts] = useState(false);
   const [selfRate, setSelfRate] = useState(false);
   const [index, setIndex] = useState(0);
   const [typed, setTyped] = useState("");
@@ -135,6 +137,10 @@ export function StudyVerbal({
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const ratingActiveRef = useRef(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+  const speechCancelRef = useRef<(() => void) | null>(null);
+  const audioRunRef = useRef(0);
 
   const card = deck[index];
   const handsFree = mode === "handsfree";
@@ -161,6 +167,7 @@ export function StudyVerbal({
   useEffect(() => {
     return () => {
       recognitionRef.current?.stop();
+      stopAudio();
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
       }
@@ -184,10 +191,7 @@ export function StudyVerbal({
     if (!(handsFree && phase === "feedback" && !selfRate)) {
       return;
     }
-    const timeout = window.setTimeout(() => {
-      void advanceAfterFeedback();
-    }, 1800);
-    return () => window.clearTimeout(timeout);
+    void speakFeedbackThenAdvance(card, feedbackVerdict, feedback);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handsFree, phase, selfRate]);
 
@@ -199,20 +203,33 @@ export function StudyVerbal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handsFree, phase, selfRate]);
 
-  async function speakQuestion() {
-    const text = card.question;
-    setError("");
-    if (!usePremiumTts) {
-      setPhase("evaluating");
-      speakNative(text, () => setPhase("ready"));
-      return;
+  function stopAudio() {
+    audioRunRef.current += 1;
+    speechCancelRef.current?.();
+    speechCancelRef.current = null;
+    audioRef.current?.pause();
+    audioRef.current = null;
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
     }
+    window.speechSynthesis.cancel();
+  }
 
+  async function speakAi(
+    text: string,
+    options?: { cardId?: string; onEnd?: () => void; playbackPhase?: VerbalPhase | null },
+  ) {
+    stopAudio();
+    const runId = audioRunRef.current;
+    setError("");
     try {
-      setPhase("evaluating");
+      if (options?.playbackPhase !== null) {
+        setPhase(options?.playbackPhase ?? "evaluating");
+      }
       const response = await fetch("/api/study/tts", {
         body: JSON.stringify({
-          cardId: card.id,
+          cardId: options?.cardId,
           text,
         }),
         headers: { "Content-Type": "application/json" },
@@ -223,20 +240,59 @@ export function StudyVerbal({
       }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
+      audioUrlRef.current = url;
       const audio = new Audio(url);
+      audioRef.current = audio;
       audio.onended = () => {
+        if (runId !== audioRunRef.current) {
+          return;
+        }
         URL.revokeObjectURL(url);
-        setPhase("ready");
+        audioUrlRef.current = null;
+        audioRef.current = null;
+        options?.onEnd?.();
       };
       audio.onerror = () => {
+        if (runId !== audioRunRef.current) {
+          return;
+        }
         URL.revokeObjectURL(url);
+        audioUrlRef.current = null;
+        audioRef.current = null;
+        setError("AI voice unavailable. Try again.");
         setPhase("ready");
       };
       await audio.play();
     } catch {
-      setError("Audio unavailable. Read the prompt and answer.");
+      if (runId !== audioRunRef.current) {
+        return;
+      }
+      setError("AI voice unavailable. Try again.");
       setPhase("ready");
     }
+  }
+
+  async function speakQuestion(targetCard: StudyVerbalCard) {
+    await speakAi(targetCard.question, {
+      cardId: targetCard.id,
+      onEnd: () => setPhase("ready"),
+    });
+  }
+
+  async function speakFeedbackThenAdvance(
+    targetCard: StudyVerbalCard,
+    verdict: StudyVerdict,
+    explanation: string,
+  ) {
+    const spoken = `Rated ${VERDICT_LABELS[verdict]}. ${trimSpokenFeedback(explanation)}`;
+    await speakAi(spoken, {
+      onEnd: () => {
+        window.setTimeout(() => {
+          void advanceAfterFeedback();
+        }, 350);
+      },
+      playbackPhase: null,
+    });
   }
 
   function startRecording() {
@@ -343,11 +399,12 @@ export function StudyVerbal({
       return;
     }
     saveVerbalSession(deck.map((currentCard) => currentCard.id), nextIndex);
+    const nextCard = deck[nextIndex];
     setIndex(nextIndex);
     setTyped("");
     setFeedback("");
     setPhase("evaluating");
-    await speakQuestion();
+    await speakQuestion(nextCard);
   }
 
   async function advanceAfterFeedback() {
@@ -362,11 +419,12 @@ export function StudyVerbal({
       return;
     }
     saveVerbalSession(deck.map((currentCard) => currentCard.id), nextIndex);
+    const nextCard = deck[nextIndex];
     setIndex(nextIndex);
     setTyped("");
     setFeedback("");
     setPhase("evaluating");
-    await speakQuestion();
+    await speakQuestion(nextCard);
   }
 
   async function submitAnswer(input?: string) {
@@ -439,7 +497,7 @@ export function StudyVerbal({
   function startSession() {
     saveVerbalSession(deck.map((currentCard) => currentCard.id), 0);
     setPhase("evaluating");
-    void speakQuestion();
+    void speakQuestion(deck[0]);
   }
 
   function restart() {
@@ -546,37 +604,11 @@ export function StudyVerbal({
     ratingActiveRef.current = true;
     const text = `The answer is: ${card.answer}. Again, Hard, Good, or Easy?`;
 
-    if (usePremiumTts) {
-      try {
-        const response = await fetch("/api/study/tts", {
-          body: JSON.stringify({ text }),
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-        });
-        if (response.ok) {
-          const url = URL.createObjectURL(await response.blob());
-          const audio = new Audio(url);
-          audio.onended = () => {
-            URL.revokeObjectURL(url);
-            startRatingRecognition();
-          };
-          audio.onerror = () => {
-            URL.revokeObjectURL(url);
-            startRatingRecognition();
-          };
-          await audio.play();
-          return;
-        }
-      } catch {
-        // Fall back to native speech.
-      }
-    }
-
-    const cancelFallback = window.setTimeout(() => startRatingRecognition(), 1800);
-    const cancel = speakNative(text, () => {
-      window.clearTimeout(cancelFallback);
-      cancel();
-      startRatingRecognition();
+    await speakAi(text, {
+      onEnd: () => {
+        startRatingRecognition();
+      },
+      playbackPhase: null,
     });
   }
 
@@ -612,13 +644,7 @@ export function StudyVerbal({
             ))}
           </div>
         </div>
-        <div className="study-verbal-option-row">
-          <span>Voice</span>
-          <div className="study-verbal-options segmented-control">
-            <button className={usePremiumTts ? "active" : ""} onClick={() => setUsePremiumTts(true)} type="button">AI Voice</button>
-            <button className={!usePremiumTts ? "active" : ""} onClick={() => setUsePremiumTts(false)} type="button">Device Voice</button>
-          </div>
-        </div>
+        <p className="study-verbal-voice-note">AI voice is used for hands-free sessions.</p>
         {!supported && <p className="form-error">Voice input requires Chrome or Edge.</p>}
         <button className="study-verbal-start" disabled={!supported} onClick={startSession} type="button">Start Session</button>
       </section>
