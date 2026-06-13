@@ -43,6 +43,21 @@ export default async function StudyQuizPage({ params, searchParams }: Props) {
     redirect("/");
   }
 
+  if (hf === "1") {
+    const redirectedSearch = new URLSearchParams();
+    redirectedSearch.set("hf", "1");
+    if (filter) {
+      redirectedSearch.set("filter", filter);
+    }
+    if (level) {
+      redirectedSearch.set("level", level);
+    }
+    if (srs === "1") {
+      redirectedSearch.set("srs", "1");
+    }
+    redirect(`/study/decks/${deckId}/study/verbal?${redirectedSearch.toString()}`);
+  }
+
   const allCards = await getStudyDeckCards(deckId);
   const levelCards = filterStudyCardsByLevel(allCards, level);
 

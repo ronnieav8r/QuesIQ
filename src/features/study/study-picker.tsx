@@ -47,18 +47,16 @@ function buildUrl(
     search.set("order", "ordered");
   }
 
+  if (modality === "handsfree") {
+    search.set("hf", "1");
+    return `/study/decks/${deckId}/study/verbal?${search.toString()}`;
+  }
+
   if (mode === "flashcards") {
-    if (modality === "handsfree") {
-      search.set("hf", "1");
-      return `/study/decks/${deckId}/study/verbal?${search.toString()}`;
-    }
     return `/study/decks/${deckId}/study?${search.toString()}`;
   }
   if (mode === "quiz" || mode === "truefalse") {
     search.set("mode", mode === "truefalse" ? "truefalse" : "quiz");
-    if (modality === "handsfree") {
-      search.set("hf", "1");
-    }
     return `/study/decks/${deckId}/study/quiz?${search.toString()}`;
   }
   return `/study/decks/${deckId}/study/${mode}?${search.toString()}`;
@@ -105,7 +103,7 @@ export function StudyPicker({ deckId, dueCount, totalCount, weakCount }: Props) 
     { key: "test", label: "Test", icon: <ClipboardList size={18} />, desc: "Full test with final review", visualOnly: true },
   ];
   const selectedModality: Modality = modality ?? "visual";
-  const visibleModes = selectedModality === "handsfree" ? modes.filter((mode) => !mode.visualOnly) : modes;
+  const visibleModes = selectedModality === "handsfree" ? modes.filter((mode) => mode.key === "flashcards") : modes;
 
   if (!open) {
     return (
