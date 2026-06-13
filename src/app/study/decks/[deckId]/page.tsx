@@ -132,7 +132,7 @@ export default async function StudyDeckPage({ params }: Props) {
             Official means QuesIQ-curated. Verified means source/card checked with high confidence; it is not a credential.
           </p>
         )}
-        {isAdmin && (
+        {isAdmin && !deck.isOfficial && (
           <StudyVerifyButton deckId={deckId} />
         )}
       </section>
