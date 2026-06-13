@@ -1132,8 +1132,15 @@ export const quiraKnowledgeArticles = pgTable(
       .$type<"admin" | "docs" | "seed" | "upload">()
       .default("admin")
       .notNull(),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
     tags: jsonb("tags").$type<string[]>().default([]).notNull(),
     title: text("title").notNull(),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    reviewedBy: text("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+    reviewStatus: text("review_status")
+      .$type<"archived" | "draft" | "reviewed">()
+      .default("draft")
+      .notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     vectorFileId: text("vector_file_id"),
     vectorSyncError: text("vector_sync_error"),
@@ -1146,10 +1153,48 @@ export const quiraKnowledgeArticles = pgTable(
   (article) => ({
     productIdx: index("quira_knowledge_articles_product_idx").on(article.product),
     publishedIdx: index("quira_knowledge_articles_published_idx").on(article.published),
+    archivedIdx: index("quira_knowledge_articles_archived_idx").on(article.archivedAt),
+    reviewIdx: index("quira_knowledge_articles_review_idx").on(article.reviewStatus),
     slugIdx: uniqueIndex("quira_knowledge_articles_slug_idx").on(article.slug),
     vectorSyncIdx: index("quira_knowledge_articles_vector_sync_idx").on(
       article.vectorSyncStatus,
     ),
+  }),
+);
+
+export const quiraKnownIssues = pgTable(
+  "quira_known_issues",
+  {
+    adminNotes: text("admin_notes"),
+    affectedScreens: jsonb("affected_screens").$type<string[]>().default([]).notNull(),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    createdByUserId: text("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    fixedAt: timestamp("fixed_at", { withTimezone: true }),
+    id: uuid("id").defaultRandom().primaryKey(),
+    product: text("product").default("shared").notNull(),
+    severity: text("severity")
+      .$type<"critical" | "high" | "low" | "normal">()
+      .default("normal")
+      .notNull(),
+    status: text("status")
+      .$type<"archived" | "fixed" | "investigating" | "open">()
+      .default("open")
+      .notNull(),
+    summary: text("summary").notNull(),
+    title: text("title").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedByUserId: text("updated_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    workaround: text("workaround"),
+  },
+  (issue) => ({
+    productIdx: index("quira_known_issues_product_idx").on(issue.product),
+    statusIdx: index("quira_known_issues_status_idx").on(issue.status),
+    updatedIdx: index("quira_known_issues_updated_idx").on(issue.updatedAt),
   }),
 );
 
@@ -1189,6 +1234,9 @@ export const quiraLeads = pgTable(
 export const quiraSupportCases = pgTable(
   "quira_support_cases",
   {
+    assignedToUserId: text("assigned_to_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     conversationId: uuid("conversation_id").references(() => quiraConversations.id, {
       onDelete: "set null",
     }),
@@ -1196,10 +1244,17 @@ export const quiraSupportCases = pgTable(
     details: jsonb("details").$type<Record<string, unknown>>().default({}).notNull(),
     id: uuid("id").defaultRandom().primaryKey(),
     kind: text("kind").$type<"bug" | "feedback" | "support">().default("support").notNull(),
+    knownIssueId: uuid("known_issue_id").references(() => quiraKnownIssues.id, {
+      onDelete: "set null",
+    }),
     product: text("product").default("shared").notNull(),
     resolvedAt: timestamp("resolved_at", { withTimezone: true }),
     screen: text("screen").default("unknown").notNull(),
     sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "set null" }),
+    severity: text("severity")
+      .$type<"critical" | "high" | "low" | "normal">()
+      .default("normal")
+      .notNull(),
     status: text("status")
       .$type<"in_progress" | "new" | "resolved" | "triage">()
       .default("new")
@@ -1211,12 +1266,115 @@ export const quiraSupportCases = pgTable(
     userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
   },
   (supportCase) => ({
+    assignedIdx: index("quira_support_cases_assigned_idx").on(supportCase.assignedToUserId),
     conversationIdx: index("quira_support_cases_conversation_idx").on(
       supportCase.conversationId,
     ),
     createdAtIdx: index("quira_support_cases_created_at_idx").on(supportCase.createdAt),
+    knownIssueIdx: index("quira_support_cases_known_issue_idx").on(supportCase.knownIssueId),
+    severityIdx: index("quira_support_cases_severity_idx").on(supportCase.severity),
     statusIdx: index("quira_support_cases_status_idx").on(supportCase.status),
     userIdx: index("quira_support_cases_user_idx").on(supportCase.userId),
+  }),
+);
+
+export const quiraCaseEvents = pgTable(
+  "quira_case_events",
+  {
+    actorUserId: text("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => quiraSupportCases.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    eventType: text("event_type").notNull(),
+    fromStatus: text("from_status"),
+    id: uuid("id").defaultRandom().primaryKey(),
+    knownIssueId: uuid("known_issue_id").references(() => quiraKnownIssues.id, {
+      onDelete: "set null",
+    }),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}).notNull(),
+    note: text("note"),
+    toStatus: text("to_status"),
+  },
+  (event) => ({
+    caseIdx: index("quira_case_events_case_idx").on(event.caseId, event.createdAt),
+    knownIssueIdx: index("quira_case_events_known_issue_idx").on(event.knownIssueId),
+  }),
+);
+
+export const quiraCaseTags = pgTable(
+  "quira_case_tags",
+  {
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => quiraSupportCases.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    createdByUserId: text("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    id: uuid("id").defaultRandom().primaryKey(),
+    tag: text("tag").notNull(),
+  },
+  (tag) => ({
+    caseTagIdx: uniqueIndex("quira_case_tags_case_tag_idx").on(tag.caseId, tag.tag),
+    tagIdx: index("quira_case_tags_tag_idx").on(tag.tag),
+  }),
+);
+
+export const quiraAttachments = pgTable(
+  "quira_attachments",
+  {
+    caseId: uuid("case_id").references(() => quiraSupportCases.id, { onDelete: "cascade" }),
+    checksum: text("checksum"),
+    conversationId: uuid("conversation_id").references(() => quiraConversations.id, {
+      onDelete: "cascade",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    errorMessage: text("error_message"),
+    fileKey: text("file_key"),
+    fileName: text("file_name"),
+    fileSize: integer("file_size"),
+    id: uuid("id").defaultRandom().primaryKey(),
+    kind: text("kind").$type<"file" | "screenshot">().default("screenshot").notNull(),
+    messageId: uuid("message_id").references(() => quiraMessages.id, { onDelete: "set null" }),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}).notNull(),
+    mimeType: text("mime_type"),
+    publicUrl: text("public_url"),
+    status: text("status")
+      .$type<"failed" | "unavailable" | "uploaded">()
+      .default("uploaded")
+      .notNull(),
+    storageProvider: text("storage_provider").$type<"r2">().default("r2").notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  },
+  (attachment) => ({
+    caseIdx: index("quira_attachments_case_idx").on(attachment.caseId),
+    conversationIdx: index("quira_attachments_conversation_idx").on(
+      attachment.conversationId,
+    ),
+  }),
+);
+
+export const quiraAnswerFeedback = pgTable(
+  "quira_answer_feedback",
+  {
+    comment: text("comment"),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => quiraConversations.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    messageId: uuid("message_id")
+      .notNull()
+      .references(() => quiraMessages.id, { onDelete: "cascade" }),
+    rating: text("rating").$type<"helpful" | "not_helpful">().notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  },
+  (feedback) => ({
+    conversationIdx: index("quira_answer_feedback_conversation_idx").on(
+      feedback.conversationId,
+    ),
+    messageIdx: index("quira_answer_feedback_message_idx").on(feedback.messageId),
   }),
 );
 

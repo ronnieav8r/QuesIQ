@@ -4,7 +4,10 @@ import { requireAdminSession } from "@/server/admin";
 import {
   listQuiraAdminSupportData,
   parseQuiraSupportCaseStatus,
+  saveQuiraKnowledgeArticle,
+  saveQuiraKnownIssue,
   syncQuiraKnowledgeToVectorStore,
+  updateQuiraSupportCaseTriage,
   updateQuiraSupportCaseStatus,
 } from "@/server/support/quira-support";
 
@@ -93,30 +96,58 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => ({}))) as {
     action?: unknown;
+    payload?: Record<string, unknown>;
   };
-
-  if (body.action !== "sync_vector_store") {
-    return NextResponse.json({ error: "Unsupported Quira admin action." }, { status: 400 });
-  }
 
   if (!process.env.DATABASE_URL) {
     return NextResponse.json(
-      { error: "Quira vector sync needs a configured database." },
+      { error: "Quira admin actions need a configured database." },
       { status: 503 },
     );
   }
 
   try {
-    const result = await syncQuiraKnowledgeToVectorStore();
+    if (body.action === "sync_vector_store") {
+      const result = await syncQuiraKnowledgeToVectorStore();
 
-    return NextResponse.json({ result });
+      return NextResponse.json({ result });
+    }
+
+    if (body.action === "save_knowledge_article") {
+      const article = await saveQuiraKnowledgeArticle({
+        ...(body.payload ?? {}),
+        userId: appSession.user.id,
+      });
+
+      return NextResponse.json({ article });
+    }
+
+    if (body.action === "save_known_issue") {
+      const knownIssue = await saveQuiraKnownIssue({
+        ...(body.payload ?? {}),
+        userId: appSession.user.id,
+      });
+
+      return NextResponse.json({ knownIssue });
+    }
+
+    if (body.action === "update_case_triage") {
+      const supportCase = await updateQuiraSupportCaseTriage({
+        ...(body.payload ?? {}),
+        userId: appSession.user.id,
+      });
+
+      return NextResponse.json({ supportCase });
+    }
+
+    return NextResponse.json({ error: "Unsupported Quira admin action." }, { status: 400 });
   } catch (error) {
-    console.error("Quira vector sync failed.", error);
+    console.error("Quira admin action failed.", error);
 
     return NextResponse.json(
       {
-        detail: error instanceof Error ? error.message : "Quira vector sync failed.",
-        error: "Quira vector sync could not complete.",
+        detail: error instanceof Error ? error.message : "Quira admin action failed.",
+        error: "Quira admin action could not complete.",
       },
       { status: 503 },
     );

@@ -392,14 +392,17 @@ Last updated: 2026-06-02
     general brand/product/beta/signup questions and signed-in context for
     private account/session troubleshooting
   - Quira can use curated Postgres KB, optional OpenAI vector-store file search,
-    support-case tool escalation, lead capture, and safe Interview session
-    snapshots for signed-in users
+    current non-archived known issues, support-case tool escalation, lead
+    capture, safe Interview session snapshots, and signed-in Study context for
+    deck/session troubleshooting
   - explicit Quira bug/feedback reports save into Quira support storage via
-    `/api/support/report` (conversation + case), with compatibility support for
+    `/api/support/report` (conversation + case), with R2-backed attachment
+    metadata when storage is configured and compatibility support for
     `/api/feedback` callers that set `supportSource: "quira"`
   - Admin support now includes prompt visibility, vector sync state, knowledge
-    article metadata, leads, practical case workflow controls, conversations,
-    messages, and recent tool events
+    article metadata/review state, current/archived known issues, leads,
+    lightweight case triage, case events, tags, attachments, answer feedback,
+    conversations, messages, and recent tool events
 - Story Lab Phase 1 started:
   - the former Stories placeholder is now positioned as Story Lab
   - users can now choose Tell Que, Dictate, or Type as story-capture modes:

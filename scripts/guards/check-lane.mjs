@@ -94,6 +94,7 @@ const lanes = {
   quira: [
     ".env.example",
     "drizzle/0070_expand_quira_hybrid_support.sql",
+    "drizzle/0081_expand_quira_support_database.sql",
     "drizzle/meta/_journal.json",
     "docs/rebuild/CURRENT_STATUS.md",
     "docs/rebuild/HANDOFF.md",
@@ -107,6 +108,7 @@ const lanes = {
     "src/components/interview/quira-support-launcher.tsx",
     "src/components/support/",
     "src/features/admin/admin-console.tsx",
+    "src/features/admin/quira-admin-actions.tsx",
     "src/features/interview/interview-app.tsx",
     "src/features/support/",
     "src/server/db/schema.ts",

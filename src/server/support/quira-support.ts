@@ -7,22 +7,40 @@ import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
 import { getDb } from "@/server/db/client";
 import {
   evaluations,
+  quiraAnswerFeedback,
+  quiraAttachments,
+  quiraCaseEvents,
+  quiraCaseTags,
   quiraLeads,
   quiraConversations,
+  quiraKnownIssues,
   quiraKnowledgeArticles,
   quiraMessages,
   quiraSupportCases,
   quiraToolEvents,
   sessions,
+  studyCardAttempts,
+  studyCards,
+  studyDecks,
+  studyDeckStacks,
+  studySessions,
   users,
 } from "@/server/db/schema";
 import { getOpenAiApiKey } from "@/server/openai/keys";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
+import {
+  isSupportStorageConfigured,
+  supportAttachmentFromDataUrl,
+  uploadSupportAttachment,
+} from "@/server/support/storage";
 
 type QuiraProduct = "dpe" | "interview" | "shared" | "study";
 type SupportCaseKind = "bug" | "feedback" | "support";
 type SupportCaseStatus = "in_progress" | "new" | "resolved" | "triage";
 type SupportCaseUrgency = "high" | "low" | "normal";
+type SupportSeverity = "critical" | "high" | "low" | "normal";
+type KnownIssueStatus = "archived" | "fixed" | "investigating" | "open";
+type KnowledgeReviewStatus = "archived" | "draft" | "reviewed";
 
 type QuiraChatInput = {
   browserContext?: Record<string, unknown>;
@@ -66,6 +84,17 @@ type KnowledgeArticleRecord = {
   slug: string;
   tags: string[];
   title: string;
+};
+
+type KnownIssueRecord = {
+  affectedScreens: string[];
+  id: string;
+  product: string;
+  severity: SupportSeverity;
+  status: KnownIssueStatus;
+  summary: string;
+  title: string;
+  workaround?: string | null;
 };
 
 type ToolEventRecord = {
@@ -126,6 +155,46 @@ function cleanProduct(value: unknown): QuiraProduct {
   return "shared";
 }
 
+function cleanSeverity(value: unknown): SupportSeverity {
+  const severity = cleanText(value, 40)?.toLowerCase();
+
+  if (
+    severity === "critical" ||
+    severity === "high" ||
+    severity === "low" ||
+    severity === "normal"
+  ) {
+    return severity;
+  }
+
+  return "normal";
+}
+
+function cleanKnownIssueStatus(value: unknown): KnownIssueStatus {
+  const status = cleanText(value, 40)?.toLowerCase();
+
+  if (
+    status === "archived" ||
+    status === "fixed" ||
+    status === "investigating" ||
+    status === "open"
+  ) {
+    return status;
+  }
+
+  return "open";
+}
+
+function cleanKnowledgeReviewStatus(value: unknown): KnowledgeReviewStatus {
+  const status = cleanText(value, 40)?.toLowerCase();
+
+  if (status === "archived" || status === "draft" || status === "reviewed") {
+    return status;
+  }
+
+  return "draft";
+}
+
 function cleanUuid(value: unknown) {
   const text = cleanText(value, 80);
 
@@ -137,8 +206,53 @@ function cleanUuid(value: unknown) {
     : undefined;
 }
 
+function cleanTags(value: unknown) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => cleanText(item, 40)?.toLowerCase().replace(/[^a-z0-9_-]+/g, "-"))
+      .filter((item): item is string => Boolean(item))
+      .slice(0, 12);
+  }
+
+  return (cleanText(value, 400) ?? "")
+    .split(",")
+    .map((item) => item.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-"))
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
 function cleanConversationSource(value: unknown): "public" | "signed_in" {
   return value === "public" ? "public" : "signed_in";
+}
+
+function cleanJsonValue(value: unknown, depth = 0): unknown {
+  if (depth > 3) {
+    return undefined;
+  }
+
+  if (
+    value === null ||
+    typeof value === "boolean" ||
+    typeof value === "number" ||
+    typeof value === "string"
+  ) {
+    return typeof value === "string" ? value.slice(0, 500) : value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.slice(0, 20).map((item) => cleanJsonValue(item, depth + 1));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .slice(0, 30)
+        .map(([key, item]) => [key.slice(0, 80), cleanJsonValue(item, depth + 1)])
+        .filter(([, item]) => item !== undefined),
+    );
+  }
+
+  return undefined;
 }
 
 function cleanBrowserContext(value: unknown) {
@@ -149,8 +263,10 @@ function cleanBrowserContext(value: unknown) {
   const candidate = value as Record<string, unknown>;
 
   return {
+    contextDetails: cleanJsonValue(candidate.contextDetails),
     language: cleanText(candidate.language, 80),
     pathname: cleanText(candidate.pathname, 200),
+    timeZone: cleanText(candidate.timeZone, 80),
     userAgent: cleanText(candidate.userAgent, 500),
     viewport: cleanText(candidate.viewport, 80),
   };
@@ -379,7 +495,13 @@ export async function searchQuiraKnowledge(input: {
       title: quiraKnowledgeArticles.title,
     })
     .from(quiraKnowledgeArticles)
-    .where(eq(quiraKnowledgeArticles.published, true));
+    .where(
+      and(
+        eq(quiraKnowledgeArticles.published, true),
+        eq(quiraKnowledgeArticles.reviewStatus, "reviewed"),
+        isNull(quiraKnowledgeArticles.archivedAt),
+      ),
+    );
 
   return rows
     .filter((row) => source === "signed_in" || row.audience === "public")
@@ -402,14 +524,71 @@ export async function searchQuiraKnowledge(input: {
     }));
 }
 
+function issueScore(issue: KnownIssueRecord, query: string, product: string) {
+  const terms = query
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((term) => term.length > 2);
+  const haystack = `${issue.title} ${issue.summary} ${issue.workaround ?? ""} ${issue.affectedScreens.join(" ")}`.toLowerCase();
+  const termScore = terms.reduce((score, term) => score + (haystack.includes(term) ? 1 : 0), 0);
+  const productScore = issue.product === product ? 3 : issue.product === "shared" ? 1 : 0;
+
+  return termScore + productScore;
+}
+
+export async function searchQuiraKnownIssues(input: {
+  product?: string;
+  query: string;
+}) {
+  const product = cleanProduct(input.product);
+  const query = cleanText(input.query, 400) ?? "";
+  const rows = await getDb()
+    .select({
+      affectedScreens: quiraKnownIssues.affectedScreens,
+      id: quiraKnownIssues.id,
+      product: quiraKnownIssues.product,
+      severity: quiraKnownIssues.severity,
+      status: quiraKnownIssues.status,
+      summary: quiraKnownIssues.summary,
+      title: quiraKnownIssues.title,
+      workaround: quiraKnownIssues.workaround,
+    })
+    .from(quiraKnownIssues)
+    .where(and(isNull(quiraKnownIssues.archivedAt)));
+
+  return rows
+    .filter((row) => row.status === "open" || row.status === "investigating")
+    .map((row) => ({
+      ...row,
+      score: issueScore(row, query, product),
+    }))
+    .filter((row) => row.score > 0)
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 5)
+    .map((issue) => ({
+      affectedScreens: issue.affectedScreens,
+      id: issue.id,
+      product: issue.product,
+      severity: issue.severity,
+      status: issue.status,
+      summary: issue.summary,
+      title: issue.title,
+      workaround: issue.workaround,
+    }));
+}
+
 async function createSupportCase(input: {
+  assignedToUserId?: string;
   conversationId: string;
   details?: Record<string, unknown>;
   kind?: SupportCaseKind;
+  knownIssueId?: string;
   product?: string;
   screen?: string;
   sessionId?: string;
+  severity?: SupportSeverity;
   summary: string;
+  tags?: string[];
   title?: string;
   urgency?: SupportCaseUrgency;
   userId?: string;
@@ -420,12 +599,15 @@ async function createSupportCase(input: {
   const [supportCase] = await getDb()
     .insert(quiraSupportCases)
     .values({
+      assignedToUserId: input.assignedToUserId,
       conversationId: input.conversationId,
       details: input.details ?? {},
       kind: input.kind ?? "support",
+      knownIssueId: cleanUuid(input.knownIssueId),
       product: cleanProduct(input.product),
       screen: cleanText(input.screen, MAX_SCREEN_LENGTH) ?? "unknown",
       sessionId: cleanUuid(input.sessionId),
+      severity: input.severity ?? cleanSeverity(input.urgency),
       summary,
       title,
       updatedAt: now,
@@ -439,7 +621,88 @@ async function createSupportCase(input: {
     .set({ status: "escalated", updatedAt: now })
     .where(eq(quiraConversations.id, input.conversationId));
 
+  await recordCaseEvent({
+    actorUserId: input.userId,
+    caseId: supportCase.id,
+    eventType: "created",
+    knownIssueId: supportCase.knownIssueId ?? undefined,
+    metadata: {
+      kind: supportCase.kind,
+      product: supportCase.product,
+      screen: supportCase.screen,
+      severity: supportCase.severity,
+      source: input.details?.source ?? input.details?.tool ?? "quira",
+    },
+    note: summary,
+    toStatus: supportCase.status,
+  });
+
+  if (input.tags?.length) {
+    await setSupportCaseTags({
+      actorUserId: input.userId,
+      caseId: supportCase.id,
+      tags: input.tags,
+    });
+  }
+
   return supportCase;
+}
+
+async function recordCaseEvent(input: {
+  actorUserId?: string;
+  caseId: string;
+  eventType: string;
+  fromStatus?: string | null;
+  knownIssueId?: string;
+  metadata?: Record<string, unknown>;
+  note?: string;
+  toStatus?: string | null;
+}) {
+  await getDb().insert(quiraCaseEvents).values({
+    actorUserId: input.actorUserId,
+    caseId: input.caseId,
+    eventType: input.eventType,
+    fromStatus: input.fromStatus,
+    knownIssueId: cleanUuid(input.knownIssueId),
+    metadata: input.metadata ?? {},
+    note: cleanText(input.note, 2000),
+    toStatus: input.toStatus,
+  });
+}
+
+async function setSupportCaseTags(input: {
+  actorUserId?: string;
+  caseId: string;
+  tags: string[];
+}) {
+  const tags = cleanTags(input.tags);
+
+  if (tags.length === 0) {
+    return [];
+  }
+
+  const inserted = await getDb()
+    .insert(quiraCaseTags)
+    .values(
+      tags.map((tag) => ({
+        caseId: input.caseId,
+        createdByUserId: input.actorUserId,
+        tag,
+      })),
+    )
+    .onConflictDoNothing()
+    .returning();
+
+  for (const tag of inserted) {
+    await recordCaseEvent({
+      actorUserId: input.actorUserId,
+      caseId: input.caseId,
+      eventType: "tag_added",
+      metadata: { tag: tag.tag },
+    });
+  }
+
+  return tags;
 }
 
 async function createLead(input: {
@@ -516,6 +779,7 @@ export async function updateQuiraSupportCaseStatus(input: {
   const [updated] = await getDb()
     .update(quiraSupportCases)
     .set({
+      resolvedAt: input.status === "resolved" ? now : null,
       status: input.status,
       updatedAt: now,
     })
@@ -526,6 +790,14 @@ export async function updateQuiraSupportCaseStatus(input: {
       status: quiraSupportCases.status,
       updatedAt: quiraSupportCases.updatedAt,
     });
+
+  await recordCaseEvent({
+    actorUserId: input.userId,
+    caseId: existing.id,
+    eventType: "status_changed",
+    fromStatus: existing.status,
+    toStatus: input.status,
+  });
 
   if (existing.conversationId) {
     await getDb()
@@ -549,6 +821,258 @@ export async function updateQuiraSupportCaseStatus(input: {
   }
 
   return updated;
+}
+
+function slugFromTitle(title: string) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
+export async function saveQuiraKnowledgeArticle(input: {
+  articleId?: string;
+  audience?: unknown;
+  category?: unknown;
+  content?: unknown;
+  product?: unknown;
+  published?: unknown;
+  reviewStatus?: unknown;
+  slug?: unknown;
+  tags?: unknown;
+  title?: unknown;
+  userId: string;
+}) {
+  const title = cleanText(input.title, 180);
+  const content = cleanText(input.content, 20_000);
+
+  if (!title || !content) {
+    throw new Error("Knowledge article title and content are required.");
+  }
+
+  const requestedReviewStatus = cleanKnowledgeReviewStatus(input.reviewStatus);
+  const published = Boolean(input.published);
+  const reviewStatus = published ? "reviewed" : requestedReviewStatus;
+  const archivedAt = reviewStatus === "archived" ? new Date() : null;
+  const audience: "public" | "signed_in" =
+    input.audience === "signed_in" ? "signed_in" : "public";
+  const values = {
+    archivedAt,
+    audience,
+    category: cleanText(input.category, 80) ?? "general",
+    content,
+    product: cleanProduct(input.product),
+    published: published && !archivedAt,
+    reviewStatus,
+    reviewedAt: reviewStatus === "reviewed" ? new Date() : null,
+    reviewedBy: reviewStatus === "reviewed" ? input.userId : undefined,
+    slug: cleanText(input.slug, 120) ?? slugFromTitle(title),
+    sourceType: "admin" as const,
+    tags: cleanTags(input.tags),
+    title,
+    updatedAt: new Date(),
+    vectorSyncStatus: published && !archivedAt ? ("pending" as const) : ("not_synced" as const),
+  };
+  const articleId = cleanUuid(input.articleId);
+
+  if (articleId) {
+    const [article] = await getDb()
+      .update(quiraKnowledgeArticles)
+      .set(values)
+      .where(eq(quiraKnowledgeArticles.id, articleId))
+      .returning();
+
+    return article;
+  }
+
+  const [article] = await getDb()
+    .insert(quiraKnowledgeArticles)
+    .values(values)
+    .returning();
+
+  return article;
+}
+
+export async function saveQuiraKnownIssue(input: {
+  adminNotes?: unknown;
+  affectedScreens?: unknown;
+  issueId?: string;
+  product?: unknown;
+  severity?: unknown;
+  status?: unknown;
+  summary?: unknown;
+  title?: unknown;
+  userId: string;
+  workaround?: unknown;
+}) {
+  const title = cleanText(input.title, 180);
+  const summary = cleanText(input.summary, 4000);
+
+  if (!title || !summary) {
+    throw new Error("Known issue title and summary are required.");
+  }
+
+  const status = cleanKnownIssueStatus(input.status);
+  const now = new Date();
+  const fixedAt = status === "fixed" || status === "archived" ? now : null;
+  const archivedAt = status === "fixed" || status === "archived" ? now : null;
+  const values = {
+    adminNotes: cleanText(input.adminNotes, 4000),
+    affectedScreens: cleanTags(input.affectedScreens),
+    archivedAt,
+    fixedAt,
+    product: cleanProduct(input.product),
+    severity: cleanSeverity(input.severity),
+    status,
+    summary,
+    title,
+    updatedAt: now,
+    updatedByUserId: input.userId,
+    workaround: cleanText(input.workaround, 4000),
+  };
+  const issueId = cleanUuid(input.issueId);
+
+  if (issueId) {
+    const [issue] = await getDb()
+      .update(quiraKnownIssues)
+      .set(values)
+      .where(eq(quiraKnownIssues.id, issueId))
+      .returning();
+
+    return issue;
+  }
+
+  const [issue] = await getDb()
+    .insert(quiraKnownIssues)
+    .values({
+      ...values,
+      createdByUserId: input.userId,
+    })
+    .returning();
+
+  return issue;
+}
+
+export async function updateQuiraSupportCaseTriage(input: {
+  assignedToUserId?: unknown;
+  caseId?: unknown;
+  knownIssueId?: unknown;
+  note?: unknown;
+  severity?: unknown;
+  status?: unknown;
+  tags?: unknown;
+  userId: string;
+}) {
+  const caseId = cleanUuid(input.caseId);
+  if (!caseId) {
+    throw new Error("Valid caseId is required.");
+  }
+
+  const [existing] = await getDb()
+    .select({
+      assignedToUserId: quiraSupportCases.assignedToUserId,
+      knownIssueId: quiraSupportCases.knownIssueId,
+      severity: quiraSupportCases.severity,
+      status: quiraSupportCases.status,
+    })
+    .from(quiraSupportCases)
+    .where(eq(quiraSupportCases.id, caseId))
+    .limit(1);
+
+  if (!existing) {
+    throw new Error("Quira support case was not found.");
+  }
+
+  const status = parseQuiraSupportCaseStatus(input.status) ?? existing.status;
+  const knownIssueId =
+    input.knownIssueId === null || input.knownIssueId === "" ? null : cleanUuid(input.knownIssueId);
+  const assignedToUserId =
+    input.assignedToUserId === null || input.assignedToUserId === ""
+      ? null
+      : cleanText(input.assignedToUserId, 160);
+  const now = new Date();
+  const [supportCase] = await getDb()
+    .update(quiraSupportCases)
+    .set({
+      assignedToUserId: assignedToUserId ?? existing.assignedToUserId,
+      knownIssueId: knownIssueId ?? existing.knownIssueId,
+      resolvedAt: status === "resolved" ? now : null,
+      severity: cleanSeverity(input.severity ?? existing.severity),
+      status,
+      updatedAt: now,
+    })
+    .where(eq(quiraSupportCases.id, caseId))
+    .returning();
+
+  if (status !== existing.status) {
+    await recordCaseEvent({
+      actorUserId: input.userId,
+      caseId,
+      eventType: "status_changed",
+      fromStatus: existing.status,
+      toStatus: status,
+    });
+  }
+
+  if (knownIssueId && knownIssueId !== existing.knownIssueId) {
+    await recordCaseEvent({
+      actorUserId: input.userId,
+      caseId,
+      eventType: "known_issue_linked",
+      knownIssueId,
+    });
+  }
+
+  const note = cleanText(input.note, 2000);
+  if (note) {
+    await recordCaseEvent({
+      actorUserId: input.userId,
+      caseId,
+      eventType: "note_added",
+      note,
+    });
+  }
+
+  const tags = cleanTags(input.tags);
+  if (tags.length > 0) {
+    await setSupportCaseTags({
+      actorUserId: input.userId,
+      caseId,
+      tags,
+    });
+  }
+
+  return supportCase;
+}
+
+export async function recordQuiraAnswerFeedback(input: {
+  comment?: unknown;
+  conversationId?: unknown;
+  messageId?: unknown;
+  rating?: unknown;
+  userId?: string;
+}) {
+  const conversationId = cleanUuid(input.conversationId);
+  const messageId = cleanUuid(input.messageId);
+  const rating = input.rating === "not_helpful" ? "not_helpful" : "helpful";
+
+  if (!conversationId || !messageId) {
+    throw new Error("Valid conversationId and messageId are required.");
+  }
+
+  const [feedback] = await getDb()
+    .insert(quiraAnswerFeedback)
+    .values({
+      comment: cleanText(input.comment, 1000),
+      conversationId,
+      messageId,
+      rating,
+      userId: input.userId,
+    })
+    .returning();
+
+  return feedback;
 }
 
 async function getSessionSupportSnapshot(input: {
@@ -607,6 +1131,192 @@ async function getSessionSupportSnapshot(input: {
   };
 }
 
+function browserContextRecord(value?: Record<string, unknown>) {
+  return value && typeof value === "object" ? value : {};
+}
+
+function contextDetails(value?: Record<string, unknown>) {
+  const context = browserContextRecord(value);
+  const details = context.contextDetails;
+
+  return details && typeof details === "object" ? (details as Record<string, unknown>) : {};
+}
+
+function findUuidInText(value: unknown, pattern: RegExp) {
+  const text = cleanText(value, 240);
+  const match = text?.match(pattern);
+
+  return cleanUuid(match?.[1]);
+}
+
+function contextUuid(input: {
+  browserContext?: Record<string, unknown>;
+  key: string;
+  pathnamePattern: RegExp;
+}) {
+  const details = contextDetails(input.browserContext);
+
+  return cleanUuid(details[input.key]) ?? findUuidInText(input.browserContext?.pathname, input.pathnamePattern);
+}
+
+async function getStudySupportSnapshot(input: {
+  browserContext?: Record<string, unknown>;
+  sessionId?: string;
+  userId?: string;
+}) {
+  if (!input.userId) {
+    return {
+      available: false,
+      reason: "Sign in is required before Quira can inspect private Study progress.",
+    };
+  }
+
+  const deckId =
+    contextUuid({
+      browserContext: input.browserContext,
+      key: "deckId",
+      pathnamePattern: /\/study\/decks\/([0-9a-f-]+)/i,
+    }) ?? undefined;
+  const stackId = contextUuid({
+    browserContext: input.browserContext,
+    key: "stackId",
+    pathnamePattern: /\/study\/stacks\/([0-9a-f-]+)/i,
+  });
+
+  const recentSessionRows = await getDb()
+    .select({
+      cardsStudied: studySessions.cardsStudied,
+      correctCount: studySessions.correctCount,
+      deckId: studySessions.deckId,
+      endedAt: studySessions.endedAt,
+      id: studySessions.id,
+      mode: studySessions.mode,
+      startedAt: studySessions.startedAt,
+    })
+    .from(studySessions)
+    .where(eq(studySessions.userId, input.userId))
+    .orderBy(desc(studySessions.startedAt))
+    .limit(3);
+
+  let deckSnapshot: Record<string, unknown> | undefined;
+  if (deckId) {
+    const [deck] = await getDb()
+      .select({
+        cardCount: studyDecks.cardCount,
+        id: studyDecks.id,
+        isOfficial: studyDecks.isOfficial,
+        isPublic: studyDecks.isPublic,
+        subject: studyDecks.subject,
+        title: studyDecks.title,
+        userId: studyDecks.userId,
+        verifiedCardCount: studyDecks.verifiedCardCount,
+      })
+      .from(studyDecks)
+      .where(eq(studyDecks.id, deckId))
+      .limit(1);
+
+    if (deck && (deck.isPublic || deck.isOfficial || deck.userId === input.userId)) {
+      const cards = await getDb()
+        .select({
+          dueAt: studyCards.dueAt,
+          id: studyCards.id,
+          isVerified: studyCards.isVerified,
+        })
+        .from(studyCards)
+        .where(eq(studyCards.deckId, deck.id));
+      const attempts = await getDb()
+        .select({
+          attemptedAt: studyCardAttempts.attemptedAt,
+          isCorrect: studyCardAttempts.isCorrect,
+          score: studyCardAttempts.score,
+          verdict: studyCardAttempts.verdict,
+        })
+        .from(studyCardAttempts)
+        .leftJoin(studyCards, eq(studyCards.id, studyCardAttempts.cardId))
+        .where(eq(studyCards.deckId, deck.id))
+        .orderBy(desc(studyCardAttempts.attemptedAt))
+        .limit(5);
+
+      deckSnapshot = {
+        cardCount: deck.cardCount || cards.length,
+        deckId: deck.id,
+        isOfficial: deck.isOfficial,
+        recentAttempts: attempts.map((attempt) => ({
+          attemptedAt: attempt.attemptedAt.toISOString(),
+          isCorrect: attempt.isCorrect,
+          score: attempt.score,
+          verdict: attempt.verdict,
+        })),
+        subject: deck.subject,
+        title: deck.title,
+        verifiedCardCount: deck.verifiedCardCount,
+      };
+    }
+  }
+
+  let stackSnapshot: Record<string, unknown> | undefined;
+  if (stackId) {
+    const [stack] = await getDb()
+      .select({
+        id: studyDeckStacks.id,
+        isOfficial: studyDeckStacks.isOfficial,
+        isPublic: studyDeckStacks.isPublic,
+        subject: studyDeckStacks.subject,
+        title: studyDeckStacks.title,
+        userId: studyDeckStacks.userId,
+      })
+      .from(studyDeckStacks)
+      .where(eq(studyDeckStacks.id, stackId))
+      .limit(1);
+
+    if (stack && (stack.isPublic || stack.isOfficial || stack.userId === input.userId)) {
+      stackSnapshot = {
+        isOfficial: stack.isOfficial,
+        stackId: stack.id,
+        subject: stack.subject,
+        title: stack.title,
+      };
+    }
+  }
+
+  return {
+    available: true,
+    deck: deckSnapshot,
+    recentSessions: recentSessionRows.map((session) => ({
+      cardsStudied: session.cardsStudied,
+      correctCount: session.correctCount,
+      deckId: session.deckId,
+      endedAt: session.endedAt?.toISOString(),
+      mode: session.mode,
+      sessionId: session.id,
+      startedAt: session.startedAt.toISOString(),
+    })),
+    stack: stackSnapshot,
+  };
+}
+
+async function getProductSupportContext(input: {
+  browserContext?: Record<string, unknown>;
+  product?: string;
+  sessionId?: string;
+  userId?: string;
+}) {
+  const product = cleanProduct(input.product);
+
+  if (product === "study") {
+    return getStudySupportSnapshot(input);
+  }
+
+  if (product === "interview") {
+    return getSessionSupportSnapshot(input);
+  }
+
+  return {
+    available: false,
+    reason: "Product support context is currently available for Study and Interview.",
+  };
+}
+
 async function recordToolEvent(input: {
   conversationId: string;
   event: ToolEventRecord;
@@ -626,8 +1336,10 @@ async function recordToolEvent(input: {
 
 function supportContext(input: {
   browserContext?: Record<string, unknown>;
+  knownIssues: KnownIssueRecord[];
   knowledge: KnowledgeArticleRecord[];
   product: string;
+  productContext?: Record<string, unknown>;
   screen: string;
   sessionSnapshot?: Record<string, unknown>;
   user: QuiraChatUser;
@@ -643,7 +1355,17 @@ function supportContext(input: {
     `Current product: ${input.product}`,
     `Current screen: ${input.screen}`,
     `Browser context: ${JSON.stringify(input.browserContext ?? {})}`,
+    `Safe product context: ${JSON.stringify(input.productContext ?? { available: false })}`,
     `Safe session snapshot: ${JSON.stringify(input.sessionSnapshot ?? { available: false })}`,
+    "Current known issues:",
+    input.knownIssues.length
+      ? input.knownIssues
+          .map(
+            (issue, index) =>
+              `${index + 1}. ${issue.title} [${issue.product}/${issue.status}/${issue.severity}]: ${issue.summary}${issue.workaround ? ` Workaround: ${issue.workaround}` : ""}`,
+          )
+          .join("\n")
+      : "No matching open or investigating known issues were found.",
     "Published Quira knowledge:",
     input.knowledge.length
       ? input.knowledge
@@ -694,6 +1416,34 @@ function toolDefinitions() {
       type: "function",
     },
     {
+      description: "Search open or investigating Quira known issues. Fixed and archived issues are hidden.",
+      name: "search_quira_known_issues",
+      parameters: {
+        additionalProperties: false,
+        properties: {
+          product: { type: "string" },
+          query: { type: "string" },
+        },
+        required: ["query"],
+        type: "object",
+      },
+      type: "function",
+    },
+    {
+      description:
+        "Get safe user-facing product support context for the current Study or Interview screen.",
+      name: "get_product_support_context",
+      parameters: {
+        additionalProperties: false,
+        properties: {
+          sessionId: { type: "string" },
+        },
+        required: [],
+        type: "object",
+      },
+      type: "function",
+    },
+    {
       description:
         "Create a lead for public or signed-in follow-up about beta access, pricing, signup, product fit, or human contact.",
       name: "create_lead",
@@ -719,6 +1469,9 @@ function toolDefinitions() {
           summary: { type: "string" },
           title: { type: "string" },
           urgency: { enum: ["low", "normal", "high"], type: "string" },
+          severity: { enum: ["low", "normal", "high", "critical"], type: "string" },
+          tags: { items: { type: "string" }, type: "array" },
+          knownIssueId: { type: "string" },
         },
         required: ["title", "summary"],
         type: "object",
@@ -734,6 +1487,9 @@ function toolDefinitions() {
           summary: { type: "string" },
           title: { type: "string" },
           urgency: { enum: ["low", "normal", "high"], type: "string" },
+          severity: { enum: ["low", "normal", "high", "critical"], type: "string" },
+          tags: { items: { type: "string" }, type: "array" },
+          knownIssueId: { type: "string" },
         },
         required: ["title", "summary"],
         type: "object",
@@ -749,6 +1505,9 @@ function toolDefinitions() {
           summary: { type: "string" },
           title: { type: "string" },
           urgency: { enum: ["low", "normal", "high"], type: "string" },
+          severity: { enum: ["low", "normal", "high", "critical"], type: "string" },
+          tags: { items: { type: "string" }, type: "array" },
+          knownIssueId: { type: "string" },
         },
         required: ["title", "summary"],
         type: "object",
@@ -836,6 +1595,24 @@ async function runTool(input: {
     return { matches };
   }
 
+  if (input.name === "search_quira_known_issues") {
+    const matches = await searchQuiraKnownIssues({
+      product: cleanText(input.args.product, MAX_PRODUCT_LENGTH) ?? input.product,
+      query: cleanText(input.args.query, 400) ?? "",
+    });
+
+    return { matches };
+  }
+
+  if (input.name === "get_product_support_context") {
+    return getProductSupportContext({
+      browserContext: input.browserContext,
+      product: input.product,
+      sessionId: cleanUuid(input.args.sessionId) ?? input.sessionId,
+      userId: input.userId,
+    });
+  }
+
   if (input.name === "create_lead") {
     const lead = await createLead({
       conversationId: input.conversationId,
@@ -865,10 +1642,13 @@ async function runTool(input: {
           : input.name === "record_feedback"
             ? "feedback"
             : "support",
+      knownIssueId: cleanUuid(input.args.knownIssueId),
       product: input.product,
       screen: input.screen,
       sessionId: input.sessionId,
+      severity: cleanSeverity(input.args.severity ?? input.args.urgency),
       summary: cleanText(input.args.summary, 2000) ?? "Support case created from Quira chat.",
+      tags: cleanTags(input.args.tags),
       title: cleanText(input.args.title, 160) ?? "Quira support case",
       urgency:
         input.args.urgency === "high" || input.args.urgency === "low"
@@ -930,15 +1710,27 @@ async function runQuiraModel(input: {
     query: input.message,
     source: input.user.source,
   });
+  const knownIssues = await searchQuiraKnownIssues({
+    product: input.product,
+    query: input.message,
+  });
   const sessionSnapshot = await getSessionSupportSnapshot({
+    product: input.product,
+    sessionId: input.sessionId,
+    userId: input.user.id,
+  });
+  const productContext = await getProductSupportContext({
+    browserContext: input.browserContext,
     product: input.product,
     sessionId: input.sessionId,
     userId: input.user.id,
   });
   const context = supportContext({
     browserContext: input.browserContext,
+    knownIssues,
     knowledge,
     product: input.product,
+    productContext,
     screen: input.screen,
     sessionSnapshot,
     user: input.user,
@@ -1129,6 +1921,141 @@ export async function handleQuiraChat(input: QuiraChatInput, user: QuiraChatUser
   };
 }
 
+async function saveSupportAttachment(input: {
+  caseId: string;
+  conversationId: string;
+  dataUrl?: string;
+  fileName?: string;
+  messageId: string;
+  mimeType?: string;
+  size?: number;
+  userId?: string;
+}) {
+  if (!input.dataUrl) {
+    return undefined;
+  }
+
+  let parsed: ReturnType<typeof supportAttachmentFromDataUrl>;
+  try {
+    parsed = supportAttachmentFromDataUrl(input.dataUrl);
+  } catch (error) {
+    const [attachment] = await getDb()
+      .insert(quiraAttachments)
+      .values({
+        caseId: input.caseId,
+        conversationId: input.conversationId,
+        errorMessage: error instanceof Error ? error.message : "Attachment parse failed.",
+        fileName: input.fileName,
+        fileSize: input.size,
+        kind: "screenshot",
+        messageId: input.messageId,
+        mimeType: input.mimeType,
+        status: "failed",
+        userId: input.userId,
+      })
+      .returning();
+
+    await recordCaseEvent({
+      actorUserId: input.userId,
+      caseId: input.caseId,
+      eventType: "attachment_failed",
+      metadata: { attachmentId: attachment.id, reason: attachment.errorMessage },
+    });
+
+    return attachment;
+  }
+
+  if (!parsed || !isSupportStorageConfigured()) {
+    const [attachment] = await getDb()
+      .insert(quiraAttachments)
+      .values({
+        caseId: input.caseId,
+        checksum: parsed?.checksum,
+        conversationId: input.conversationId,
+        errorMessage: "R2 support attachment storage is not configured.",
+        fileName: input.fileName,
+        fileSize: parsed?.size ?? input.size,
+        kind: "screenshot",
+        messageId: input.messageId,
+        mimeType: parsed?.mimeType ?? input.mimeType,
+        status: "unavailable",
+        userId: input.userId,
+      })
+      .returning();
+
+    await recordCaseEvent({
+      actorUserId: input.userId,
+      caseId: input.caseId,
+      eventType: "attachment_unavailable",
+      metadata: { attachmentId: attachment.id },
+    });
+
+    return attachment;
+  }
+
+  try {
+    const uploaded = await uploadSupportAttachment({
+      buffer: parsed.buffer,
+      conversationId: input.conversationId,
+      fileName: input.fileName,
+      kind: "screenshot",
+      mimeType: parsed.mimeType,
+    });
+    const [attachment] = await getDb()
+      .insert(quiraAttachments)
+      .values({
+        caseId: input.caseId,
+        checksum: parsed.checksum,
+        conversationId: input.conversationId,
+        fileKey: uploaded.key,
+        fileName: input.fileName,
+        fileSize: parsed.size,
+        kind: "screenshot",
+        messageId: input.messageId,
+        mimeType: parsed.mimeType,
+        publicUrl: uploaded.url,
+        status: "uploaded",
+        userId: input.userId,
+      })
+      .returning();
+
+    await recordCaseEvent({
+      actorUserId: input.userId,
+      caseId: input.caseId,
+      eventType: "attachment_added",
+      metadata: { attachmentId: attachment.id, fileKey: attachment.fileKey },
+    });
+
+    return attachment;
+  } catch (error) {
+    const [attachment] = await getDb()
+      .insert(quiraAttachments)
+      .values({
+        caseId: input.caseId,
+        checksum: parsed.checksum,
+        conversationId: input.conversationId,
+        errorMessage: error instanceof Error ? error.message : "Attachment upload failed.",
+        fileName: input.fileName,
+        fileSize: parsed.size,
+        kind: "screenshot",
+        messageId: input.messageId,
+        mimeType: parsed.mimeType,
+        status: "failed",
+        userId: input.userId,
+      })
+      .returning();
+
+    await recordCaseEvent({
+      actorUserId: input.userId,
+      caseId: input.caseId,
+      eventType: "attachment_failed",
+      metadata: { attachmentId: attachment.id, reason: attachment.errorMessage },
+    });
+
+    return attachment;
+  }
+}
+
 export async function createQuiraSupportReport(
   input: QuiraSupportReportInput,
   user: QuiraChatUser,
@@ -1154,10 +2081,10 @@ export async function createQuiraSupportReport(
       kind: input.kind,
       rating: input.rating,
       screenshot: {
-        dataUrl: input.screenshotDataUrl,
         mimeType: input.screenshotMimeType,
         name: input.screenshotName,
         size: input.screenshotSize,
+        storage: input.screenshotDataUrl ? "pending_attachment_record" : "none",
       },
       source: "quira_report",
     },
@@ -1171,10 +2098,10 @@ export async function createQuiraSupportReport(
       browserContext: input.browserContext,
       rating: input.rating,
       screenshot: {
-        dataUrl: input.screenshotDataUrl,
         mimeType: input.screenshotMimeType,
         name: input.screenshotName,
         size: input.screenshotSize,
+        storage: input.screenshotDataUrl ? "attachment_record" : "none",
       },
       source: "quira_report",
     },
@@ -1192,8 +2119,19 @@ export async function createQuiraSupportReport(
     urgency: input.urgency,
     userId: user.id,
   });
+  const attachment = await saveSupportAttachment({
+    caseId: supportCase.id,
+    conversationId: conversation.id,
+    dataUrl: input.screenshotDataUrl,
+    fileName: input.screenshotName,
+    messageId: userMessage.id,
+    mimeType: input.screenshotMimeType,
+    size: input.screenshotSize,
+    userId: user.id,
+  });
 
   return {
+    attachmentId: attachment?.id,
     caseId: supportCase.id,
     conversationId: conversation.id,
     messageId: userMessage.id,
@@ -1202,17 +2140,32 @@ export async function createQuiraSupportReport(
 }
 
 export async function listQuiraAdminSupportData(limit = 100) {
-  const [cases, conversations, articles, messages, leads, toolEvents] = await Promise.all([
+  const [
+    cases,
+    conversations,
+    articles,
+    messages,
+    leads,
+    toolEvents,
+    knownIssues,
+    caseEvents,
+    caseTags,
+    attachments,
+    answerFeedback,
+  ] = await Promise.all([
     getDb()
       .select({
+        assignedToUserId: quiraSupportCases.assignedToUserId,
         conversationId: quiraSupportCases.conversationId,
         createdAt: quiraSupportCases.createdAt,
         details: quiraSupportCases.details,
         id: quiraSupportCases.id,
         kind: quiraSupportCases.kind,
+        knownIssueId: quiraSupportCases.knownIssueId,
         product: quiraSupportCases.product,
         screen: quiraSupportCases.screen,
         sessionId: quiraSupportCases.sessionId,
+        severity: quiraSupportCases.severity,
         status: quiraSupportCases.status,
         summary: quiraSupportCases.summary,
         title: quiraSupportCases.title,
@@ -1250,6 +2203,10 @@ export async function listQuiraAdminSupportData(limit = 100) {
         id: quiraKnowledgeArticles.id,
         product: quiraKnowledgeArticles.product,
         published: quiraKnowledgeArticles.published,
+        archivedAt: quiraKnowledgeArticles.archivedAt,
+        reviewedAt: quiraKnowledgeArticles.reviewedAt,
+        reviewedBy: quiraKnowledgeArticles.reviewedBy,
+        reviewStatus: quiraKnowledgeArticles.reviewStatus,
         slug: quiraKnowledgeArticles.slug,
         sourceHash: quiraKnowledgeArticles.sourceHash,
         sourcePath: quiraKnowledgeArticles.sourcePath,
@@ -1314,11 +2271,89 @@ export async function listQuiraAdminSupportData(limit = 100) {
       .from(quiraToolEvents)
       .orderBy(desc(quiraToolEvents.createdAt))
       .limit(limit * 2),
+    getDb()
+      .select({
+        adminNotes: quiraKnownIssues.adminNotes,
+        affectedScreens: quiraKnownIssues.affectedScreens,
+        archivedAt: quiraKnownIssues.archivedAt,
+        createdAt: quiraKnownIssues.createdAt,
+        fixedAt: quiraKnownIssues.fixedAt,
+        id: quiraKnownIssues.id,
+        product: quiraKnownIssues.product,
+        severity: quiraKnownIssues.severity,
+        status: quiraKnownIssues.status,
+        summary: quiraKnownIssues.summary,
+        title: quiraKnownIssues.title,
+        updatedAt: quiraKnownIssues.updatedAt,
+        workaround: quiraKnownIssues.workaround,
+      })
+      .from(quiraKnownIssues)
+      .orderBy(desc(quiraKnownIssues.updatedAt))
+      .limit(limit),
+    getDb()
+      .select({
+        actorUserId: quiraCaseEvents.actorUserId,
+        caseId: quiraCaseEvents.caseId,
+        createdAt: quiraCaseEvents.createdAt,
+        eventType: quiraCaseEvents.eventType,
+        fromStatus: quiraCaseEvents.fromStatus,
+        id: quiraCaseEvents.id,
+        knownIssueId: quiraCaseEvents.knownIssueId,
+        metadata: quiraCaseEvents.metadata,
+        note: quiraCaseEvents.note,
+        toStatus: quiraCaseEvents.toStatus,
+      })
+      .from(quiraCaseEvents)
+      .orderBy(desc(quiraCaseEvents.createdAt))
+      .limit(limit * 2),
+    getDb()
+      .select({
+        caseId: quiraCaseTags.caseId,
+        createdAt: quiraCaseTags.createdAt,
+        id: quiraCaseTags.id,
+        tag: quiraCaseTags.tag,
+      })
+      .from(quiraCaseTags)
+      .orderBy(desc(quiraCaseTags.createdAt))
+      .limit(limit * 4),
+    getDb()
+      .select({
+        caseId: quiraAttachments.caseId,
+        conversationId: quiraAttachments.conversationId,
+        createdAt: quiraAttachments.createdAt,
+        errorMessage: quiraAttachments.errorMessage,
+        fileKey: quiraAttachments.fileKey,
+        fileName: quiraAttachments.fileName,
+        fileSize: quiraAttachments.fileSize,
+        id: quiraAttachments.id,
+        kind: quiraAttachments.kind,
+        mimeType: quiraAttachments.mimeType,
+        publicUrl: quiraAttachments.publicUrl,
+        status: quiraAttachments.status,
+      })
+      .from(quiraAttachments)
+      .orderBy(desc(quiraAttachments.createdAt))
+      .limit(limit * 2),
+    getDb()
+      .select({
+        comment: quiraAnswerFeedback.comment,
+        conversationId: quiraAnswerFeedback.conversationId,
+        createdAt: quiraAnswerFeedback.createdAt,
+        id: quiraAnswerFeedback.id,
+        messageId: quiraAnswerFeedback.messageId,
+        rating: quiraAnswerFeedback.rating,
+        userId: quiraAnswerFeedback.userId,
+      })
+      .from(quiraAnswerFeedback)
+      .orderBy(desc(quiraAnswerFeedback.createdAt))
+      .limit(limit * 2),
   ]);
 
   return {
     articles: articles.map((article) => ({
       ...article,
+      archivedAt: article.archivedAt?.toISOString(),
+      reviewedAt: article.reviewedAt?.toISOString(),
       updatedAt: article.updatedAt.toISOString(),
       vectorSyncedAt: article.vectorSyncedAt?.toISOString(),
     })),
@@ -1344,6 +2379,29 @@ export async function listQuiraAdminSupportData(limit = 100) {
     toolEvents: toolEvents.map((event) => ({
       ...event,
       createdAt: event.createdAt.toISOString(),
+    })),
+    knownIssues: knownIssues.map((issue) => ({
+      ...issue,
+      archivedAt: issue.archivedAt?.toISOString(),
+      createdAt: issue.createdAt.toISOString(),
+      fixedAt: issue.fixedAt?.toISOString(),
+      updatedAt: issue.updatedAt.toISOString(),
+    })),
+    caseEvents: caseEvents.map((event) => ({
+      ...event,
+      createdAt: event.createdAt.toISOString(),
+    })),
+    caseTags: caseTags.map((tag) => ({
+      ...tag,
+      createdAt: tag.createdAt.toISOString(),
+    })),
+    attachments: attachments.map((attachment) => ({
+      ...attachment,
+      createdAt: attachment.createdAt.toISOString(),
+    })),
+    answerFeedback: answerFeedback.map((feedback) => ({
+      ...feedback,
+      createdAt: feedback.createdAt.toISOString(),
     })),
   };
 }
@@ -1515,7 +2573,13 @@ export async function syncQuiraKnowledgeToVectorStore() {
       vectorSyncStatus: quiraKnowledgeArticles.vectorSyncStatus,
     })
     .from(quiraKnowledgeArticles)
-    .where(eq(quiraKnowledgeArticles.published, true));
+    .where(
+      and(
+        eq(quiraKnowledgeArticles.published, true),
+        eq(quiraKnowledgeArticles.reviewStatus, "reviewed"),
+        isNull(quiraKnowledgeArticles.archivedAt),
+      ),
+    );
   const summary = {
     failed: 0,
     skipped: 0,
