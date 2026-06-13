@@ -8,6 +8,7 @@ import type { StudyVerdict } from "@/features/study/study-srs";
 
 type StudyVerbalCard = {
   answer: string;
+  deckId?: string;
   explanation: string | null;
   hint: string | null;
   id: string;
@@ -22,6 +23,8 @@ type Result = {
 };
 
 type StudyVerbalProps = {
+  backHref?: string;
+  backLabel?: string;
   cards: StudyVerbalCard[];
   deckId: string;
   deckTitle: string;
@@ -29,6 +32,7 @@ type StudyVerbalProps = {
   hf?: boolean;
   resume?: boolean;
   srs?: boolean;
+  visualHref?: string;
 };
 
 type SpeechRecognitionLike = {
@@ -74,7 +78,18 @@ function speakNative(text: string, onEnd: () => void) {
   return () => window.speechSynthesis.cancel();
 }
 
-export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, resume, srs }: StudyVerbalProps) {
+export function StudyVerbal({
+  backHref,
+  backLabel = "Back to Deck",
+  cards,
+  deckId,
+  deckTitle,
+  filter,
+  hf,
+  resume,
+  srs,
+  visualHref,
+}: StudyVerbalProps) {
   const resumeKey = `quesiq-study-verbal-session-${deckId}`;
   const [deck, setDeck] = useState(() => {
     if (resume && typeof window !== "undefined") {
@@ -287,7 +302,8 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, resume, srs 
   async function rate(verdict: StudyVerdict, explanation?: string) {
     stopRatingCountdown();
     ratingActiveRef.current = false;
-    await fetch(`/api/study/decks/${deckId}/rate`, {
+    const ratingDeckId = card.deckId ?? deckId;
+    await fetch(`/api/study/decks/${ratingDeckId}/rate`, {
       body: JSON.stringify({
         aiFeedback: explanation,
         cardId: card.id,
@@ -391,7 +407,8 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, resume, srs 
 
       setFeedback(evaluateData.feedback);
       setFeedbackVerdict(evaluateData.verdict);
-      await fetch(`/api/study/decks/${deckId}/rate`, {
+      const ratingDeckId = card.deckId ?? deckId;
+      await fetch(`/api/study/decks/${ratingDeckId}/rate`, {
         body: JSON.stringify({
           aiFeedback: evaluateData.feedback,
           cardId: card.id,
@@ -609,7 +626,7 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, resume, srs 
         </div>
         <div className="inline-actions">
           <button className="secondary" onClick={restart} type="button">Study Again</button>
-          <Link className="button-link" href={`/study/decks/${deckId}${filter ? `?filter=${filter}` : ""}`}>Back to Deck</Link>
+          <Link className="button-link" href={backHref ?? `/study/decks/${deckId}${filter ? `?filter=${filter}` : ""}`}>{backLabel}</Link>
         </div>
       </section>
     );
@@ -660,7 +677,7 @@ export function StudyVerbal({ cards, deckId, deckTitle, filter, hf, resume, srs 
             )}
           </>
         )}
-        <Link className="button-link secondary" href={`/study/decks/${deckId}/study${filter ? `?filter=${filter}` : ""}`}>Study Visual</Link>
+        <Link className="button-link secondary" href={visualHref ?? `/study/decks/${deckId}/study${filter ? `?filter=${filter}` : ""}`}>Study Visual</Link>
       </div>
       {handsFree && selfRate && countdown !== null && (
         <p className="text-muted">Listening for a rating. Defaulting to Good in {countdown}.</p>

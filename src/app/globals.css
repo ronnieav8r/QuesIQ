@@ -439,6 +439,13 @@ button:hover {
   box-shadow: 0 0 1.1rem rgba(232, 114, 26, 0.18);
 }
 
+.study-dashboard-screen .button-link:hover,
+.study-session-screen .button-link:hover {
+  background: rgba(232, 114, 26, 0.16);
+  border-color: rgba(232, 114, 26, 0.62);
+  box-shadow: 0 0 0.8rem rgba(232, 114, 26, 0.16);
+}
+
 button:disabled,
 button:disabled:hover {
   background: var(--surface-raised);
@@ -1371,7 +1378,14 @@ p {
 .study-picker {
   display: grid;
   gap: var(--space-3);
+  justify-items: center;
   width: 100%;
+}
+
+.study-picker--open {
+  justify-self: center;
+  max-width: 44rem;
+  width: min(100%, 44rem);
 }
 
 .study-picker__presets,
@@ -1384,6 +1398,11 @@ p {
 .study-picker__modalities,
 .study-picker__queue-toggle {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(100%, 28rem);
+}
+
+.study-picker__filters {
+  width: min(100%, 38rem);
 }
 
 .study-picker__resume {
@@ -1402,6 +1421,7 @@ p {
 .study-picker__mode-cards {
   display: grid;
   gap: var(--space-2);
+  width: 100%;
 }
 
 .study-picker__mode-card {
@@ -1424,9 +1444,29 @@ p {
 
 .study-picker__mode-card:hover {
   background: var(--surface-hover);
-  border-color: var(--focus);
-  box-shadow: var(--shadow-brand);
+  border-color: rgba(232, 114, 26, 0.48);
+  box-shadow: 0 0 0.75rem rgba(232, 114, 26, 0.14);
   transform: translateY(-1px);
+}
+
+.study-picker__launch {
+  justify-self: center;
+  width: min(100%, 20rem);
+}
+
+.study-stack-study-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: center;
+}
+
+.study-stack-study-actions button {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-2);
+  min-height: 2.5rem;
+  padding: var(--space-2) var(--space-3);
 }
 
 .study-picker__mode-card-info {
@@ -2632,8 +2672,9 @@ label span {
 }
 
 .pill-grid button:hover {
-  background: var(--focus-soft);
-  border-color: var(--focus);
+  background: rgba(232, 114, 26, 0.12);
+  border-color: rgba(232, 114, 26, 0.42);
+  box-shadow: 0 0 0.65rem rgba(232, 114, 26, 0.1);
 }
 
 .question-queue-screen {

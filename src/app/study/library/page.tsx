@@ -9,7 +9,6 @@ import {
   getStudyLibraryDecks,
   getStudyStackCardStatsForStacks,
   getStudySubjectOptions,
-  getVisibleStudyStackDeckIds,
   getVisibleStudyStacks,
   type StudyLibraryScope,
 } from "@/features/study/study-data";
@@ -54,7 +53,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
   const verifiedOnly = verified === "1";
   const scopeFilter = normalizeScope(scope);
 
-  const [filteredDecks, optionDecks, subjectTaxonomyOptions, audienceTags, stacks, stackedDeckIds] = await Promise.all([
+  const [filteredDecks, optionDecks, subjectTaxonomyOptions, audienceTags, stacks] = await Promise.all([
     getStudyLibraryDecks({
       officialOnly,
       query,
@@ -71,7 +70,6 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
     getStudySubjectOptions(),
     getStudyAudienceTags(),
     getVisibleStudyStacks(userId),
-    getVisibleStudyStackDeckIds(userId),
   ]);
 
   const deckSubjects = Array.from(
@@ -96,7 +94,6 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
     ...stack,
     stats: stackStatsById.get(stack.id),
   }));
-  const stackedDeckIdSet = new Set(stackedDeckIds);
   const filteredStacks = stacksWithStats.filter((stack) => {
     if (scopeFilter === "mine" && (!userId || stack.userId !== userId)) {
       return false;
@@ -121,8 +118,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
     }
     return [stack.title, stack.description ?? "", stack.subject ?? ""].join(" ").toLowerCase().includes(query);
   });
-  const standaloneDecks = filteredDecks.filter((deck) => !stackedDeckIdSet.has(deck.id));
-  const totalResults = filteredStacks.length + standaloneDecks.length;
+  const totalResults = filteredStacks.length + filteredDecks.length;
   const hasFilters = Boolean(
     query || subjectFilter || tagFilter || officialOnly || verifiedOnly || scopeFilter !== "all",
   );
@@ -176,7 +172,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
         <div>
           <p className="eyebrow">QuesIQ Study</p>
           <h1>Library</h1>
-          <p>Browse stacks first, then standalone decks that are not already inside a stack.</p>
+          <p>Browse stacks or open any deck directly, including decks that also belong to a stack.</p>
         </div>
         <div className="inline-actions">
           {userId && (
@@ -198,9 +194,9 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
         <BookOpen size={20} aria-hidden="true" />
         <div>
           <h2>
-            {filteredStacks.length} stack{filteredStacks.length === 1 ? "" : "s"} - {standaloneDecks.length} standalone deck{standaloneDecks.length === 1 ? "" : "s"}
+            {filteredStacks.length} stack{filteredStacks.length === 1 ? "" : "s"} - {filteredDecks.length} deck{filteredDecks.length === 1 ? "" : "s"}
           </h2>
-          <p>Open a stack to study all included decks together, or open a standalone deck directly.</p>
+          <p>Open a stack to study all included decks together, or open a deck directly.</p>
         </div>
       </section>
 
@@ -354,7 +350,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
           {!hasFilters ? (
             <>
               <h2>No Study library items yet.</h2>
-              <p>Public and Official stacks or standalone decks will appear here after curation.</p>
+              <p>Public and Official stacks or decks will appear here after curation.</p>
               <Link className="button-link" href="/study/decks/new">
                 Create Deck
               </Link>
@@ -387,16 +383,16 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
             </>
           )}
 
-          {standaloneDecks.length > 0 && (
+          {filteredDecks.length > 0 && (
             <>
               <section className="section-head">
                 <div>
-                  <p className="eyebrow">Standalone Decks</p>
-                  <h2>Decks not in a stack</h2>
+                  <p className="eyebrow">Decks</p>
+                  <h2>Open a deck directly</h2>
                 </div>
               </section>
-              <section className="study-deck-grid" aria-label="Standalone Study decks">
-                {standaloneDecks.map((deck) => (
+              <section className="study-deck-grid" aria-label="Study decks">
+                {filteredDecks.map((deck) => (
                   <StudyDeckCard currentUserId={userId} deck={deck} key={deck.id} />
                 ))}
               </section>

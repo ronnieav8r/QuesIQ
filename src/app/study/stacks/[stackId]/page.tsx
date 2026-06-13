@@ -10,6 +10,7 @@ import {
   getStudyStackCardStats,
   getStudyStackWithDecks,
 } from "@/features/study/study-data";
+import { StudyStackPicker } from "@/features/study/study-stack-picker";
 import { StudyStackEditor } from "@/features/study/study-stack-editor";
 import styles from "@/features/study/study-stacks.module.css";
 import { StudyTrustBadge } from "@/features/study/study-trust-badge";
@@ -60,15 +61,12 @@ export default async function StudyStackPage({ params }: Props) {
         <h1>{stack.title}</h1>
         {stack.description && <p>{stack.description}</p>}
         {stack.cardCount > 0 && (
-          <div className="inline-actions">
-            <Link className="button-link" href={`/study/stacks/${stack.id}/study?order=random`}>
-              <Play size={14} aria-hidden="true" />
-              Study Stack Random
-            </Link>
-            <Link className="button-link secondary" href={`/study/stacks/${stack.id}/study?order=ordered`}>
-              Study Stack Ordered
-            </Link>
-          </div>
+          <StudyStackPicker
+            readyCount={stats.due}
+            stackId={stack.id}
+            totalCount={stack.cardCount}
+            weakCount={stats.weak}
+          />
         )}
         <div className="study-deck-card__footer">
           {isOwner && <span className="badge">Mine</span>}
@@ -156,7 +154,7 @@ export default async function StudyStackPage({ params }: Props) {
                   <Link className="button-link secondary" href={`/study/decks/${deck.deckId}`}>
                     Details
                   </Link>
-                  <Link className="button-link" href={`/study/decks/${deck.deckId}/study`}>
+                  <Link className="button-link" href={`/study/decks/${deck.deckId}`}>
                     <Play size={14} aria-hidden="true" />
                     Study
                   </Link>
