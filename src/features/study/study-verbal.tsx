@@ -48,6 +48,7 @@ type SpeechRecognitionLike = {
 
 type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 type VerbalPhase = "answering" | "evaluating" | "feedback" | "ready" | "recording" | "start" | "summary";
+type HandsFreeStatus = "checking" | "idle" | "listening" | "speaking";
 
 const SILENCE_OPTIONS = [1000, 1500, 2000, 3000];
 const VERDICT_LABELS: Record<StudyVerdict, string> = {
@@ -131,6 +132,7 @@ export function StudyVerbal({
   const [results, setResults] = useState<Result[]>([]);
   const [error, setError] = useState<string>("");
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [handsFreeStatus, setHandsFreeStatus] = useState<HandsFreeStatus>("idle");
   const [supported] = useState(() => Boolean(getSpeechRecognitionCtor()));
   const sessionIdRef = useRef<string | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -167,7 +169,7 @@ export function StudyVerbal({
   useEffect(() => {
     return () => {
       recognitionRef.current?.stop();
-      stopAudio();
+      stopAudio(false);
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
       }
@@ -203,7 +205,7 @@ export function StudyVerbal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handsFree, phase, selfRate]);
 
-  function stopAudio() {
+  function stopAudio(resetStatus = true) {
     audioRunRef.current += 1;
     speechCancelRef.current?.();
     speechCancelRef.current = null;
@@ -214,6 +216,9 @@ export function StudyVerbal({
       audioUrlRef.current = null;
     }
     window.speechSynthesis.cancel();
+    if (resetStatus) {
+      setHandsFreeStatus("idle");
+    }
   }
 
   async function speakAi(
@@ -227,6 +232,7 @@ export function StudyVerbal({
       if (options?.playbackPhase !== null) {
         setPhase(options?.playbackPhase ?? "evaluating");
       }
+      setHandsFreeStatus("speaking");
       const response = await fetch("/api/study/tts", {
         body: JSON.stringify({
           cardId: options?.cardId,
@@ -250,6 +256,7 @@ export function StudyVerbal({
         URL.revokeObjectURL(url);
         audioUrlRef.current = null;
         audioRef.current = null;
+        setHandsFreeStatus("idle");
         options?.onEnd?.();
       };
       audio.onerror = () => {
@@ -260,6 +267,7 @@ export function StudyVerbal({
         audioUrlRef.current = null;
         audioRef.current = null;
         setError("AI voice unavailable. Try again.");
+        setHandsFreeStatus("idle");
         setPhase("ready");
       };
       await audio.play();
@@ -268,6 +276,7 @@ export function StudyVerbal({
         return;
       }
       setError("AI voice unavailable. Try again.");
+      setHandsFreeStatus("idle");
       setPhase("ready");
     }
   }
@@ -331,19 +340,25 @@ export function StudyVerbal({
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
       }
+      setHandsFreeStatus("idle");
       setPhase("ready");
       if (handsFree && finalText.trim()) {
         if (selfRate) {
           setFeedback("Compare your answer, then say Again, Hard, Good, or Easy.");
           setFeedbackVerdict("good");
+          setHandsFreeStatus("speaking");
           setPhase("feedback");
         } else {
           void submitAnswer(finalText.trim());
         }
       }
     };
-    rec.onerror = () => setPhase("ready");
+    rec.onerror = () => {
+      setHandsFreeStatus("idle");
+      setPhase("ready");
+    };
     rec.start();
+    setHandsFreeStatus("listening");
     setPhase("recording");
   }
 
@@ -352,6 +367,7 @@ export function StudyVerbal({
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
     }
+    setHandsFreeStatus("idle");
     setPhase("ready");
   }
 
@@ -403,6 +419,7 @@ export function StudyVerbal({
     setIndex(nextIndex);
     setTyped("");
     setFeedback("");
+    setHandsFreeStatus("speaking");
     setPhase("evaluating");
     await speakQuestion(nextCard);
   }
@@ -423,6 +440,7 @@ export function StudyVerbal({
     setIndex(nextIndex);
     setTyped("");
     setFeedback("");
+    setHandsFreeStatus("speaking");
     setPhase("evaluating");
     await speakQuestion(nextCard);
   }
@@ -436,11 +454,13 @@ export function StudyVerbal({
     if (selfRate) {
       setFeedback("Compare your answer, then choose a rating.");
       setFeedbackVerdict("good");
+      setHandsFreeStatus("speaking");
       setPhase("feedback");
       return;
     }
 
     setPhase("evaluating");
+    setHandsFreeStatus("checking");
     setError("");
     try {
       const evaluateResponse = await fetch("/api/study/evaluate", {
@@ -496,8 +516,29 @@ export function StudyVerbal({
 
   function startSession() {
     saveVerbalSession(deck.map((currentCard) => currentCard.id), 0);
+    setHandsFreeStatus("speaking");
     setPhase("evaluating");
     void speakQuestion(deck[0]);
+  }
+
+  function endSession() {
+    stopRatingCountdown();
+    ratingActiveRef.current = false;
+    recognitionRef.current?.stop();
+    stopAudio();
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(resumeKey);
+    }
+    setTyped("");
+    setFeedback("");
+    setError("");
+    setCountdown(null);
+    setHandsFreeStatus("idle");
+    setPhase("summary");
   }
 
   function restart() {
@@ -509,6 +550,7 @@ export function StudyVerbal({
     setTyped("");
     setFeedback("");
     setResults([]);
+    setHandsFreeStatus("idle");
     sessionIdRef.current = null;
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(resumeKey);
@@ -554,6 +596,7 @@ export function StudyVerbal({
 
     const RatingCtor = Ctor;
     ratingActiveRef.current = true;
+    setHandsFreeStatus("listening");
 
     function listen() {
       if (!ratingActiveRef.current) return;
@@ -644,7 +687,6 @@ export function StudyVerbal({
             ))}
           </div>
         </div>
-        <p className="study-verbal-voice-note">AI voice is used for hands-free sessions.</p>
         {!supported && <p className="form-error">Voice input requires Chrome or Edge.</p>}
         <button className="study-verbal-start" disabled={!supported} onClick={startSession} type="button">Start Session</button>
       </section>
@@ -676,12 +718,20 @@ export function StudyVerbal({
   return (
     <section className="panel">
       <p className="eyebrow">
-        Card {index + 1} of {deck.length} {handsFree ? "• Hands-Free" : "• Manual"}
+        Card {index + 1} of {deck.length} - {handsFree ? "Hands-Free" : "Manual"}
       </p>
       <h2>{card.question}</h2>
       {card.hint && <p className="study-card-hint">Hint: {card.hint}</p>}
       {error && <p className="form-error">{error}</p>}
       {(phase === "recording" || typed) && <p className="text-muted">{phase === "recording" ? "Listening..." : typed}</p>}
+      {handsFree && (
+        <div className="study-verbal-status" aria-label="Hands-free session status" aria-live="polite">
+          <span className={handsFreeStatus === "speaking" ? "active" : ""}>Que is speaking</span>
+          <span className={handsFreeStatus === "listening" || phase === "recording" ? "active" : ""}>Recording answer</span>
+          <span className={handsFreeStatus === "checking" ? "active" : ""}>Checking answer</span>
+          <span className={phase === "ready" && handsFreeStatus === "idle" ? "active" : ""}>Preparing next</span>
+        </div>
+      )}
       {phase === "feedback" && (
         <div className="panel">
           <p className="eyebrow">{feedbackVerdict.toUpperCase()}</p>
@@ -693,33 +743,47 @@ export function StudyVerbal({
           />
         </div>
       )}
-      <div className="inline-actions">
-        {phase !== "feedback" && (
-          <>
-            {phase === "recording" ? (
-              <button className="secondary" onClick={stopRecording} type="button">Stop Recording</button>
-            ) : (
-              <button onClick={startRecording} type="button">Start Recording</button>
-            )}
-            {!handsFree && <button disabled={!typed.trim()} onClick={() => void submitAnswer()} type="button">{selfRate ? "Reveal + Rate" : "Submit"}</button>}
-          </>
-        )}
-        {phase === "feedback" && (
-          <>
-          {selfRate ? (
-            <>
+      {handsFree ? (
+        <div className="study-verbal-session-actions">
+          {phase === "feedback" && selfRate && (
+            <div className="study-verbal-rating-actions" aria-label="Manual rating fallback">
               <button className="secondary" onClick={() => void rate("again", feedback)} type="button">Again</button>
               <button className="secondary" onClick={() => void rate("hard", feedback)} type="button">Hard</button>
               <button className="secondary" onClick={() => void rate("good", feedback)} type="button">Good</button>
               <button className="secondary" onClick={() => void rate("easy", feedback)} type="button">Easy</button>
+            </div>
+          )}
+          <button className="secondary study-verbal-end" onClick={endSession} type="button">End Session</button>
+        </div>
+      ) : (
+        <div className="inline-actions">
+          {phase !== "feedback" && (
+            <>
+              {phase === "recording" ? (
+                <button className="secondary" onClick={stopRecording} type="button">Stop Recording</button>
+              ) : (
+                <button onClick={startRecording} type="button">Start Recording</button>
+              )}
+              <button disabled={!typed.trim()} onClick={() => void submitAnswer()} type="button">{selfRate ? "Reveal + Rate" : "Submit"}</button>
             </>
-            ) : (
-              <button onClick={() => void advanceAfterFeedback()} type="button">{index + 1 >= deck.length ? "Finish" : "Next"}</button>
-            )}
-          </>
-        )}
-        <Link className="button-link secondary" href={visualHref ?? `/study/decks/${deckId}/study${filter ? `?filter=${filter}` : ""}`}>Study Visual</Link>
-      </div>
+          )}
+          {phase === "feedback" && (
+            <>
+            {selfRate ? (
+              <>
+                <button className="secondary" onClick={() => void rate("again", feedback)} type="button">Again</button>
+                <button className="secondary" onClick={() => void rate("hard", feedback)} type="button">Hard</button>
+                <button className="secondary" onClick={() => void rate("good", feedback)} type="button">Good</button>
+                <button className="secondary" onClick={() => void rate("easy", feedback)} type="button">Easy</button>
+              </>
+              ) : (
+                <button onClick={() => void advanceAfterFeedback()} type="button">{index + 1 >= deck.length ? "Finish" : "Next"}</button>
+              )}
+            </>
+          )}
+          <Link className="button-link secondary" href={visualHref ?? `/study/decks/${deckId}/study${filter ? `?filter=${filter}` : ""}`}>Study Visual</Link>
+        </div>
+      )}
       {handsFree && selfRate && countdown !== null && (
         <p className="text-muted">Listening for a rating. Defaulting to Good in {countdown}.</p>
       )}
