@@ -582,30 +582,45 @@ export function StudyVerbal({
 
   if (phase === "start") {
     return (
-      <section className="panel">
-        <h2>{deckTitle}</h2>
-        <p>{cards.length} cards in verbal mode.</p>
+      <section className="panel study-verbal-setup">
+        <div className="study-verbal-setup__header">
+          <p className="eyebrow">Hands-Free setup</p>
+          <h2>{deckTitle}</h2>
+          <p>{cards.length} cards ready for verbal study.</p>
+        </div>
         {!hf && (
-          <div className="inline-actions">
-            <button className={mode === "manual" ? "" : "secondary"} onClick={() => setMode("manual")} type="button">Manual</button>
-            <button className={mode === "handsfree" ? "" : "secondary"} onClick={() => setMode("handsfree")} type="button">Hands-Free</button>
+          <div className="study-verbal-option-row">
+            <span>Session</span>
+            <div className="study-verbal-options segmented-control">
+              <button className={mode === "manual" ? "active" : ""} onClick={() => setMode("manual")} type="button">Manual</button>
+              <button className={mode === "handsfree" ? "active" : ""} onClick={() => setMode("handsfree")} type="button">Hands-Free</button>
+            </div>
           </div>
         )}
-        <div className="inline-actions">
-          <button className={selfRate ? "secondary" : ""} onClick={() => setSelfRate(false)} type="button">Que Rates</button>
-          <button className={selfRate ? "" : "secondary"} onClick={() => setSelfRate(true)} type="button">I Rate</button>
+        <div className="study-verbal-option-row">
+          <span>Rating</span>
+          <div className="study-verbal-options segmented-control">
+            <button className={!selfRate ? "active" : ""} onClick={() => setSelfRate(false)} type="button">Que Rates</button>
+            <button className={selfRate ? "active" : ""} onClick={() => setSelfRate(true)} type="button">I Rate</button>
+          </div>
         </div>
-        <div className="inline-actions">
-          {SILENCE_OPTIONS.map((ms) => (
-            <button className={silenceMs === ms ? "" : "secondary"} key={ms} onClick={() => setSilenceMs(ms)} type="button">{ms / 1000}s</button>
-          ))}
+        <div className="study-verbal-option-row">
+          <span>Pause</span>
+          <div className="study-verbal-options study-verbal-options--four segmented-control">
+            {SILENCE_OPTIONS.map((ms) => (
+              <button className={silenceMs === ms ? "active" : ""} key={ms} onClick={() => setSilenceMs(ms)} type="button">{ms / 1000}s</button>
+            ))}
+          </div>
         </div>
-        <div className="inline-actions">
-          <button className={usePremiumTts ? "" : "secondary"} onClick={() => setUsePremiumTts(true)} type="button">AI Voice</button>
-          <button className={usePremiumTts ? "secondary" : ""} onClick={() => setUsePremiumTts(false)} type="button">Device Voice</button>
+        <div className="study-verbal-option-row">
+          <span>Voice</span>
+          <div className="study-verbal-options segmented-control">
+            <button className={usePremiumTts ? "active" : ""} onClick={() => setUsePremiumTts(true)} type="button">AI Voice</button>
+            <button className={!usePremiumTts ? "active" : ""} onClick={() => setUsePremiumTts(false)} type="button">Device Voice</button>
+          </div>
         </div>
         {!supported && <p className="form-error">Voice input requires Chrome or Edge.</p>}
-        <button disabled={!supported} onClick={startSession} type="button">Start Session</button>
+        <button className="study-verbal-start" disabled={!supported} onClick={startSession} type="button">Start Session</button>
       </section>
     );
   }
