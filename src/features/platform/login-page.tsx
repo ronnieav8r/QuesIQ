@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 import { AuthView, useAuthSession } from "@/components/auth-control";
-import { platformProducts } from "@/features/platform/products";
+import { availablePlatformProducts } from "@/features/platform/products";
 
 export function LoginPage({ nextPath }: { nextPath: string }) {
   const authSession = useAuthSession();
@@ -43,7 +43,7 @@ export function LoginPage({ nextPath }: { nextPath: string }) {
                 apps share the same QuesIQ account.
               </p>
               <div className="inline-actions">
-                {platformProducts.map((product) => (
+                {availablePlatformProducts.map((product) => (
                   <Link className="button-link secondary" href={`/login?next=${product.href}`} key={product.key}>
                     {product.shortName}
                   </Link>

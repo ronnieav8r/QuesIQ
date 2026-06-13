@@ -56,8 +56,8 @@ export function AppsPage({ signedIn }: { signedIn: boolean }) {
           <p className="marketing-kicker">QuesIQ Apps</p>
           <h1>Choose where you want to practice.</h1>
           <p>
-            One QuesIQ account opens Interview, Study, and DPE. Pick the app that matches
-            today&apos;s work.
+            One QuesIQ account opens Interview and Study. DPE is visible here while it
+            remains under development.
           </p>
         </div>
       </section>
@@ -67,9 +67,8 @@ export function AppsPage({ signedIn }: { signedIn: boolean }) {
           const meta = productMeta[product.key];
           const Icon = meta.icon;
           const href = signedIn ? product.href : `/login?next=${product.href}`;
-
-          return (
-            <Link className={`apps-product-card ${product.key}`} href={href} key={product.key}>
+          const content = (
+            <>
               <span className="apps-card-accent">{meta.accent}</span>
               <div className="apps-product-logo">
                 <Image alt="" height={72} src={meta.logo} width={180} />
@@ -82,7 +81,25 @@ export function AppsPage({ signedIn }: { signedIn: boolean }) {
                 <Icon aria-hidden="true" />
                 {meta.proof}
               </span>
-              <strong>{signedIn ? product.label : `Sign in for ${product.shortName}`}</strong>
+              <strong>{product.available ? (signedIn ? product.label : `Sign in for ${product.shortName}`) : "Under Development"}</strong>
+              {!product.available && <span className="apps-under-development">Under Development</span>}
+            </>
+          );
+
+          if (!product.available) {
+            return (
+              <article
+                className={`apps-product-card ${product.key} unavailable`}
+                key={product.key}
+              >
+                {content}
+              </article>
+            );
+          }
+
+          return (
+            <Link className={`apps-product-card ${product.key}`} href={href} key={product.key}>
+              {content}
             </Link>
           );
         })}
