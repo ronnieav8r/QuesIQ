@@ -23,7 +23,7 @@ type StudyStackCardProps = {
 };
 
 export function StudyStackCard({ currentUserId, stack }: StudyStackCardProps) {
-  const isOwner = stack.userId === currentUserId;
+  const isOwner = !stack.isOfficial && stack.userId === currentUserId;
   const isFullyVerified = stack.cardCount > 0 && (stack.verifiedCardCount ?? 0) === stack.cardCount;
   const isExpertReviewed =
     stack.cardCount > 0 && (stack.expertReviewedCardCount ?? 0) === stack.cardCount;
@@ -46,7 +46,7 @@ export function StudyStackCard({ currentUserId, stack }: StudyStackCardProps) {
       </div>
       {stack.stats && stack.stats.total > 0 && (
         <div className={styles.stackCardStats} aria-label="Stack card health">
-          <span>{stack.stats.due} due</span>
+          <span>{stack.stats.due} ready</span>
           <span>{stack.stats.weak} weak</span>
           <span>{stack.stats.mastered} mastered</span>
         </div>

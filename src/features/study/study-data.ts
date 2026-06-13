@@ -1,4 +1,4 @@
-import { asc, desc, eq, isNull, lt, lte, or, sql, and, gt, inArray } from "drizzle-orm";
+import { asc, desc, eq, isNotNull, isNull, lt, lte, or, sql, and, gt, inArray } from "drizzle-orm";
 
 import { getDb } from "@/server/db/client";
 import {
@@ -61,7 +61,7 @@ export async function getStudyDecksWithStats(userId: string) {
       cardCount: studyDecks.cardCount,
       createdAt: studyDecks.createdAt,
       description: studyDecks.description,
-      dueCount: sql<number>`COUNT(CASE WHEN ${studyCards.dueAt} IS NULL OR ${studyCards.dueAt} <= NOW() THEN 1 END)::int`,
+      dueCount: sql<number>`COUNT(CASE WHEN ${studyCards.dueAt} IS NOT NULL AND ${studyCards.dueAt} <= NOW() THEN 1 END)::int`,
       expertReviewedCardCount: expertReviewedCardCountSql(),
       id: studyDecks.id,
       folderId: studyDecks.folderId,
@@ -139,7 +139,7 @@ export async function getStudyStackCardStatsForStacks(stackIds: string[], userId
   const rows = await getDb()
     .select({
       avgEase: sql<number | null>`AVG(CASE WHEN ${studyCards.dueAt} IS NOT NULL THEN ${studyCards.easeFactor} END)`,
-      due: sql<number>`COUNT(CASE WHEN ${studyCards.dueAt} IS NULL OR ${studyCards.dueAt} <= NOW() THEN 1 END)::int`,
+      due: sql<number>`COUNT(CASE WHEN ${studyCards.dueAt} IS NOT NULL AND ${studyCards.dueAt} <= NOW() THEN 1 END)::int`,
       mastered: sql<number>`COUNT(CASE WHEN ${studyCards.interval} >= 21 AND ${studyCards.lapses} = 0 AND ${studyCards.dueAt} IS NOT NULL THEN 1 END)::int`,
       seen: sql<number>`COUNT(${studyCards.dueAt})::int`,
       stackId: studyDeckStackItems.stackId,
@@ -910,7 +910,8 @@ export async function getStudyDueCards(deckId: string) {
     .where(
       and(
         eq(studyCards.deckId, deckId),
-        or(isNull(studyCards.dueAt), lte(studyCards.dueAt, new Date())),
+        isNotNull(studyCards.dueAt),
+        lte(studyCards.dueAt, new Date()),
       ),
     )
     .orderBy(asc(studyCards.position));
@@ -942,7 +943,7 @@ export async function getStudyStackCards(
   const deckVisibility = visibleStudyDeckSql(userId);
   const filterCondition =
     filter === "due"
-      ? or(isNull(studyCards.dueAt), lte(studyCards.dueAt, new Date()))
+      ? and(isNotNull(studyCards.dueAt), lte(studyCards.dueAt, new Date()))
       : filter === "weak"
         ? and(
             gt(studyCards.dueAt, new Date(0)),
@@ -992,7 +993,7 @@ export async function getStudyDeckStats(deckId: string) {
   const [row] = await getDb()
     .select({
       avgEase: sql<number | null>`AVG(CASE WHEN ${studyCards.dueAt} IS NOT NULL THEN ${studyCards.easeFactor} END)`,
-      due: sql<number>`COUNT(CASE WHEN ${studyCards.dueAt} IS NULL OR ${studyCards.dueAt} <= NOW() THEN 1 END)::int`,
+      due: sql<number>`COUNT(CASE WHEN ${studyCards.dueAt} IS NOT NULL AND ${studyCards.dueAt} <= NOW() THEN 1 END)::int`,
       mastered: sql<number>`COUNT(CASE WHEN ${studyCards.interval} >= 21 AND ${studyCards.lapses} = 0 AND ${studyCards.dueAt} IS NOT NULL THEN 1 END)::int`,
       seen: sql<number>`COUNT(${studyCards.dueAt})::int`,
       total: sql<number>`COUNT(*)::int`,

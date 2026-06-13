@@ -61,7 +61,7 @@ export default async function StudySessionPage({ params, searchParams }: Props) 
   }
 
   const filterLabel =
-    filter === "due" ? "Due cards" : filter === "weak" ? "Weak cards" : "All cards";
+    filter === "due" ? "Ready cards" : filter === "weak" ? "Weak cards" : "All cards";
 
   return (
     <div className="screen study-session-screen">

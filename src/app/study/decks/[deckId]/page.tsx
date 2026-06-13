@@ -60,7 +60,7 @@ export default async function StudyDeckPage({ params }: Props) {
     getStudyWeakCards(deckId),
     getStudyDeckStats(deckId),
   ]);
-  const isOwner = deck.userId === userId;
+  const isOwner = !deck.isOfficial && deck.userId === userId;
   const verifiedCardCount = deck.verifiedCardCount ?? 0;
   const isFullyVerified = deck.cardCount > 0 && verifiedCardCount === deck.cardCount;
   const expertReviewedCardCount = cards.filter(isExpertReviewedCard).length;
@@ -141,7 +141,7 @@ export default async function StudyDeckPage({ params }: Props) {
         <section className="study-stat-strip" aria-label="Deck stats">
           <div className={stats.due > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
             <strong>{dueCards.length}</strong>
-            <span>Due</span>
+            <span>Ready</span>
           </div>
           <div className={stats.mastered > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
             <strong>{stats.mastered}</strong>
@@ -168,11 +168,6 @@ export default async function StudyDeckPage({ params }: Props) {
           <StudyPicker
             deckId={deckId}
             dueCount={dueCards.length}
-            levelCounts={{
-              advanced: cards.filter((card) => card.level === "advanced").length,
-              beginner: cards.filter((card) => card.level === "beginner").length,
-              intermediate: cards.filter((card) => card.level === "intermediate").length,
-            }}
             totalCount={cards.length}
             weakCount={weakCards.length}
           />

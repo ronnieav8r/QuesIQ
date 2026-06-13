@@ -11,7 +11,7 @@ export default async function StudyStacksPage() {
   const session = await auth();
   const userId = session?.user?.id;
   const stacks = await getVisibleStudyStacks(userId);
-  const ownedStacks = userId ? stacks.filter((stack) => stack.userId === userId).length : 0;
+  const ownedStacks = userId ? stacks.filter((stack) => !stack.isOfficial && stack.userId === userId).length : 0;
   const publicStacks = stacks.filter((stack) => stack.isPublic).length;
   const officialStacks = stacks.filter((stack) => stack.isOfficial).length;
 

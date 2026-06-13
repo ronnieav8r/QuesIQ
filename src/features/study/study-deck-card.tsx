@@ -45,7 +45,7 @@ function timeAgo(date: Date) {
 
 export function StudyDeckCard({ currentUserId, deck }: StudyDeckCardProps) {
   const hasStats = deck.dueCount !== undefined;
-  const isOwner = deck.userId === currentUserId;
+  const isOwner = !deck.isOfficial && deck.userId === currentUserId;
   const verifiedCardCount = deck.verifiedCardCount ?? 0;
   const isFullyVerified = deck.cardCount > 0 && verifiedCardCount === deck.cardCount;
   const isExpertReviewed =
@@ -62,7 +62,7 @@ export function StudyDeckCard({ currentUserId, deck }: StudyDeckCardProps) {
         {isFullyVerified && !deck.isOfficial && <StudyTrustBadge compact type="verified" />}
         {isExpertReviewed && <StudyTrustBadge compact type="expert" />}
         {hasStats && (deck.dueCount ?? 0) > 0 && (
-          <span className="study-deck-card__due">{deck.dueCount} due</span>
+          <span className="study-deck-card__due">{deck.dueCount} ready</span>
         )}
       </div>
 

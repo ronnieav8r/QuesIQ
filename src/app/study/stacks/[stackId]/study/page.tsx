@@ -61,7 +61,7 @@ export default async function StudyStackSessionPage({ params, searchParams }: Pr
     redirect(`/study/stacks/${stackId}`);
   }
 
-  const filterLabel = filter === "due" ? "Due cards" : filter === "weak" ? "Weak cards" : "All cards";
+  const filterLabel = filter === "due" ? "Ready cards" : filter === "weak" ? "Weak cards" : "All cards";
   const orderLabel = order === "ordered" ? "Stack order" : "Random order";
 
   return (

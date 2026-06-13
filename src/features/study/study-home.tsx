@@ -30,7 +30,9 @@ export default async function StudyHome() {
     }
   }
 
-  const totalDue = userDecks.reduce((sum, deck) => sum + (deck.dueCount ?? 0), 0);
+  const personalDecks = userDecks.filter((deck) => !deck.isOfficial);
+  const totalAvailable = personalDecks.reduce((sum, deck) => sum + deck.cardCount, 0);
+  const totalReady = personalDecks.reduce((sum, deck) => sum + (deck.dueCount ?? 0), 0);
   const levelProgressPct =
     userProgression && userProgression.nextLevelXp > 0
       ? Math.max(
@@ -48,23 +50,21 @@ export default async function StudyHome() {
         })
         .slice(0, 3)
     : [];
-  const topDueDeck = [...userDecks]
+  const topReadyDeck = [...personalDecks]
     .sort((first, second) => (second.dueCount ?? 0) - (first.dueCount ?? 0))
     .find((deck) => (deck.dueCount ?? 0) > 0);
 
   const supportingCopy =
-    totalDue > 0
-      ? `You have ${totalDue} card${totalDue !== 1 ? "s" : ""} ready for review.`
-      : userDecks.length > 0
-        ? "Keep your memory warm with a quick study pass."
-        : "Create or import a deck to start studying with Que.";
+    totalAvailable > 0
+      ? `${totalAvailable} card${totalAvailable !== 1 ? "s" : ""} available in your decks.`
+      : "Browse the Study Library or create a deck to start studying with Que.";
 
   return (
     <div className="screen study-dashboard-screen">
       <div className="screen-toolbar">
         <div>
           <p className="eyebrow">QuesIQ Study</p>
-          <h1>Ready to study?</h1>
+          <h1>Study</h1>
           <p>{supportingCopy}</p>
         </div>
         {isAdmin && (
@@ -87,9 +87,13 @@ export default async function StudyHome() {
       {userId && !studyDataError ? (
         <>
           <section className="study-stat-strip" aria-label="Study stats">
-            <div className={totalDue > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
-              <strong>{totalDue}</strong>
-              <span>Due Today</span>
+            <div className={totalAvailable > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
+              <strong>{totalAvailable}</strong>
+              <span>Cards Available</span>
+            </div>
+            <div className={totalReady > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
+              <strong>{totalReady}</strong>
+              <span>Ready for Review</span>
             </div>
             <div
               className={(userStats?.streak ?? 0) > 0 ? "study-stat-chip highlight" : "study-stat-chip"}
@@ -149,14 +153,14 @@ export default async function StudyHome() {
             </section>
           )}
 
-          {topDueDeck && (
+          {topReadyDeck && (
             <section className="next-action">
               <div className="next-action__body">
-                <span className="next-action__label">Continue reviewing</span>
-                <span className="next-action__deck">{topDueDeck.title}</span>
+                <span className="next-action__label">Ready for review</span>
+                <span className="next-action__deck">{topReadyDeck.title}</span>
               </div>
-              <Link className="button-link" href={`/study/decks/${topDueDeck.id}`}>
-                Review {totalDue} card{totalDue !== 1 ? "s" : ""}
+              <Link className="button-link" href={`/study/decks/${topReadyDeck.id}`}>
+                Review {topReadyDeck.dueCount ?? 0} card{(topReadyDeck.dueCount ?? 0) !== 1 ? "s" : ""}
                 <ChevronRight size={16} aria-hidden="true" />
               </Link>
             </section>
@@ -178,17 +182,17 @@ export default async function StudyHome() {
             </div>
           </section>
 
-          {userDecks.length === 0 ? (
+          {personalDecks.length === 0 ? (
             <section className="panel study-empty-panel">
               <h2>No decks yet.</h2>
-              <p>Create, import, or organize your first Study deck from the Decks page.</p>
+              <p>Create your first deck, or browse Official stacks from the Study Library.</p>
               <Link className="button-link" href="/study/decks">
                 Open Decks
               </Link>
             </section>
           ) : (
             <section className="study-deck-grid" aria-label="Study decks">
-              {userDecks.map((deck) => (
+              {personalDecks.map((deck) => (
                 <StudyDeckCard currentUserId={userId} deck={deck} key={deck.id} />
               ))}
             </section>

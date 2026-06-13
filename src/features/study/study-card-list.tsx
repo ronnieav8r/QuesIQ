@@ -181,15 +181,15 @@ export function StudyCardList({
     if (!card.dueAt) return "New";
     if ((card.interval ?? 0) >= 21 && (card.lapses ?? 0) === 0) return "Mastered";
     if ((card.lapses ?? 0) > 0 || (card.easeFactor ?? 2.5) < 2) return "Weak";
-    if (new Date(card.dueAt).getTime() <= nowMs) return "Due";
+    if (new Date(card.dueAt).getTime() <= nowMs) return "Ready";
     return "Learning";
   }
 
   function formatDue(card: StudyCard) {
     if (!card.dueAt) return "Not studied yet";
     const due = new Date(card.dueAt);
-    if (due.getTime() <= nowMs) return "Due now";
-    return `Due ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(due)}`;
+    if (due.getTime() <= nowMs) return "Ready now";
+    return `Review ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(due)}`;
   }
 
   function formatConfidence(confidence: number | null) {

@@ -33,7 +33,7 @@ export default async function StudyStackPage({ params }: Props) {
     notFound();
   }
 
-  const isOwner = stack.userId === userId;
+  const isOwner = !stack.isOfficial && stack.userId === userId;
   const isFullyVerified = stack.cardCount > 0 && stack.verifiedCardCount === stack.cardCount;
   const isExpertReviewed =
     stack.cardCount > 0 && (stack.expertReviewedCardCount ?? 0) === stack.cardCount;
@@ -97,7 +97,7 @@ export default async function StudyStackPage({ params }: Props) {
         </div>
         <div className={stats.due > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
           <strong>{stats.due}</strong>
-          <span>Due</span>
+          <span>Ready</span>
         </div>
         <div className={stats.weak > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
           <strong>{stats.weak}</strong>
