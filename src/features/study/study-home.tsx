@@ -1,11 +1,22 @@
 import Link from "next/link";
-import { BookOpen, ChevronRight, Plus } from "lucide-react";
+import type { CSSProperties } from "react";
+import { BookOpen, ChevronRight, Flame, Plus, Trophy, Zap } from "lucide-react";
 
 import { auth } from "@/auth";
 import { getStudyDecksWithStats, getStudyUserStats } from "@/features/study/study-data";
 import { getStudyProgressionSummary, type StudyProgressionSummary } from "@/server/study/study-progression";
 import { StudyDeckCard } from "@/features/study/study-deck-card";
 import { isAdminEmail } from "@/server/admin";
+
+type RingStyle = CSSProperties & { "--score-percent": string };
+
+function clampPercent(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function ringStyle(percent: number): RingStyle {
+  return { "--score-percent": `${clampPercent(percent)}%` };
+}
 
 export default async function StudyHome() {
   const session = await auth();
@@ -35,20 +46,20 @@ export default async function StudyHome() {
   const totalReady = personalDecks.reduce((sum, deck) => sum + (deck.dueCount ?? 0), 0);
   const levelProgressPct =
     userProgression && userProgression.nextLevelXp > 0
-      ? Math.max(
-          0,
-          Math.min(100, Math.round((userProgression.currentLevelXp / userProgression.nextLevelXp) * 100)),
-        )
+      ? clampPercent((userProgression.currentLevelXp / userProgression.nextLevelXp) * 100)
       : 0;
+  const questProgressPct =
+    userProgression && userProgression.questsTotal > 0
+      ? clampPercent((userProgression.questsCompleted / userProgression.questsTotal) * 100)
+      : 0;
+  const streakProgressPct = userProgression ? clampPercent((Math.min(userProgression.streakDays, 7) / 7) * 100) : 0;
+  const accuracyProgressPct = userProgression ? clampPercent(userProgression.accuracyPercent) : 0;
   const questPreview = userProgression
     ? [...userProgression.quests]
         .sort((left, right) => {
-          if (left.status === right.status) {
-            return left.questKey.localeCompare(right.questKey);
-          }
-          return left.status === "open" ? -1 : 1;
+          return left.status === right.status ? 0 : left.status === "open" ? -1 : 1;
         })
-        .slice(0, 3)
+        .slice(0, 6)
     : [];
   const topReadyDeck = [...personalDecks]
     .sort((first, second) => (second.dueCount ?? 0) - (first.dueCount ?? 0))
@@ -108,45 +119,111 @@ export default async function StudyHome() {
           </section>
 
           {userProgression && (
-            <section className="panel">
-              <p className="eyebrow">Progress</p>
-              <h2>Study momentum</h2>
-              <p>
-                Level {userProgression.level}
-                {userProgression.levelName ? ` - ${userProgression.levelName}` : ""} · {userProgression.totalXp} XP ·{" "}
-                {userProgression.accuracyPercent.toFixed(1)}% accuracy
-              </p>
-              <div
-                aria-label="Study XP progress"
-                style={{
-                  background: "var(--panel-border)",
-                  borderRadius: "999px",
-                  height: "10px",
-                  margin: "0.75rem 0",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    background: "var(--accent)",
-                    height: "100%",
-                    width: `${levelProgressPct}%`,
-                  }}
-                />
-              </div>
-              <p className="field-note">
-                {userProgression.currentLevelXp}/{userProgression.nextLevelXp} XP toward next level ·{" "}
-                {userProgression.questsCompleted}/{userProgression.questsTotal} quests completed
-              </p>
-              {questPreview.length > 0 && (
-                <div className="study-stat-strip" aria-label="Study quest progress">
-                  {questPreview.map((quest) => (
-                    <div className={quest.status === "completed" ? "study-stat-chip highlight" : "study-stat-chip"} key={quest.questKey}>
-                      <strong>
-                        {Math.min(quest.progress, quest.checkThreshold)}/{quest.checkThreshold}
-                      </strong>
-                      <span>{quest.title}</span>
+            <section className="panel study-momentum-panel">
+              <div className="section-head">
+                <div>
+                  <p className="eyebrow">Progress</p>
+                  <h2>Study momentum</h2>
+                  <p>XP, streak, accuracy, and quests update as cards are rated.</p>
+                </div>
+                <div className="home-stat-row">
+                  <div className="level-chip">
+                    <span>Level</span>
+                    <strong>{userProgression.level}</strong>
+                    <small>{userProgression.levelName ?? "Study"}</small>
+                  </div>
+                  <div className="streak-chip">
+                    <Flame className="streak-icon" aria-hidden="true" />
+                    <div>
+                      <span>Streak</span>
+                      <div className="streak-count">
+                        <strong>{userProgression.streakDays}</strong>
+                        <span>days</span>
+                      </div>
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="study-progress-rings" aria-label="Study progress rings">
+                <article className="study-progress-ring-card xp" style={ringStyle(levelProgressPct)}>
+                  <div className="study-progress-ring">
+                    <strong>{levelProgressPct}%</strong>
+                  </div>
+                  <div>
+                    <span>Level XP</span>
+                    <p>
+                      {userProgression.currentLevelXp}/{userProgression.nextLevelXp} XP
+                    </p>
+                  </div>
+                </article>
+                <article className="study-progress-ring-card streak" style={ringStyle(streakProgressPct)}>
+                  <div className="study-progress-ring">
+                    <strong>{userProgression.streakDays}</strong>
+                  </div>
+                  <div>
+                    <span>7-day streak</span>
+                    <p>Best: {userProgression.longestStreakDays} day{userProgression.longestStreakDays === 1 ? "" : "s"}</p>
+                  </div>
+                </article>
+                <article className="study-progress-ring-card accuracy" style={ringStyle(accuracyProgressPct)}>
+                  <div className="study-progress-ring">
+                    <strong>{userProgression.accuracyPercent.toFixed(0)}%</strong>
+                  </div>
+                  <div>
+                    <span>Accuracy</span>
+                    <p>
+                      {userProgression.correctAttempts}/{userProgression.totalAttempts} correct
+                    </p>
+                  </div>
+                </article>
+                <article className="study-progress-ring-card quests" style={ringStyle(questProgressPct)}>
+                  <div className="study-progress-ring">
+                    <strong>
+                      {userProgression.questsCompleted}/{userProgression.questsTotal}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Quests</span>
+                    <p>{userProgression.totalXp.toLocaleString()} total XP</p>
+                  </div>
+                </article>
+              </div>
+
+              <div className="study-xp-track" aria-label="XP toward next level">
+                <span style={{ width: `${levelProgressPct}%` }} />
+              </div>
+              <div className="study-xp-note">
+                <span>
+                  <Zap size={14} aria-hidden="true" />
+                  {userProgression.totalXp.toLocaleString()} total XP
+                </span>
+                <span>
+                  <Trophy size={14} aria-hidden="true" />
+                  {userProgression.questsCompleted}/{userProgression.questsTotal} quests completed
+                </span>
+              </div>
+
+              {questPreview.length > 0 && (
+                <div className="study-quest-grid" aria-label="Study quest progress">
+                  {questPreview.map((quest) => (
+                    <article className={quest.status === "completed" ? "completed" : ""} key={quest.questKey}>
+                      <div>
+                        <strong>{quest.title}</strong>
+                        <span>{quest.status === "completed" ? "complete" : `${quest.xpReward} XP`}</span>
+                      </div>
+                      <p>{quest.description}</p>
+                      <div className="study-quest-progress">
+                        <span
+                          style={{
+                            width: `${clampPercent((Math.min(quest.progress, quest.checkThreshold) / quest.checkThreshold) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <small>
+                        {Math.min(quest.progress, quest.checkThreshold)}/{quest.checkThreshold}
+                      </small>
+                    </article>
                   ))}
                 </div>
               )}

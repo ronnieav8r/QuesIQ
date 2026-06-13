@@ -1643,7 +1643,13 @@ export const studyQuests = pgTable("study_quests", {
   checkDimension: text("check_dimension"),
   checkThreshold: integer("check_threshold").notNull(),
   checkType: text("check_type")
-    .$type<"card_attempt_count" | "correct_attempt_count" | "distinct_mode_count">()
+    .$type<
+      | "card_attempt_count"
+      | "correct_attempt_count"
+      | "distinct_mode_count"
+      | "streak_day_count"
+      | "total_xp"
+    >()
     .notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   description: text("description").notNull(),

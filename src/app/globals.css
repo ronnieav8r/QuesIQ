@@ -749,7 +749,7 @@ p {
 }
 
 .study-stat-strip {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .study-stat-chip {
@@ -777,6 +777,168 @@ p {
 .study-stat-chip.highlight {
   border-color: var(--focus);
   box-shadow: var(--shadow-brand);
+}
+
+.study-momentum-panel {
+  background:
+    linear-gradient(135deg, rgba(20, 184, 166, 0.1), transparent 42%),
+    linear-gradient(225deg, rgba(232, 114, 26, 0.1), transparent 38%),
+    rgba(13, 19, 38, 0.72);
+}
+
+.study-progress-rings {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.study-progress-ring-card {
+  --ring-color: var(--brand-strong);
+  align-items: center;
+  background: rgba(21, 27, 51, 0.82);
+  border: 1px solid rgba(185, 191, 216, 0.18);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: 6.25rem;
+  padding: var(--space-3);
+}
+
+.study-progress-ring-card.xp {
+  --ring-color: #8c52ff;
+}
+
+.study-progress-ring-card.streak {
+  --ring-color: #e8721a;
+}
+
+.study-progress-ring-card.accuracy {
+  --ring-color: #22c55e;
+}
+
+.study-progress-ring-card.quests {
+  --ring-color: #38bdf8;
+}
+
+.study-progress-ring {
+  align-items: center;
+  aspect-ratio: 1;
+  background:
+    radial-gradient(circle at center, var(--surface-raised) 0 57%, transparent 58%),
+    conic-gradient(var(--ring-color) var(--score-percent), rgba(185, 191, 216, 0.16) 0);
+  border-radius: 50%;
+  display: grid;
+  justify-items: center;
+  width: 4.35rem;
+}
+
+.study-progress-ring strong {
+  color: var(--text);
+  font-size: var(--font-size-md);
+  line-height: 1;
+  text-align: center;
+}
+
+.study-progress-ring-card span,
+.study-quest-grid article span {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.study-progress-ring-card p {
+  font-size: var(--font-size-sm);
+  margin-bottom: 0;
+}
+
+.study-xp-track,
+.study-quest-progress {
+  background: rgba(185, 191, 216, 0.14);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.study-xp-track {
+  height: 0.7rem;
+}
+
+.study-xp-track span,
+.study-quest-progress span {
+  background: linear-gradient(90deg, #38bdf8, #22c55e, #e8721a);
+  display: block;
+  height: 100%;
+}
+
+.study-xp-note {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.study-xp-note span {
+  align-items: center;
+  background: rgba(21, 27, 51, 0.72);
+  border: 1px solid rgba(185, 191, 216, 0.18);
+  border-radius: var(--radius-full);
+  color: var(--muted);
+  display: inline-flex;
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  gap: var(--space-1);
+  min-height: 2rem;
+  padding: 0.35rem 0.7rem;
+}
+
+.study-quest-grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.study-quest-grid article {
+  background: rgba(21, 27, 51, 0.78);
+  border: 1px solid rgba(185, 191, 216, 0.18);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-2);
+  min-height: 8rem;
+  padding: var(--space-3);
+}
+
+.study-quest-grid article.completed {
+  border-color: rgba(34, 197, 94, 0.72);
+  box-shadow: 0 0 1.3rem rgba(34, 197, 94, 0.14);
+}
+
+.study-quest-grid article div:first-child {
+  align-items: start;
+  display: flex;
+  gap: var(--space-2);
+  justify-content: space-between;
+}
+
+.study-quest-grid article strong,
+.study-quest-grid article p {
+  overflow-wrap: anywhere;
+}
+
+.study-quest-grid article p {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+  margin-bottom: 0;
+}
+
+.study-quest-grid article small {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+.study-quest-progress {
+  height: 0.48rem;
 }
 
 .study-deck-grid {
@@ -5473,6 +5635,29 @@ textarea::placeholder {
   .study-deck-grid,
   .study-stat-strip {
     grid-template-columns: 1fr;
+  }
+
+  .study-momentum-panel .section-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .study-momentum-panel .home-stat-row {
+    justify-content: stretch;
+  }
+
+  .study-momentum-panel .level-chip,
+  .study-momentum-panel .streak-chip {
+    flex: 1 1 10rem;
+  }
+
+  .study-progress-rings,
+  .study-quest-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .study-progress-ring-card {
+    grid-template-columns: auto minmax(0, 1fr);
   }
 
   .study-library-cta {
