@@ -62,6 +62,7 @@ export async function getStudyDecksWithStats(userId: string) {
       createdAt: studyDecks.createdAt,
       description: studyDecks.description,
       dueCount: sql<number>`COUNT(CASE WHEN ${studyCards.dueAt} IS NULL OR ${studyCards.dueAt} <= NOW() THEN 1 END)::int`,
+      expertReviewedCardCount: expertReviewedCardCountSql(),
       id: studyDecks.id,
       folderId: studyDecks.folderId,
       isOfficial: studyDecks.isOfficial,
@@ -118,6 +119,17 @@ function emptyStudyStackCardStats(): StudyStackCardStats {
   };
 }
 
+function expertReviewedCardCountSql() {
+  return sql<number>`(
+    SELECT COUNT(DISTINCT expert_cards.id)::int
+    FROM study_cards expert_cards
+    INNER JOIN study_card_sources expert_sources
+      ON expert_sources.card_id = expert_cards.id
+    WHERE expert_cards.deck_id = "study_decks"."id"
+      AND expert_sources.source_metadata->'expertReview'->>'status' = 'expert_reviewed'
+  )`;
+}
+
 export async function getStudyStackCardStatsForStacks(stackIds: string[], userId?: string) {
   if (stackIds.length === 0) {
     return new Map<string, StudyStackCardStats>();
@@ -172,6 +184,7 @@ export async function getVisibleStudyStacks(userId?: string) {
       createdAt: studyDeckStacks.createdAt,
       deckCount: sql<number>`COUNT(DISTINCT CASE WHEN ${deckVisibility} THEN ${studyDecks.id} END)::int`,
       description: studyDeckStacks.description,
+      expertReviewedCardCount: sql<number>`COALESCE(SUM(CASE WHEN ${deckVisibility} THEN ${expertReviewedCardCountSql()} ELSE 0 END), 0)::int`,
       id: studyDeckStacks.id,
       isOfficial: studyDeckStacks.isOfficial,
       isPublic: studyDeckStacks.isPublic,
@@ -217,6 +230,7 @@ export async function getStudyStackWithDecks(stackId: string, userId?: string) {
       createdAt: studyDecks.createdAt,
       deckId: studyDecks.id,
       description: studyDecks.description,
+      expertReviewedCardCount: expertReviewedCardCountSql(),
       id: studyDeckStackItems.deckId,
       isOfficial: studyDecks.isOfficial,
       isPublic: studyDecks.isPublic,
@@ -237,6 +251,10 @@ export async function getStudyStackWithDecks(stackId: string, userId?: string) {
     cardCount: decks.reduce((sum, deck) => sum + deck.cardCount, 0),
     deckCount: decks.length,
     decks,
+    expertReviewedCardCount: decks.reduce(
+      (sum, deck) => sum + (deck.expertReviewedCardCount ?? 0),
+      0,
+    ),
     verifiedCardCount: decks.reduce((sum, deck) => sum + (deck.verifiedCardCount ?? 0), 0),
   };
 }
@@ -457,6 +475,7 @@ export async function getVisibleStudyLibraryDecks(limit = 50, userId?: string) {
       createdAt: studyDecks.createdAt,
       description: studyDecks.description,
       dueCount: sql<number>`0::int`,
+      expertReviewedCardCount: expertReviewedCardCountSql(),
       id: studyDecks.id,
       isOfficial: studyDecks.isOfficial,
       isPublic: studyDecks.isPublic,

@@ -35,6 +35,8 @@ export default async function StudyStackPage({ params }: Props) {
 
   const isOwner = stack.userId === userId;
   const isFullyVerified = stack.cardCount > 0 && stack.verifiedCardCount === stack.cardCount;
+  const isExpertReviewed =
+    stack.cardCount > 0 && (stack.expertReviewedCardCount ?? 0) === stack.cardCount;
   const userDecks = isOwner && userId ? await getStudyDecksWithStats(userId) : [];
 
   return (
@@ -72,7 +74,8 @@ export default async function StudyStackPage({ params }: Props) {
           {isOwner && <span className="badge">Mine</span>}
           {stack.isPublic && <span className="badge">Public</span>}
           {stack.isOfficial && <StudyTrustBadge type="official" />}
-          {isFullyVerified && <StudyTrustBadge type="verified" />}
+          {isFullyVerified && !stack.isOfficial && <StudyTrustBadge type="verified" />}
+          {isExpertReviewed && <StudyTrustBadge type="expert" />}
           {stack.subject && <span className="badge">{stack.subject}</span>}
           <span className="badge">{stack.deckCount} decks</span>
           <span className="badge">{stack.cardCount} cards</span>
@@ -132,6 +135,8 @@ export default async function StudyStackPage({ params }: Props) {
           {stack.decks.map((deck, index) => {
             const isFullyVerified =
               deck.cardCount > 0 && (deck.verifiedCardCount ?? 0) === deck.cardCount;
+            const isExpertReviewed =
+              deck.cardCount > 0 && (deck.expertReviewedCardCount ?? 0) === deck.cardCount;
             return (
               <li className={styles.item} key={deck.deckId}>
                 <div className={styles.rank}>{index + 1}</div>
@@ -139,7 +144,8 @@ export default async function StudyStackPage({ params }: Props) {
                   <div className="study-deck-card__header">
                     {deck.isPublic && <span className="badge">Public</span>}
                     {deck.isOfficial && <StudyTrustBadge compact type="official" />}
-                    {isFullyVerified && <StudyTrustBadge compact type="verified" />}
+                    {isFullyVerified && !deck.isOfficial && <StudyTrustBadge compact type="verified" />}
+                    {isExpertReviewed && <StudyTrustBadge compact type="expert" />}
                     {deck.subject && <span className="badge">{deck.subject}</span>}
                   </div>
                   <h3>{deck.title}</h3>

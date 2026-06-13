@@ -10,6 +10,7 @@ type StudyStackCardProps = {
     cardCount: number;
     deckCount: number;
     description: string | null;
+    expertReviewedCardCount?: number;
     id: string;
     isOfficial: boolean;
     isPublic: boolean;
@@ -24,6 +25,8 @@ type StudyStackCardProps = {
 export function StudyStackCard({ currentUserId, stack }: StudyStackCardProps) {
   const isOwner = stack.userId === currentUserId;
   const isFullyVerified = stack.cardCount > 0 && (stack.verifiedCardCount ?? 0) === stack.cardCount;
+  const isExpertReviewed =
+    stack.cardCount > 0 && (stack.expertReviewedCardCount ?? 0) === stack.cardCount;
 
   return (
     <Link className="study-deck-card" href={`/study/stacks/${stack.id}`}>
@@ -31,7 +34,8 @@ export function StudyStackCard({ currentUserId, stack }: StudyStackCardProps) {
         {isOwner && <span className="badge">Mine</span>}
         {stack.isPublic && <span className="badge">Public</span>}
         {stack.isOfficial && <StudyTrustBadge compact type="official" />}
-        {isFullyVerified && <StudyTrustBadge compact type="verified" />}
+        {isFullyVerified && !stack.isOfficial && <StudyTrustBadge compact type="verified" />}
+        {isExpertReviewed && <StudyTrustBadge compact type="expert" />}
       </div>
       <h3>{stack.title}</h3>
       <p>{stack.description || "No description yet."}</p>

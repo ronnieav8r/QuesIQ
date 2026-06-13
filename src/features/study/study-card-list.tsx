@@ -47,11 +47,17 @@ type EditingCardState = {
 
 type StudyCardListProps = {
   deckId: string;
+  deckIsOfficial?: boolean;
   initialCards: StudyCard[];
   isOwner: boolean;
 };
 
-export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListProps) {
+export function StudyCardList({
+  deckId,
+  deckIsOfficial = false,
+  initialCards,
+  isOwner,
+}: StudyCardListProps) {
   const [addingCard, setAddingCard] = useState(false);
   const [addError, setAddError] = useState<string>();
   const [answer, setAnswer] = useState("");
@@ -212,6 +218,13 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
     };
   }
 
+  function cardIsExpertReviewed(card: StudyCard) {
+    return (
+      card.sources?.some((source) => expertReviewMetadata(source)?.status === "expert_reviewed") ??
+      false
+    );
+  }
+
   return (
     <section className="study-card-list">
       {cards.length === 0 && !addingCard && (
@@ -282,7 +295,8 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
               <div className="study-card-meta">
                 <span className="badge">{cardStatus(card)}</span>
                 {card.level && <span className="badge">{card.level}</span>}
-                {card.isVerified && <StudyTrustBadge compact type="verified" />}
+                {card.isVerified && !deckIsOfficial && <StudyTrustBadge compact type="verified" />}
+                {cardIsExpertReviewed(card) && <StudyTrustBadge compact type="expert" />}
               </div>
               <p className="study-card-question">{card.question}</p>
               <StudyCardBack
