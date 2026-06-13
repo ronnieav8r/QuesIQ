@@ -87,12 +87,15 @@ The first Study slice is imported:
   (`{ [targetField]: sourceHeader }`) and uses the same parser normalization
   path for preview/save. Preview returns detected CSV headers, supported target
   fields, effective mapping, and unmapped required fields.
-- Rich CSV import also accepts the current Study test-bed CSV schema with
+- Rich CSV import also accepts the official content CSV schema with
   `shortAnswer`, `explanation`, `officialReference`, `officialReferenceUrl`,
-  `additionalReferences`, `additionalReferenceUrls`, and optional
+  `additionalReferenceLabels`, `additionalReferenceUrls`, `referenceNote`, and optional
   `official`/`verified` booleans without requiring explicit column mapping.
   Rows with `officialReference`/`officialReferenceUrl` infer Official deck
   import intent unless an explicit `official` value is provided.
+- `drizzle/0080_add_study_card_explanations.sql` adds a dedicated
+  learner-facing `study_cards.explanation` field. Expanded explanations should
+  never be forced into `hint`, `sourceNotes`, or verification metadata.
 - `drizzle/0054_add_study_source_verification_metadata.sql` adds structured
   source metadata and verification status/evidence/verifier fields so rich CSV
   imports do not have to preserve chunk/page/visual details only inside labels
@@ -144,7 +147,7 @@ The first Study slice is imported:
   `node_modules/.bin/tsx scripts/study/rich-csv-import-smoke.ts --parse-only`
   for parser/source-coverage verification, or without `--parse-only` after
   `DATABASE_URL` and migrations through `0054` are available for a disposable
-  `[TEST_DELETE]` DB save/readback check. DB mode verifies the `0054` metadata
+  `[TEST_DELETE]` DB save/readback check. DB mode verifies the rich-import
   columns before writing and accepts `--cleanup` to remove the disposable deck
   after readback.
 - model-backed Study answer-evaluator smoke coverage is available with
@@ -169,7 +172,7 @@ The first Study slice is imported:
 Use this header row for Study admin imports:
 
 ```text
-externalId,deckTitle,deckDescription,subject,audience,question,answer,hint,level,tags,sourcePackId,sourcePackTitle,sourceChunkIds,sourcePages,sourceVisualAssetIds,sourceLabel,sourceUrl,sourceNotes,draftId,draftConfidence,draftWarnings,verificationStatus,verificationConfidence,verificationNotes,verificationEvidence,verifier,isOfficial,isVerified
+externalId,deckTitle,deckDescription,industry,role,certification,examOrStandard,version,subject,topic,audience,question,answer,explanation,hint,level,tags,sourceLabel,sourceUrl,additionalReferenceLabels,additionalReferenceUrls,referenceNote,sourcePackId,sourcePackTitle,sourceChunkIds,sourcePages,sourceVisualAssetIds,sourceNotes,draftId,draftConfidence,draftWarnings,verificationStatus,verificationConfidence,verificationNotes,verificationEvidence,verifier,isOfficial,isVerified,expertReviewStatus,expertReviewType,expertReviewer,expertReviewDate,expertReviewNotes
 ```
 
 Required fields:
@@ -179,14 +182,31 @@ Required fields:
 
 Operational fields:
 
+- `answer` should be the short memory target; `explanation` is the expanded
+  learner-facing context shown after the answer.
+- `sourceLabel`/`sourceUrl` are the primary source shown to learners.
+  `additionalReferenceLabels` and `additionalReferenceUrls` are
+  pipe-separated supporting references. `referenceNote` is learner-visible.
+- `sourceNotes`, `draftWarnings`, `verificationNotes`, and
+  `verificationEvidence` are internal/admin metadata and should not be used as
+  the learner explanation.
 - `isOfficial=true` marks the imported deck Official, or admins can use the
   Study Admin checkbox.
-- `isVerified=true` can infer verified status, but a card is only marked
-  Verified when `verificationStatus=verified`, `verificationConfidence >= 0.8`,
-  and `verifier` is present.
+- `isVerified=true` is source/fact verification only. It is not expert review.
+  A card is only marked Verified when the CSV explicitly sets
+  `isVerified=true`, `verificationStatus=verified`,
+  `verificationConfidence >= 0.8`, and `verifier` is present.
+- `expertReviewStatus` is a separate human/expert review layer. It accepts
+  `not_required`, `needs_expert_review`, `expert_reviewed`, or `rejected`.
+  Do not use `isVerified=true` as a substitute for expert review.
+- `expertReviewType` identifies the review lane, such as `clinical`,
+  `flight_instructor`, `broker`, `legal`, or `finance`.
+  `expertReviewer`, `expertReviewDate`, and `expertReviewNotes` preserve the
+  human signoff metadata.
 - list fields such as `tags`, `sourceChunkIds`, `sourcePages`,
-  `sourceVisualAssetIds`, `draftWarnings`, and `verificationEvidence` may use
-  `|`, `;`, `,`, or JSON arrays.
+  `sourceVisualAssetIds`, `additionalReferenceLabels`,
+  `additionalReferenceUrls`, `draftWarnings`, and `verificationEvidence` may
+  use `|`, `;`, `,`, or JSON arrays.
 - `level` accepts `beginner`, `intermediate`, or `advanced`.
 - `verificationStatus` accepts `blocked`, `needs_review`,
   `ready_for_verifier`, `unverified`, or `verified`.
@@ -194,15 +214,15 @@ Operational fields:
 Minimal official deck import example:
 
 ```csv
-deckTitle,subject,question,answer,hint,level,tags,isOfficial
-Private Pilot Airplane - Weather,Private Pilot,What is a METAR?,A routine aviation weather report.,Think current observed weather.,beginner,weather|metar,true
+deckTitle,subject,question,answer,explanation,hint,level,tags,sourceLabel,sourceUrl,isOfficial
+Private Pilot Airplane - Weather,Private Pilot,What is a METAR?,A routine aviation weather report.,METARs report observed weather at an airport and are used for preflight weather awareness.,Think current observed weather.,beginner,weather|metar,FAA Aviation Weather Handbook,https://www.faa.gov/regulations_policies/handbooks_manuals/aviation,true
 ```
 
 Verified source-backed example:
 
 ```csv
-deckTitle,subject,question,answer,sourceLabel,sourceUrl,verificationStatus,verificationConfidence,verificationEvidence,verifier,isOfficial
-Private Pilot Airplane - Weather,Private Pilot,What is a METAR?,A routine aviation weather report.,FAA PHAK,https://example.com,verified,0.91,PHAK weather reference,admin_reviewer,true
+deckTitle,subject,question,answer,sourceLabel,sourceUrl,verificationStatus,verificationConfidence,verificationEvidence,verifier,isOfficial,isVerified,expertReviewStatus,expertReviewType
+Private Pilot Airplane - Weather,Private Pilot,What is a METAR?,A routine aviation weather report.,FAA PHAK,https://example.com,verified,0.91,PHAK weather reference,admin_reviewer,true,true,needs_expert_review,flight_instructor
 ```
 - local Codex skill `quesiq-study-content-pipeline` coordinates the source
   scrubber, Study deck drafter, Study verifier, rich CSV export, and optional

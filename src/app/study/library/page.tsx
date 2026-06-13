@@ -1,16 +1,20 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Layers3, Plus } from "lucide-react";
 
 import { auth } from "@/auth";
 import {
   getStudyAudienceTags,
   getStudyLibraryDecks,
+  getStudyStackCardStatsForStacks,
   getStudySubjectOptions,
+  getVisibleStudyStacks,
   type StudyLibraryScope,
 } from "@/features/study/study-data";
 import { StudyDeckCard } from "@/features/study/study-deck-card";
+import styles from "@/features/study/study-library.module.css";
+import { StudyStackCard } from "@/features/study/study-stack-card";
 
 type Props = {
   searchParams: Promise<{
@@ -49,7 +53,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
   const verifiedOnly = verified === "1";
   const scopeFilter = normalizeScope(scope);
 
-  const [filteredDecks, optionDecks, subjectTaxonomyOptions, audienceTags] = await Promise.all([
+  const [filteredDecks, optionDecks, subjectTaxonomyOptions, audienceTags, stacks] = await Promise.all([
     getStudyLibraryDecks({
       officialOnly,
       query,
@@ -65,6 +69,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
     }),
     getStudySubjectOptions(),
     getStudyAudienceTags(),
+    getVisibleStudyStacks(userId),
   ]);
 
   const deckSubjects = Array.from(
@@ -81,20 +86,58 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
     ),
   ).sort((a, b) => a.localeCompare(b));
 
+  const stackStatsById = await getStudyStackCardStatsForStacks(
+    stacks.map((stack) => stack.id),
+    userId,
+  );
+  const stacksWithStats = stacks.map((stack) => ({
+    ...stack,
+    stats: stackStatsById.get(stack.id),
+  }));
+  const filteredStacks = stacksWithStats.filter((stack) => {
+    if (scopeFilter === "mine" && (!userId || stack.userId !== userId)) {
+      return false;
+    }
+    if (scopeFilter !== "mine" && !stack.isPublic) {
+      return false;
+    }
+    if (officialOnly && !stack.isOfficial) {
+      return false;
+    }
+    if (verifiedOnly && (stack.cardCount <= 0 || (stack.verifiedCardCount ?? 0) !== stack.cardCount)) {
+      return false;
+    }
+    if (subjectFilter && (stack.subject?.trim().toLowerCase() ?? "") !== subjectFilter) {
+      return false;
+    }
+    if (tagFilter && (stack.subject?.trim().toLowerCase() ?? "") !== tagFilter) {
+      return false;
+    }
+    if (!query) {
+      return true;
+    }
+    return [stack.title, stack.description ?? "", stack.subject ?? ""].join(" ").toLowerCase().includes(query);
+  });
+  const totalResults = filteredStacks.length + filteredDecks.length;
   const hasFilters = Boolean(
     query || subjectFilter || tagFilter || officialOnly || verifiedOnly || scopeFilter !== "all",
   );
-  const resultLabel = `${filteredDecks.length} result${filteredDecks.length === 1 ? "" : "s"}`;
+  const resultLabel = `${totalResults} result${totalResults === 1 ? "" : "s"}`;
   const subjectOptions = [
     ...subjectTaxonomyOptions.map((value) => ({ label: value.label, value: value.name })),
     ...extraDeckSubjects.map((value) => ({ label: value, value })),
   ];
-  const tagOptions = [
-    ...audienceTags.map((value) => ({ label: value.label, value: value.label })),
-    ...tags
-      .filter((value) => !audienceTags.some((audienceTag) => audienceTag.label.toLowerCase() === value.toLowerCase()))
-      .map((value) => ({ label: value, value })),
-  ];
+  const audienceTagOptions = audienceTags.map((value) => ({ label: value.label, value: value.label }));
+  const deckTagOptions = tags
+    .filter((value) => !audienceTags.some((audienceTag) => audienceTag.label.toLowerCase() === value.toLowerCase()))
+    .map((value) => ({ label: value, value }));
+  const primaryAudienceTagOptions = audienceTagOptions.slice(0, 8);
+  const overflowAudienceTagOptions = audienceTagOptions.slice(8);
+  const tagOptions = [...audienceTagOptions, ...deckTagOptions];
+  const activeTagOption = tagFilter
+    ? tagOptions.find((value) => value.value.toLowerCase() === tagFilter)
+    : undefined;
+  const moreTagCount = overflowAudienceTagOptions.length + deckTagOptions.length;
 
   function libraryHref(next: {
     official?: string | null;
@@ -129,18 +172,31 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
         <div>
           <p className="eyebrow">QuesIQ Study</p>
           <h1>Library</h1>
-          <p>Browse Public decks, your Mine collection, and QuesIQ-reviewed Study material.</p>
+          <p>Browse stacks or open any deck directly, including decks that also belong to a stack.</p>
         </div>
-        <Link className="button-link secondary" href="/study">
-          Study Home
-        </Link>
+        <div className="inline-actions">
+          {userId && (
+            <Link className="button-link secondary" href="/study/stacks/new">
+              <Layers3 size={14} aria-hidden="true" />
+              New Stack
+            </Link>
+          )}
+          {userId && (
+            <Link className="button-link" href="/study/decks/new">
+              <Plus size={14} aria-hidden="true" />
+              New Deck
+            </Link>
+          )}
+        </div>
       </div>
 
       <section className="panel study-library-heading">
         <BookOpen size={20} aria-hidden="true" />
         <div>
-          <h2>{filteredDecks.length} deck{filteredDecks.length === 1 ? "" : "s"}</h2>
-          <p>V1 labels are Mine, Public, Official, and Verified. Verified means source/card review, not a credential.</p>
+          <h2>
+            {filteredStacks.length} stack{filteredStacks.length === 1 ? "" : "s"} - {filteredDecks.length} deck{filteredDecks.length === 1 ? "" : "s"}
+          </h2>
+          <p>Open a stack to study all included decks together, or open a deck directly.</p>
         </div>
       </section>
 
@@ -220,12 +276,12 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
           </div>
 
           <div className="study-library-filter-group">
-            <span>Audience & Tags</span>
+            <span>Audience / Exam</span>
             <div className="study-filter-pills">
               <Link className={!tagFilter ? "active" : ""} href={libraryHref({ tag: null })}>
                 All
               </Link>
-              {tagOptions.map((value) => (
+              {primaryAudienceTagOptions.map((value) => (
                 <Link
                   className={tagFilter === value.value.toLowerCase() ? "active" : ""}
                   href={libraryHref({ tag: value.value })}
@@ -234,19 +290,69 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
                   {value.label}
                 </Link>
               ))}
+              {activeTagOption &&
+                !primaryAudienceTagOptions.some((value) => value.value.toLowerCase() === activeTagOption.value.toLowerCase()) && (
+                  <Link className="active" href={libraryHref({ tag: activeTagOption.value })}>
+                    {activeTagOption.label}
+                  </Link>
+                )}
             </div>
           </div>
+
+          {moreTagCount > 0 && (
+            <details className={styles.filterMore} open={Boolean(tagFilter)}>
+              <summary>
+                <span>More audience and tags</span>
+                <small>{moreTagCount} filters</small>
+              </summary>
+              <div className={styles.filterMoreBody}>
+                {overflowAudienceTagOptions.length > 0 && (
+                  <div className="study-library-filter-group">
+                    <span>Additional Audience / Exam</span>
+                    <div className="study-filter-pills">
+                      {overflowAudienceTagOptions.map((value) => (
+                        <Link
+                          className={tagFilter === value.value.toLowerCase() ? "active" : ""}
+                          href={libraryHref({ tag: value.value })}
+                          key={value.value}
+                        >
+                          {value.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {deckTagOptions.length > 0 && (
+                  <div className="study-library-filter-group">
+                    <span>Topic Tags</span>
+                    <div className={`study-filter-pills ${styles.compactPills}`}>
+                      {deckTagOptions.map((value) => (
+                        <Link
+                          className={tagFilter === value.value.toLowerCase() ? "active" : ""}
+                          href={libraryHref({ tag: value.value })}
+                          key={value.value}
+                        >
+                          {value.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </details>
+          )}
         </div>
       </section>
 
-      {filteredDecks.length === 0 ? (
+      {totalResults === 0 ? (
         <section className="panel study-empty-panel">
-          {filteredDecks.length === 0 && !hasFilters ? (
+          {!hasFilters ? (
             <>
-              <h2>No public decks yet.</h2>
-              <p>Public and Official Study decks will appear here after deck curation or when you share one of your own.</p>
-              <Link className="button-link" href="/study/decks">
-                My Decks
+              <h2>No Study library items yet.</h2>
+              <p>Public and Official stacks or decks will appear here after curation.</p>
+              <Link className="button-link" href="/study/decks/new">
+                Create Deck
               </Link>
             </>
           ) : (
@@ -260,11 +366,39 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
           )}
         </section>
       ) : (
-        <section className="study-deck-grid" aria-label="Public Study decks">
-          {filteredDecks.map((deck) => (
-            <StudyDeckCard currentUserId={userId} deck={deck} key={deck.id} />
-          ))}
-        </section>
+        <>
+          {filteredStacks.length > 0 && (
+            <>
+              <section className="section-head">
+                <div>
+                  <p className="eyebrow">Stacks</p>
+                  <h2>Study paths</h2>
+                </div>
+              </section>
+              <section className="study-deck-grid" aria-label="Study stacks">
+                {filteredStacks.map((stack) => (
+                  <StudyStackCard currentUserId={userId} key={stack.id} stack={stack} />
+                ))}
+              </section>
+            </>
+          )}
+
+          {filteredDecks.length > 0 && (
+            <>
+              <section className="section-head">
+                <div>
+                  <p className="eyebrow">Decks</p>
+                  <h2>Open a deck directly</h2>
+                </div>
+              </section>
+              <section className="study-deck-grid" aria-label="Study decks">
+                {filteredDecks.map((deck) => (
+                  <StudyDeckCard currentUserId={userId} deck={deck} key={deck.id} />
+                ))}
+              </section>
+            </>
+          )}
+        </>
       )}
     </div>
   );

@@ -18,19 +18,12 @@ import {
 
 type Filter = "all" | "due" | "weak";
 type Modality = "handsfree" | "visual";
+type OrderMode = "ordered" | "random";
 type QueueMode = "once" | "srs";
-type Level = "all" | "beginner" | "intermediate" | "advanced";
-
-type LevelCounts = {
-  advanced: number;
-  beginner: number;
-  intermediate: number;
-};
 
 type Props = {
   deckId: string;
   dueCount: number;
-  levelCounts: LevelCounts;
   totalCount: number;
   weakCount: number;
 };
@@ -41,8 +34,8 @@ function buildUrl(
   deckId: string,
   filter: Filter,
   modality: Modality,
+  orderMode: OrderMode,
   queueMode: QueueMode,
-  level: Level,
   mode: "flashcards" | "match" | "quiz" | "test" | "truefalse" | "written",
 ) {
   const search = new URLSearchParams();
@@ -50,33 +43,31 @@ function buildUrl(
   if (queueMode === "srs" && (mode === "flashcards" || mode === "quiz" || mode === "truefalse" || mode === "written")) {
     search.set("srs", "1");
   }
-  if (level !== "all") {
-    search.set("level", level);
+  if (orderMode === "ordered") {
+    search.set("order", "ordered");
+  }
+
+  if (modality === "handsfree") {
+    search.set("hf", "1");
+    return `/study/decks/${deckId}/study/verbal?${search.toString()}`;
   }
 
   if (mode === "flashcards") {
-    if (modality === "handsfree") {
-      search.set("hf", "1");
-      return `/study/decks/${deckId}/study/verbal?${search.toString()}`;
-    }
     return `/study/decks/${deckId}/study?${search.toString()}`;
   }
   if (mode === "quiz" || mode === "truefalse") {
     search.set("mode", mode === "truefalse" ? "truefalse" : "quiz");
-    if (modality === "handsfree") {
-      search.set("hf", "1");
-    }
     return `/study/decks/${deckId}/study/quiz?${search.toString()}`;
   }
   return `/study/decks/${deckId}/study/${mode}?${search.toString()}`;
 }
 
-export function StudyPicker({ deckId, dueCount, levelCounts, totalCount, weakCount }: Props) {
+export function StudyPicker({ deckId, dueCount, totalCount, weakCount }: Props) {
   const [open, setOpen] = useState(false);
-  const [filter, setFilter] = useState<Filter>(dueCount > 0 ? "due" : "all");
+  const [filter, setFilter] = useState<Filter>("all");
   const [modality, setModality] = useState<Modality | null>(null);
+  const [orderMode, setOrderMode] = useState<OrderMode>("random");
   const [queueMode, setQueueMode] = useState<QueueMode>("once");
-  const [level, setLevel] = useState<Level>("all");
   const [resumeInfo] = useState<ResumeInfo | null>(() => {
     if (typeof window === "undefined") return null;
     try {
@@ -97,8 +88,6 @@ export function StudyPicker({ deckId, dueCount, levelCounts, totalCount, weakCou
     }
   });
 
-  const hasLevels = levelCounts.beginner + levelCounts.intermediate + levelCounts.advanced > 0;
-
   const modes: Array<{
     desc: string;
     icon: ReactNode;
@@ -113,7 +102,8 @@ export function StudyPicker({ deckId, dueCount, levelCounts, totalCount, weakCou
     { key: "match", label: "Match", icon: <Shuffle size={18} />, desc: "Match terms and definitions", visualOnly: true },
     { key: "test", label: "Test", icon: <ClipboardList size={18} />, desc: "Full test with final review", visualOnly: true },
   ];
-  const visibleModes = modality === "handsfree" ? modes.filter((mode) => !mode.visualOnly) : modes;
+  const selectedModality: Modality = modality ?? "visual";
+  const visibleModes = selectedModality === "handsfree" ? modes.filter((mode) => mode.key === "flashcards") : modes;
 
   if (!open) {
     return (
@@ -128,25 +118,25 @@ export function StudyPicker({ deckId, dueCount, levelCounts, totalCount, weakCou
             </Link>
           </div>
         )}
-        <div className="study-picker__presets pill-grid">
-          <button className="secondary" disabled={dueCount === 0} onClick={() => { setFilter("due"); setOpen(true); }} type="button">Due ({dueCount})</button>
-          <button className="secondary" disabled={weakCount === 0} onClick={() => { setFilter("weak"); setOpen(true); }} type="button">Weak ({weakCount})</button>
-          <button className="secondary" onClick={() => { setFilter("all"); setOpen(true); }} type="button">All ({totalCount})</button>
-        </div>
-      </section>
-    );
-  }
-
-  if (!modality) {
-    return (
-      <section className="study-picker study-picker--open panel">
-        <div className="study-picker__header">
-          <h3>Choose Study Mode</h3>
-          <button className="secondary" onClick={() => { setOpen(false); }} type="button"><X size={14} /></button>
-        </div>
         <div className="study-picker__modalities segmented-control">
-          <button className={modality === "handsfree" ? "active" : ""} onClick={() => setModality("handsfree")} type="button"><Headphones size={16} /> Hands-Free</button>
-          <button className={modality === "visual" ? "active" : ""} onClick={() => setModality("visual")} type="button"><Eye size={16} /> Visual</button>
+          <button
+            onClick={() => {
+              setModality("handsfree");
+              setOpen(true);
+            }}
+            type="button"
+          >
+            <Headphones size={16} /> Hands-Free
+          </button>
+          <button
+            onClick={() => {
+              setModality("visual");
+              setOpen(true);
+            }}
+            type="button"
+          >
+            <Eye size={16} /> Visual
+          </button>
         </div>
       </section>
     );
@@ -155,27 +145,43 @@ export function StudyPicker({ deckId, dueCount, levelCounts, totalCount, weakCou
   return (
     <section className="study-picker study-picker--open panel">
       <div className="study-picker__header">
-        <h3>{modality === "handsfree" ? "Hands-Free Modes" : "Visual Modes"}</h3>
-        <button className="secondary" onClick={() => { setOpen(false); }} type="button"><X size={14} /></button>
+        <h3>{selectedModality === "handsfree" ? "Hands-Free" : "Visual"}</h3>
+        <button className="secondary" onClick={() => { setOpen(false); setModality(null); }} type="button"><X size={14} /></button>
+      </div>
+      <div className="study-picker__filters pill-grid">
+        <button className={filter === "all" ? "" : "secondary"} onClick={() => setFilter("all")} type="button">
+          All cards ({totalCount})
+        </button>
+        <button
+          className={filter === "due" ? "" : "secondary"}
+          disabled={dueCount === 0}
+          onClick={() => setFilter("due")}
+          type="button"
+        >
+          Ready for review ({dueCount})
+        </button>
+        <button
+          className={filter === "weak" ? "" : "secondary"}
+          disabled={weakCount === 0}
+          onClick={() => setFilter("weak")}
+          type="button"
+        >
+          Weak cards ({weakCount})
+        </button>
       </div>
       <div className="study-picker__queue-toggle segmented-control">
-        <button className={queueMode === "once" ? "active" : ""} onClick={() => setQueueMode("once")} type="button">Once</button>
-        <button className={queueMode === "srs" ? "active" : ""} onClick={() => setQueueMode("srs")} type="button">SRS</button>
+        <button className={queueMode === "once" ? "active" : ""} onClick={() => setQueueMode("once")} type="button">One Pass</button>
+        <button className={queueMode === "srs" ? "active" : ""} onClick={() => setQueueMode("srs")} type="button">Smart Review</button>
       </div>
-      {hasLevels && (
-        <div className="study-picker__filters pill-grid">
-          {(["all", "beginner", "intermediate", "advanced"] as const).map((option) => (
-            <button className={level === option ? "" : "secondary"} key={option} onClick={() => setLevel(option)} type="button">
-              {option}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="study-picker__queue-toggle segmented-control" aria-label="Card order">
+        <button className={orderMode === "random" ? "active" : ""} onClick={() => setOrderMode("random")} type="button">Random</button>
+        <button className={orderMode === "ordered" ? "active" : ""} onClick={() => setOrderMode("ordered")} type="button">Deck order</button>
+      </div>
       <div className="study-picker__mode-cards">
         {visibleModes.map((mode) => (
           <Link
             className="study-picker__mode-card"
-            href={buildUrl(deckId, filter, modality, queueMode, level, mode.key)}
+            href={buildUrl(deckId, filter, selectedModality, orderMode, queueMode, mode.key)}
             key={mode.key}
             onClick={() => { setOpen(false); setModality(null); }}
           >

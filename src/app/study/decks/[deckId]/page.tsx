@@ -24,6 +24,21 @@ type Props = {
   params: Promise<{ deckId: string }>;
 };
 
+type StudyDeckCard = Awaited<ReturnType<typeof getStudyDeckCards>>[number];
+
+function isExpertReviewedCard(card: StudyDeckCard) {
+  return (
+    card.sources?.some((source) => {
+      const value = source.sourceMetadata?.expertReview;
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return false;
+      }
+
+      return (value as Record<string, unknown>).status === "expert_reviewed";
+    }) ?? false
+  );
+}
+
 export default async function StudyDeckPage({ params }: Props) {
   const { deckId } = await params;
   const session = await auth();
@@ -45,9 +60,11 @@ export default async function StudyDeckPage({ params }: Props) {
     getStudyWeakCards(deckId),
     getStudyDeckStats(deckId),
   ]);
-  const isOwner = deck.userId === userId;
+  const isOwner = !deck.isOfficial && deck.userId === userId;
   const verifiedCardCount = deck.verifiedCardCount ?? 0;
   const isFullyVerified = deck.cardCount > 0 && verifiedCardCount === deck.cardCount;
+  const expertReviewedCardCount = cards.filter(isExpertReviewedCard).length;
+  const isExpertReviewed = deck.cardCount > 0 && expertReviewedCardCount === deck.cardCount;
 
   return (
     <div className="screen study-dashboard-screen">
@@ -95,7 +112,8 @@ export default async function StudyDeckPage({ params }: Props) {
           {isOwner && <span className="badge">Mine</span>}
           {deck.isPublic && <span className="badge">Public</span>}
           {deck.isOfficial && <StudyTrustBadge type="official" />}
-          {isFullyVerified && <StudyTrustBadge type="verified" />}
+          {isFullyVerified && !deck.isOfficial && <StudyTrustBadge type="verified" />}
+          {isExpertReviewed && <StudyTrustBadge type="expert" />}
           {deck.subject && <span className="badge">{deck.subject}</span>}
           {deck.tags?.map((tag) => (
             <span className="badge" key={tag}>
@@ -103,18 +121,18 @@ export default async function StudyDeckPage({ params }: Props) {
             </span>
           ))}
           <span className="badge">{deck.cardCount} cards</span>
-          {verifiedCardCount > 0 && !isFullyVerified && (
+          {verifiedCardCount > 0 && !isFullyVerified && !deck.isOfficial && (
             <span className="badge">
               {verifiedCardCount}/{deck.cardCount} verified cards
             </span>
           )}
         </div>
-        {verifiedCardCount > 0 && (
+        {verifiedCardCount > 0 && !deck.isOfficial && (
           <p className="field-note">
             Official means QuesIQ-curated. Verified means source/card checked with high confidence; it is not a credential.
           </p>
         )}
-        {isAdmin && (
+        {isAdmin && !deck.isOfficial && (
           <StudyVerifyButton deckId={deckId} />
         )}
       </section>
@@ -123,7 +141,7 @@ export default async function StudyDeckPage({ params }: Props) {
         <section className="study-stat-strip" aria-label="Deck stats">
           <div className={stats.due > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
             <strong>{dueCards.length}</strong>
-            <span>Due</span>
+            <span>Ready</span>
           </div>
           <div className={stats.mastered > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
             <strong>{stats.mastered}</strong>
@@ -150,11 +168,6 @@ export default async function StudyDeckPage({ params }: Props) {
           <StudyPicker
             deckId={deckId}
             dueCount={dueCards.length}
-            levelCounts={{
-              advanced: cards.filter((card) => card.level === "advanced").length,
-              beginner: cards.filter((card) => card.level === "beginner").length,
-              intermediate: cards.filter((card) => card.level === "intermediate").length,
-            }}
             totalCount={cards.length}
             weakCount={weakCards.length}
           />
@@ -185,7 +198,12 @@ export default async function StudyDeckPage({ params }: Props) {
         </section>
       )}
 
-      <StudyCardList deckId={deckId} initialCards={cards} isOwner={isOwner} />
+      <StudyCardList
+        deckId={deckId}
+        deckIsOfficial={deck.isOfficial}
+        initialCards={cards}
+        isOwner={isOwner}
+      />
     </div>
   );
 }

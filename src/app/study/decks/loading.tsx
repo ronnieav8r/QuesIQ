@@ -11,7 +11,7 @@ export default function StudyDecksLoading() {
       <section className="panel study-empty-panel">
         <div className="spinner" />
         <h2>Getting your deck library ready</h2>
-        <p>Folders, due cards, and trust labels will appear here in a moment.</p>
+        <p>Folders, review cards, and trust labels will appear here in a moment.</p>
       </section>
     </div>
   );

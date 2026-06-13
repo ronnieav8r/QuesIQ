@@ -132,6 +132,10 @@ export async function verifyStudyDeckWithAi(args: {
     return undefined;
   }
 
+  if (deck.isOfficial) {
+    throw new Error("Official decks are already QuesIQ-verified and cannot run lightweight AI verification.");
+  }
+
   const cards = await db
     .select({
       answer: studyCards.answer,

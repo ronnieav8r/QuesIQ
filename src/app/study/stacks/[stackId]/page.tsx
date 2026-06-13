@@ -7,8 +7,10 @@ import { BookOpen, ChevronLeft, Play } from "lucide-react";
 import { auth } from "@/auth";
 import {
   getStudyDecksWithStats,
+  getStudyStackCardStats,
   getStudyStackWithDecks,
 } from "@/features/study/study-data";
+import { StudyStackPicker } from "@/features/study/study-stack-picker";
 import { StudyStackEditor } from "@/features/study/study-stack-editor";
 import styles from "@/features/study/study-stacks.module.css";
 import { StudyTrustBadge } from "@/features/study/study-trust-badge";
@@ -23,26 +25,29 @@ export default async function StudyStackPage({ params }: Props) {
   const session = await auth();
   const userId = session?.user?.id;
   const isAdmin = isAdminEmail(session?.user?.email);
-  const stack = await getStudyStackWithDecks(stackId, userId);
+  const [stack, stats] = await Promise.all([
+    getStudyStackWithDecks(stackId, userId),
+    getStudyStackCardStats(stackId, userId),
+  ]);
 
   if (!stack) {
     notFound();
   }
 
-  const isOwner = stack.userId === userId;
+  const isOwner = !stack.isOfficial && stack.userId === userId;
+  const isFullyVerified = stack.cardCount > 0 && stack.verifiedCardCount === stack.cardCount;
+  const isExpertReviewed =
+    stack.cardCount > 0 && (stack.expertReviewedCardCount ?? 0) === stack.cardCount;
   const userDecks = isOwner && userId ? await getStudyDecksWithStats(userId) : [];
 
   return (
     <div className="screen study-dashboard-screen">
       <div className="screen-toolbar">
-        <Link className="back-button" href="/study/stacks">
+        <Link className="back-button" href="/study/library">
           <ChevronLeft size={16} aria-hidden="true" />
-          Stacks
+          Library
         </Link>
         <div className="inline-actions">
-          <Link className="button-link secondary" href="/study/decks">
-            Decks
-          </Link>
           {isOwner && (
             <Link className="button-link secondary" href="/study/stacks/new">
               New Stack
@@ -55,10 +60,20 @@ export default async function StudyStackPage({ params }: Props) {
         <p className="eyebrow">Study Stack</p>
         <h1>{stack.title}</h1>
         {stack.description && <p>{stack.description}</p>}
+        {stack.cardCount > 0 && (
+          <StudyStackPicker
+            readyCount={stats.due}
+            stackId={stack.id}
+            totalCount={stack.cardCount}
+            weakCount={stats.weak}
+          />
+        )}
         <div className="study-deck-card__footer">
           {isOwner && <span className="badge">Mine</span>}
           {stack.isPublic && <span className="badge">Public</span>}
           {stack.isOfficial && <StudyTrustBadge type="official" />}
+          {isFullyVerified && !stack.isOfficial && <StudyTrustBadge type="verified" />}
+          {isExpertReviewed && <StudyTrustBadge type="expert" />}
           {stack.subject && <span className="badge">{stack.subject}</span>}
           <span className="badge">{stack.deckCount} decks</span>
           <span className="badge">{stack.cardCount} cards</span>
@@ -77,6 +92,22 @@ export default async function StudyStackPage({ params }: Props) {
         <div className={stack.isPublic ? "study-stat-chip highlight" : "study-stat-chip"}>
           <strong>{stack.isPublic ? "On" : "Off"}</strong>
           <span>Public</span>
+        </div>
+        <div className={stats.due > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
+          <strong>{stats.due}</strong>
+          <span>Ready</span>
+        </div>
+        <div className={stats.weak > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
+          <strong>{stats.weak}</strong>
+          <span>Weak</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{stats.mastered}</strong>
+          <span>Mastered</span>
+        </div>
+        <div className="study-stat-chip">
+          <strong>{stats.verified}</strong>
+          <span>Verified</span>
         </div>
       </section>
 
@@ -102,6 +133,8 @@ export default async function StudyStackPage({ params }: Props) {
           {stack.decks.map((deck, index) => {
             const isFullyVerified =
               deck.cardCount > 0 && (deck.verifiedCardCount ?? 0) === deck.cardCount;
+            const isExpertReviewed =
+              deck.cardCount > 0 && (deck.expertReviewedCardCount ?? 0) === deck.cardCount;
             return (
               <li className={styles.item} key={deck.deckId}>
                 <div className={styles.rank}>{index + 1}</div>
@@ -109,7 +142,8 @@ export default async function StudyStackPage({ params }: Props) {
                   <div className="study-deck-card__header">
                     {deck.isPublic && <span className="badge">Public</span>}
                     {deck.isOfficial && <StudyTrustBadge compact type="official" />}
-                    {isFullyVerified && <StudyTrustBadge compact type="verified" />}
+                    {isFullyVerified && !deck.isOfficial && <StudyTrustBadge compact type="verified" />}
+                    {isExpertReviewed && <StudyTrustBadge compact type="expert" />}
                     {deck.subject && <span className="badge">{deck.subject}</span>}
                   </div>
                   <h3>{deck.title}</h3>
@@ -120,7 +154,7 @@ export default async function StudyStackPage({ params }: Props) {
                   <Link className="button-link secondary" href={`/study/decks/${deck.deckId}`}>
                     Details
                   </Link>
-                  <Link className="button-link" href={`/study/decks/${deck.deckId}/study`}>
+                  <Link className="button-link" href={`/study/decks/${deck.deckId}`}>
                     <Play size={14} aria-hidden="true" />
                     Study
                   </Link>

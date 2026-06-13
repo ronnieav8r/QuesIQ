@@ -13,8 +13,6 @@ import {
   ChevronUp,
   History,
   Home,
-  Layers,
-  Layers3,
   LogOut,
   Menu,
   Plus,
@@ -47,29 +45,22 @@ const studyNavItems: StudyNavItem[] = [
     match: (pathname) => pathname === "/study",
   },
   {
-    href: "/study/decks",
-    icon: Layers,
-    label: "Decks",
+    href: "/study/library",
+    icon: BookOpen,
+    label: "Library",
     match: (pathname) =>
-      pathname === "/study/decks" || (pathname.startsWith("/study/decks/") && pathname !== "/study/decks/new"),
+      pathname === "/study/library" ||
+      pathname.startsWith("/study/library/") ||
+      pathname === "/study/decks" ||
+      (pathname.startsWith("/study/decks/") && pathname !== "/study/decks/new") ||
+      pathname === "/study/stacks" ||
+      (pathname.startsWith("/study/stacks/") && pathname !== "/study/stacks/new"),
   },
   {
     href: "/study/decks/new",
     icon: Plus,
     label: "New",
-    match: (pathname) => pathname === "/study/decks/new",
-  },
-  {
-    href: "/study/stacks",
-    icon: Layers3,
-    label: "Stacks",
-    match: (pathname) => pathname === "/study/stacks" || pathname.startsWith("/study/stacks/"),
-  },
-  {
-    href: "/study/library",
-    icon: BookOpen,
-    label: "Library",
-    match: (pathname) => pathname === "/study/library" || pathname.startsWith("/study/library/"),
+    match: (pathname) => pathname === "/study/decks/new" || pathname === "/study/stacks/new",
   },
   {
     href: "/study/history",
@@ -79,7 +70,7 @@ const studyNavItems: StudyNavItem[] = [
   },
 ];
 
-const overflowMobileStudyNavItems = studyNavItems.slice(4);
+const overflowMobileStudyNavItems = studyNavItems.slice(3);
 
 export function StudyShell({ authSession, children }: StudyShellProps) {
   const pathname = usePathname();

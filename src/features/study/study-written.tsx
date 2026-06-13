@@ -3,13 +3,16 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 
+import { StudyCardBack, type StudyCardSourceForBack } from "@/features/study/study-card-back";
 import type { StudyVerdict } from "@/features/study/study-srs";
 
 type StudyWrittenCard = {
   answer: string;
+  explanation: string | null;
   hint: string | null;
   id: string;
   question: string;
+  sources?: StudyCardSourceForBack[];
 };
 
 type StudyWrittenProps = {
@@ -210,7 +213,11 @@ export function StudyWritten({ cards, deckId, filter, srs }: StudyWrittenProps) 
         <div className="panel">
           <p className="eyebrow">{feedback.verdict.toUpperCase()}</p>
           <p>{feedback.explanation}</p>
-          <p className="study-card-hint">Correct answer: {card.answer}</p>
+          <StudyCardBack
+            answer={card.answer}
+            explanation={card.explanation}
+            sources={card.sources}
+          />
         </div>
       )}
 

@@ -32,7 +32,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (deck.userId !== session.user.id) {
+  if (!deck.isPublic && deck.userId !== session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

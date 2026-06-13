@@ -7,20 +7,30 @@ export const STUDY_RICH_IMPORT_HEADERS = [
   "externalId",
   "deckTitle",
   "deckDescription",
+  "industry",
+  "role",
+  "certification",
+  "examOrStandard",
+  "version",
   "subject",
+  "topic",
   "audience",
   "question",
   "answer",
+  "explanation",
   "hint",
   "level",
   "tags",
+  "sourceLabel",
+  "sourceUrl",
+  "additionalReferenceLabels",
+  "additionalReferenceUrls",
+  "referenceNote",
   "sourcePackId",
   "sourcePackTitle",
   "sourceChunkIds",
   "sourcePages",
   "sourceVisualAssetIds",
-  "sourceLabel",
-  "sourceUrl",
   "sourceNotes",
   "draftId",
   "draftConfidence",
@@ -32,6 +42,11 @@ export const STUDY_RICH_IMPORT_HEADERS = [
   "verifier",
   "isOfficial",
   "isVerified",
+  "expertReviewStatus",
+  "expertReviewType",
+  "expertReviewer",
+  "expertReviewDate",
+  "expertReviewNotes",
 ] as const;
 export type StudyRichImportTargetField = (typeof STUDY_RICH_IMPORT_HEADERS)[number];
 export type StudyRichImportColumnMapping = Partial<Record<StudyRichImportTargetField, string>>;
@@ -39,15 +54,28 @@ export type StudyRichImportColumnMapping = Partial<Record<StudyRichImportTargetF
 export const STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING: Record<StudyRichImportTargetField, string> = {
   audience: "audience",
   answer: "answer",
+  additionalReferenceLabels: "additionalReferenceLabels",
+  additionalReferenceUrls: "additionalReferenceUrls",
+  certification: "certification",
   deckDescription: "deckDescription",
   deckTitle: "deckTitle",
   draftConfidence: "draftConfidence",
   draftId: "draftId",
   draftWarnings: "draftWarnings",
+  examOrStandard: "examOrStandard",
+  expertReviewDate: "expertReviewDate",
+  expertReviewer: "expertReviewer",
+  expertReviewNotes: "expertReviewNotes",
+  expertReviewStatus: "expertReviewStatus",
+  expertReviewType: "expertReviewType",
+  explanation: "explanation",
   externalId: "externalId",
   hint: "hint",
+  industry: "industry",
   level: "level",
   question: "question",
+  referenceNote: "referenceNote",
+  role: "role",
   sourceChunkIds: "sourceChunkIds",
   sourceLabel: "sourceLabel",
   sourceNotes: "sourceNotes",
@@ -58,6 +86,8 @@ export const STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING: Record<StudyRichImportTar
   sourceVisualAssetIds: "sourceVisualAssetIds",
   subject: "subject",
   tags: "tags",
+  topic: "topic",
+  version: "version",
   verificationConfidence: "verificationConfidence",
   verificationEvidence: "verificationEvidence",
   verificationNotes: "verificationNotes",
@@ -68,22 +98,40 @@ export const STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING: Record<StudyRichImportTar
 };
 
 type StudyRichImportLevel = "advanced" | "beginner" | "intermediate";
+type StudyRichExpertReviewStatus = "expert_reviewed" | "needs_expert_review" | "not_required" | "rejected";
 type StudyRichVerificationStatus = "blocked" | "needs_review" | "ready_for_verifier" | "unverified" | "verified";
 
 export type StudyRichImportNormalizedRow = {
   answer: string;
+  certification?: string;
   audience?: string;
   deckDescription?: string;
   deckTitle?: string;
   draftConfidence?: number;
   draftId?: string;
   draftWarnings: string[];
+  examOrStandard?: string;
+  expertReview: {
+    date?: string;
+    notes?: string;
+    reviewer?: string;
+    status?: StudyRichExpertReviewStatus;
+    type?: string;
+  };
+  explanation?: string;
   externalId?: string;
   hint?: string;
+  industry?: string;
   level?: StudyRichImportLevel;
   question: string;
+  role?: string;
   isOfficial?: boolean;
+  isVerified?: boolean;
+  rawFields: Record<string, string>;
   source: {
+    additionalReferenceLabels: string[];
+    additionalReferenceUrls: string[];
+    referenceNote?: string;
     sourceChunkIds: string[];
     sourceLabel?: string;
     sourceNotes?: string;
@@ -95,6 +143,8 @@ export type StudyRichImportNormalizedRow = {
   };
   subject?: string;
   tags: string[];
+  topic?: string;
+  version?: string;
   verification: {
     confidence?: number;
     evidence: string[];
@@ -123,6 +173,7 @@ export type StudyRichImportParseResult = {
     uniquePages: number;
     uniqueVisualAssetIds: number;
   };
+  expertReviewStatusCounts: Partial<Record<StudyRichExpertReviewStatus, number>>;
   verificationStatusCounts: Partial<Record<StudyRichVerificationStatus, number>>;
   unmappedRequiredFields: StudyRichImportTargetField[];
   warnings: StudyRichImportParseIssue[];
@@ -257,6 +308,25 @@ function normalizeVerificationStatus(value: string): StudyRichVerificationStatus
   return undefined;
 }
 
+function normalizeExpertReviewStatus(value: string): StudyRichExpertReviewStatus | undefined {
+  const lower = value.trim().toLowerCase();
+  if (
+    lower === "expert_reviewed" ||
+    lower === "needs_expert_review" ||
+    lower === "not_required" ||
+    lower === "rejected"
+  ) {
+    return lower;
+  }
+  return undefined;
+}
+
+function normalizeIsoDate(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  return /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? trimmed : undefined;
+}
+
 function parseConfidence(value: string): number | undefined {
   if (!value.trim()) return undefined;
   const parsed = Number(value.trim());
@@ -282,6 +352,7 @@ function normalizeHeader(value: string) {
 
 function shouldVerifyCard(row: StudyRichImportNormalizedRow) {
   return (
+    row.isVerified === true &&
     row.verification.status === "verified" &&
     typeof row.verification.confidence === "number" &&
     row.verification.confidence >= 0.8 &&
@@ -291,20 +362,38 @@ function shouldVerifyCard(row: StudyRichImportNormalizedRow) {
 
 function targetFieldAliases(target: StudyRichImportTargetField) {
   const aliases: Record<StudyRichImportTargetField, string[]> = {
+    additionalReferenceLabels: ["additionalReferenceLabels", "additional_reference_labels", "additionalReferences", "additional_references"],
+    additionalReferenceUrls: [
+      "additionalReferenceUrls",
+      "additional_reference_urls",
+      "additionalReferencesUrls",
+      "additional_reference_urls",
+    ],
     audience: ["audience"],
     answer: ["answer", "shortAnswer", "short_answer"],
+    certification: ["certification"],
     deckDescription: ["deckDescription", "deck_description", "version"],
     deckTitle: ["deckTitle", "deck_title", "examOrStandard", "exam_or_standard", "certification"],
     draftConfidence: ["draftConfidence", "draft_confidence"],
     draftId: ["draftId", "draft_id"],
     draftWarnings: ["draftWarnings", "draft_warnings"],
+    examOrStandard: ["examOrStandard", "exam_or_standard"],
+    expertReviewDate: ["expertReviewDate", "expert_review_date"],
+    expertReviewer: ["expertReviewer", "expert_reviewer"],
+    expertReviewNotes: ["expertReviewNotes", "expert_review_notes"],
+    expertReviewStatus: ["expertReviewStatus", "expert_review_status"],
+    expertReviewType: ["expertReviewType", "expert_review_type"],
+    explanation: ["explanation", "expandedAnswer", "expanded_answer", "learnerExplanation", "learner_explanation"],
     externalId: ["externalId", "external_id", "card_id"],
-    hint: ["hint", "explanation"],
+    hint: ["hint"],
+    industry: ["industry"],
     level: ["level"],
     question: ["question"],
+    referenceNote: ["referenceNote", "reference_note"],
+    role: ["role"],
     sourceChunkIds: ["sourceChunkIds", "source_chunk_ids"],
     sourceLabel: ["sourceLabel", "source_label", "officialReference", "official_reference"],
-    sourceNotes: ["sourceNotes", "source_notes", "additionalReferences", "additional_references"],
+    sourceNotes: ["sourceNotes", "source_notes"],
     sourcePackId: ["sourcePackId", "source_pack_id", "examOrStandard", "exam_or_standard"],
     sourcePackTitle: ["sourcePackTitle", "source_pack_title", "certification", "version"],
     sourcePages: ["sourcePages", "source_pages", "source_page_anchors"],
@@ -312,13 +401,10 @@ function targetFieldAliases(target: StudyRichImportTargetField) {
     sourceVisualAssetIds: ["sourceVisualAssetIds", "source_visual_asset_ids", "source_visual_ids"],
     subject: ["subject"],
     tags: ["tags"],
+    topic: ["topic"],
+    version: ["version"],
     verificationConfidence: ["verificationConfidence", "verification_confidence"],
-    verificationEvidence: [
-      "verificationEvidence",
-      "verification_evidence",
-      "additionalReferenceUrls",
-      "additional_reference_urls",
-    ],
+    verificationEvidence: ["verificationEvidence", "verification_evidence"],
     verificationNotes: ["verificationNotes", "verification_notes"],
     verificationStatus: ["verificationStatus", "verification_status"],
     verifier: ["verifier"],
@@ -399,6 +485,7 @@ export function parseStudyRichFlashcardImportText(
       rowCount: 0,
       rows: [],
       sourceCoverage: { sourcePackIds: [], uniqueChunkIds: 0, uniquePages: 0, uniqueVisualAssetIds: 0 },
+      expertReviewStatusCounts: {},
       verificationStatusCounts: {},
       unmappedRequiredFields: ["question", "answer"],
       warnings: [],
@@ -419,6 +506,7 @@ export function parseStudyRichFlashcardImportText(
       rowCount: 0,
       rows: [],
       sourceCoverage: { sourcePackIds: [], uniqueChunkIds: 0, uniquePages: 0, uniqueVisualAssetIds: 0 },
+      expertReviewStatusCounts: {},
       verificationStatusCounts: {},
       unmappedRequiredFields: ["question", "answer"],
       warnings: [],
@@ -449,6 +537,7 @@ export function parseStudyRichFlashcardImportText(
   const chunkIds = new Set<string>();
   const pages = new Set<number>();
   const visualIds = new Set<string>();
+  const expertReviewStatusCounts: Partial<Record<StudyRichExpertReviewStatus, number>> = {};
   const verificationStatusCounts: Partial<Record<StudyRichVerificationStatus, number>> = {};
 
   for (let rowOffset = 0; rowOffset < dataRows.length; rowOffset += 1) {
@@ -466,6 +555,7 @@ export function parseStudyRichFlashcardImportText(
 
     const question = getMappedValue("question");
     const answer = getMappedValue("answer");
+    const explanation = getMappedValue("explanation") || undefined;
     if (!question) errors.push({ message: "Missing question.", row: rowNumber, severity: "error" });
     if (!answer) errors.push({ message: "Missing answer.", row: rowNumber, severity: "error" });
     if (!question || !answer) continue;
@@ -479,10 +569,30 @@ export function parseStudyRichFlashcardImportText(
     const verificationStatusRaw = getMappedValue("verificationStatus");
     const verificationStatus = normalizeVerificationStatus(verificationStatusRaw);
     if (verificationStatusRaw && !verificationStatus) {
-      warnings.push({
-        message: `Unknown verificationStatus '${verificationStatusRaw}' (ignored).`,
+      errors.push({
+        message: `Unknown verificationStatus '${verificationStatusRaw}'.`,
         row: rowNumber,
-        severity: "warning",
+        severity: "error",
+      });
+    }
+
+    const expertReviewStatusRaw = getMappedValue("expertReviewStatus");
+    const expertReviewStatus = normalizeExpertReviewStatus(expertReviewStatusRaw);
+    if (expertReviewStatusRaw && !expertReviewStatus) {
+      errors.push({
+        message: `Unknown expertReviewStatus '${expertReviewStatusRaw}'.`,
+        row: rowNumber,
+        severity: "error",
+      });
+    }
+
+    const expertReviewDateRaw = getMappedValue("expertReviewDate");
+    const expertReviewDate = normalizeIsoDate(expertReviewDateRaw);
+    if (expertReviewDateRaw && !expertReviewDate) {
+      errors.push({
+        message: `Invalid expertReviewDate '${expertReviewDateRaw}'. Use YYYY-MM-DD.`,
+        row: rowNumber,
+        severity: "error",
       });
     }
 
@@ -526,11 +636,6 @@ export function parseStudyRichFlashcardImportText(
       });
     }
 
-    let resolvedVerificationStatus = verificationStatus;
-    if (!resolvedVerificationStatus && isVerified === true) {
-      resolvedVerificationStatus = "verified";
-    }
-
     const sourceLabel = getMappedValue("sourceLabel") || undefined;
     const sourceUrl = getMappedValue("sourceUrl") || undefined;
     const inferredOfficialFromReference =
@@ -543,20 +648,45 @@ export function parseStudyRichFlashcardImportText(
       ]) &&
       Boolean(sourceLabel || sourceUrl);
 
+    const rawFields: Record<string, string> = {};
+    detectedHeaders.forEach((header, index) => {
+      const value = (row[index] ?? "").trim();
+      if (header && value) {
+        rawFields[header] = value;
+      }
+    });
+
     const normalizedRow: StudyRichImportNormalizedRow = {
       answer,
+      certification: getMappedValue("certification") || undefined,
       audience: getMappedValue("audience") || undefined,
       deckDescription: getMappedValue("deckDescription") || undefined,
       deckTitle: getMappedValue("deckTitle") || undefined,
       draftConfidence,
       draftId: getMappedValue("draftId") || undefined,
       draftWarnings: parseList(getMappedValue("draftWarnings")),
+      examOrStandard: getMappedValue("examOrStandard") || undefined,
+      expertReview: {
+        date: expertReviewDate,
+        notes: getMappedValue("expertReviewNotes") || undefined,
+        reviewer: getMappedValue("expertReviewer") || undefined,
+        status: expertReviewStatus,
+        type: getMappedValue("expertReviewType") || undefined,
+      },
+      explanation,
       externalId: getMappedValue("externalId") || undefined,
       hint: getMappedValue("hint") || undefined,
+      industry: getMappedValue("industry") || undefined,
       isOfficial: isOfficial ?? inferredOfficialFromReference,
+      isVerified,
       level,
       question,
+      rawFields,
+      role: getMappedValue("role") || undefined,
       source: {
+        additionalReferenceLabels: parseList(getMappedValue("additionalReferenceLabels")),
+        additionalReferenceUrls: parseList(getMappedValue("additionalReferenceUrls")),
+        referenceNote: getMappedValue("referenceNote") || undefined,
         sourceChunkIds: parseList(getMappedValue("sourceChunkIds")),
         sourceLabel,
         sourceNotes: getMappedValue("sourceNotes") || undefined,
@@ -568,11 +698,13 @@ export function parseStudyRichFlashcardImportText(
       },
       subject: getMappedValue("subject") || undefined,
       tags: parseList(getMappedValue("tags")),
+      topic: getMappedValue("topic") || undefined,
+      version: getMappedValue("version") || undefined,
       verification: {
         confidence: verificationConfidence,
         evidence: parseList(getMappedValue("verificationEvidence")),
         notes: getMappedValue("verificationNotes") || undefined,
-        status: resolvedVerificationStatus,
+        status: verificationStatus,
         verifier: getMappedValue("verifier") || undefined,
       },
     };
@@ -587,9 +719,14 @@ export function parseStudyRichFlashcardImportText(
         (verificationStatusCounts[normalizedRow.verification.status] ?? 0) + 1;
     }
 
-    if (normalizedRow.verification.status === "verified" && !shouldVerifyCard(normalizedRow)) {
+    if (normalizedRow.expertReview.status) {
+      expertReviewStatusCounts[normalizedRow.expertReview.status] =
+        (expertReviewStatusCounts[normalizedRow.expertReview.status] ?? 0) + 1;
+    }
+
+    if (normalizedRow.isVerified === true && !shouldVerifyCard(normalizedRow)) {
       warnings.push({
-        message: "Row marked verified but does not meet import verification policy (status kept as metadata only).",
+        message: "Row has isVerified=true but does not meet source verification policy.",
         row: rowNumber,
         severity: "warning",
       });
@@ -611,6 +748,7 @@ export function parseStudyRichFlashcardImportText(
       uniquePages: pages.size,
       uniqueVisualAssetIds: visualIds.size,
     },
+    expertReviewStatusCounts,
     verificationStatusCounts,
     unmappedRequiredFields,
     warnings,
@@ -644,6 +782,7 @@ export async function saveStudyRichFlashcardImport(args: {
       return {
         answer: row.answer,
         deckId: args.deckId,
+        explanation: row.explanation ?? null,
         hint: row.hint ?? null,
         isVerified: verified,
         level: row.level ?? null,
@@ -664,33 +803,45 @@ export async function saveStudyRichFlashcardImport(args: {
       const hasSource =
         Boolean(source.sourceLabel) ||
         Boolean(source.sourceUrl) ||
+        Boolean(source.referenceNote) ||
+        source.additionalReferenceLabels.length > 0 ||
+        source.additionalReferenceUrls.length > 0 ||
         Boolean(source.sourcePackId) ||
         source.sourceChunkIds.length > 0 ||
         source.sourcePages.length > 0 ||
-        source.sourceVisualAssetIds.length > 0;
+        source.sourceVisualAssetIds.length > 0 ||
+        Boolean(args.rows[index].expertReview.status) ||
+        Boolean(args.rows[index].expertReview.type) ||
+        Boolean(args.rows[index].expertReview.reviewer) ||
+        Boolean(args.rows[index].expertReview.date) ||
+        Boolean(args.rows[index].expertReview.notes);
       if (!hasSource) return [];
-      const sourceLabelParts = [
-        source.sourceLabel,
-        source.sourcePackId ? `sourcePack=${source.sourcePackId}` : "",
-        source.sourcePackTitle ? `sourcePackTitle=${source.sourcePackTitle}` : "",
-        source.sourceChunkIds.length > 0 ? `chunks=${source.sourceChunkIds.join(",")}` : "",
-        source.sourcePages.length > 0 ? `pages=${source.sourcePages.join(",")}` : "",
-        source.sourceVisualAssetIds.length > 0 ? `visuals=${source.sourceVisualAssetIds.join(",")}` : "",
-        source.sourceNotes ? `notes=${source.sourceNotes}` : "",
-      ].filter(Boolean);
-      const generatedSourceLabel = sourceLabelParts.length > 0 ? sourceLabelParts.join(" | ") : undefined;
-
       return [
         {
           cardId: card.id,
-        sourceMetadata: {
+          sourceMetadata: {
+            additionalReferenceLabels: source.additionalReferenceLabels,
+            additionalReferenceUrls: source.additionalReferenceUrls,
             audience: args.rows[index].audience ?? null,
+            certification: args.rows[index].certification ?? null,
             deckDescription: args.rows[index].deckDescription ?? null,
             deckTitle: args.rows[index].deckTitle ?? null,
             draftConfidence: args.rows[index].draftConfidence ?? null,
             draftId: args.rows[index].draftId ?? null,
             draftWarnings: args.rows[index].draftWarnings,
+            examOrStandard: args.rows[index].examOrStandard ?? null,
+            expertReview: {
+              date: args.rows[index].expertReview.date ?? null,
+              notes: args.rows[index].expertReview.notes ?? null,
+              reviewer: args.rows[index].expertReview.reviewer ?? null,
+              status: args.rows[index].expertReview.status ?? null,
+              type: args.rows[index].expertReview.type ?? null,
+            },
             externalId: args.rows[index].externalId ?? null,
+            industry: args.rows[index].industry ?? null,
+            referenceNote: source.referenceNote ?? null,
+            role: args.rows[index].role ?? null,
+            rawFields: args.rows[index].rawFields,
             sourceChunkIds: source.sourceChunkIds,
             sourceNotes: source.sourceNotes ?? null,
             sourcePackId: source.sourcePackId ?? null,
@@ -699,8 +850,10 @@ export async function saveStudyRichFlashcardImport(args: {
             sourceVisualAssetIds: source.sourceVisualAssetIds,
             subject: args.rows[index].subject ?? null,
             tags: args.rows[index].tags,
+            topic: args.rows[index].topic ?? null,
+            version: args.rows[index].version ?? null,
           },
-          sourceLabel: generatedSourceLabel ?? null,
+          sourceLabel: source.sourceLabel ?? null,
           sourceType: source.sourcePackId ? "source_pack_csv" : source.sourceUrl ? "url_csv" : "csv",
           sourceUrl: source.sourceUrl ?? null,
         },
@@ -723,7 +876,13 @@ export async function saveStudyRichFlashcardImport(args: {
       const noteParts = [
         verification.status ? `status=${verification.status}` : "",
         verification.verifier ? `verifier=${verification.verifier}` : "",
+        args.rows[index].industry ? `industry=${args.rows[index].industry}` : "",
+        args.rows[index].role ? `role=${args.rows[index].role}` : "",
+        args.rows[index].certification ? `certification=${args.rows[index].certification}` : "",
+        args.rows[index].examOrStandard ? `examOrStandard=${args.rows[index].examOrStandard}` : "",
+        args.rows[index].version ? `version=${args.rows[index].version}` : "",
         args.rows[index].subject ? `subject=${args.rows[index].subject}` : "",
+        args.rows[index].topic ? `topic=${args.rows[index].topic}` : "",
         args.rows[index].audience ? `audience=${args.rows[index].audience}` : "",
         args.rows[index].tags.length > 0 ? `tags=${args.rows[index].tags.join(" | ")}` : "",
         typeof args.rows[index].draftConfidence === "number" ? `draftConfidence=${args.rows[index].draftConfidence}` : "",
@@ -786,8 +945,100 @@ export async function saveStudyRichFlashcardImport(args: {
   });
 }
 
+function sampleCsvRow(values: string[]) {
+  return values.map((value) => `"${value.replace(/"/g, "\"\"")}"`).join(",");
+}
+
 export const STUDY_RICH_IMPORT_SAMPLE_CSV = [
   STUDY_RICH_IMPORT_HEADERS.join(","),
-  "row-001,Rich CSV Sample Import,Imported through Study Admin CSV.,Flight Fundamentals,Private Pilot,What is the purpose of trim?,To relieve control pressure in steady flight.,Set pitch first then trim.,beginner,fundamentals|flight-controls,sample-source-pack,Sample Source Pack,chunk-001|chunk-002,12|13,figure-12-a,PHAK chapter 4,https://example.com/phak/ch4,Use with source-linked context,draft-001,0.86,needs_review_pass,verified,0.91,Grounded in chunk evidence,chunk-001 line 3|chunk-002 line 1,admin_reviewer,true,true",
-  "row-002,Rich CSV Sample Import,Imported through Study Admin CSV.,Flight Fundamentals,Private Pilot,When should confidence be reduced?,When source evidence is missing or contradictory.,Check source anchors first.,intermediate,verification|quality,sample-source-pack,Sample Source Pack,chunk-010,18-19,,Review Notes,,Needs human follow-up,draft-001,0.62,needs_human_review,needs_review,0.62,Needs human follow-up,chunk-010 summary,admin_reviewer,true,false",
+  sampleCsvRow([
+    "row-001",
+    "Rich CSV Sample Import",
+    "Imported through Study Admin CSV.",
+    "Aviation",
+    "Pilot",
+    "Private Pilot",
+    "FAA PHAK",
+    "2026 sample",
+    "Flight Fundamentals",
+    "Trim",
+    "Private Pilot",
+    "What is the purpose of trim?",
+    "To relieve control pressure in steady flight.",
+    "Trim helps hold the selected flight attitude without continuous control pressure. Set pitch first, then trim to reduce workload.",
+    "Set pitch first, then trim.",
+    "beginner",
+    "fundamentals|flight-controls",
+    "FAA PHAK Chapter 4",
+    "https://example.com/phak/ch4",
+    "FAA AFH Chapter 3",
+    "https://example.com/afh/ch3",
+    "Primary source supports trim purpose.",
+    "sample-source-pack",
+    "Sample Source Pack",
+    "chunk-001|chunk-002",
+    "12|13",
+    "figure-12-a",
+    "Use with source-linked context",
+    "draft-001",
+    "0.86",
+    "needs_review_pass",
+    "verified",
+    "0.91",
+    "Grounded in chunk evidence",
+    "chunk-001 line 3|chunk-002 line 1",
+    "admin_reviewer",
+    "true",
+    "true",
+    "needs_expert_review",
+    "flight_instructor",
+    "",
+    "",
+    "Source verified; awaiting instructor review.",
+  ]),
+  sampleCsvRow([
+    "row-002",
+    "Rich CSV Sample Import",
+    "Imported through Study Admin CSV.",
+    "Aviation",
+    "Pilot",
+    "Private Pilot",
+    "QuesIQ verification policy",
+    "2026 sample",
+    "Flight Fundamentals",
+    "Verification",
+    "Private Pilot",
+    "When should confidence be reduced?",
+    "When source evidence is missing or contradictory.",
+    "A lower confidence score tells reviewers the card needs another evidence pass before it should be treated as verified.",
+    "Check source anchors first.",
+    "intermediate",
+    "verification|quality",
+    "Review Notes",
+    "",
+    "",
+    "",
+    "Needs human follow-up",
+    "sample-source-pack",
+    "Sample Source Pack",
+    "chunk-010",
+    "18-19",
+    "",
+    "Needs human follow-up",
+    "draft-001",
+    "0.62",
+    "needs_human_review",
+    "needs_review",
+    "0.62",
+    "Needs human follow-up",
+    "chunk-010 summary",
+    "admin_reviewer",
+    "true",
+    "false",
+    "not_required",
+    "",
+    "",
+    "",
+    "Policy example only.",
+  ]),
 ].join("\n");

@@ -8,6 +8,7 @@ type StudyDeckCardProps = {
     cardCount: number;
     description: string | null;
     dueCount?: number;
+    expertReviewedCardCount?: number;
     id: string;
     isOfficial: boolean;
     isPublic: boolean;
@@ -44,9 +45,11 @@ function timeAgo(date: Date) {
 
 export function StudyDeckCard({ currentUserId, deck }: StudyDeckCardProps) {
   const hasStats = deck.dueCount !== undefined;
-  const isOwner = deck.userId === currentUserId;
+  const isOwner = !deck.isOfficial && deck.userId === currentUserId;
   const verifiedCardCount = deck.verifiedCardCount ?? 0;
   const isFullyVerified = deck.cardCount > 0 && verifiedCardCount === deck.cardCount;
+  const isExpertReviewed =
+    deck.cardCount > 0 && (deck.expertReviewedCardCount ?? 0) === deck.cardCount;
   const masteryPct =
     deck.cardCount > 0 ? Math.round(((deck.masteredCount ?? 0) / deck.cardCount) * 100) : 0;
 
@@ -56,9 +59,10 @@ export function StudyDeckCard({ currentUserId, deck }: StudyDeckCardProps) {
         {isOwner && <span className="badge">Mine</span>}
         {deck.isPublic && <span className="badge">Public</span>}
         {deck.isOfficial && <StudyTrustBadge compact type="official" />}
-        {isFullyVerified && <StudyTrustBadge compact type="verified" />}
+        {isFullyVerified && !deck.isOfficial && <StudyTrustBadge compact type="verified" />}
+        {isExpertReviewed && <StudyTrustBadge compact type="expert" />}
         {hasStats && (deck.dueCount ?? 0) > 0 && (
-          <span className="study-deck-card__due">{deck.dueCount} due</span>
+          <span className="study-deck-card__due">{deck.dueCount} ready</span>
         )}
       </div>
 
@@ -76,7 +80,7 @@ export function StudyDeckCard({ currentUserId, deck }: StudyDeckCardProps) {
 
       <div className="study-deck-card__footer">
         {deck.subject && <span className="badge">{deck.subject}</span>}
-        {verifiedCardCount > 0 && !isFullyVerified && (
+        {verifiedCardCount > 0 && !isFullyVerified && !deck.isOfficial && (
           <span className="badge">
             {verifiedCardCount} verified card{verifiedCardCount === 1 ? "" : "s"}
           </span>

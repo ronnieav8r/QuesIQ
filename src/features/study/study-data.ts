@@ -1,4 +1,4 @@
-import { asc, desc, eq, isNull, lt, lte, or, sql, and, gt, inArray } from "drizzle-orm";
+import { asc, desc, eq, isNotNull, isNull, lt, lte, or, sql, and, gt, inArray } from "drizzle-orm";
 
 import { getDb } from "@/server/db/client";
 import {
@@ -20,6 +20,15 @@ import { computeNextStudyReview, type StudyVerdict } from "@/features/study/stud
 
 export type StudyLevel = "advanced" | "beginner" | "intermediate";
 export type StudyLibraryScope = "all" | "mine" | "public";
+export type StudyStackCardStats = {
+  due: number;
+  fluencyScore: number | null;
+  mastered: number;
+  seen: number;
+  total: number;
+  verified: number;
+  weak: number;
+};
 type StudyVisibleDeck = Awaited<ReturnType<typeof getVisibleStudyLibraryDecks>>[number];
 export type StudyLibraryDeck = StudyVisibleDeck & { audienceTags: string[] };
 export type StudyStack = Awaited<ReturnType<typeof getVisibleStudyStacks>>[number];
@@ -52,7 +61,8 @@ export async function getStudyDecksWithStats(userId: string) {
       cardCount: studyDecks.cardCount,
       createdAt: studyDecks.createdAt,
       description: studyDecks.description,
-      dueCount: sql<number>`COUNT(CASE WHEN ${studyCards.dueAt} IS NULL OR ${studyCards.dueAt} <= NOW() THEN 1 END)::int`,
+      dueCount: sql<number>`COUNT(CASE WHEN ${studyCards.dueAt} IS NOT NULL AND ${studyCards.dueAt} <= NOW() THEN 1 END)::int`,
+      expertReviewedCardCount: expertReviewedCardCountSql(),
       id: studyDecks.id,
       folderId: studyDecks.folderId,
       isOfficial: studyDecks.isOfficial,
@@ -90,6 +100,81 @@ function visibleStudyDeckSql(userId?: string) {
     : sql<boolean>`${studyDecks.isPublic} = true`;
 }
 
+function toFluencyScore(avgEase: number | null | undefined) {
+  if (avgEase === null || avgEase === undefined) {
+    return null;
+  }
+  return Math.round(Math.min(100, Math.max(0, ((avgEase - 1.3) / (3.5 - 1.3)) * 100)));
+}
+
+function emptyStudyStackCardStats(): StudyStackCardStats {
+  return {
+    due: 0,
+    fluencyScore: null,
+    mastered: 0,
+    seen: 0,
+    total: 0,
+    verified: 0,
+    weak: 0,
+  };
+}
+
+function expertReviewedCardCountSql() {
+  return sql<number>`(
+    SELECT COUNT(DISTINCT expert_cards.id)::int
+    FROM study_cards expert_cards
+    INNER JOIN study_card_sources expert_sources
+      ON expert_sources.card_id = expert_cards.id
+    WHERE expert_cards.deck_id = "study_decks"."id"
+      AND expert_sources.source_metadata->'expertReview'->>'status' = 'expert_reviewed'
+  )`;
+}
+
+export async function getStudyStackCardStatsForStacks(stackIds: string[], userId?: string) {
+  if (stackIds.length === 0) {
+    return new Map<string, StudyStackCardStats>();
+  }
+
+  const deckVisibility = visibleStudyDeckSql(userId);
+  const rows = await getDb()
+    .select({
+      avgEase: sql<number | null>`AVG(CASE WHEN ${studyCards.dueAt} IS NOT NULL THEN ${studyCards.easeFactor} END)`,
+      due: sql<number>`COUNT(CASE WHEN ${studyCards.dueAt} IS NOT NULL AND ${studyCards.dueAt} <= NOW() THEN 1 END)::int`,
+      mastered: sql<number>`COUNT(CASE WHEN ${studyCards.interval} >= 21 AND ${studyCards.lapses} = 0 AND ${studyCards.dueAt} IS NOT NULL THEN 1 END)::int`,
+      seen: sql<number>`COUNT(${studyCards.dueAt})::int`,
+      stackId: studyDeckStackItems.stackId,
+      total: sql<number>`COUNT(*)::int`,
+      verified: sql<number>`COUNT(CASE WHEN ${studyCards.isVerified} = true THEN 1 END)::int`,
+      weak: sql<number>`COUNT(CASE WHEN ${studyCards.dueAt} IS NOT NULL AND (${studyCards.lapses} > 0 OR ${studyCards.easeFactor} < 2.0) THEN 1 END)::int`,
+    })
+    .from(studyDeckStackItems)
+    .innerJoin(studyDeckStacks, eq(studyDeckStacks.id, studyDeckStackItems.stackId))
+    .innerJoin(studyDecks, eq(studyDecks.id, studyDeckStackItems.deckId))
+    .innerJoin(studyCards, eq(studyCards.deckId, studyDecks.id))
+    .where(and(inArray(studyDeckStackItems.stackId, stackIds), studyStackVisibilityFilter(userId), deckVisibility))
+    .groupBy(studyDeckStackItems.stackId);
+
+  return new Map(
+    rows.map((row) => [
+      row.stackId,
+      {
+        due: row.due ?? 0,
+        fluencyScore: toFluencyScore(row.avgEase),
+        mastered: row.mastered ?? 0,
+        seen: row.seen ?? 0,
+        total: row.total ?? 0,
+        verified: row.verified ?? 0,
+        weak: row.weak ?? 0,
+      },
+    ]),
+  );
+}
+
+export async function getStudyStackCardStats(stackId: string, userId?: string) {
+  const stats = await getStudyStackCardStatsForStacks([stackId], userId);
+  return stats.get(stackId) ?? emptyStudyStackCardStats();
+}
+
 export async function getVisibleStudyStacks(userId?: string) {
   const deckVisibility = visibleStudyDeckSql(userId);
 
@@ -99,6 +184,7 @@ export async function getVisibleStudyStacks(userId?: string) {
       createdAt: studyDeckStacks.createdAt,
       deckCount: sql<number>`COUNT(DISTINCT CASE WHEN ${deckVisibility} THEN ${studyDecks.id} END)::int`,
       description: studyDeckStacks.description,
+      expertReviewedCardCount: sql<number>`COALESCE(SUM(CASE WHEN ${deckVisibility} THEN ${expertReviewedCardCountSql()} ELSE 0 END), 0)::int`,
       id: studyDeckStacks.id,
       isOfficial: studyDeckStacks.isOfficial,
       isPublic: studyDeckStacks.isPublic,
@@ -106,6 +192,7 @@ export async function getVisibleStudyStacks(userId?: string) {
       title: studyDeckStacks.title,
       updatedAt: studyDeckStacks.updatedAt,
       userId: studyDeckStacks.userId,
+      verifiedCardCount: sql<number>`COALESCE(SUM(CASE WHEN ${deckVisibility} THEN ${studyDecks.verifiedCardCount} ELSE 0 END), 0)::int`,
     })
     .from(studyDeckStacks)
     .leftJoin(studyDeckStackItems, eq(studyDeckStackItems.stackId, studyDeckStacks.id))
@@ -143,6 +230,7 @@ export async function getStudyStackWithDecks(stackId: string, userId?: string) {
       createdAt: studyDecks.createdAt,
       deckId: studyDecks.id,
       description: studyDecks.description,
+      expertReviewedCardCount: expertReviewedCardCountSql(),
       id: studyDeckStackItems.deckId,
       isOfficial: studyDecks.isOfficial,
       isPublic: studyDecks.isPublic,
@@ -163,7 +251,24 @@ export async function getStudyStackWithDecks(stackId: string, userId?: string) {
     cardCount: decks.reduce((sum, deck) => sum + deck.cardCount, 0),
     deckCount: decks.length,
     decks,
+    expertReviewedCardCount: decks.reduce(
+      (sum, deck) => sum + (deck.expertReviewedCardCount ?? 0),
+      0,
+    ),
+    verifiedCardCount: decks.reduce((sum, deck) => sum + (deck.verifiedCardCount ?? 0), 0),
   };
+}
+
+export async function getVisibleStudyStackDeckIds(userId?: string) {
+  const deckVisibility = visibleStudyDeckSql(userId);
+  const rows = await getDb()
+    .select({ deckId: studyDeckStackItems.deckId })
+    .from(studyDeckStackItems)
+    .innerJoin(studyDeckStacks, eq(studyDeckStacks.id, studyDeckStackItems.stackId))
+    .innerJoin(studyDecks, eq(studyDecks.id, studyDeckStackItems.deckId))
+    .where(and(studyStackVisibilityFilter(userId), deckVisibility));
+
+  return Array.from(new Set(rows.map((row) => row.deckId)));
 }
 
 export async function createStudyStack(data: {
@@ -370,6 +475,7 @@ export async function getVisibleStudyLibraryDecks(limit = 50, userId?: string) {
       createdAt: studyDecks.createdAt,
       description: studyDecks.description,
       dueCount: sql<number>`0::int`,
+      expertReviewedCardCount: expertReviewedCardCountSql(),
       id: studyDecks.id,
       isOfficial: studyDecks.isOfficial,
       isPublic: studyDecks.isPublic,
@@ -720,6 +826,7 @@ export async function forkStudyDeck(data: {
         sourceCards.map((card, index) => ({
           answer: card.answer,
           deckId: newDeck.id,
+          explanation: card.explanation,
           hint: card.hint,
           level: card.level,
           position: index,
@@ -732,13 +839,7 @@ export async function forkStudyDeck(data: {
   });
 }
 
-export async function getStudyDeckCards(deckId: string) {
-  const cards = await getDb()
-    .select()
-    .from(studyCards)
-    .where(eq(studyCards.deckId, deckId))
-    .orderBy(asc(studyCards.position));
-
+async function attachStudyCardDetails(cards: Array<typeof studyCards.$inferSelect>) {
   if (cards.length === 0) {
     return [];
   }
@@ -792,21 +893,34 @@ export async function getStudyDeckCards(deckId: string) {
   }));
 }
 
+export async function getStudyDeckCards(deckId: string) {
+  const cards = await getDb()
+    .select()
+    .from(studyCards)
+    .where(eq(studyCards.deckId, deckId))
+    .orderBy(asc(studyCards.position));
+
+  return attachStudyCardDetails(cards);
+}
+
 export async function getStudyDueCards(deckId: string) {
-  return getDb()
+  const cards = await getDb()
     .select()
     .from(studyCards)
     .where(
       and(
         eq(studyCards.deckId, deckId),
-        or(isNull(studyCards.dueAt), lte(studyCards.dueAt, new Date())),
+        isNotNull(studyCards.dueAt),
+        lte(studyCards.dueAt, new Date()),
       ),
     )
     .orderBy(asc(studyCards.position));
+
+  return attachStudyCardDetails(cards);
 }
 
 export async function getStudyWeakCards(deckId: string) {
-  return getDb()
+  const cards = await getDb()
     .select()
     .from(studyCards)
     .where(
@@ -817,13 +931,69 @@ export async function getStudyWeakCards(deckId: string) {
       ),
     )
     .orderBy(asc(studyCards.easeFactor));
+
+  return attachStudyCardDetails(cards);
+}
+
+export async function getStudyStackCards(
+  stackId: string,
+  userId?: string,
+  filter: "all" | "due" | "weak" = "all",
+) {
+  const deckVisibility = visibleStudyDeckSql(userId);
+  const filterCondition =
+    filter === "due"
+      ? and(isNotNull(studyCards.dueAt), lte(studyCards.dueAt, new Date()))
+      : filter === "weak"
+        ? and(
+            gt(studyCards.dueAt, new Date(0)),
+            or(gt(studyCards.lapses, 0), lt(studyCards.easeFactor, 2.0)),
+          )
+        : undefined;
+  const conditions = [eq(studyDeckStackItems.stackId, stackId), deckVisibility];
+  if (filterCondition) {
+    conditions.push(filterCondition);
+  }
+
+  const cards = await getDb()
+    .select({
+      answer: studyCards.answer,
+      createdAt: studyCards.createdAt,
+      deckId: studyCards.deckId,
+      dueAt: studyCards.dueAt,
+      easeFactor: studyCards.easeFactor,
+      explanation: studyCards.explanation,
+      hint: studyCards.hint,
+      id: studyCards.id,
+      interval: studyCards.interval,
+      isVerified: studyCards.isVerified,
+      lapses: studyCards.lapses,
+      level: studyCards.level,
+      position: studyCards.position,
+      question: studyCards.question,
+      questionAudioUrl: studyCards.questionAudioUrl,
+      quizMcAudioUrl: studyCards.quizMcAudioUrl,
+      tfFalseAudioUrl: studyCards.tfFalseAudioUrl,
+      tfFoilCardId: studyCards.tfFoilCardId,
+      tfTrueAudioUrl: studyCards.tfTrueAudioUrl,
+      updatedAt: studyCards.updatedAt,
+      verifiedAt: studyCards.verifiedAt,
+      verifiedBy: studyCards.verifiedBy,
+    })
+    .from(studyDeckStackItems)
+    .innerJoin(studyDecks, eq(studyDecks.id, studyDeckStackItems.deckId))
+    .innerJoin(studyCards, eq(studyCards.deckId, studyDecks.id))
+    .where(and(...conditions))
+    .orderBy(asc(studyDeckStackItems.sortOrder), asc(studyCards.position));
+
+  return attachStudyCardDetails(cards);
 }
 
 export async function getStudyDeckStats(deckId: string) {
   const [row] = await getDb()
     .select({
       avgEase: sql<number | null>`AVG(CASE WHEN ${studyCards.dueAt} IS NOT NULL THEN ${studyCards.easeFactor} END)`,
-      due: sql<number>`COUNT(CASE WHEN ${studyCards.dueAt} IS NULL OR ${studyCards.dueAt} <= NOW() THEN 1 END)::int`,
+      due: sql<number>`COUNT(CASE WHEN ${studyCards.dueAt} IS NOT NULL AND ${studyCards.dueAt} <= NOW() THEN 1 END)::int`,
       mastered: sql<number>`COUNT(CASE WHEN ${studyCards.interval} >= 21 AND ${studyCards.lapses} = 0 AND ${studyCards.dueAt} IS NOT NULL THEN 1 END)::int`,
       seen: sql<number>`COUNT(${studyCards.dueAt})::int`,
       total: sql<number>`COUNT(*)::int`,
@@ -833,10 +1003,7 @@ export async function getStudyDeckStats(deckId: string) {
     .where(eq(studyCards.deckId, deckId));
 
   const avgEase = row?.avgEase ?? null;
-  const fluencyScore =
-    avgEase === null
-      ? null
-      : Math.round(Math.min(100, Math.max(0, ((avgEase - 1.3) / (3.5 - 1.3)) * 100)));
+  const fluencyScore = toFluencyScore(avgEase);
 
   return {
     due: row?.due ?? 0,
@@ -957,6 +1124,7 @@ async function refreshStudyDeckVerifiedCount(deckId: string) {
 export async function createStudyCard(data: {
   answer: string;
   deckId: string;
+  explanation?: string | null;
   hint?: string;
   question: string;
 }) {
@@ -966,6 +1134,7 @@ export async function createStudyCard(data: {
     .values({
       answer: data.answer,
       deckId: data.deckId,
+      explanation: data.explanation?.trim() || null,
       hint: data.hint ?? null,
       position,
       question: data.question,
@@ -985,7 +1154,7 @@ export async function createStudyCard(data: {
 
 export async function bulkCreateStudyCards(
   deckId: string,
-  drafts: Array<{ answer: string; hint?: string | null; question: string }>,
+  drafts: Array<{ answer: string; explanation?: string | null; hint?: string | null; question: string }>,
 ) {
   if (drafts.length === 0) {
     return [];
@@ -998,6 +1167,7 @@ export async function bulkCreateStudyCards(
       drafts.map((draft, index) => ({
         answer: draft.answer,
         deckId,
+        explanation: draft.explanation?.trim() || null,
         hint: draft.hint ?? null,
         position: position + index,
         question: draft.question,
@@ -1020,11 +1190,13 @@ export async function updateStudyCard(
   cardId: string,
   data: {
     answer?: string;
+    explanation?: string | null;
     hint?: string | null;
     question?: string;
   },
 ) {
-  const clearsVerification = data.answer !== undefined || data.question !== undefined;
+  const clearsVerification =
+    data.answer !== undefined || data.explanation !== undefined || data.question !== undefined;
   const [card] = await getDb()
     .update(studyCards)
     .set({

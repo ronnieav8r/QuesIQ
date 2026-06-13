@@ -28,11 +28,14 @@ export async function POST(_request: Request, { params }: Params) {
 
     return NextResponse.json(result);
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Study deck verification failed.";
+    const status = message.includes("Official decks") ? 409 : 502;
+
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Study deck verification failed.",
+        error: message,
       },
-      { status: 502 },
+      { status },
     );
   }
 }

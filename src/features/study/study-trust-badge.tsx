@@ -1,14 +1,20 @@
 import Image from "next/image";
 
+import expertReviewedBadge from "@/features/study/assets/expert_reviewed_badge.png";
 import officialBadge from "@/features/study/assets/official_badge.png";
 import verifiedBadge from "@/features/study/assets/verified_badge.png";
 
 type StudyTrustBadgeProps = {
   compact?: boolean;
-  type: "official" | "verified";
+  type: "expert" | "official" | "verified";
 };
 
 const BADGES = {
+  expert: {
+    alt: "Expert reviewed study content",
+    label: "Expert Reviewed",
+    src: expertReviewedBadge,
+  },
   official: {
     alt: "Official QuesIQ content",
     label: "Official",
@@ -22,8 +28,8 @@ const BADGES = {
 } as const;
 
 export function StudyTrustBadge({ compact = false, type }: StudyTrustBadgeProps) {
-  const badge = BADGES[type];
   const size = compact ? 42 : 58;
+  const badge = BADGES[type];
 
   return (
     <span

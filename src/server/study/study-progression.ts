@@ -11,7 +11,12 @@ import {
   studyXpRules,
 } from "@/server/db/schema";
 
-type StudyQuestCheckType = "card_attempt_count" | "correct_attempt_count" | "distinct_mode_count";
+type StudyQuestCheckType =
+  | "card_attempt_count"
+  | "correct_attempt_count"
+  | "distinct_mode_count"
+  | "streak_day_count"
+  | "total_xp";
 type StudyXpAwardMode = "highest_only" | "stack";
 type StudyXpConditionType = "always" | "is_correct";
 
@@ -142,6 +147,56 @@ const DEFAULT_STUDY_QUESTS: Array<{
     key: "study_mode_switcher",
     title: "Mode Switcher",
     xpReward: 70,
+  },
+  {
+    category: "momentum",
+    checkThreshold: 3,
+    checkType: "streak_day_count",
+    description: "Build a 3-day Study streak.",
+    displayOrder: 50,
+    key: "study_three_day_streak",
+    title: "Three-Day Streak",
+    xpReward: 90,
+  },
+  {
+    category: "milestone",
+    checkThreshold: 100,
+    checkType: "card_attempt_count",
+    description: "Log 100 Study card attempts.",
+    displayOrder: 60,
+    key: "study_century_reps",
+    title: "Century Reps",
+    xpReward: 120,
+  },
+  {
+    category: "mastery",
+    checkThreshold: 100,
+    checkType: "correct_attempt_count",
+    description: "Reach 100 correct Study card attempts.",
+    displayOrder: 70,
+    key: "study_sharp_recall",
+    title: "Sharp Recall",
+    xpReward: 160,
+  },
+  {
+    category: "momentum",
+    checkThreshold: 5,
+    checkType: "distinct_mode_count",
+    description: "Use 5 different Study modes.",
+    displayOrder: 80,
+    key: "study_mode_explorer",
+    title: "Mode Explorer",
+    xpReward: 100,
+  },
+  {
+    category: "milestone",
+    checkThreshold: 500,
+    checkType: "total_xp",
+    description: "Earn 500 Study XP.",
+    displayOrder: 90,
+    key: "study_xp_500",
+    title: "500 XP Club",
+    xpReward: 150,
   },
 ];
 
@@ -393,13 +448,21 @@ async function rebuildStudyProgressionSnapshot(userId: string) {
 
 async function getQuestProgress(userId: string, checkType: StudyQuestCheckType, summary: {
   correctAttempts: number;
+  streakDays: number;
   totalAttempts: number;
+  totalXp: number;
 }) {
   if (checkType === "card_attempt_count") {
     return summary.totalAttempts;
   }
   if (checkType === "correct_attempt_count") {
     return summary.correctAttempts;
+  }
+  if (checkType === "streak_day_count") {
+    return summary.streakDays;
+  }
+  if (checkType === "total_xp") {
+    return summary.totalXp;
   }
 
   const [modeCountRow] = await getDb()

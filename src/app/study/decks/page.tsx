@@ -15,12 +15,15 @@ export default async function StudyDecksPage() {
   const [decks, folders, stacks] = userId
     ? await Promise.all([getStudyDecksWithStats(userId), getStudyFolders(userId), getVisibleStudyStacks(userId)])
     : [[], [], []];
-  const publicDecks = decks.filter((deck) => deck.isPublic).length;
-  const fullyVerifiedDecks = decks.filter(
+  const personalDecks = decks.filter((deck) => !deck.isOfficial);
+  const publicDecks = personalDecks.filter((deck) => deck.isPublic).length;
+  const fullyVerifiedDecks = personalDecks.filter(
     (deck) => deck.cardCount > 0 && (deck.verifiedCardCount ?? 0) === deck.cardCount,
   ).length;
-  const ownedStacks = userId ? stacks.filter((stack) => stack.userId === userId).length : 0;
-  const importHref = decks[0] ? `/study/decks/${decks[0].id}/import` : "/study/decks/new";
+  const ownedStacks = userId
+    ? stacks.filter((stack) => !stack.isOfficial && stack.userId === userId).length
+    : 0;
+  const importHref = personalDecks[0] ? `/study/decks/${personalDecks[0].id}/import` : "/study/decks/new";
 
   return (
     <div className="screen study-dashboard-screen">
@@ -58,7 +61,7 @@ export default async function StudyDecksPage() {
         <>
           <section className="study-stat-strip" aria-label="Deck summary">
             <div className="study-stat-chip">
-              <strong>{decks.length}</strong>
+              <strong>{personalDecks.length}</strong>
               <span>Mine</span>
             </div>
             <div className={ownedStacks > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
@@ -107,12 +110,12 @@ export default async function StudyDecksPage() {
               </div>
               <h3>Import cards</h3>
               <p>
-                {decks.length > 0
+                {personalDecks.length > 0
                   ? "Add cards to your newest deck from text, CSV, TSV, PDF, images, or URLs."
                   : "Create a deck first, then bring in text, files, or URLs."}
               </p>
               <div className="study-deck-card__footer">
-                <span>{decks.length > 0 ? "Uses your most recent deck" : "Creates a deck first"}</span>
+                <span>{personalDecks.length > 0 ? "Uses your most recent deck" : "Creates a deck first"}</span>
               </div>
             </Link>
 
@@ -163,7 +166,7 @@ export default async function StudyDecksPage() {
             </div>
           </section>
 
-          {decks.length === 0 ? (
+          {personalDecks.length === 0 ? (
             <section className="panel study-empty-panel">
               <h2>No decks yet.</h2>
               <p>Create a manual deck first. Once it exists, you can add cards by hand or import from notes, files, and URLs.</p>
@@ -172,7 +175,7 @@ export default async function StudyDecksPage() {
               </Link>
             </section>
           ) : (
-            <StudyFolderManager currentUserId={userId} decks={decks} initialFolders={folders} />
+            <StudyFolderManager currentUserId={userId} decks={personalDecks} initialFolders={folders} />
           )}
         </>
       )}

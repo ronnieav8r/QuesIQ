@@ -118,7 +118,7 @@ export default async function StudyDeckStatsPage({ params }: Props) {
           </div>
           <div className="study-stat-chip">
             <strong>{deckStats.due}</strong>
-            <span>Due</span>
+            <span>Ready</span>
           </div>
           <div className="study-stat-chip">
             <strong>{deckStats.weak}</strong>

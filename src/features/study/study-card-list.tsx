@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 
+import { StudyCardBack } from "@/features/study/study-card-back";
 import { StudyTrustBadge } from "@/features/study/study-trust-badge";
 
 type StudyCardSource = {
@@ -16,6 +17,7 @@ type StudyCard = {
   answer: string;
   dueAt?: Date | null;
   easeFactor?: number | null;
+  explanation: string | null;
   hint: string | null;
   id: string;
   interval?: number | null;
@@ -38,21 +40,29 @@ type StudyCard = {
 
 type EditingCardState = {
   answer: string;
+  explanation: string;
   hint: string;
   question: string;
 };
 
 type StudyCardListProps = {
   deckId: string;
+  deckIsOfficial?: boolean;
   initialCards: StudyCard[];
   isOwner: boolean;
 };
 
-export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListProps) {
+export function StudyCardList({
+  deckId,
+  deckIsOfficial = false,
+  initialCards,
+  isOwner,
+}: StudyCardListProps) {
   const [addingCard, setAddingCard] = useState(false);
   const [addError, setAddError] = useState<string>();
   const [answer, setAnswer] = useState("");
   const [cards, setCards] = useState(initialCards);
+  const [explanation, setExplanation] = useState("");
   const [hint, setHint] = useState("");
   const [pending, setPending] = useState(false);
   const [question, setQuestion] = useState("");
@@ -60,6 +70,7 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
   const [nowMs] = useState(() => Date.now());
   const [editingValues, setEditingValues] = useState<EditingCardState>({
     answer: "",
+    explanation: "",
     hint: "",
     question: "",
   });
@@ -81,6 +92,7 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
     const response = await fetch(`/api/study/decks/${deckId}/cards`, {
       body: JSON.stringify({
         answer: answer.trim(),
+        explanation: explanation.trim() || undefined,
         hint: hint.trim() || undefined,
         question: question.trim(),
       }),
@@ -99,6 +111,7 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
     setCards((current) => [...current, data.card as StudyCard]);
     setQuestion("");
     setAnswer("");
+    setExplanation("");
     setHint("");
     setAddingCard(false);
   }
@@ -118,6 +131,7 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
     setEditError(undefined);
     setEditingValues({
       answer: card.answer,
+      explanation: card.explanation ?? "",
       hint: card.hint ?? "",
       question: card.question,
     });
@@ -128,6 +142,7 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
     setEditError(undefined);
     setEditingValues({
       answer: "",
+      explanation: "",
       hint: "",
       question: "",
     });
@@ -143,6 +158,7 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
     const response = await fetch(`/api/study/decks/${deckId}/cards/${cardId}`, {
       body: JSON.stringify({
         answer: editingValues.answer.trim(),
+        explanation: editingValues.explanation.trim() || null,
         hint: editingValues.hint.trim() || null,
         question: editingValues.question.trim(),
       }),
@@ -165,15 +181,15 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
     if (!card.dueAt) return "New";
     if ((card.interval ?? 0) >= 21 && (card.lapses ?? 0) === 0) return "Mastered";
     if ((card.lapses ?? 0) > 0 || (card.easeFactor ?? 2.5) < 2) return "Weak";
-    if (new Date(card.dueAt).getTime() <= nowMs) return "Due";
+    if (new Date(card.dueAt).getTime() <= nowMs) return "Ready";
     return "Learning";
   }
 
   function formatDue(card: StudyCard) {
     if (!card.dueAt) return "Not studied yet";
     const due = new Date(card.dueAt);
-    if (due.getTime() <= nowMs) return "Due now";
-    return `Due ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(due)}`;
+    if (due.getTime() <= nowMs) return "Ready now";
+    return `Review ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(due)}`;
   }
 
   function formatConfidence(confidence: number | null) {
@@ -185,6 +201,28 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
     const value = source.sourceMetadata?.[key];
     if (!Array.isArray(value)) return [];
     return value.map((item) => String(item)).filter(Boolean);
+  }
+
+  function expertReviewMetadata(source: StudyCardSource) {
+    const value = source.sourceMetadata?.expertReview;
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return undefined;
+    }
+    const review = value as Record<string, unknown>;
+    return {
+      date: typeof review.date === "string" ? review.date : undefined,
+      notes: typeof review.notes === "string" ? review.notes : undefined,
+      reviewer: typeof review.reviewer === "string" ? review.reviewer : undefined,
+      status: typeof review.status === "string" ? review.status : undefined,
+      type: typeof review.type === "string" ? review.type : undefined,
+    };
+  }
+
+  function cardIsExpertReviewed(card: StudyCard) {
+    return (
+      card.sources?.some((source) => expertReviewMetadata(source)?.status === "expert_reviewed") ??
+      false
+    );
   }
 
   return (
@@ -223,6 +261,16 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
                 />
               </label>
               <label>
+                <span>Explanation</span>
+                <textarea
+                  onChange={(event) =>
+                    setEditingValues((current) => ({ ...current, explanation: event.target.value }))
+                  }
+                  rows={4}
+                  value={editingValues.explanation}
+                />
+              </label>
+              <label>
                 <span>Hint</span>
                 <input
                   onChange={(event) =>
@@ -247,18 +295,23 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
               <div className="study-card-meta">
                 <span className="badge">{cardStatus(card)}</span>
                 {card.level && <span className="badge">{card.level}</span>}
-                {card.isVerified && <StudyTrustBadge compact type="verified" />}
+                {card.isVerified && !deckIsOfficial && <StudyTrustBadge compact type="verified" />}
+                {cardIsExpertReviewed(card) && <StudyTrustBadge compact type="expert" />}
               </div>
               <p className="study-card-question">{card.question}</p>
-              <p>{card.answer}</p>
+              <StudyCardBack
+                answer={card.answer}
+                explanation={card.explanation}
+                sources={card.sources}
+              />
               {card.hint && <p className="study-card-hint">Hint: {card.hint}</p>}
               <p className="study-card-schedule">
                 {formatDue(card)}
                 {typeof card.easeFactor === "number" && ` - ease ${card.easeFactor.toFixed(2)}`}
               </p>
-              {((card.sources?.length ?? 0) > 0 || (card.verifications?.length ?? 0) > 0) && (
+              {isOwner && ((card.sources?.length ?? 0) > 0 || (card.verifications?.length ?? 0) > 0) && (
                 <details className="study-card-hint">
-                  <summary>Sources and verification</summary>
+                  <summary>Admin source and verification details</summary>
                   {(card.sources?.length ?? 0) > 0 && (
                     <div>
                       <strong>Source material</strong>
@@ -289,6 +342,26 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
                                 </span>
                               )}
                             </div>
+                            {expertReviewMetadata(source) && (
+                              <div className="status-callout">
+                                <strong>
+                                  Expert review:{" "}
+                                  {expertReviewMetadata(source)?.status?.replaceAll("_", " ") ?? "not provided"}
+                                </strong>
+                                <span>
+                                  {[
+                                    expertReviewMetadata(source)?.type,
+                                    expertReviewMetadata(source)?.reviewer,
+                                    expertReviewMetadata(source)?.date,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" | ") || "No expert review lane, reviewer, or date provided."}
+                                </span>
+                                {expertReviewMetadata(source)?.notes && (
+                                  <span>{expertReviewMetadata(source)?.notes}</span>
+                                )}
+                              </div>
+                            )}
                           </li>
                         ))}
                       </ul>
@@ -361,6 +434,15 @@ export function StudyCardList({ deckId, initialCards, isOwner }: StudyCardListPr
                   placeholder="The correct answer"
                   rows={3}
                   value={answer}
+                />
+              </label>
+              <label>
+                <span>Explanation</span>
+                <textarea
+                  onChange={(event) => setExplanation(event.target.value)}
+                  placeholder="Expanded learner-facing explanation"
+                  rows={4}
+                  value={explanation}
                 />
               </label>
               <label>

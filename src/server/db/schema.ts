@@ -1482,6 +1482,7 @@ export const studyCards = pgTable("study_cards", {
     .references(() => studyDecks.id, { onDelete: "cascade" }),
   dueAt: timestamp("due_at", { withTimezone: true }),
   easeFactor: real("ease_factor").default(2.5).notNull(),
+  explanation: text("explanation"),
   hint: text("hint"),
   id: uuid("id").defaultRandom().primaryKey(),
   interval: integer("interval").default(1).notNull(),
@@ -1642,7 +1643,13 @@ export const studyQuests = pgTable("study_quests", {
   checkDimension: text("check_dimension"),
   checkThreshold: integer("check_threshold").notNull(),
   checkType: text("check_type")
-    .$type<"card_attempt_count" | "correct_attempt_count" | "distinct_mode_count">()
+    .$type<
+      | "card_attempt_count"
+      | "correct_attempt_count"
+      | "distinct_mode_count"
+      | "streak_day_count"
+      | "total_xp"
+    >()
     .notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   description: text("description").notNull(),

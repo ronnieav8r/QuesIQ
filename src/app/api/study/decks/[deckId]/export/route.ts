@@ -51,9 +51,9 @@ export async function GET(request: NextRequest, { params }: Params) {
   const delimiter = format === "tsv" ? "\t" : ",";
   const cards = await getStudyDeckCards(deckId);
   const rows = [
-    ["question", "answer", "hint"].join(delimiter),
+    ["question", "answer", "explanation", "hint"].join(delimiter),
     ...cards.map((card) =>
-      [card.question, card.answer, card.hint ?? ""]
+      [card.question, card.answer, card.explanation ?? "", card.hint ?? ""]
         .map((value) => escapeDelimited(value, delimiter))
         .join(delimiter),
     ),

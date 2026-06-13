@@ -27,7 +27,8 @@ export async function POST(request: NextRequest, { params }: Params) {
 
   const body = (await request.json()) as {
     answer?: string;
-    cards?: Array<{ answer?: string; hint?: string; question?: string }>;
+    cards?: Array<{ answer?: string; explanation?: string; hint?: string; question?: string }>;
+    explanation?: string;
     hint?: string;
     question?: string;
   };
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       .filter((card) => card.question?.trim() && card.answer?.trim())
       .map((card) => ({
         answer: card.answer!.trim(),
+        explanation: card.explanation?.trim() || undefined,
         hint: card.hint?.trim() || undefined,
         question: card.question!.trim(),
       }));
@@ -57,6 +59,7 @@ export async function POST(request: NextRequest, { params }: Params) {
   const card = await createStudyCard({
     answer: body.answer.trim(),
     deckId,
+    explanation: body.explanation?.trim() || undefined,
     hint: body.hint?.trim() || undefined,
     question: body.question.trim(),
   });

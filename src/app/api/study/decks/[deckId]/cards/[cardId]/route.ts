@@ -48,11 +48,13 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
   const body = (await request.json()) as {
     answer?: string;
+    explanation?: string | null;
     hint?: string | null;
     question?: string;
   };
   const card = await updateStudyCard(cardId, {
     ...(body.answer !== undefined && { answer: body.answer.trim() }),
+    ...(body.explanation !== undefined && { explanation: body.explanation?.trim() || null }),
     ...(body.hint !== undefined && { hint: body.hint?.trim() || null }),
     ...(body.question !== undefined && { question: body.question.trim() }),
   });

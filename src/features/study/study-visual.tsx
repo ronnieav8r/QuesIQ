@@ -3,19 +3,27 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+import { StudyCardBack, type StudyCardSourceForBack } from "@/features/study/study-card-back";
 import type { StudyVerdict } from "@/features/study/study-srs";
 
 type StudyVisualCard = {
   answer: string;
+  deckId?: string;
+  explanation: string | null;
   hint: string | null;
   id: string;
   question: string;
+  sources?: StudyCardSourceForBack[];
 };
 
 type StudyVisualProps = {
+  backHref?: string;
+  backLabel?: string;
   cards: StudyVisualCard[];
+  collectionId?: string;
   deckId: string;
   filter?: string;
+  order?: "ordered" | "random";
   resume?: boolean;
   srs?: boolean;
 };
@@ -42,12 +50,23 @@ function shuffle<T>(items: T[]) {
   return next;
 }
 
-export function StudyVisual({ cards, deckId, filter, resume, srs }: StudyVisualProps) {
+export function StudyVisual({
+  backHref,
+  backLabel = "Back to Deck",
+  cards,
+  collectionId,
+  deckId,
+  filter,
+  order = "random",
+  resume,
+  srs,
+}: StudyVisualProps) {
+  const sessionScopeId = collectionId ?? deckId;
   const [deck, setDeck] = useState<StudyVisualCard[]>(() => {
     if (resume && typeof window !== "undefined") {
       try {
         const saved = JSON.parse(
-          window.localStorage.getItem(sessionKey(deckId)) ?? "null",
+          window.localStorage.getItem(sessionKey(sessionScopeId)) ?? "null",
         ) as SavedSession | null;
 
         if (saved?.orderedIds && typeof saved.ratedCount === "number") {
@@ -66,7 +85,7 @@ export function StudyVisual({ cards, deckId, filter, resume, srs }: StudyVisualP
       }
     }
 
-    return shuffle(cards);
+    return order === "random" ? shuffle(cards) : cards;
   });
   const [flipped, setFlipped] = useState(false);
   const [index, setIndex] = useState(0);
@@ -81,7 +100,7 @@ export function StudyVisual({ cards, deckId, filter, resume, srs }: StudyVisualP
     }
 
     const session: SavedSession = {
-      deckId,
+      deckId: sessionScopeId,
       filter: filter ?? "all",
       mode: "visual",
       orderedIds: deck.map((card) => card.id),
@@ -89,7 +108,7 @@ export function StudyVisual({ cards, deckId, filter, resume, srs }: StudyVisualP
       startedAt: Date.now(),
     };
 
-    window.localStorage.setItem(sessionKey(deckId), JSON.stringify(session));
+    window.localStorage.setItem(sessionKey(sessionScopeId), JSON.stringify(session));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const card = deck[index];
@@ -97,7 +116,8 @@ export function StudyVisual({ cards, deckId, filter, resume, srs }: StudyVisualP
   const total = deck.length;
 
   function recordRate(cardId: string, verdict: StudyVerdict) {
-    fetch(`/api/study/decks/${deckId}/rate`, {
+    const ratingDeckId = card.deckId ?? deckId;
+    fetch(`/api/study/decks/${ratingDeckId}/rate`, {
       body: JSON.stringify({
         cardId,
         mode: "visual",
@@ -134,19 +154,19 @@ export function StudyVisual({ cards, deckId, filter, resume, srs }: StudyVisualP
     const effectiveLength = willRequeue ? deck.length + 1 : deck.length;
 
     if (newIndex >= effectiveLength) {
-      window.localStorage.removeItem(sessionKey(deckId));
+      window.localStorage.removeItem(sessionKey(sessionScopeId));
       setPhase("summary");
       return;
     }
 
     try {
       const saved = JSON.parse(
-        window.localStorage.getItem(sessionKey(deckId)) ?? "null",
+        window.localStorage.getItem(sessionKey(sessionScopeId)) ?? "null",
       ) as SavedSession | null;
 
       if (saved) {
         saved.ratedCount = newIndex;
-        window.localStorage.setItem(sessionKey(deckId), JSON.stringify(saved));
+        window.localStorage.setItem(sessionKey(sessionScopeId), JSON.stringify(saved));
       }
     } catch {
       // Ignore invalid saved sessions.
@@ -158,9 +178,9 @@ export function StudyVisual({ cards, deckId, filter, resume, srs }: StudyVisualP
 
   function restart() {
     sessionIdRef.current = null;
-    const freshDeck = shuffle(cards);
+    const freshDeck = order === "random" ? shuffle(cards) : cards;
     const session: SavedSession = {
-      deckId,
+      deckId: sessionScopeId,
       filter: filter ?? "all",
       mode: "visual",
       orderedIds: freshDeck.map((freshCard) => freshCard.id),
@@ -168,7 +188,7 @@ export function StudyVisual({ cards, deckId, filter, resume, srs }: StudyVisualP
       startedAt: Date.now(),
     };
 
-    window.localStorage.setItem(sessionKey(deckId), JSON.stringify(session));
+    window.localStorage.setItem(sessionKey(sessionScopeId), JSON.stringify(session));
     setDeck(freshDeck);
     setFlipped(false);
     setIndex(0);
@@ -212,8 +232,8 @@ export function StudyVisual({ cards, deckId, filter, resume, srs }: StudyVisualP
           <button className="secondary" onClick={restart} type="button">
             Study Again
           </button>
-          <Link className="button-link" href={`/study/decks/${deckId}`}>
-            Back to Deck
+          <Link className="button-link" href={backHref ?? `/study/decks/${deckId}`}>
+            {backLabel}
           </Link>
         </div>
       </section>
@@ -241,16 +261,23 @@ export function StudyVisual({ cards, deckId, filter, resume, srs }: StudyVisualP
         </button>
       </div>
 
-      <button
-        className={flipped ? "study-flip-card flipped" : "study-flip-card"}
-        onClick={() => setFlipped(true)}
-        type="button"
-      >
-        <span className="study-card-label">{flipped ? "Answer" : "Question"}</span>
-        <span className="study-card-text">{flipped ? card.answer : card.question}</span>
-        {flipped && card.hint && <span className="study-card-hint">{card.hint}</span>}
-        {!flipped && <span className="study-card-tap">Tap to reveal answer</span>}
-      </button>
+      {flipped ? (
+        <div className="study-flip-card flipped">
+          <span className="study-card-label">Answer</span>
+          <StudyCardBack
+            answer={card.answer}
+            explanation={card.explanation}
+            sources={card.sources}
+          />
+          {card.hint && <span className="study-card-hint">{card.hint}</span>}
+        </div>
+      ) : (
+        <button className="study-flip-card" onClick={() => setFlipped(true)} type="button">
+          <span className="study-card-label">Question</span>
+          <span className="study-card-text">{card.question}</span>
+          <span className="study-card-tap">Tap to reveal answer</span>
+        </button>
+      )}
 
       <div className={flipped ? "study-ratings visible" : "study-ratings"} aria-hidden={!flipped}>
         {selfRate ? (

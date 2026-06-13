@@ -110,6 +110,7 @@ if (exists("src/server/db/schema.ts")) {
   const schema = read("src/server/db/schema.ts");
   checkPattern(schema, /export const studyDeckStacks/, "Study deck stacks schema exported", true);
   checkPattern(schema, /export const studyDeckStackItems/, "Study deck stack items schema exported", true);
+  checkPattern(schema, /explanation: text\("explanation"\)/, "Study card explanation schema field present", true);
 }
 
 if (exists("src/app/api/study/stacks/[stackId]/items/route.ts")) {
@@ -122,6 +123,12 @@ if (exists("src/app/api/study/stacks/[stackId]/items/route.ts")) {
 if (exists("src/server/study/study-rich-flashcard-import.ts")) {
   const richImport = read("src/server/study/study-rich-flashcard-import.ts");
   checkPattern(richImport, /export const STUDY_RICH_IMPORT_HEADERS/, "Rich CSV header contract exported", true);
+  checkPattern(richImport, /"explanation"/, "Rich CSV header includes learner explanation field", true);
+  checkPattern(richImport, /additionalReferenceLabels/, "Rich CSV header includes additional reference labels", true);
+  checkPattern(richImport, /expertReviewStatus/, "Rich CSV header includes expert review status", true);
+  checkPattern(richImport, /type StudyRichExpertReviewStatus/, "Rich CSV validates expert review status", true);
+  checkPattern(richImport, /const requiredFields: StudyRichImportTargetField\[\] = \["question", "answer"\]/, "Rich CSV requires question and answer", true);
+  checkPattern(richImport, /rawFields/, "Rich CSV preserves raw expanded fields", true);
   checkPattern(richImport, /export const STUDY_RICH_IMPORT_DEFAULT_COLUMN_MAPPING/, "Default rich CSV mapping exported", true);
   checkPattern(richImport, /export function parseStudyRichFlashcardImportText\(/, "Rich CSV parser exported", true);
   checkPattern(richImport, /columnMapping\?: StudyRichImportColumnMapping/, "Rich CSV parser accepts optional mapping", true);
@@ -133,6 +140,7 @@ if (exists("scripts/study/rich-csv-import-smoke.ts")) {
   const smoke = read("scripts/study/rich-csv-import-smoke.ts");
   checkPattern(smoke, /--parse-only/, "Rich CSV smoke supports parse-only mode", true);
   checkPattern(smoke, /mappedCsv|mappedColumnMapping/, "Rich CSV smoke includes non-default mapped header coverage", true);
+  checkPattern(smoke, /Expected explanation not to map into hint/, "Rich CSV smoke guards explanation versus hint mapping", true);
 }
 
 if (exists("src/server/study/study-answer-evaluator.ts")) {
@@ -155,6 +163,7 @@ if (exists("src/features/study/study-card-list.tsx")) {
   const cardList = read("src/features/study/study-card-list.tsx");
   checkPattern(cardList, /verificationStatus/, "Study card list references verification status metadata", false);
   checkPattern(cardList, /sourcePackId|sourceChunkIds|sourceVisualAssetIds/, "Study card list references source metadata", false);
+  checkPattern(cardList, /expertReviewMetadata/, "Study card list references expert review metadata", false);
 } else {
   warn("Study card list file not present for source/verification metadata display marker checks.");
 }
