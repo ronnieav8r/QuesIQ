@@ -1,14 +1,24 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { BookOpen, ChevronRight, Flame, Plus, Trophy, Zap } from "lucide-react";
+import { BookOpen, ChevronRight, Clock3, Flame, Library, PlayCircle, Plus, Trophy, Zap } from "lucide-react";
 
 import { auth } from "@/auth";
-import { getStudyDecksWithStats, getStudyUserStats } from "@/features/study/study-data";
+import {
+  getStudyDecksWithStats,
+  getStudyRecentSessions,
+  getStudyUserStats,
+} from "@/features/study/study-data";
 import { getStudyProgressionSummary, type StudyProgressionSummary } from "@/server/study/study-progression";
 import { StudyDeckCard } from "@/features/study/study-deck-card";
 import { isAdminEmail } from "@/server/admin";
 
 type RingStyle = CSSProperties & { "--score-percent": string };
+type StudyDeckAction = {
+  detail: string;
+  href: string;
+  id: string;
+  title: string;
+};
 
 function clampPercent(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
@@ -18,22 +28,62 @@ function ringStyle(percent: number): RingStyle {
   return { "--score-percent": `${clampPercent(percent)}%` };
 }
 
+function pluralize(count: number, singular: string) {
+  return `${singular}${count === 1 ? "" : "s"}`;
+}
+
+function formatStudyMode(mode: string) {
+  const labels: Record<string, string> = {
+    quiz: "Quiz",
+    truefalse: "True/false",
+    verbal: "Hands-free",
+    visual: "Visual",
+    written: "Written",
+  };
+
+  return labels[mode] ?? "Study";
+}
+
+function formatStudyRecency(date: Date) {
+  const days = Math.floor((Date.now() - date.getTime()) / 86_400_000);
+
+  if (days <= 0) {
+    return "today";
+  }
+
+  if (days === 1) {
+    return "yesterday";
+  }
+
+  if (days < 7) {
+    return `${days} days ago`;
+  }
+
+  if (days < 30) {
+    return `${Math.floor(days / 7)} weeks ago`;
+  }
+
+  return `${Math.floor(days / 30)} months ago`;
+}
+
 export default async function StudyHome() {
   const session = await auth();
   const userId = session?.user?.id;
   const isAdmin = isAdminEmail(session?.user?.email);
 
   let studyDataError = false;
+  let recentSessions: Awaited<ReturnType<typeof getStudyRecentSessions>> = [];
   let userDecks: Awaited<ReturnType<typeof getStudyDecksWithStats>> = [];
   let userStats: Awaited<ReturnType<typeof getStudyUserStats>> | null = null;
   let userProgression: StudyProgressionSummary | null = null;
 
   if (userId) {
     try {
-      [userDecks, userStats, userProgression] = await Promise.all([
+      [userDecks, userStats, userProgression, recentSessions] = await Promise.all([
         getStudyDecksWithStats(userId),
         getStudyUserStats(userId),
         getStudyProgressionSummary(userId),
+        getStudyRecentSessions(userId, 12),
       ]);
     } catch (error) {
       studyDataError = true;
@@ -42,6 +92,68 @@ export default async function StudyHome() {
   }
 
   const personalDecks = userDecks.filter((deck) => !deck.isOfficial);
+  const personalDeckById = new Map(personalDecks.map((deck) => [deck.id, deck]));
+  const recentDeckActions: StudyDeckAction[] = [];
+  const seenRecentDeckIds = new Set<string>();
+
+  for (const sessionRow of recentSessions) {
+    if (!sessionRow.deckId || seenRecentDeckIds.has(sessionRow.deckId)) {
+      continue;
+    }
+
+    const deck = personalDeckById.get(sessionRow.deckId);
+    const title = deck?.title ?? sessionRow.deckTitle ?? "Study deck";
+    const cardsStudied = sessionRow.cardsStudied ?? 0;
+    const details = [`Last studied ${formatStudyRecency(new Date(sessionRow.startedAt))}`];
+
+    if (cardsStudied > 0) {
+      details.push(`${cardsStudied} ${pluralize(cardsStudied, "card")} last session`);
+    }
+
+    details.push(formatStudyMode(sessionRow.mode));
+    seenRecentDeckIds.add(sessionRow.deckId);
+    recentDeckActions.push({
+      detail: details.join(" · "),
+      href: `/study/decks/${sessionRow.deckId}`,
+      id: sessionRow.deckId,
+      title,
+    });
+  }
+
+  const fallbackDeckActions = personalDecks
+    .filter((deck) => deck.cardCount > 0)
+    .map((deck) => ({
+      detail: `${deck.cardCount} ${pluralize(deck.cardCount, "card")} available`,
+      href: `/study/decks/${deck.id}`,
+      id: deck.id,
+      title: deck.title,
+    }));
+  const primaryAction = recentDeckActions[0] ?? fallbackDeckActions[0] ?? null;
+  const quickDeckActions: StudyDeckAction[] = [];
+  const seenQuickDeckIds = new Set<string>();
+
+  for (const action of [...recentDeckActions, ...fallbackDeckActions]) {
+    if (action.id === primaryAction?.id || seenQuickDeckIds.has(action.id)) {
+      continue;
+    }
+
+    quickDeckActions.push(action);
+    seenQuickDeckIds.add(action.id);
+
+    if (quickDeckActions.length >= 3) {
+      break;
+    }
+  }
+
+  const primaryActionHref = primaryAction?.href ?? "/study/library";
+  const primaryActionKicker = recentDeckActions[0]
+    ? "Pick up where you left off"
+    : primaryAction
+      ? "Start a deck"
+      : "Find something to study";
+  const primaryActionTitle = primaryAction?.title ?? "Browse the Study Library";
+  const primaryActionDetail =
+    primaryAction?.detail ?? "Open official and public decks when you want a new topic.";
   const totalAvailable = personalDecks.reduce((sum, deck) => sum + deck.cardCount, 0);
   const totalReady = personalDecks.reduce((sum, deck) => sum + (deck.dueCount ?? 0), 0);
   const levelProgressPct =
@@ -61,9 +173,6 @@ export default async function StudyHome() {
         })
         .slice(0, 6)
     : [];
-  const topReadyDeck = [...personalDecks]
-    .sort((first, second) => (second.dueCount ?? 0) - (first.dueCount ?? 0))
-    .find((deck) => (deck.dueCount ?? 0) > 0);
 
   const supportingCopy =
     totalAvailable > 0
@@ -104,7 +213,7 @@ export default async function StudyHome() {
             </div>
             <div className={totalReady > 0 ? "study-stat-chip highlight" : "study-stat-chip"}>
               <strong>{totalReady}</strong>
-              <span>Ready for Review</span>
+              <span>Available Now</span>
             </div>
             <div
               className={(userStats?.streak ?? 0) > 0 ? "study-stat-chip highlight" : "study-stat-chip"}
@@ -115,6 +224,62 @@ export default async function StudyHome() {
             <div className="study-stat-chip">
               <strong>{(userStats?.totalStudied ?? 0).toLocaleString()}</strong>
               <span>Studied</span>
+            </div>
+          </section>
+
+          <section className="panel study-actions-panel">
+            <div className="section-head">
+              <div>
+                <p className="eyebrow">Study actions</p>
+                <h2>What do you want to study?</h2>
+                <p>Jump back into a recent deck, browse official content, or build a new deck.</p>
+              </div>
+            </div>
+
+            <div className="study-action-layout">
+              <article className="study-action-primary">
+                <div className="study-action-primary__icon">
+                  <PlayCircle size={26} aria-hidden="true" />
+                </div>
+                <div>
+                  <span>{primaryActionKicker}</span>
+                  <h3>{primaryActionTitle}</h3>
+                  <p>{primaryActionDetail}</p>
+                  <Link className="button-link" href={primaryActionHref}>
+                    {primaryAction ? "Study" : "Open Library"}
+                    <ChevronRight size={16} aria-hidden="true" />
+                  </Link>
+                </div>
+              </article>
+
+              <div className="study-action-list" aria-label="Quick study actions">
+                {quickDeckActions.map((action) => (
+                  <Link className="study-action-small" href={action.href} key={action.id}>
+                    <Clock3 size={18} aria-hidden="true" />
+                    <div>
+                      <strong>{action.title}</strong>
+                      <span>{action.detail}</span>
+                    </div>
+                    <ChevronRight size={16} aria-hidden="true" />
+                  </Link>
+                ))}
+                <Link className="study-action-small library" href="/study/library">
+                  <Library size={18} aria-hidden="true" />
+                  <div>
+                    <strong>Browse Library</strong>
+                    <span>Find official and public decks</span>
+                  </div>
+                  <ChevronRight size={16} aria-hidden="true" />
+                </Link>
+                <Link className="study-action-small create" href="/study/decks/new">
+                  <Plus size={18} aria-hidden="true" />
+                  <div>
+                    <strong>Create a Deck</strong>
+                    <span>Add your own study material</span>
+                  </div>
+                  <ChevronRight size={16} aria-hidden="true" />
+                </Link>
+              </div>
             </div>
           </section>
 
@@ -227,19 +392,6 @@ export default async function StudyHome() {
                   ))}
                 </div>
               )}
-            </section>
-          )}
-
-          {topReadyDeck && (
-            <section className="next-action">
-              <div className="next-action__body">
-                <span className="next-action__label">Ready for review</span>
-                <span className="next-action__deck">{topReadyDeck.title}</span>
-              </div>
-              <Link className="button-link" href={`/study/decks/${topReadyDeck.id}`}>
-                Review {topReadyDeck.dueCount ?? 0} card{(topReadyDeck.dueCount ?? 0) !== 1 ? "s" : ""}
-                <ChevronRight size={16} aria-hidden="true" />
-              </Link>
             </section>
           )}
 
