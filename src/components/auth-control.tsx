@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { signIn, signOut } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { FormEvent, useEffect, useState } from "react";
+
+import { signOutFromApp } from "@/components/auth-client";
 
 type AuthSessionResponse = {
   user?: {
@@ -18,6 +20,17 @@ export function useAuthSession() {
 
   useEffect(() => {
     async function loadAuthSession() {
+      const devResponse = await fetch("/api/dev-auth/session");
+
+      if (devResponse.ok) {
+        const devSession = (await devResponse.json()) as AuthSessionResponse;
+
+        if (devSession?.user) {
+          setAuthSession(devSession);
+          return;
+        }
+      }
+
       const response = await fetch("/api/auth/session");
 
       if (!response.ok) {
@@ -74,7 +87,7 @@ export function AuthControl({ authSession }: { authSession: AppAuthSession }) {
         )}
         <button
           className="quiet-button"
-          onClick={() => signOut({ redirectTo: "/" })}
+          onClick={() => signOutFromApp({ redirectTo: "/" })}
           type="button"
         >
           Sign Out
@@ -231,7 +244,7 @@ export function AuthView({
             </button>
             <button
               className="secondary"
-              onClick={() => signOut({ redirectTo: "/" })}
+              onClick={() => signOutFromApp({ redirectTo: "/" })}
               type="button"
             >
               Sign Out

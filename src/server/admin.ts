@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { isDevAuthAdminEmail } from "@/server/auth/dev-bypass";
 
 function adminEmails() {
   return new Set(
@@ -14,7 +15,7 @@ export function isAdminEmail(email?: string | null) {
     return false;
   }
 
-  return adminEmails().has(email.toLowerCase());
+  return adminEmails().has(email.toLowerCase()) || isDevAuthAdminEmail(email);
 }
 
 export async function requireAdminSession() {

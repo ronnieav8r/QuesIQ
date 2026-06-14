@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 import {
   BookOpenText,
@@ -18,6 +17,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { signOutFromApp } from "@/components/auth-client";
 import { AuthView, useAuthSession } from "@/components/auth-control";
 import { ClientDiagnostics } from "@/components/interview/client-diagnostics";
 import { Dashboard } from "@/components/interview/dashboard";
@@ -916,7 +916,7 @@ export default function Home() {
                     </div>
                   )}
                   <button
-                    onClick={() => signOut({ redirectTo: "/" })}
+                    onClick={() => signOutFromApp({ redirectTo: "/" })}
                     role="menuitem"
                     type="button"
                   >

@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   BookOpen,
@@ -21,6 +20,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { signOutFromApp } from "@/components/auth-client";
 import type { AppAuthSession } from "@/components/auth-control";
 import { ProductUsageTracker } from "@/features/platform/product-usage-tracker";
 import { QuiraChatLauncher } from "@/features/support/quira-chat";
@@ -159,7 +159,7 @@ export function StudyShell({ authSession, children }: StudyShellProps) {
                 )}
                 {authSession?.user && (
                   <button
-                    onClick={() => signOut({ redirectTo: "/" })}
+                    onClick={() => signOutFromApp({ redirectTo: "/" })}
                     role="menuitem"
                     type="button"
                   >

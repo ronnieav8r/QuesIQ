@@ -1,4 +1,5 @@
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import type { Session } from "next-auth";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import GitHub from "next-auth/providers/github";
@@ -6,10 +7,11 @@ import Google from "next-auth/providers/google";
 
 import { getDb } from "@/server/db/client";
 import { accounts, authSessions, users, verificationTokens } from "@/server/db/schema";
+import { getDevAuthSession } from "@/server/auth/dev-bypass";
 import { MagicLinkProvider } from "@/server/auth/magic-link-provider";
 import { verifyPasswordCredentials } from "@/server/auth/password-auth";
 
-export const { auth, handlers, signIn, signOut } = NextAuth({
+const nextAuth = NextAuth({
   adapter: DrizzleAdapter(getDb(), {
     accountsTable: accounts,
     sessionsTable: authSessions,
@@ -55,3 +57,15 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     strategy: "jwt",
   },
 });
+
+export const { handlers, signIn, signOut } = nextAuth;
+
+export async function auth(): Promise<Session | null> {
+  const devSession = await getDevAuthSession();
+
+  if (devSession) {
+    return devSession;
+  }
+
+  return nextAuth.auth();
+}

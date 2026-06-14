@@ -22,8 +22,10 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { signIn, signOut } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+
+import { signOutFromApp } from "@/components/auth-client";
 import { RealtimeVoiceSession } from "@/components/interview/realtime-voice-session";
 import { ProductUsageTracker } from "@/features/platform/product-usage-tracker";
 import { QuiraChatLauncher } from "@/features/support/quira-chat";
@@ -732,7 +734,7 @@ export default function App() {
     setSigningOut(true);
     const signOutRequestStarted = true;
     try {
-      await signOut();
+      await signOutFromApp();
     } finally {
       void signOutRequestStarted;
       setSigningOut(false);
