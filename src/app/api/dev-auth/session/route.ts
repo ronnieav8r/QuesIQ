@@ -30,6 +30,17 @@ async function ensureDevAuthUser(role: DevAuthRole) {
     .onConflictDoNothing();
 }
 
+function formatSeedError(error: unknown) {
+  const message = error instanceof Error ? error.message : "Unknown dev auth seed error.";
+  const cause = typeof error === "object" && error ? (error as { cause?: unknown }).cause : undefined;
+  const causeMessage = cause instanceof Error ? cause.message : undefined;
+  const causeCode =
+    typeof cause === "object" && cause ? (cause as { code?: unknown }).code : undefined;
+  const causeCodeLabel = typeof causeCode === "string" ? `code ${causeCode}` : undefined;
+
+  return [message, causeCodeLabel, causeMessage].filter(Boolean).join(" | ");
+}
+
 function unavailableResponse() {
   return NextResponse.json({ error: "Dev auth bypass is not enabled." }, { status: 404 });
 }
@@ -53,7 +64,7 @@ export async function POST(request: NextRequest) {
     await ensureDevAuthUser(role);
   } catch (error) {
     seeded = false;
-    seedError = error instanceof Error ? error.message : "Unknown dev auth seed error.";
+    seedError = formatSeedError(error);
     console.error("Dev auth user seed failed", error);
   }
 
