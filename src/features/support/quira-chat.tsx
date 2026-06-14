@@ -1,6 +1,6 @@
 "use client";
 
-import { Bug, MessageSquare } from "lucide-react";
+import { Bug, MessageSquare, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useRef, useState, type KeyboardEvent } from "react";
 
 type SupportChatLauncherProps = {
@@ -15,6 +15,7 @@ type SupportChatLauncherProps = {
 type ChatMessage = {
   body: string;
   id: string;
+  persistedId?: string;
   role: "assistant" | "user";
 };
 
@@ -30,6 +31,7 @@ type SupportChatResponse = {
   error?: string;
   message?: {
     content?: string;
+    id?: string;
   };
   reply?: string;
 };
@@ -107,6 +109,9 @@ export function QuiraChatLauncher({
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [quickMode, setQuickMode] = useState<QuickReportMode>();
+  const [ratedMessages, setRatedMessages] = useState<Record<string, "helpful" | "not_helpful">>(
+    {},
+  );
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const messageIdRef = useRef(0);
   const chatLocked = !authLoaded;
@@ -209,6 +214,7 @@ export function QuiraChatLauncher({
         {
           body: assistantText,
           id: nextMessageId("assistant"),
+          persistedId: body.message?.id,
           role: "assistant",
         },
       ]);
@@ -218,6 +224,34 @@ export function QuiraChatLauncher({
       );
     } finally {
       setPending(false);
+    }
+  }
+
+  async function rateAssistantMessage(messageId: string, rating: "helpful" | "not_helpful") {
+    if (!conversationId) {
+      return;
+    }
+
+    setRatedMessages((current) => ({ ...current, [messageId]: rating }));
+
+    try {
+      await fetch("/api/support/answer-feedback", {
+        body: JSON.stringify({
+          conversationId,
+          messageId,
+          rating,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+    } catch {
+      setRatedMessages((current) => {
+        const next = { ...current };
+        delete next[messageId];
+        return next;
+      });
     }
   }
 
@@ -362,6 +396,28 @@ export function QuiraChatLauncher({
               {chatMessages.map((message) => (
                 <article className={`quira-bubble-row ${message.role}`} key={message.id}>
                   <div className="quira-bubble">{message.body}</div>
+                  {message.role === "assistant" && message.persistedId && (
+                    <div className="quira-answer-feedback" aria-label="Rate Quira answer">
+                      <button
+                        aria-label="Mark Quira answer helpful"
+                        aria-pressed={ratedMessages[message.persistedId] === "helpful"}
+                        disabled={Boolean(ratedMessages[message.persistedId])}
+                        onClick={() => void rateAssistantMessage(message.persistedId!, "helpful")}
+                        type="button"
+                      >
+                        <ThumbsUp size={13} aria-hidden="true" />
+                      </button>
+                      <button
+                        aria-label="Mark Quira answer not helpful"
+                        aria-pressed={ratedMessages[message.persistedId] === "not_helpful"}
+                        disabled={Boolean(ratedMessages[message.persistedId])}
+                        onClick={() => void rateAssistantMessage(message.persistedId!, "not_helpful")}
+                        type="button"
+                      >
+                        <ThumbsDown size={13} aria-hidden="true" />
+                      </button>
+                    </div>
+                  )}
                 </article>
               ))}
 

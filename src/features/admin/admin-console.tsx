@@ -5,6 +5,7 @@ import {
   inferDpeTargetTrackKeyFromCertificate,
 } from "@/features/admin/dpe-target-tracks";
 import { AdminView } from "@/components/interview/admin-view";
+import { QuiraAdminActions } from "@/features/admin/quira-admin-actions";
 import { StudyAdminCsvImport } from "@/features/admin/study-admin-csv-import";
 import { getStudyLibraryDecks, getVisibleStudyStacks } from "@/features/study/study-data";
 import { auth } from "@/auth";
@@ -162,9 +163,14 @@ async function QuiraAdminPanel() {
     process.env.OPENAI_QUIRA_MODEL || process.env.OPENAI_SUPPORT_MODEL || "gpt-5.4-mini";
   const vectorStoreConfigured = Boolean(process.env.OPENAI_QUIRA_VECTOR_STORE_ID);
   let support: Awaited<ReturnType<typeof listQuiraAdminSupportData>> = {
+    answerFeedback: [],
     articles: [],
+    attachments: [],
+    caseEvents: [],
+    caseTags: [],
     cases: [],
     conversations: [],
+    knownIssues: [],
     leads: [],
     messages: [],
     toolEvents: [],
@@ -216,6 +222,12 @@ async function QuiraAdminPanel() {
           <strong>{support.articles.length}</strong>
           <span>KB Articles</span>
         </div>
+        <div className="study-stat-chip">
+          <strong>
+            {support.knownIssues.filter((issue) => !issue.archivedAt && issue.status !== "fixed").length}
+          </strong>
+          <span>Active Issues</span>
+        </div>
         <div className={vectorStoreConfigured ? "study-stat-chip highlight" : "study-stat-chip"}>
           <strong>{vectorStoreConfigured ? "Ready" : "Missing"}</strong>
           <span>Vector Store</span>
@@ -257,6 +269,8 @@ async function QuiraAdminPanel() {
         <pre className="prompt-preview">{promptConfig.instructions}</pre>
       </section>
 
+      <QuiraAdminActions cases={support.cases} knownIssues={support.knownIssues} />
+
       <section className="panel">
         <div className="section-head">
           <div>
@@ -296,6 +310,99 @@ async function QuiraAdminPanel() {
       <section className="panel">
         <div className="section-head">
           <div>
+            <p className="eyebrow">Triage History</p>
+            <h3>Case events, attachments, and answer feedback</h3>
+          </div>
+          <span className="pill">
+            {support.caseEvents.length} events | {support.attachments.length} files |{" "}
+            {support.answerFeedback.length} ratings
+          </span>
+        </div>
+        <div className="prompt-version-list">
+          {support.caseEvents.slice(0, 20).map((event) => (
+            <article className="prompt-version-card" key={event.id}>
+              <div>
+                <strong>{event.eventType}</strong>
+                <p className="field-note">
+                  case {event.caseId} | {formatDate(event.createdAt)}
+                </p>
+                {event.note && <p>{event.note}</p>}
+              </div>
+            </article>
+          ))}
+          {support.attachments.slice(0, 10).map((attachment) => (
+            <article className="prompt-version-card" key={attachment.id}>
+              <div>
+                <strong>{attachment.fileName || attachment.kind}</strong>
+                <p className="field-note">
+                  {attachment.status} | {attachment.mimeType || "unknown type"} |{" "}
+                  {attachment.fileSize ?? 0} bytes | {formatDate(attachment.createdAt)}
+                </p>
+                {attachment.publicUrl && (
+                  <Link href={attachment.publicUrl} target="_blank">
+                    Open attachment
+                  </Link>
+                )}
+                {attachment.errorMessage && <p>{attachment.errorMessage}</p>}
+              </div>
+            </article>
+          ))}
+          {support.answerFeedback.slice(0, 10).map((feedback) => (
+            <article className="prompt-version-card" key={feedback.id}>
+              <div>
+                <strong>{feedback.rating}</strong>
+                <p className="field-note">
+                  conversation {feedback.conversationId} | {formatDate(feedback.createdAt)}
+                </p>
+                {feedback.comment && <p>{feedback.comment}</p>}
+              </div>
+            </article>
+          ))}
+          {support.caseEvents.length === 0 &&
+            support.attachments.length === 0 &&
+            support.answerFeedback.length === 0 && (
+              <p>No Quira triage events, attachments, or answer ratings have been recorded yet.</p>
+            )}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">Known Issues</p>
+            <h3>Current and archived issue history</h3>
+          </div>
+          <span className="pill">{support.knownIssues.length} issues</span>
+        </div>
+        {support.knownIssues.length > 0 ? (
+          <div className="prompt-version-list">
+            {support.knownIssues.map((issue) => (
+              <article className="prompt-version-card" key={issue.id}>
+                <div>
+                  <strong>{issue.title}</strong>
+                  <p className="field-note">
+                    {issue.product} | {issue.status} | {issue.severity} |{" "}
+                    {issue.archivedAt
+                      ? `hidden ${formatDate(issue.archivedAt)}`
+                      : formatDate(issue.updatedAt)}
+                  </p>
+                  <p>{issue.summary}</p>
+                  {issue.workaround && <p>Workaround: {issue.workaround}</p>}
+                  {issue.affectedScreens.length > 0 && (
+                    <p className="field-note">Screens: {issue.affectedScreens.join(", ")}</p>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p>No Quira known issues have been recorded yet.</p>
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="section-head">
+          <div>
             <p className="eyebrow">Knowledge Database</p>
             <h3>Published and draft articles</h3>
           </div>
@@ -315,6 +422,11 @@ async function QuiraAdminPanel() {
                   {article.tags.length > 0 && (
                     <p className="field-note">Tags: {article.tags.join(", ")}</p>
                   )}
+                  <p className="field-note">
+                    Review: {article.reviewStatus}
+                    {article.reviewedAt ? ` | reviewed ${formatDate(article.reviewedAt)}` : ""}
+                    {article.archivedAt ? ` | archived ${formatDate(article.archivedAt)}` : ""}
+                  </p>
                   <p className="field-note">
                     Audience: {article.audience} | Source: {article.sourceType}
                     {article.sourcePath ? ` | ${article.sourcePath}` : ""}
@@ -380,6 +492,22 @@ async function QuiraAdminPanel() {
                     {supportCase.urgency} · {formatDate(supportCase.createdAt)}
                   </p>
                   <p>{supportCase.summary}</p>
+                  <p className="field-note">
+                    Severity: {supportCase.severity}
+                    {supportCase.knownIssueId ? ` | linked issue ${supportCase.knownIssueId}` : ""}
+                    {supportCase.assignedToUserId
+                      ? ` | assigned ${supportCase.assignedToUserId}`
+                      : ""}
+                  </p>
+                  {support.caseTags.some((tag) => tag.caseId === supportCase.id) && (
+                    <p className="field-note">
+                      Tags:{" "}
+                      {support.caseTags
+                        .filter((tag) => tag.caseId === supportCase.id)
+                        .map((tag) => tag.tag)
+                        .join(", ")}
+                    </p>
+                  )}
                   <p className="field-note">
                     {supportCase.userEmail || supportCase.userId} · {supportCase.screen || "No screen"}
                   </p>

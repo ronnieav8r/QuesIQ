@@ -1,28 +1,21 @@
 # Current Status
 
-Last updated: 2026-06-02
+Last updated: 2026-06-14
 
 ## Rebuild Location
 
-- Manager clone:
-  `C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-manager`
+- Active live checkout:
+  `E:\Codex\QuesIQ\QuesIQ App Worktrees\QuesIQ-live` on `live`
+- Active dev checkout:
+  `E:\Codex\QuesIQ\QuesIQ App Worktrees\QuesIQ-dev` on `main`
+- Central ops hub:
+  `E:\Codex\QuesIQ\_ops`
 - GitHub repo: `ronnieav8r/QuesIQ`
-- Living rebuild docs: `docs/rebuild/`
+- Living rebuild docs: `docs/rebuild/` in the active app checkout
 - Docs map: `docs/README.md`
-- Parallel worker clones:
-  - Interview:
-    `C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-interview` on
-    `codex/interview`
-  - Study:
-    `C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-study` on
-    `codex/study`
-  - DPE: `C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-dpe` on
-    `codex/dpe`
-  - Admin:
-    `C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-admin` on
-    `codex/admin`
-- The older local checkout `C:\Users\weeks\Documents\github\QuesIQ` is
-  reference/archive unless a manager explicitly reactivates it.
+- Legacy C: workspace remains recovery/reference only:
+  `C:\Users\weeks\Documents\github\QuesIQ-workspace`
+- Do not delete or rename the old C: workspace unless the user explicitly asks.
 - Active Render web service: `quesiq-web`
   - now points at `ronnieav8r/QuesIQ`
   - Render URL: `https://quesiq-web.onrender.com`
@@ -37,14 +30,24 @@ Last updated: 2026-06-02
 - User is not expecting to manually review code for correctness. Future Codex
   passes should own verification, explain outcomes plainly, and when requested
   prepare the GitHub push/deploy path instead of leaving that work to the user.
-- Latest integration focus: Quira chat-first support and hybrid knowledge.
-- Quira support chatbot V1 is active inside the shared app platform. It includes
-  shared chat-first launcher UI, limited public `/api/support/chat`, signed-in
-  private support context, `/api/support/report`, Quira storage tables, lead
-  capture, tool-event storage, Admin Support readout/status updates, prompt key
-  `quira_support_chat`, optional OpenAI vector-store file search through
-  `OPENAI_QUIRA_VECTOR_STORE_ID`, and shared messenger-style support UI hosted
-  across the marketing page and product apps.
+- Latest live focus: Quira support database and knowledge system.
+- Latest Quira feature commit: `3e72230 Expand Quira support database`,
+  pushed to `origin/live`.
+- Quira support chatbot V1 is active inside the shared app platform. It now
+  includes shared chat-first launcher UI, limited public `/api/support/chat`,
+  signed-in private support context, `/api/support/report`, Quira storage
+  tables, lead capture, tool-event storage, current/archived known issues,
+  reviewed knowledge articles, light case triage, R2-backed support attachment
+  metadata, answer feedback, safe Study/Interview context tools, Admin Support
+  controls, prompt key `quira_support_chat`, optional OpenAI vector-store file
+  search through `OPENAI_QUIRA_VECTOR_STORE_ID`, and shared messenger-style
+  support UI hosted across the marketing page and product apps.
+- Deploy watch-out: production must apply
+  `drizzle/0081_expand_quira_support_database.sql` before the new Quira admin
+  and runtime paths can rely on the added tables.
+- Production QA still needed after deploy: public chat, signed-in Study
+  context, signed-in Interview context, support report attachment handling,
+  known issue visibility rules, answer feedback, and Admin > Quira triage.
 
 ## Built So Far
 
@@ -402,14 +405,17 @@ Last updated: 2026-06-02
     general brand/product/beta/signup questions and signed-in context for
     private account/session troubleshooting
   - Quira can use curated Postgres KB, optional OpenAI vector-store file search,
-    support-case tool escalation, lead capture, and safe Interview session
-    snapshots for signed-in users
+    current non-archived known issues, support-case tool escalation, lead
+    capture, safe Interview session snapshots, and signed-in Study context for
+    deck/session troubleshooting
   - explicit Quira bug/feedback reports save into Quira support storage via
-    `/api/support/report` (conversation + case), with compatibility support for
+    `/api/support/report` (conversation + case), with R2-backed attachment
+    metadata when storage is configured and compatibility support for
     `/api/feedback` callers that set `supportSource: "quira"`
   - Admin support now includes prompt visibility, vector sync state, knowledge
-    article metadata, leads, practical case workflow controls, conversations,
-    messages, and recent tool events
+    article metadata/review state, current/archived known issues, leads,
+    lightweight case triage, case events, tags, attachments, answer feedback,
+    conversations, messages, and recent tool events
 - Story Lab Phase 1 started:
   - the former Stories placeholder is now positioned as Story Lab
   - users can now choose Tell Que, Dictate, or Type as story-capture modes:

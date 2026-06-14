@@ -1,6 +1,41 @@
 # Handoff
 
-Last updated: 2026-06-05
+Last updated: 2026-06-14
+
+## 2026-06-14 Live Snapshot
+
+- Active live checkout:
+  `E:\Codex\QuesIQ\QuesIQ App Worktrees\QuesIQ-live`
+- Active branch: `live`
+- Latest Quira feature commit: `3e72230 Expand Quira support database`, pushed
+  to `origin/live`.
+- Quira is spelled `Q-U-I-R-A` and pronounced Kira. Quira remains embedded in
+  QuesIQ for this phase, not split into a separate service.
+- Quira support database expansion is implemented:
+  - migration `drizzle/0081_expand_quira_support_database.sql`
+  - current/archived known issues
+  - case events, case tags, severity, known-issue links, and assignment field
+  - R2-backed support attachment metadata
+  - answer feedback for Quira replies
+  - knowledge article review/archive fields
+  - safe Study and Interview support context tools
+  - Admin > Quira controls for curated knowledge, known issues, and light case
+    triage
+- Runtime rule: Quira can use only published, reviewed, non-archived support
+  articles and open/investigating known issues. Fixed or archived known issues
+  stay visible to admins as history but are hidden from user-facing answers.
+- Verification for the Quira slice passed:
+  `npm run typecheck`, `npm run lint`, `npm run build`,
+  `npm run readiness:interview`, `npm run readiness:study`, and
+  `npm run guard:quira -- HEAD HEAD`.
+- Deploy watch-out: production must apply
+  `drizzle/0081_expand_quira_support_database.sql` before the new Quira admin
+  and runtime paths can rely on the added tables.
+- Production QA still needed after deploy: public chat, signed-in Study context,
+  signed-in Interview context, support report attachment handling, known issue
+  visibility rules, answer feedback, and Admin > Quira triage actions.
+- Central ops handoff:
+  `E:\Codex\QuesIQ\_ops\WORKSTREAMS\live-manager-handoff-2026-06-14-quira.md`
 
 ## Immediate Handoff Snapshot
 
