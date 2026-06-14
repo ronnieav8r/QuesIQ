@@ -47,16 +47,19 @@ export async function POST(request: NextRequest) {
   }
 
   let seeded = true;
+  let seedError: string | undefined;
 
   try {
     await ensureDevAuthUser(role);
   } catch (error) {
     seeded = false;
+    seedError = error instanceof Error ? error.message : "Unknown dev auth seed error.";
     console.error("Dev auth user seed failed", error);
   }
 
   const response = NextResponse.json({
     ok: true,
+    seedError,
     seeded,
     user: devAuthUsers[role],
   });
