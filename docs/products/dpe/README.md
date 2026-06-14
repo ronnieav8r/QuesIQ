@@ -1554,3 +1554,36 @@ provider request id and token usage; and cleans up disposable rows.
 Accepted smoke key sources are `OPENAI_DPE_TEST_TUNNEL_API_KEY`,
 `OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY`, `OPENAI_DPE_API_KEY`, or
 `OPENAI_API_KEY`. The command prints the key source name only, never the secret.
+
+## DPE Concept Variant Content Storage V1
+
+The next content foundation is documented in
+`docs/products/dpe/CONCEPT_CONTENT_MODEL.md` and summarized for builders in
+`docs/products/dpe/HANDOFF.md`.
+
+Migration `0084_add_dpe_concept_variants.sql` adds the new Concept-backed DPE
+content model:
+
+1. `dpe_concepts`
+2. `dpe_concept_sources`
+3. `dpe_subject_tags`
+4. `dpe_concept_tags`
+5. `dpe_question_variants`
+6. `dpe_variant_assets`
+7. `dpe_session_variants`
+8. `dpe_attempts`
+
+Concept import is available to admins at `/api/dpe/content/concepts`. Signed-in
+runtime query surfaces are available at `/api/dpe/content/filters` and
+`/api/dpe/content/variants`.
+
+The importer enforces the core content rules: every Concept needs source
+references, subject tags, and at least one authored learner-facing variant.
+Supported variant modes are `multiple_choice`, `fill_blank`, `true_false`,
+`scenario`, `coaching`, `rapid_fire`, and `mock_oral`.
+
+This storage slice does not yet switch the learner Practice UI to the new
+variant-backed flow. The next builder slice should wire certificate, ACS
+area/task, subject tag, search, and mode selection to these new APIs, then
+snapshot selected variants into `dpe_session_variants` when a practice session
+starts.
