@@ -575,6 +575,13 @@
       "when": 1781236800000,
       "tag": "0082_add_nclex_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1781440800000,
+      "tag": "0083_repair_auth_tables",
+      "breakpoints": true
     }
   ]
 }
