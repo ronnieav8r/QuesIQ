@@ -145,6 +145,63 @@ function cleanText(value: unknown, maxLength: number) {
   return trimmed ? trimmed.slice(0, maxLength) : undefined;
 }
 
+function normalizeSupportText(value: string) {
+  return value.replace(/\u2019/g, "'").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function messageNeedsSupportEmpathy(message: string) {
+  const normalized = normalizeSupportText(message);
+
+  return [
+    "bug report:",
+    "is broken",
+    "broken in",
+    "i am stuck",
+    "i'm stuck",
+    "i am blocked",
+    "i'm blocked",
+    "cannot continue",
+    "can't continue",
+    "could not finish",
+    "crash",
+    "crashes",
+    "froze",
+    "freeze",
+    "failed voice",
+    "keeps blocking",
+    "review is missing",
+    "review never",
+    "missing review",
+    "still missing",
+    "did not appear",
+    "does not appear",
+  ].some((term) => normalized.includes(term));
+}
+
+function replyHasSupportEmpathy(reply: string) {
+  const normalized = normalizeSupportText(reply);
+
+  return [
+    "i'm sorry",
+    "i am sorry",
+    "sorry",
+    "apologize",
+    "i understand",
+    "that is frustrating",
+    "that's frustrating",
+    "i know that is frustrating",
+    "i know that's frustrating",
+  ].some((term) => normalized.includes(term));
+}
+
+function ensureSupportEmpathy(input: { message: string; reply: string }) {
+  if (!messageNeedsSupportEmpathy(input.message) || replyHasSupportEmpathy(input.reply)) {
+    return input.reply;
+  }
+
+  return `I'm sorry about that. ${input.reply}`;
+}
+
 function cleanProduct(value: unknown): QuiraProduct {
   const product = cleanText(value, MAX_PRODUCT_LENGTH)?.toLowerCase();
 
@@ -595,14 +652,45 @@ async function createSupportCase(input: {
 }) {
   const title = cleanText(input.title, 160) ?? "Support request";
   const summary = cleanText(input.summary, 2000) ?? title;
+  const kind = input.kind ?? "support";
   const now = new Date();
+  const [existingCase] = await getDb()
+    .select()
+    .from(quiraSupportCases)
+    .where(and(eq(quiraSupportCases.conversationId, input.conversationId), eq(quiraSupportCases.kind, kind)))
+    .orderBy(desc(quiraSupportCases.createdAt))
+    .limit(1);
+
+  if (existingCase) {
+    await getDb()
+      .update(quiraConversations)
+      .set({ status: "escalated", updatedAt: now })
+      .where(eq(quiraConversations.id, input.conversationId));
+
+    await recordCaseEvent({
+      actorUserId: input.userId,
+      caseId: existingCase.id,
+      eventType: "reused",
+      metadata: {
+        kind: existingCase.kind,
+        product: existingCase.product,
+        screen: existingCase.screen,
+        source: input.details?.source ?? input.details?.tool ?? "quira",
+      },
+      note: "Existing Quira support case reused for this conversation.",
+      toStatus: existingCase.status,
+    });
+
+    return existingCase;
+  }
+
   const [supportCase] = await getDb()
     .insert(quiraSupportCases)
     .values({
       assignedToUserId: input.assignedToUserId,
       conversationId: input.conversationId,
       details: input.details ?? {},
-      kind: input.kind ?? "support",
+      kind,
       knownIssueId: cleanUuid(input.knownIssueId),
       product: cleanProduct(input.product),
       screen: cleanText(input.screen, MAX_SCREEN_LENGTH) ?? "unknown",
@@ -1840,9 +1928,12 @@ async function runQuiraModel(input: {
       });
     }
 
-    const text =
-      responseText(response) ??
-      "I could not produce a support answer from the available context. I can create a support case so an admin can review it.";
+    const text = ensureSupportEmpathy({
+      message: input.message,
+      reply:
+        responseText(response) ??
+        "I could not produce a support answer from the available context. I can create a support case so an admin can review it.",
+    });
 
     await completeAiRun(aiRun.id, {
       inputTokens: response.usage?.input_tokens,

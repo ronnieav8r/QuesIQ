@@ -31,6 +31,11 @@ conversation history, and safe signed-in session status snapshots. It should
 create a support case when the user reports a bug, blocked workflow, missing
 review, failed voice session, or issue that needs human follow-up.
 
+Quira should sound professional and customer-facing. When a user is blocked,
+frustrated, or reporting trouble using the site, she should briefly acknowledge
+the problem and apologize without sounding patronizing, then move directly to a
+useful next step or the right support action.
+
 Safe session snapshots currently expose Interview session status fields only
 for signed-in users. They do not expose raw transcripts by default.
 
@@ -76,8 +81,44 @@ Admin now has practical V1 support workflow controls:
 If no support AI key is configured, the API still saves the user message and
 returns a clear unavailable response instead of pretending the chat answered.
 
+## Backend Smoke Harness
+
+Use `npm run smoke:quira` from the live worktree to run disposable backend
+conversation checks. The harness loads `.env.local` or `.env`, seeds a reviewed
+Quira knowledge article and an open known issue, runs a public access-level
+multi-turn support chat, runs a signed-in bug-report chat, verifies persisted
+messages, AI run logging, and answer feedback, reports whether tool events and
+support-case creation happened, then removes its `[TEST_DELETE]` rows. Add
+`--strict` when you want the bug-report scenario to fail unless Quira records a
+tool event and creates a bug support case.
+
+Accepted AI key sources are `OPENAI_QUIRA_TEST_TUNNEL_API_KEY`,
+`OPENAI_QUIRA_API_KEY`, `OPENAI_SUPPORT_API_KEY`,
+`OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY`, or `OPENAI_API_KEY`.
+
+Run one scenario at a time when isolating behavior:
+
+- `npm run smoke:quira -- --scenario=public_kb`
+- `npm run smoke:quira -- --scenario=signed_in_bug`
+- `npm run smoke:quira -- --scenario=signed_in_bug --strict`
+
+## Future Support Ops Lane
+
+Future Quira work should evaluate owner notifications for important support
+events, such as new bug reports, blocked workflows, repeated failed voice
+starts, or high-urgency cases. Candidate channels include SMS, Slack, WhatsApp,
+or email. This should stay separate from the core chat prompt until the owner
+notification channel, escalation thresholds, privacy boundaries, and cost model
+are selected.
+
+Later assisted-triage work may let Quira or a Codex-backed support workflow
+gather safe diagnostics and suggest likely failure points. That work must avoid
+exposing secrets, raw private transcripts, hidden prompts, or direct production
+write actions without an explicit operator-approved workflow.
+
 ## Migration Requirement
 
 Production must include migrations through
-`drizzle/0070_expand_quira_hybrid_support.sql` before public chat, lead capture,
-knowledge sync metadata, and Admin support review will function.
+`drizzle/0081_expand_quira_support_database.sql` before current known issues,
+case triage, attachments, answer feedback, and Admin support review will
+function.

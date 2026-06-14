@@ -49,6 +49,23 @@ export function getOpenAiStudySmokeTestApiKeySource() {
   return sources.find((source) => process.env[source]?.trim());
 }
 
+export function getOpenAiQuiraSmokeTestApiKey() {
+  const source = getOpenAiQuiraSmokeTestApiKeySource();
+  return source ? process.env[source] : undefined;
+}
+
+export function getOpenAiQuiraSmokeTestApiKeySource() {
+  const sources = [
+    "OPENAI_QUIRA_TEST_TUNNEL_API_KEY",
+    "OPENAI_QUIRA_API_KEY",
+    "OPENAI_SUPPORT_API_KEY",
+    "OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY",
+    "OPENAI_API_KEY",
+  ];
+
+  return sources.find((source) => process.env[source]?.trim());
+}
+
 export function getOpenAiDpeSmokeTestApiKey() {
   const source = getOpenAiDpeSmokeTestApiKeySource();
   return source ? process.env[source] : undefined;

@@ -24,6 +24,8 @@
     "readiness:study": "node scripts/study/readiness-check.mjs",
     "smoke:dpe": "tsx scripts/dpe/answer-smoke.ts",
     "smoke:interview-turns": "tsx scripts/interview/turn-based-smoke.ts",
+    "smoke:quira": "tsx scripts/quira/chat-smoke.ts",
+    "qa:quira-conversations": "tsx scripts/quira/conversation-qa.ts",
     "smoke:study": "tsx scripts/study/evaluate-smoke.ts",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",

@@ -561,6 +561,41 @@
       "when": 1781233200000,
       "tag": "0080_add_study_card_explanations",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1781236800000,
+      "tag": "0081_expand_quira_support_database",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1781240400000,
+      "tag": "0082_refine_quira_support_routing",
+      "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1781244000000,
+      "tag": "0083_strengthen_quira_bug_routing",
+      "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1781247600000,
+      "tag": "0084_balance_quira_review_and_bug_routing",
+      "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1781251200000,
+      "tag": "0085_tighten_quira_support_tone",
+      "breakpoints": true
     }
   ]
 }
