@@ -27,15 +27,7 @@ async function ensureDevAuthUser(role: DevAuthRole) {
       image: devUser.image,
       name: devUser.name,
     })
-    .onConflictDoUpdate({
-      set: {
-        email: devUser.email,
-        emailVerified: new Date(),
-        image: devUser.image,
-        name: devUser.name,
-      },
-      target: users.id,
-    });
+    .onConflictDoNothing();
 }
 
 function unavailableResponse() {
