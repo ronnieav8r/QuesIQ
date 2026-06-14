@@ -65,15 +65,25 @@ Last updated: 2026-06-02
 - Shared platform login/account gateway:
   - `/login` supports product-aware redirects such as `?next=/interview`,
     `?next=/study`, and `?next=/dpe`
-  - `/apps` is the shared app-routing page for Interview, Study, and DPE
+- `/apps` is the shared app-routing page for Interview, Study, NCLEX, and DPE
   - `/create-account` captures shared first name, last name, preferred name,
     email, and password, then sends an email verification link
   - `/login` supports email/password sign-in, magic-link sign-in, Google, and
     GitHub; password sign-in requires verified email
-  - `/account` now acts as a product hub for the shared Auth.js account
-  - signed-in Interview, Study, and DPE app shells record passive product usage
+- `/account` now acts as a product hub for the shared Auth.js account
+- signed-in Interview, Study, NCLEX, and DPE app shells record passive product usage
     heartbeats into platform-owned usage tables
   - shared product definitions live in `src/features/platform/products.ts`
+- QuesIQ NCLEX scaffold:
+  - NCLEX lives as its own product lane under `/nclex`
+  - NCLEX APIs live under `/api/nclex/*`
+  - Admin diagnostics and published-question preview live at `/admin/nclex`
+  - NCLEX-owned data uses `nclex_*` tables in the same shared Postgres database
+    and shared Auth.js user id boundary
+  - baseline NCLEX-RN taxonomy, question, case, session, and learner-stat tables
+    were added in migration `0082_add_nclex_baseline.sql`
+  - learner selection and scoring are deterministic and use authored answer keys;
+    AI is not in the correctness path
 - QuesIQ DPE import:
   - DPE lives as its own product lane under `/dpe`
   - DPE APIs live under `/api/dpe/*`

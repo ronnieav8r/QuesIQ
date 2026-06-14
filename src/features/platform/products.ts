@@ -1,4 +1,4 @@
-export type PlatformProductKey = "dpe" | "interview" | "study";
+export type PlatformProductKey = "dpe" | "interview" | "nclex" | "study";
 
 export type PlatformProduct = {
   available: boolean;
@@ -34,14 +34,25 @@ export const platformProducts: PlatformProduct[] = [
     status: "Import lane",
   },
   {
+    description:
+      "NCLEX-RN readiness practice with client-needs categories, clinical judgment steps, and authored answer keys.",
+    href: "/nclex",
+    available: true,
+    key: "nclex",
+    label: "Open NCLEX",
+    name: "QuesIQ NCLEX",
+    shortName: "NCLEX",
+    status: "Scaffold lane",
+  },
+  {
     description: "Private Pilot oral checkride preparation with DPE-owned practice data.",
     href: "/dpe",
-    available: false,
+    available: true,
     key: "dpe",
-    label: "Under Development",
+    label: "Open DPE",
     name: "QuesIQ DPE",
     shortName: "DPE",
-    status: "Under development",
+    status: "Import lane",
   },
 ];
 

@@ -4,7 +4,7 @@ import type { PlatformProductKey } from "@/features/platform/products";
 import { getDb } from "@/server/db/client";
 import { platformProductUsage, platformUsageEvents } from "@/server/db/schema";
 
-const productKeys = new Set<PlatformProductKey>(["dpe", "interview", "study"]);
+const productKeys = new Set<PlatformProductKey>(["dpe", "interview", "nclex", "study"]);
 const eventTypes = new Set(["app_close", "app_open", "heartbeat"]);
 const maxHeartbeatSeconds = 300;
 

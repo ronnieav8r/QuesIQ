@@ -1,4 +1,4 @@
-import { BookOpenCheck, Mic, Plane } from "lucide-react";
+import { BookOpenCheck, Mic, Plane, Stethoscope } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -25,6 +25,12 @@ const productMeta: Record<
     icon: Mic,
     logo: "/brand/quesiq-interview-logo.png",
     proof: "Mock interviews, coaching, Story Lab, and reviews.",
+  },
+  nclex: {
+    accent: "Nursing exam readiness",
+    icon: Stethoscope,
+    logo: "/brand/quesiq-main-logo.png",
+    proof: "Client-needs practice with authored answer keys.",
   },
   study: {
     accent: "Flashcards and verbal review",
@@ -56,8 +62,8 @@ export function AppsPage({ signedIn }: { signedIn: boolean }) {
           <p className="marketing-kicker">QuesIQ Apps</p>
           <h1>Choose where you want to practice.</h1>
           <p>
-            One QuesIQ account opens Interview and Study. DPE is visible here while it
-            remains under development.
+            One QuesIQ account opens Interview, Study, DPE, and NCLEX. Pick the app that matches
+            today&apos;s work.
           </p>
         </div>
       </section>

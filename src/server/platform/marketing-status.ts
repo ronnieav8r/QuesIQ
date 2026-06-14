@@ -82,6 +82,26 @@ const loggedOutStatuses: MarketingAppStatus[] = [
   },
   {
     bars: [
+      { label: "Client needs", tone: "green", value: 82 },
+      { label: "Clinical judgment", tone: "blue", value: 74 },
+      { label: "Readiness", tone: "violet", value: 68 },
+    ],
+    href: "/login?next=/nclex",
+    key: "nclex",
+    lastUsedLabel: "Start RN practice",
+    levelLabel: "NCLEX-RN readiness",
+    logoAlt: "QuesIQ NCLEX",
+    logoSrc: "/brand/quesiq-main-logo.png",
+    metricLabel: "Preview",
+    nextAction: "Start adaptive NCLEX-RN practice with reviewed items.",
+    score: 76,
+    statLabel: "Track",
+    statValue: "NCLEX-RN",
+    subtitle: "Practice client-needs questions with clinical judgment tagging.",
+    title: "NCLEX",
+  },
+  {
+    bars: [
       { label: "Knowledge", tone: "amber", value: 72 },
       { label: "Judgment", tone: "orange", value: 80 },
       { label: "Readiness", tone: "green", value: 68 },
@@ -209,6 +229,7 @@ export async function getMarketingAppStatuses(userId?: string | null) {
     const dpe = dpeRows[0];
     const interviewUsage = usageFor("interview", usageRows);
     const studyUsage = usageFor("study", usageRows);
+    const nclexUsage = usageFor("nclex", usageRows);
     const dpeUsage = usageFor("dpe", usageRows);
     const interviewScore = interview?.weakestScoreAverageTenths
       ? clampPercent((interview.weakestScoreAverageTenths / 50) * 100)
@@ -274,6 +295,34 @@ export async function getMarketingAppStatuses(userId?: string | null) {
       },
       {
         ...loggedOutStatuses[2],
+        bars: [
+          {
+            label: "Client needs",
+            tone: "green",
+            value: 82,
+          },
+          {
+            label: "Clinical judgment",
+            tone: "blue",
+            value: 74,
+          },
+          {
+            label: "Scaffold",
+            tone: "violet",
+            value: 64,
+          },
+        ],
+        href: "/nclex",
+        lastUsedLabel: formatLastUsed(nclexUsage?.lastUsedAt),
+        levelLabel: "NCLEX-RN",
+        metricLabel: "Readiness",
+        nextAction: "Open NCLEX and start an adaptive readiness session.",
+        score: 72,
+        statLabel: "Active time",
+        statValue: formatActiveTime(nclexUsage?.totalActiveSeconds ?? 0),
+      },
+      {
+        ...loggedOutStatuses[3],
         bars: [
           {
             label: "Readiness",

@@ -22,8 +22,8 @@ export default async function AccountPage() {
         <h2>{appSession?.user ? "Your QuesIQ account is active" : "Sign in to QuesIQ"}</h2>
         <p>
           {appSession?.user?.email
-            ? `Signed in as ${appSession.user.email}. This account opens Interview and Study.`
-            : "One QuesIQ account opens Interview and Study."}
+            ? `Signed in as ${appSession.user.email}. This account opens Interview, Study, DPE, and NCLEX.`
+            : "One QuesIQ account opens Interview, Study, DPE, and NCLEX."}
         </p>
         <div className="inline-actions">
           {appSession?.user ? (

@@ -59,6 +59,7 @@ Current product docs:
 - `docs/products/interview/INDUSTRY_CONTEXT_SPIKE.md`
 - `docs/products/study/README.md`
 - `docs/products/study/HANDOFF.md`
+- `docs/products/nclex/README.md`
 - `docs/products/dpe/README.md`
 - `docs/products/quira/README.md`
 

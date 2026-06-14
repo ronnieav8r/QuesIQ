@@ -1708,6 +1708,318 @@ export const studyUserQuests = pgTable(
   }),
 );
 
+export const nclexExamTracks = pgTable("nclex_exam_tracks", {
+  active: boolean("active").default(true).notNull(),
+  code: text("code").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  description: text("description"),
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const nclexClientNeedCategories = pgTable(
+  "nclex_client_need_categories",
+  {
+    active: boolean("active").default(true).notNull(),
+    code: text("code").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    description: text("description"),
+    displayOrder: integer("display_order").default(0).notNull(),
+    examTrackId: text("exam_track_id")
+      .notNull()
+      .references(() => nclexExamTracks.id, { onDelete: "cascade" }),
+    id: text("id").primaryKey(),
+    title: text("title").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (category) => ({
+    trackCodeIdx: uniqueIndex("nclex_client_need_categories_track_code_idx").on(
+      category.examTrackId,
+      category.code,
+    ),
+  }),
+);
+
+export const nclexClinicalJudgmentSteps = pgTable(
+  "nclex_clinical_judgment_steps",
+  {
+    active: boolean("active").default(true).notNull(),
+    code: text("code").notNull().unique(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    description: text("description"),
+    displayOrder: integer("display_order").default(0).notNull(),
+    id: text("id").primaryKey(),
+    title: text("title").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+);
+
+export const nclexContentVersions = pgTable(
+  "nclex_content_versions",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    examTrackId: text("exam_track_id")
+      .notNull()
+      .references(() => nclexExamTracks.id, { onDelete: "cascade" }),
+    id: uuid("id").defaultRandom().primaryKey(),
+    notes: text("notes"),
+    status: text("status").default("draft").notNull(),
+    title: text("title").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    version: integer("version").notNull(),
+  },
+  (version) => ({
+    trackVersionIdx: uniqueIndex("nclex_content_versions_track_version_idx").on(
+      version.examTrackId,
+      version.version,
+    ),
+  }),
+);
+
+export const nclexCaseStudies = pgTable(
+  "nclex_case_studies",
+  {
+    active: boolean("active").default(true).notNull(),
+    caseText: text("case_text").notNull(),
+    clientNeedCategoryId: text("client_need_category_id").references(
+      () => nclexClientNeedCategories.id,
+      { onDelete: "set null" },
+    ),
+    contentVersionId: uuid("content_version_id").references(() => nclexContentVersions.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    examTrackId: text("exam_track_id")
+      .notNull()
+      .references(() => nclexExamTracks.id, { onDelete: "cascade" }),
+    id: uuid("id").defaultRandom().primaryKey(),
+    reviewStatus: text("review_status").default("draft").notNull(),
+    sourceReference: text("source_reference"),
+    title: text("title").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (caseStudy) => ({
+    trackStatusIdx: index("nclex_case_studies_track_status_idx").on(
+      caseStudy.examTrackId,
+      caseStudy.reviewStatus,
+    ),
+  }),
+);
+
+export const nclexQuestions = pgTable(
+  "nclex_questions",
+  {
+    active: boolean("active").default(true).notNull(),
+    clinicalJudgmentStepId: text("clinical_judgment_step_id").references(
+      () => nclexClinicalJudgmentSteps.id,
+      { onDelete: "set null" },
+    ),
+    clientNeedCategoryId: text("client_need_category_id")
+      .notNull()
+      .references(() => nclexClientNeedCategories.id, { onDelete: "restrict" }),
+    concepts: text("concepts").array(),
+    contentVersionId: uuid("content_version_id").references(() => nclexContentVersions.id, {
+      onDelete: "set null",
+    }),
+    correctAnswerJson: jsonb("correct_answer_json").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    difficultyEstimate: real("difficulty_estimate").default(0.5).notNull(),
+    examTrackId: text("exam_track_id")
+      .notNull()
+      .references(() => nclexExamTracks.id, { onDelete: "cascade" }),
+    explanation: text("explanation"),
+    id: uuid("id").defaultRandom().primaryKey(),
+    itemType: text("item_type")
+      .$type<
+        | "bow_tie"
+        | "dropdown_cloze"
+        | "highlight"
+        | "matrix"
+        | "multiple_choice"
+        | "multiple_response"
+        | "ordered_response"
+      >()
+      .notNull(),
+    optionsJson: jsonb("options_json").$type<Record<string, unknown>>().notNull(),
+    prompt: text("prompt").notNull(),
+    remediation: text("remediation"),
+    reviewStatus: text("review_status").default("draft").notNull(),
+    scoringJson: jsonb("scoring_json").$type<Record<string, unknown>>(),
+    sourceReference: text("source_reference"),
+    tags: text("tags").array(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (question) => ({
+    categoryIdx: index("nclex_questions_category_idx").on(question.clientNeedCategoryId),
+    judgmentIdx: index("nclex_questions_judgment_idx").on(question.clinicalJudgmentStepId),
+    trackStatusIdx: index("nclex_questions_track_status_idx").on(
+      question.examTrackId,
+      question.reviewStatus,
+      question.active,
+    ),
+  }),
+);
+
+export const nclexCaseItems = pgTable(
+  "nclex_case_items",
+  {
+    caseStudyId: uuid("case_study_id")
+      .notNull()
+      .references(() => nclexCaseStudies.id, { onDelete: "cascade" }),
+    clinicalJudgmentStepId: text("clinical_judgment_step_id").references(
+      () => nclexClinicalJudgmentSteps.id,
+      { onDelete: "set null" },
+    ),
+    correctAnswerJson: jsonb("correct_answer_json").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    difficultyEstimate: real("difficulty_estimate").default(0.5).notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    itemType: text("item_type").notNull(),
+    optionsJson: jsonb("options_json").$type<Record<string, unknown>>().notNull(),
+    prompt: text("prompt").notNull(),
+    reviewStatus: text("review_status").default("draft").notNull(),
+    scoringJson: jsonb("scoring_json").$type<Record<string, unknown>>(),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (item) => ({
+    caseSortIdx: index("nclex_case_items_case_sort_idx").on(item.caseStudyId, item.sortOrder),
+  }),
+);
+
+export const nclexUserProfiles = pgTable(
+  "nclex_user_profiles",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    examDate: timestamp("exam_date", { withTimezone: true }),
+    examTrackId: text("exam_track_id")
+      .notNull()
+      .references(() => nclexExamTracks.id, { onDelete: "restrict" }),
+    id: uuid("id").defaultRandom().primaryKey(),
+    readinessGoal: text("readiness_goal"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (profile) => ({
+    userIdx: uniqueIndex("nclex_user_profiles_user_idx").on(profile.userId),
+  }),
+);
+
+export const nclexPracticeSessions = pgTable(
+  "nclex_practice_sessions",
+  {
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    examTrackId: text("exam_track_id")
+      .notNull()
+      .references(() => nclexExamTracks.id, { onDelete: "restrict" }),
+    id: uuid("id").defaultRandom().primaryKey(),
+    mode: text("mode")
+      .$type<
+        | "adaptive_readiness"
+        | "category_focus"
+        | "missed_question_review"
+        | "ngn_case_study"
+        | "weakness_remediation"
+      >()
+      .notNull(),
+    status: text("status").default("active").notNull(),
+    summaryJson: jsonb("summary_json").$type<Record<string, unknown>>(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (session) => ({
+    userCreatedIdx: index("nclex_practice_sessions_user_created_idx").on(
+      session.userId,
+      session.createdAt,
+    ),
+  }),
+);
+
+export const nclexSessionItems = pgTable(
+  "nclex_session_items",
+  {
+    answeredAt: timestamp("answered_at", { withTimezone: true }),
+    categorySnapshot: jsonb("category_snapshot").$type<Record<string, unknown>>(),
+    caseItemId: uuid("case_item_id").references(() => nclexCaseItems.id, {
+      onDelete: "restrict",
+    }),
+    clinicalJudgmentSnapshot: jsonb("clinical_judgment_snapshot").$type<Record<string, unknown>>(),
+    correct: boolean("correct"),
+    correctnessJson: jsonb("correctness_json").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    difficultyAtSelection: real("difficulty_at_selection").default(0.5).notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    questionId: uuid("question_id").references(() => nclexQuestions.id, {
+      onDelete: "restrict",
+    }),
+    score: real("score"),
+    selectedAt: timestamp("selected_at", { withTimezone: true }).defaultNow().notNull(),
+    selectionReason: text("selection_reason").notNull(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => nclexPracticeSessions.id, { onDelete: "cascade" }),
+    sortOrder: integer("sort_order").notNull(),
+    timeSpentSeconds: integer("time_spent_seconds"),
+    userAnswerJson: jsonb("user_answer_json").$type<Record<string, unknown>>(),
+  },
+  (item) => ({
+    sessionSortIdx: uniqueIndex("nclex_session_items_session_sort_idx").on(
+      item.sessionId,
+      item.sortOrder,
+    ),
+  }),
+);
+
+export const nclexUserCategoryStats = pgTable(
+  "nclex_user_category_stats",
+  {
+    attempts: integer("attempts").default(0).notNull(),
+    clientNeedCategoryId: text("client_need_category_id")
+      .notNull()
+      .references(() => nclexClientNeedCategories.id, { onDelete: "cascade" }),
+    correct: integer("correct").default(0).notNull(),
+    lastAttemptedAt: timestamp("last_attempted_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (stat) => ({
+    userCategoryIdx: uniqueIndex("nclex_user_category_stats_user_category_idx").on(
+      stat.userId,
+      stat.clientNeedCategoryId,
+    ),
+  }),
+);
+
+export const nclexUserJudgmentStepStats = pgTable(
+  "nclex_user_judgment_step_stats",
+  {
+    attempts: integer("attempts").default(0).notNull(),
+    clinicalJudgmentStepId: text("clinical_judgment_step_id")
+      .notNull()
+      .references(() => nclexClinicalJudgmentSteps.id, { onDelete: "cascade" }),
+    correct: integer("correct").default(0).notNull(),
+    lastAttemptedAt: timestamp("last_attempted_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (stat) => ({
+    userStepIdx: uniqueIndex("nclex_user_judgment_step_stats_user_step_idx").on(
+      stat.userId,
+      stat.clinicalJudgmentStepId,
+    ),
+  }),
+);
+
 export const dpeProfiles = pgTable(
   "dpe_profiles",
   {

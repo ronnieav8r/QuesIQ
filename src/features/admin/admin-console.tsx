@@ -21,7 +21,7 @@ import {
 import { listQuiraAdminSupportData } from "@/server/support/quira-support";
 import type { PromptConfigRecord } from "@/product/interview-types";
 
-type AdminProduct = "dpe" | "interview" | "overview" | "quira" | "study";
+type AdminProduct = "dpe" | "interview" | "nclex" | "overview" | "quira" | "study";
 type DpeContentSummary = Awaited<ReturnType<typeof listDpeContentSummary>>;
 type DpeCertificateSummary = DpeContentSummary["certificateTypes"][number];
 type DpeQuestionSummary = DpeCertificateSummary["questions"][number];
@@ -31,6 +31,7 @@ const adminProducts: { key: AdminProduct; label: string }[] = [
   { key: "quira", label: "Quira" },
   { key: "interview", label: "Interview" },
   { key: "study", label: "Study" },
+  { key: "nclex", label: "NCLEX" },
   { key: "dpe", label: "DPE" },
 ];
 
@@ -60,6 +61,9 @@ export async function AdminConsole({ product }: { product?: string }) {
           <Link className="button-link secondary" href="/study">
             Study
           </Link>
+          <Link className="button-link secondary" href="/nclex">
+            NCLEX
+          </Link>
           <Link className="button-link secondary" href="/dpe">
             DPE
           </Link>
@@ -83,6 +87,7 @@ export async function AdminConsole({ product }: { product?: string }) {
       {activeProduct === "quira" && <QuiraAdminPanel />}
       {activeProduct === "interview" && <AdminView eyebrow="Interview" title="Interview" />}
       {activeProduct === "study" && <StudyAdminPanel />}
+      {activeProduct === "nclex" && <NclexAdminPanel />}
       {activeProduct === "dpe" && <DpeAdminPanel />}
     </section>
   );
@@ -111,8 +116,36 @@ function AdminOverview() {
         <Link className="button-link secondary" href="/admin?product=study">
           Study admin
         </Link>
+        <Link className="button-link secondary" href="/admin/nclex">
+          NCLEX admin
+        </Link>
         <Link className="button-link secondary" href="/admin?product=dpe">
           DPE admin
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+function NclexAdminPanel() {
+  return (
+    <section className="ai-runs-panel" aria-labelledby="nclex-admin-title">
+      <div className="section-head">
+        <div>
+          <p className="eyebrow">NCLEX</p>
+          <h2 id="nclex-admin-title">NCLEX content operations</h2>
+          <p>
+            Use the dedicated NCLEX admin route for deterministic selector diagnostics,
+            published question previews, and future import/review workflows.
+          </p>
+        </div>
+      </div>
+      <div className="prompt-version-list">
+        <Link className="button-link secondary" href="/admin/nclex">
+          Open NCLEX admin
+        </Link>
+        <Link className="button-link secondary" href="/nclex">
+          Open learner app
         </Link>
       </div>
     </section>

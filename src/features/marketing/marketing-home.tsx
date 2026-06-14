@@ -8,6 +8,7 @@ import {
   Plane,
   ShieldCheck,
   Sparkles,
+  Stethoscope,
   TrendingUp,
   Volume2,
 } from "lucide-react";
@@ -29,7 +30,7 @@ const trustItems = [
 
 const steps = [
   {
-    body: "Pick Interview or Study and start with the kind of preparation that matches your goal.",
+    body: "Pick Interview, Study, DPE, or NCLEX and start with the kind of preparation that matches your goal.",
     icon: Sparkles,
     title: "Choose your path",
   },
@@ -113,6 +114,7 @@ export default async function MarketingHome() {
             <span className="active"><Mic aria-hidden="true" /></span>
             <span><BookOpenCheck aria-hidden="true" /></span>
             <span><Plane aria-hidden="true" /></span>
+            <span><Stethoscope aria-hidden="true" /></span>
             <span><BarChart3 aria-hidden="true" /></span>
           </div>
           <div className="dashboard-main">
@@ -162,11 +164,18 @@ export default async function MarketingHome() {
                 <div className="sparkline" aria-hidden="true" />
               </article>
               <article className="mock-card dpe-preview">
-                <span className="development-watermark">Under Development</span>
                 <strong>DPE Oral Prep</strong>
                 <p>Systems - Electrical</p>
                 <div className="readiness-line">
                   <span>76%</span>
+                  <i />
+                </div>
+              </article>
+              <article className="mock-card nclex-preview">
+                <strong>NCLEX-RN</strong>
+                <p>Clinical judgment - Recognize cues</p>
+                <div className="readiness-line">
+                  <span>72%</span>
                   <i />
                 </div>
               </article>
@@ -178,24 +187,22 @@ export default async function MarketingHome() {
       <section className="marketing-products marketing-app-statuses" id="products">
         <div className="marketing-section-heading">
           <p>App Status</p>
-          <h2>{appSession?.user ? "Your QuesIQ command center" : "Two ways to prepare"}</h2>
+          <h2>{appSession?.user ? "Your QuesIQ command center" : "Four ways to prepare"}</h2>
           <span>
             {appSession?.user
-              ? "Jump into Interview or Study, with progress visible at a glance."
-              : "Sign in to turn Interview and Study previews into personal progress dashboards."}
+              ? "Jump into the app that needs attention next, with progress visible at a glance."
+              : "Sign in to turn Interview, Study, DPE, and NCLEX previews into personal progress dashboards."}
           </span>
         </div>
         <div className="marketing-status-grid">
           {appStatuses.map((status) => {
             const scoreStyle = { "--status-score": `${status.score}%` } as CSSProperties;
-            const unavailable = status.key === "dpe";
 
             return (
               <article
-                className={`marketing-status-card ${status.key}${unavailable ? " unavailable" : ""}`}
+                className={`marketing-status-card ${status.key}`}
                 key={status.key}
               >
-                {unavailable && <span className="development-watermark">Under Development</span>}
                 <div className="status-card-top">
                   <Image
                     alt={status.logoAlt}
@@ -238,15 +245,11 @@ export default async function MarketingHome() {
                   ))}
                 </div>
                 <div className="status-next-action">
-                  <p>{unavailable ? "DPE is under development and will reopen after this release window." : status.nextAction}</p>
-                  {unavailable ? (
-                    <span className="status-disabled-action">Under Development</span>
-                  ) : (
-                    <Link href={status.href}>
-                      Open {status.title}
-                      <ArrowRight aria-hidden="true" />
-                    </Link>
-                  )}
+                  <p>{status.nextAction}</p>
+                  <Link href={status.href}>
+                    Open {status.title}
+                    <ArrowRight aria-hidden="true" />
+                  </Link>
                 </div>
               </article>
             );
