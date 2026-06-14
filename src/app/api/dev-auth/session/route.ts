@@ -54,10 +54,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Choose a valid dev auth role." }, { status: 400 });
   }
 
-  await ensureDevAuthUser(role);
+  let seeded = true;
+
+  try {
+    await ensureDevAuthUser(role);
+  } catch (error) {
+    seeded = false;
+    console.error("Dev auth user seed failed", error);
+  }
 
   const response = NextResponse.json({
     ok: true,
+    seeded,
     user: devAuthUsers[role],
   });
 
