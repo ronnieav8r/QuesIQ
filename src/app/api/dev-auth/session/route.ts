@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { sql } from "drizzle-orm";
 
 import {
   devAuthCookieName,
@@ -15,8 +16,23 @@ export const runtime = "nodejs";
 
 const maxAgeSeconds = 30 * 24 * 60 * 60;
 
+async function ensureDevAuthUserTable() {
+  await getDb().execute(sql`
+    CREATE TABLE IF NOT EXISTS "user" (
+      "email" text,
+      "emailVerified" timestamp,
+      "id" text PRIMARY KEY NOT NULL,
+      "image" text,
+      "name" text,
+      CONSTRAINT "user_email_unique" UNIQUE("email")
+    )
+  `);
+}
+
 async function ensureDevAuthUser(role: DevAuthRole) {
   const devUser = devAuthUsers[role];
+
+  await ensureDevAuthUserTable();
 
   await getDb()
     .insert(users)
