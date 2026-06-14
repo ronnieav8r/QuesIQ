@@ -2360,6 +2360,9 @@ export const dpePracticeSessions = pgTable(
     acsArea: text("acs_area"),
     acsTask: text("acs_task"),
     acsTitle: text("acs_title").notNull(),
+    certificateTypeId: text("certificate_type_id").references(() => dpeCertificateTypes.id, {
+      onDelete: "set null",
+    }),
     checkrideTargetId: uuid("checkride_target_id").references(() => dpeCheckrideTargets.id, {
       onDelete: "set null",
     }),
@@ -2370,6 +2373,9 @@ export const dpePracticeSessions = pgTable(
     promptConfigKey: text("prompt_config_key"),
     promptConfigVersion: integer("prompt_config_version"),
     reviewJson: jsonb("review_json"),
+    searchQuery: text("search_query"),
+    selectedScopeJson: jsonb("selected_scope_json").$type<Record<string, unknown>>(),
+    selectedSubjectTags: text("selected_subject_tags").array(),
     startedAt: timestamp("started_at", { withTimezone: true }),
     status: text("status").notNull(),
     transcriptJson: jsonb("transcript_json"),
@@ -2384,9 +2390,248 @@ export const dpePracticeSessions = pgTable(
       session.acsArea,
       session.acsTask,
     ),
+    certificateModeIdx: index("dpe_practice_sessions_certificate_mode_idx").on(
+      session.certificateTypeId,
+      session.mode,
+    ),
     userCreatedIdx: index("dpe_practice_sessions_user_created_idx").on(
       session.userId,
       session.createdAt,
+    ),
+  }),
+);
+
+export const dpeConcepts = pgTable(
+  "dpe_concepts",
+  {
+    acsArea: text("acs_area").notNull(),
+    acsAreaTitle: text("acs_area_title"),
+    acsElementReference: text("acs_element_reference").notNull(),
+    acsElementType: text("acs_element_type").notNull(),
+    acsTask: text("acs_task").notNull(),
+    acsTaskTitle: text("acs_task_title"),
+    acsTitle: text("acs_title").notNull(),
+    active: boolean("active").default(true).notNull(),
+    certificateTypeId: text("certificate_type_id")
+      .notNull()
+      .references(() => dpeCertificateTypes.id, { onDelete: "cascade" }),
+    contentVersionId: uuid("content_version_id").references(() => dpeContentVersions.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    difficulty: text("difficulty"),
+    id: text("id").primaryKey(),
+    reviewStatus: text("review_status").default("draft").notNull(),
+    searchText: text("search_text").default("").notNull(),
+    sourceStatus: text("source_status").default("missing").notNull(),
+    title: text("title").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (concept) => ({
+    acsIdx: index("dpe_concepts_acs_idx").on(
+      concept.acsTitle,
+      concept.acsArea,
+      concept.acsTask,
+    ),
+    certificateAcsIdx: index("dpe_concepts_certificate_acs_idx").on(
+      concept.certificateTypeId,
+      concept.acsArea,
+      concept.acsTask,
+    ),
+    reviewStatusIdx: index("dpe_concepts_review_status_idx").on(concept.reviewStatus),
+    searchIdx: index("dpe_concepts_search_idx").on(concept.searchText),
+  }),
+);
+
+export const dpeConceptSources = pgTable(
+  "dpe_concept_sources",
+  {
+    conceptId: text("concept_id")
+      .notNull()
+      .references(() => dpeConcepts.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    label: text("label").notNull(),
+    notes: text("notes"),
+    reference: text("reference").notNull(),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    sourceUrl: text("source_url"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (source) => ({
+    conceptIdx: index("dpe_concept_sources_concept_idx").on(source.conceptId, source.sortOrder),
+  }),
+);
+
+export const dpeSubjectTags = pgTable(
+  "dpe_subject_tags",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    label: text("label").notNull(),
+    slug: text("slug").notNull().unique(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (tag) => ({
+    slugIdx: uniqueIndex("dpe_subject_tags_slug_idx").on(tag.slug),
+  }),
+);
+
+export const dpeConceptTags = pgTable(
+  "dpe_concept_tags",
+  {
+    conceptId: text("concept_id")
+      .notNull()
+      .references(() => dpeConcepts.id, { onDelete: "cascade" }),
+    tagId: uuid("tag_id")
+      .notNull()
+      .references(() => dpeSubjectTags.id, { onDelete: "cascade" }),
+  },
+  (tag) => ({
+    conceptTagKey: primaryKey({
+      columns: [tag.conceptId, tag.tagId],
+    }),
+    tagIdx: index("dpe_concept_tags_tag_idx").on(tag.tagId),
+  }),
+);
+
+export const dpeQuestionVariants = pgTable(
+  "dpe_question_variants",
+  {
+    acceptedAnswers: jsonb("accepted_answers").$type<string[]>(),
+    acceptablePhrases: jsonb("acceptable_phrases").$type<string[]>(),
+    active: boolean("active").default(true).notNull(),
+    choicesJson: jsonb("choices_json").$type<Array<{ id: string; text: string }>>(),
+    commonMisses: jsonb("common_misses").$type<string[]>(),
+    conceptId: text("concept_id")
+      .notNull()
+      .references(() => dpeConcepts.id, { onDelete: "cascade" }),
+    correctionIfFalse: text("correction_if_false"),
+    correctAnswerBoolean: boolean("correct_answer_boolean"),
+    correctChoiceIds: jsonb("correct_choice_ids").$type<string[]>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    debrief: text("debrief"),
+    explanation: text("explanation"),
+    expectedAnswerElements: jsonb("expected_answer_elements").$type<string[]>(),
+    followUps: jsonb("follow_ups").$type<string[]>(),
+    hintSequence: jsonb("hint_sequence").$type<string[]>(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    idealShortAnswer: text("ideal_short_answer"),
+    mode: text("mode")
+      .$type<
+        | "coaching"
+        | "fill_blank"
+        | "mock_oral"
+        | "multiple_choice"
+        | "rapid_fire"
+        | "scenario"
+        | "true_false"
+      >()
+      .notNull(),
+    prompt: text("prompt").notNull(),
+    reviewStatus: text("review_status").default("draft").notNull(),
+    rubricJson: jsonb("rubric_json").$type<Record<string, unknown>>(),
+    scenarioSetup: text("scenario_setup"),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    teachingPoints: jsonb("teaching_points").$type<string[]>(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (variant) => ({
+    conceptModeIdx: index("dpe_question_variants_concept_mode_idx").on(
+      variant.conceptId,
+      variant.mode,
+    ),
+    modeStatusIdx: index("dpe_question_variants_mode_status_idx").on(
+      variant.mode,
+      variant.reviewStatus,
+      variant.active,
+    ),
+  }),
+);
+
+export const dpeVariantAssets = pgTable(
+  "dpe_variant_assets",
+  {
+    conceptId: text("concept_id").references(() => dpeConcepts.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    instructions: text("instructions"),
+    label: text("label").notNull(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    storageKey: text("storage_key"),
+    transcript: text("transcript"),
+    type: text("type").$type<"audio" | "chart" | "document" | "image" | "other">().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    url: text("url"),
+    variantId: uuid("variant_id").references(() => dpeQuestionVariants.id, {
+      onDelete: "cascade",
+    }),
+  },
+  (asset) => ({
+    conceptIdx: index("dpe_variant_assets_concept_idx").on(asset.conceptId, asset.sortOrder),
+    variantIdx: index("dpe_variant_assets_variant_idx").on(asset.variantId, asset.sortOrder),
+  }),
+);
+
+export const dpeSessionVariants = pgTable(
+  "dpe_session_variants",
+  {
+    conceptId: text("concept_id").references(() => dpeConcepts.id, { onDelete: "set null" }),
+    id: uuid("id").defaultRandom().primaryKey(),
+    response: text("response"),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => dpePracticeSessions.id, { onDelete: "cascade" }),
+    snapshotJson: jsonb("snapshot_json").$type<Record<string, unknown>>().notNull(),
+    sortOrder: integer("sort_order").notNull(),
+    variantId: uuid("variant_id").references(() => dpeQuestionVariants.id, {
+      onDelete: "set null",
+    }),
+  },
+  (sessionVariant) => ({
+    sessionOrderIdx: uniqueIndex("dpe_session_variants_session_order_idx").on(
+      sessionVariant.sessionId,
+      sessionVariant.sortOrder,
+    ),
+    variantIdx: index("dpe_session_variants_variant_idx").on(sessionVariant.variantId),
+  }),
+);
+
+export const dpeAttempts = pgTable(
+  "dpe_attempts",
+  {
+    aiRunId: uuid("ai_run_id").references(() => aiRuns.id, { onDelete: "set null" }),
+    attemptNumber: integer("attempt_number").default(1).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    deterministicScore: real("deterministic_score"),
+    evaluationJson: jsonb("evaluation_json").$type<Record<string, unknown>>(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    isCorrect: boolean("is_correct"),
+    mode: text("mode").notNull(),
+    selectedChoiceIds: jsonb("selected_choice_ids").$type<string[]>(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => dpePracticeSessions.id, { onDelete: "cascade" }),
+    sessionVariantId: uuid("session_variant_id")
+      .notNull()
+      .references(() => dpeSessionVariants.id, { onDelete: "cascade" }),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }).defaultNow().notNull(),
+    transcriptSource: text("transcript_source"),
+    userResponseJson: jsonb("user_response_json").$type<Record<string, unknown>>(),
+    userResponseText: text("user_response_text"),
+    variantId: uuid("variant_id").references(() => dpeQuestionVariants.id, {
+      onDelete: "set null",
+    }),
+  },
+  (attempt) => ({
+    sessionVariantAttemptIdx: index("dpe_attempts_session_variant_attempt_idx").on(
+      attempt.sessionVariantId,
+      attempt.attemptNumber,
+    ),
+    sessionSubmittedIdx: index("dpe_attempts_session_submitted_idx").on(
+      attempt.sessionId,
+      attempt.submittedAt,
     ),
   }),
 );

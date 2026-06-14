@@ -25,6 +25,7 @@
     "readiness:nclex": "node scripts/nclex/readiness-check.mjs",
     "readiness:study": "node scripts/study/readiness-check.mjs",
     "smoke:dpe": "tsx scripts/dpe/answer-smoke.ts",
+    "smoke:dpe-concepts": "tsx scripts/dpe/concept-content-smoke.ts",
     "smoke:interview-turns": "tsx scripts/interview/turn-based-smoke.ts",
     "smoke:study": "tsx scripts/study/evaluate-smoke.ts",
     "test:e2e": "playwright test",

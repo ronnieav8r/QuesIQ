@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { dpeTargetTracks } from "@/features/dpe/target-tracks";
+import { countReadyDpeConceptVariants } from "@/server/dpe/concept-content";
 import { listDpeContentSummary } from "@/server/dpe/dpe-data";
 import { getOpenAiApiKey, getOpenAiRealtimeApiKey } from "@/server/openai/keys";
 
@@ -37,13 +38,17 @@ export async function GET() {
   const targetTrackSummary = buildTargetTrackSummary();
 
   try {
-    const summary = await listDpeContentSummary();
+    const [summary, conceptVariantCount] = await Promise.all([
+      listDpeContentSummary(),
+      countReadyDpeConceptVariants(),
+    ]);
     const questionCount = summary.certificateTypes.reduce(
       (total, certificateType) => total + certificateType.questions.length,
       0,
     );
 
     return NextResponse.json({
+      conceptVariantCount,
       contentTablesReachable: summary.available,
       questionCount,
       reviewAiConfigured: runtimeReadiness.reviewAiConfigured,
@@ -54,6 +59,7 @@ export async function GET() {
     });
   } catch {
     return NextResponse.json({
+      conceptVariantCount: 0,
       contentTablesReachable: false,
       questionCount: 0,
       reviewAiConfigured: runtimeReadiness.reviewAiConfigured,

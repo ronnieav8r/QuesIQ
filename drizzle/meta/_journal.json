@@ -582,6 +582,13 @@
       "when": 1781440800000,
       "tag": "0083_repair_auth_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1781444400000,
+      "tag": "0084_add_dpe_concept_variants",
+      "breakpoints": true
     }
   ]
 }
