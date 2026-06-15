@@ -1,6 +1,6 @@
 # Current Status
 
-Last updated: 2026-06-14
+Last updated: 2026-06-15
 
 ## Rebuild Location
 
@@ -119,6 +119,13 @@ Last updated: 2026-06-14
     stored in `dpe_answer_attempts`, optional prompt assets use
     `dpe_question_assets`, and `dpe_answer_evaluator_v1` records evaluator
     AI runs as `dpe_review`.
+  - Latest DPE Practice setup work on `main` is `8a62b75 Redesign DPE practice
+    setup flow`: certificate-first guided setup, multi-select focus cards,
+    subject/tag selection, and drill question count. Browser review decided the
+    next pass should remove ACS Area as a standalone learner selector, make
+    task cards the main multi-select boundary, make tags contextual to selected
+    tasks, remove primary-flow search for now, and keep scenario/mock oral
+    separate from quick drill modes.
   - Real DPE aviation content remains intentionally untouched for a later
     user-guided content curation pass
 - Study Admin CSV import:

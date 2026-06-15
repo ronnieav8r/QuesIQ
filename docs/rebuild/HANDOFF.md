@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-06-14
+Last updated: 2026-06-15
 
 ## 2026-06-14 Live Snapshot
 
@@ -90,6 +90,14 @@ Last updated: 2026-06-14
   scaffolded-track/demo-content practice messaging, and History review
   selection so a user can reopen a specific stored session review instead of
   only seeing the latest saved review.
+- Latest DPE dev slice on `main` is `8a62b75 Redesign DPE practice setup flow`.
+  Practice setup now flows from certificate, to focus filters, to practice
+  style and question count. It is still backed by the older button-driven DPE
+  question tables. In-app browser review decided the next UX cleanup should
+  remove ACS Area as a separate learner selector, make task cards the primary
+  multi-select content boundary, make subject/tag chips contextual to selected
+  tasks, remove primary-flow search for now, and keep on-screen drills,
+  scenarios, and mock oral separated from quick oral drills.
 - Admin now has read-only DPE progression visibility at
   `/api/admin/dpe-progression` and in the Admin DPE panel: recent progression
   users, recent XP/quest events, enabled quests, and active XP rules. This is

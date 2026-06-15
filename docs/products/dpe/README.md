@@ -1583,7 +1583,25 @@ Supported variant modes are `multiple_choice`, `fill_blank`, `true_false`,
 `scenario`, `coaching`, `rapid_fire`, and `mock_oral`.
 
 This storage slice does not yet switch the learner Practice UI to the new
-variant-backed flow. The next builder slice should wire certificate, ACS
-area/task, subject tag, search, and mode selection to these new APIs, then
-snapshot selected variants into `dpe_session_variants` when a practice session
-starts.
+variant-backed flow. The current learner setup screen has been reshaped into a
+guided certificate, focus, practice-style, and question-count flow while it
+still uses the older button-driven question tables.
+
+Browser review after that setup pass changed the intended next UX step:
+
+1. Keep certificate first.
+2. Remove ACS Area as a separate learner-facing selector.
+3. Make task cards the primary content selector, with labels such as
+   `Area I, Task A: Pilot Qualifications`.
+4. Keep task multi-select.
+5. Make subject/tag chips contextual to selected tasks; unavailable tags should
+   be disabled/gray or intentionally hidden, not equally selectable.
+6. Remove search from the primary learner flow for now. Curated tags should be
+   the main refinement control until the content library is large enough to
+   justify advanced search.
+7. Keep on-screen drills, scenario practice, and mock oral separated from the
+   quick oral drill modes.
+
+The next builder slice should apply that task-first UX cleanup while wiring the
+new Concept variant APIs, then snapshot selected variants into
+`dpe_session_variants` when a practice session starts.
