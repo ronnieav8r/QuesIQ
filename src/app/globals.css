@@ -198,6 +198,124 @@
   justify-content: flex-start;
 }
 
+.dpe-shell .practice-setup-flow {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.dpe-shell .setup-step {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.dpe-shell .muted-step {
+  opacity: 0.78;
+}
+
+.dpe-shell .step-kicker {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+}
+
+.dpe-shell .step-kicker span {
+  align-items: center;
+  background: var(--focus-soft);
+  border: 1px solid var(--focus);
+  border-radius: var(--radius-full);
+  color: var(--text);
+  display: inline-flex;
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  height: 1.75rem;
+  justify-content: center;
+  width: 1.75rem;
+}
+
+.dpe-shell .multi-chip-grid {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+}
+
+.dpe-shell .multi-chip {
+  align-items: flex-start;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  display: grid;
+  gap: var(--space-1);
+  min-height: 4.25rem;
+  padding: var(--space-3);
+  text-align: left;
+}
+
+.dpe-shell .multi-chip:hover,
+.dpe-shell .multi-chip.selected {
+  background: var(--focus-soft);
+  border-color: var(--focus);
+}
+
+.dpe-shell .multi-chip span {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-normal);
+}
+
+.dpe-shell .input-with-icon {
+  align-items: center;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  position: relative;
+}
+
+.dpe-shell .input-with-icon svg {
+  color: var(--muted);
+  height: 1rem;
+  left: var(--space-3);
+  pointer-events: none;
+  position: absolute;
+  width: 1rem;
+}
+
+.dpe-shell .input-with-icon input {
+  padding-left: 2.5rem;
+}
+
+.dpe-shell .session-size-control {
+  align-items: center;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  justify-content: space-between;
+  padding: var(--space-4);
+}
+
+.dpe-shell .session-size-control p {
+  margin: var(--space-1) 0 0;
+}
+
+.dpe-shell .compact-number-field {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+.dpe-shell .compact-number-field span {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.dpe-shell .compact-number-field input {
+  min-height: 2.5rem;
+  width: 5rem;
+}
+
 .dpe-shell .panel,
 .dpe-shell .raised-card,
 .dpe-shell .stat-chip {
@@ -227,6 +345,7 @@
   font-size: var(--font-size-lg);
   font-weight: 750;
   margin-top: var(--space-1);
+  overflow-wrap: anywhere;
 }
 
 .dpe-shell .field {

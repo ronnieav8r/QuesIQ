@@ -16,6 +16,7 @@ import {
   Plane,
   Radio,
   RotateCcw,
+  Search,
   ShieldCheck,
   SkipForward,
   User
@@ -452,6 +453,10 @@ export default function App() {
   const [recordingStatus, setRecordingStatus] = useState<"idle" | "recorded" | "recording">("idle");
   const [rapidQuestionCount, setRapidQuestionCount] = useState(5);
   const [certificateTypeId, setCertificateTypeId] = useState("");
+  const [selectedAreaIds, setSelectedAreaIds] = useState<string[]>([]);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
+  const [selectedSubjectTags, setSelectedSubjectTags] = useState<string[]>([]);
+  const [questionSearchQuery, setQuestionSearchQuery] = useState("");
   const audioChunksRef = useRef<Blob[]>([]);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
@@ -503,8 +508,40 @@ export default function App() {
   const [task, setTask] = useState(taskOptions[0] ?? "A");
 
   const selectedTask = taskOptions.includes(task) ? task : (taskOptions[0] ?? "A");
-  const selectedQuestions = certificateQuestions.filter(
-    (question) => question.acsArea === selectedArea && question.acsTask === selectedTask
+  const activeAreaIds = useMemo(
+    () => normalizeSelectedValues(selectedAreaIds, areaOptions, selectedArea),
+    [selectedAreaIds, areaOptions, selectedArea],
+  );
+  const focusTaskOptions = useMemo(
+    () => buildTaskOptionsForAreas(activeAreaIds, practiceScope.tasksByArea),
+    [activeAreaIds, practiceScope.tasksByArea],
+  );
+  const activeTaskIds = useMemo(
+    () => normalizeSelectedValues(selectedTaskIds, focusTaskOptions, selectedTask),
+    [selectedTaskIds, focusTaskOptions, selectedTask],
+  );
+  const subjectTagOptions = useMemo(
+    () => buildSubjectTagOptions(certificateQuestions),
+    [certificateQuestions],
+  );
+  const selectedQuestions = useMemo(
+    () =>
+      certificateQuestions.filter((question) =>
+        questionMatchesPracticeFocus({
+          activeAreaIds,
+          activeTaskIds,
+          question,
+          searchQuery: questionSearchQuery,
+          selectedSubjectTags,
+        }),
+      ),
+    [
+      activeAreaIds,
+      activeTaskIds,
+      certificateQuestions,
+      questionSearchQuery,
+      selectedSubjectTags,
+    ],
   );
 
   useEffect(() => {
@@ -741,12 +778,6 @@ export default function App() {
     }
   }
 
-  function changeArea(nextArea: string) {
-    const nextTasks = practiceScope.tasksByArea[nextArea] ?? ["A"];
-    setArea(nextArea);
-    setTask(nextTasks[0] ?? "A");
-  }
-
   function changeCertificate(nextCertificateTypeId: string) {
     const nextCertificateQuestions = nextCertificateTypeId
       ? questionState.questions.filter(
@@ -759,7 +790,29 @@ export default function App() {
 
     setCertificateTypeId(nextCertificateTypeId);
     setArea(nextArea);
+    setSelectedAreaIds([nextArea]);
     setTask(nextTask);
+    setSelectedTaskIds([nextTask]);
+    setSelectedSubjectTags([]);
+    setQuestionSearchQuery("");
+  }
+
+  function changeAreaSelection(nextAreaIds: string[]) {
+    const normalizedAreas = normalizeSelectedValues(nextAreaIds, areaOptions, selectedArea);
+    const nextTaskOptions = buildTaskOptionsForAreas(normalizedAreas, practiceScope.tasksByArea);
+    const normalizedTasks = normalizeSelectedValues(selectedTaskIds, nextTaskOptions, nextTaskOptions[0] ?? selectedTask);
+
+    setSelectedAreaIds(normalizedAreas);
+    setArea(normalizedAreas[0] ?? selectedArea);
+    setSelectedTaskIds(normalizedTasks);
+    setTask(normalizedTasks[0] ?? selectedTask);
+  }
+
+  function changeTaskSelection(nextTaskIds: string[]) {
+    const normalizedTasks = normalizeSelectedValues(nextTaskIds, focusTaskOptions, selectedTask);
+
+    setSelectedTaskIds(normalizedTasks);
+    setTask(normalizedTasks[0] ?? selectedTask);
   }
 
   function resetAnswerCapture() {
@@ -789,10 +842,14 @@ export default function App() {
     }
     if (storedSession.acsArea) {
       setArea(storedSession.acsArea);
+      setSelectedAreaIds([storedSession.acsArea]);
     }
     if (storedSession.acsTask) {
       setTask(storedSession.acsTask);
+      setSelectedTaskIds([storedSession.acsTask]);
     }
+    setSelectedSubjectTags([]);
+    setQuestionSearchQuery("");
     setMode(storedSession.mode);
 
     const resumePlan = buildStoredSessionResumePlan(storedSession);
@@ -826,7 +883,8 @@ export default function App() {
   async function startSession(voiceMode = false) {
     if (sessionStarting) return;
 
-    const sessionQuestionLimit = mode === "dpe_rapid_fire" ? rapidQuestionCount : 5;
+    const sessionQuestionLimit =
+      mode === "dpe_coaching" || mode === "dpe_rapid_fire" ? rapidQuestionCount : 5;
     const questions = selectedQuestions.slice(0, sessionQuestionLimit);
     if (questions.length === 0) return;
     setSessionStarting(true);
@@ -837,10 +895,10 @@ export default function App() {
       const draftSession: LocalSession = {
         id: `local-${Date.now()}`,
         mode,
-        area: selectedArea,
+        area: formatSelectedScope(activeAreaIds, selectedArea),
         certificateType: selectedCertificateType,
         targetTrackTitle: selectedTargetTrack.title,
-        task: selectedTask,
+        task: formatSelectedScope(activeTaskIds, selectedTask),
         questions,
         answers: [],
         startedAt: new Date(),
@@ -859,8 +917,8 @@ export default function App() {
           body: JSON.stringify({
             mode,
             acsTitle: selectedTargetTrack.title,
-            acsArea: selectedArea,
-            acsTask: selectedTask,
+            acsArea: formatSelectedScope(activeAreaIds, selectedArea),
+            acsTask: formatSelectedScope(activeTaskIds, selectedTask),
             certificateType: selectedCertificateType,
             questions,
             targetTrack: {
@@ -1445,6 +1503,7 @@ export default function App() {
                 currentIndex={currentIndex}
                 draftAnswer={draftAnswer}
                 mode={mode}
+                focusQuestions={certificateQuestions}
                 questions={selectedQuestions}
                 certificateOptions={certificateOptions}
                 selectedCertificateType={selectedCertificateType}
@@ -1452,18 +1511,22 @@ export default function App() {
                 questionBankAvailable={questionBankAvailable}
                 questionCount={questionState.questions.length}
                 selectedTask={selectedTask}
+                selectedAreaIds={activeAreaIds}
+                selectedTaskIds={activeTaskIds}
+                selectedSubjectTags={selectedSubjectTags}
                 selectedTargetTrack={selectedTargetTrack}
                 practiceNotice={practiceNotice}
                 publicStatus={publicStatus}
                 rapidQuestionCount={rapidQuestionCount}
+                questionSearchQuery={questionSearchQuery}
                 recordedAudioBase64={recordedAudioBase64}
                 recordingError={recordingError}
                 recordingStatus={recordingStatus}
                 session={session}
                 stage={stage}
-                taskOptions={taskOptions}
+                taskOptions={focusTaskOptions}
                 onAnswerChange={setDraftAnswer}
-                onAreaChange={changeArea}
+                onAreaSelectionChange={changeAreaSelection}
                 onClearPracticeNotice={() => setPracticeNotice(null)}
                 databaseAvailable={databaseAvailable}
                 reviewGenerating={reviewGenerating}
@@ -1474,6 +1537,7 @@ export default function App() {
                 onModeChange={setMode}
                 onOpenMe={() => setScreen("me")}
                 onCertificateChange={changeCertificate}
+                onQuestionSearchQueryChange={setQuestionSearchQuery}
                 onRecordAnswer={recordAnswer}
                 onRapidQuestionCountChange={setRapidQuestionCount}
                 onReset={resetPractice}
@@ -1486,7 +1550,9 @@ export default function App() {
                 onVoiceUnavailable={continueVoiceSessionAsTyped}
                 onVoiceArtifactFinalized={saveVoiceArtifact}
                 areaOptions={areaOptions}
-                onTaskChange={setTask}
+                subjectTagOptions={subjectTagOptions}
+                onTaskSelectionChange={changeTaskSelection}
+                onSubjectTagSelectionChange={setSelectedSubjectTags}
               />
             )}
             {screen === "scenarios" && (
@@ -2456,14 +2522,19 @@ function PracticeScreen(props: {
   certificateOptions: CertificateOption[];
   selectedTask: string;
   selectedCertificateType: CertificateOption | null;
+  selectedAreaIds: string[];
+  selectedTaskIds: string[];
+  selectedSubjectTags: string[];
   taskOptions: string[];
   mode: PracticeMode;
+  focusQuestions: DpeQuestion[];
   questions: DpeQuestion[];
   questionBankAvailable: boolean | null;
   questionCount: number;
   selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
   practiceNotice: PracticeNotice | null;
   publicStatus: DpePublicStatus | null;
+  questionSearchQuery: string;
   rapidQuestionCount: number;
   recordedAudioBase64: string | null;
   recordingError: string | null;
@@ -2477,10 +2548,12 @@ function PracticeScreen(props: {
   reviewGenerating: boolean;
   answerSaving: boolean;
   sessionStarting: boolean;
-  onAreaChange: (area: string) => void;
+  onAreaSelectionChange: (areaIds: string[]) => void;
   onClearPracticeNotice: () => void;
   onCertificateChange: (certificateTypeId: string) => void;
-  onTaskChange: (task: string) => void;
+  onQuestionSearchQueryChange: (value: string) => void;
+  onTaskSelectionChange: (taskIds: string[]) => void;
+  onSubjectTagSelectionChange: (tags: string[]) => void;
   onModeChange: (mode: PracticeMode) => void;
   onOpenMe: () => void;
     onStartSession: () => void;
@@ -2497,6 +2570,7 @@ function PracticeScreen(props: {
   onTryAgain: () => void;
   onVoiceUnavailable: (session: LocalSession) => void;
   onVoiceArtifactFinalized: (artifact: VoiceSessionArtifactDraft) => void;
+  subjectTagOptions: string[];
   }) {
   if (props.stage === "live" && props.session) {
     return (
@@ -2541,51 +2615,68 @@ function PracticeSetupScreen({
   certificateOptions,
   selectedTask,
   selectedCertificateType,
+  selectedAreaIds,
+  selectedTaskIds,
+  selectedSubjectTags,
   taskOptions,
   mode,
+  focusQuestions,
   questions,
   questionBankAvailable,
   selectedTargetTrack,
   practiceNotice,
   publicStatus,
+  questionSearchQuery,
   rapidQuestionCount,
   databaseAvailable,
   dpeProfile,
   sessionStarting,
-  onAreaChange,
+  onAreaSelectionChange,
   onCertificateChange,
-    onTaskChange,
+  onQuestionSearchQueryChange,
+    onTaskSelectionChange,
+    onSubjectTagSelectionChange,
     onModeChange,
     onOpenMe,
     onRapidQuestionCountChange,
-    onStartSession
+    onStartSession,
+    subjectTagOptions
   }: {
   areaOptions: string[];
   area: string;
   certificateOptions: CertificateOption[];
   selectedTask: string;
   selectedCertificateType: CertificateOption | null;
+  selectedAreaIds: string[];
+  selectedTaskIds: string[];
+  selectedSubjectTags: string[];
   taskOptions: string[];
   mode: PracticeMode;
+  focusQuestions: DpeQuestion[];
   questions: DpeQuestion[];
   questionBankAvailable: boolean | null;
   questionCount: number;
   selectedTargetTrack: ReturnType<typeof resolveDpeTargetTrack>;
   practiceNotice: PracticeNotice | null;
     publicStatus: DpePublicStatus | null;
+    questionSearchQuery: string;
     rapidQuestionCount: number;
     databaseAvailable: boolean | null;
     dpeProfile: DpeProfileState;
     sessionStarting: boolean;
-  onAreaChange: (area: string) => void;
+  onAreaSelectionChange: (areaIds: string[]) => void;
   onCertificateChange: (certificateTypeId: string) => void;
-    onTaskChange: (task: string) => void;
+    onQuestionSearchQueryChange: (value: string) => void;
+    onTaskSelectionChange: (taskIds: string[]) => void;
+    onSubjectTagSelectionChange: (tags: string[]) => void;
     onModeChange: (mode: PracticeMode) => void;
     onOpenMe: () => void;
     onRapidQuestionCountChange: (count: number) => void;
     onStartSession: () => void;
+    subjectTagOptions: string[];
   }) {
   const visualCount = questions.filter((question) => question.practiceLane === "visual").length;
+  const oralCount = questions.filter((question) => question.practiceLane === "oral").length;
   const handsFreeCount = questions.filter((question) => question.supportsHandsFree).length;
   const readyQuestions = questions.filter((question) => isQuestionReviewReady(question)).length;
   const missingAnswerKeys = questions.filter((question) => !isContentStatusReady(question.answerKey?.status ?? question.answerKeyStatus)).length;
@@ -2597,6 +2688,7 @@ function PracticeSetupScreen({
   const reviewAiUnavailable = publicStatus?.reviewAiConfigured === false;
   const privatePilotTrack = getDpeTargetTrackById(defaultDpeTargetTrackId) ?? dpeTargetTracks[0];
   const targetMissing = buildTargetMissingFields(dpeProfile);
+  const selectedSessionPromptCount = Math.min(rapidQuestionCount, questions.length);
   const typedStartLabel = sessionStarting
     ? "Starting session"
     : targetMissing.length > 0
@@ -2609,38 +2701,22 @@ function PracticeSetupScreen({
     certificateOptions,
   );
   const certificateAlignedToTarget = Boolean(targetAlignedCertificate);
+  const stepReady = {
+    certificate: Boolean(selectedCertificateType),
+    focus: questions.length > 0,
+  };
 
   return (
     <section className="screen">
       <div className="section-head">
         <div>
           <h2>Practice setup</h2>
-          <p>Choose Coaching or Rapid Fire, then answer out loud with manual controls.</p>
+          <p>Choose a certificate, narrow the ACS focus, then pick a practice style and session size.</p>
         </div>
         <ClipboardCheck />
       </div>
 
-      <div className="panel">
-        <div className="grid two-col" aria-label="Practice mode">
-          <button
-            className={`raised-card mode-card ${mode === "dpe_coaching" ? "selected" : ""}`}
-            onClick={() => onModeChange("dpe_coaching")}
-            type="button"
-          >
-            <span className="card-icon"><Mic /></span>
-            <strong>Coaching</strong>
-            <p>One question at a time with evaluator feedback after each submitted answer.</p>
-          </button>
-          <button
-            className={`raised-card mode-card ${mode === "dpe_rapid_fire" ? "selected" : ""}`}
-            onClick={() => onModeChange("dpe_rapid_fire")}
-            type="button"
-          >
-            <span className="card-icon"><ListChecks /></span>
-            <strong>Rapid Fire</strong>
-            <p>Quick sequence with quiet evaluations after each answer and results at the end.</p>
-          </button>
-        </div>
+      <div className="practice-setup-flow">
         {practiceNotice && (
           <div className="raised-card mt-4">
             <strong>{practiceNotice.title}</strong>
@@ -2648,9 +2724,13 @@ function PracticeSetupScreen({
           </div>
         )}
 
-        <div className="grid two-col mt-4">
+        <div className="panel setup-step">
+          <div className="step-kicker">
+            <span>1</span>
+            <strong>Certificate</strong>
+          </div>
           <label className="field">
-            <span>Certificate</span>
+            <span>Target certificate or rating</span>
             <select
               value={selectedCertificateType?.id ?? ""}
               onChange={(event) => onCertificateChange(event.target.value)}
@@ -2669,55 +2749,153 @@ function PracticeSetupScreen({
               {certificateOptions.length === 0 && <option value="">Certificate pending</option>}
             </select>
             {certificateAlignedToTarget && (
-              <small>Certificate follows target track.</small>
+              <small>Certificate follows the target track selected in Me.</small>
             )}
           </label>
-
-          <label className="field">
-            <span>ACS Area</span>
-            <select value={area} onChange={(event) => onAreaChange(event.target.value)}>
-              {areaOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option} - {areaLabels[option] ?? `Area ${option}`}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="field">
-            <span>ACS Task</span>
-            <select value={selectedTask} onChange={(event) => onTaskChange(event.target.value)}>
-              {taskOptions.map((option) => (
-                <option key={option} value={option}>
-                  Task {option}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {mode === "dpe_rapid_fire" && (
-            <label className="field">
-              <span>Question count</span>
-              <select
-                value={rapidQuestionCount}
-                onChange={(event) => onRapidQuestionCountChange(Number(event.target.value))}
-              >
-                {[3, 5, 8, 10].map((count) => (
-                  <option key={count} value={count}>
-                    {count} questions
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
         </div>
-      </div>
 
-      <div className="grid two-col">
-        <div className="panel">
+        <div className={`panel setup-step ${stepReady.certificate ? "" : "muted-step"}`}>
+          <div className="step-kicker">
+            <span>2</span>
+            <strong>Content focus</strong>
+          </div>
+          <div className="grid two-col">
+            <div className="field">
+              <span>ACS areas</span>
+              <MultiSelectChipGroup
+                options={areaOptions.map((option) => ({
+                  description: `${countQuestionsForArea(focusQuestions, option)} prompts`,
+                  label: `${option} - ${areaLabels[option] ?? `Area ${option}`}`,
+                  value: option,
+                }))}
+                selectedValues={selectedAreaIds}
+                onChange={onAreaSelectionChange}
+              />
+            </div>
+            <div className="field">
+              <span>ACS tasks</span>
+              <MultiSelectChipGroup
+                options={taskOptions.map((option) => {
+                  const detail = buildTaskOptionDetail(focusQuestions, selectedAreaIds, option);
+                  return {
+                    description: detail.description,
+                    label: `Task ${option}: ${detail.title}`,
+                    value: option,
+                  };
+                })}
+                selectedValues={selectedTaskIds}
+                onChange={onTaskSelectionChange}
+              />
+            </div>
+          </div>
+          <div className="mt-4">
+            <div className="field">
+              <label className="field">
+                <span>Search concepts, sources, prompts, or keywords</span>
+                <div className="input-with-icon">
+                  <Search />
+                  <input
+                    value={questionSearchQuery}
+                    onChange={(event) => onQuestionSearchQueryChange(event.target.value)}
+                    placeholder="Search documents, weather, BasicMed..."
+                  />
+                </div>
+              </label>
+              <div className="field">
+                <span>Subjects and tags</span>
+                <MultiSelectChipGroup
+                  emptyLabel="Tags will appear as content is authored."
+                  options={subjectTagOptions.map((tag) => ({
+                    description: `${countQuestionsForTag(focusQuestions, tag)} prompts`,
+                    label: tag,
+                    value: tag,
+                  }))}
+                  selectedValues={selectedSubjectTags}
+                  onChange={onSubjectTagSelectionChange}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className={`panel setup-step ${stepReady.focus ? "" : "muted-step"}`}>
+          <div className="step-kicker">
+            <span>3</span>
+            <strong>Practice style</strong>
+          </div>
+          <div className="grid two-col" aria-label="Practice mode">
+            <button
+              className={`raised-card mode-card ${mode === "dpe_coaching" ? "selected" : ""}`}
+              onClick={() => onModeChange("dpe_coaching")}
+              type="button"
+            >
+              <span className="card-icon"><Mic /></span>
+              <strong>Coaching</strong>
+              <p>Oral drill with feedback after each submitted answer.</p>
+              <span className="pill">{oralCount} oral prompts</span>
+            </button>
+            <button
+              className={`raised-card mode-card ${mode === "dpe_rapid_fire" ? "selected" : ""}`}
+              onClick={() => onModeChange("dpe_rapid_fire")}
+              type="button"
+            >
+              <span className="card-icon"><ListChecks /></span>
+              <strong>Rapid Fire</strong>
+              <p>Oral drill sequence with results summarized at the end.</p>
+              <span className="pill">{oralCount} oral prompts</span>
+            </button>
+            <div className="raised-card mode-card unavailable">
+              <span className="card-icon"><BookOpenCheck /></span>
+              <strong>On-screen drills</strong>
+              <p>Multiple choice, fill blank, and true/false variants live here.</p>
+              <span className="pill">{visualCount} visual prompts</span>
+            </div>
+            <div className="raised-card mode-card unavailable">
+              <span className="card-icon"><Map /></span>
+              <strong>Scenario / Mock oral</strong>
+              <p>Separated from quick drills so longer sessions stay intentional.</p>
+              <span className="pill">variant-backed</span>
+            </div>
+          </div>
+          <div className="session-size-control mt-4">
+            <div>
+              <strong>Question count</strong>
+              <p>
+                Choose how many prompts to run in this drill. The session will use up to{" "}
+                {selectedSessionPromptCount} of {questions.length} available prompts.
+              </p>
+            </div>
+            <div className="inline-actions">
+              {[5, 10, 20].map((count) => (
+                <button
+                  key={count}
+                  className={`button segment ${rapidQuestionCount === count ? "active" : ""}`}
+                  onClick={() => onRapidQuestionCountChange(count)}
+                  type="button"
+                >
+                  {count}
+                </button>
+              ))}
+              <label className="compact-number-field">
+                <span>Custom</span>
+                <input
+                  min={1}
+                  max={Math.max(questions.length, 1)}
+                  type="number"
+                  value={rapidQuestionCount}
+                  onChange={(event) =>
+                    onRapidQuestionCountChange(clampQuestionCount(Number(event.target.value)))
+                  }
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div className="panel setup-step">
           <div className="section-head">
             <div>
-              <h3>{modeCopy[mode].title}</h3>
+              <h3>Start session</h3>
               <p>{modeCopy[mode].description}</p>
             </div>
             {mode === "dpe_rapid_fire" ? <ListChecks /> : <Mic />}
@@ -2725,7 +2903,7 @@ function PracticeSetupScreen({
           <div className="stat-strip mt-4">
             <Stat
               label="Session prompts"
-              value={`${Math.min(mode === "dpe_rapid_fire" ? rapidQuestionCount : 5, questions.length)}`}
+              value={`${selectedSessionPromptCount}`}
             />
             <Stat label="Target" value={selectedTargetTrack.code} />
             <Stat label="Prompt cert" value={selectedCertificateType?.code ?? "pending"} />
@@ -2817,37 +2995,53 @@ function PracticeSetupScreen({
               </button>
             </div>
         </div>
-
-        <div className="panel">
-          <div className="section-head">
-            <div>
-                <h3>Session shape</h3>
-                <p>
-                  Voice practice saves transcript evidence for review. Typed practice captures the
-                  same examiner-question and applicant-answer shape for early content QA.
-                </p>
-            </div>
-            <Plane />
-          </div>
-          <div className="question-list mt-4">
-            <div className="raised-card">
-              <strong>Draft</strong>
-              <p>Question exists, but answer-key or rubric work is still incomplete.</p>
-            </div>
-            <div className="raised-card">
-              <strong>Ready for review</strong>
-              <p>Question, answer key, and rubric are present for an admin or DPE reviewer.</p>
-            </div>
-            <div className="raised-card">
-              <strong>Not published</strong>
-              <p>Current practice uses active product content or fallback prompts; no publish flow is enabled here.</p>
-            </div>
-          </div>
-        </div>
       </div>
 
-      <QuestionPreview area={area} selectedTask={selectedTask} questions={questions} />
+      <QuestionPreview
+        area={formatSelectedScope(selectedAreaIds, area)}
+        selectedTask={formatSelectedScope(selectedTaskIds, selectedTask)}
+        questions={questions}
+      />
     </section>
+  );
+}
+
+function MultiSelectChipGroup({
+  emptyLabel = "No options available.",
+  onChange,
+  options,
+  selectedValues,
+}: {
+  emptyLabel?: string;
+  onChange: (values: string[]) => void;
+  options: {
+    description?: string;
+    label: string;
+    value: string;
+  }[];
+  selectedValues: string[];
+}) {
+  if (options.length === 0) {
+    return <p className="muted">{emptyLabel}</p>;
+  }
+
+  return (
+    <div className="multi-chip-grid">
+      {options.map((option) => {
+        const selected = selectedValues.includes(option.value);
+        return (
+          <button
+            key={option.value}
+            className={`multi-chip ${selected ? "selected" : ""}`}
+            onClick={() => onChange(toggleSelectedValue(selectedValues, option.value))}
+            type="button"
+          >
+            <strong>{option.label}</strong>
+            {option.description && <span>{option.description}</span>}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -3902,6 +4096,137 @@ function buildQuestionScope(questions: DpeQuestion[], fallback: QuestionApiRespo
   }, {});
 
   return { areas, tasksByArea };
+}
+
+function normalizeSelectedValues(values: string[], options: string[], fallback: string) {
+  const validValues = values.filter((value) => options.includes(value));
+  if (validValues.length > 0) return validValues;
+  const validFallback = options.includes(fallback) ? fallback : options[0];
+  return validFallback ? [validFallback] : [];
+}
+
+function buildTaskOptionsForAreas(
+  areaIds: string[],
+  tasksByArea: Record<string, string[]>,
+) {
+  return [
+    ...new Set(
+      areaIds.flatMap((areaId) => tasksByArea[areaId] ?? []),
+    ),
+  ].sort();
+}
+
+function toggleSelectedValue(values: string[], value: string) {
+  return values.includes(value)
+    ? values.filter((item) => item !== value)
+    : [...values, value];
+}
+
+function formatSelectedScope(values: string[], fallback: string) {
+  const safeValues = values.length > 0 ? values : [fallback];
+  if (safeValues.length <= 2) return safeValues.join(", ");
+  return `${safeValues.slice(0, 2).join(", ")} +${safeValues.length - 2}`;
+}
+
+function buildSubjectTagOptions(questions: DpeQuestion[]) {
+  return [...new Set(questions.flatMap((question) => getQuestionSubjectTags(question)))]
+    .filter(Boolean)
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function getQuestionSubjectTags(question: DpeQuestion) {
+  const keywordTags = (question.keywords ?? "")
+    .split(/[;,|]/)
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+  return [question.primarySubject ?? "", ...keywordTags]
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+function questionMatchesPracticeFocus({
+  activeAreaIds,
+  activeTaskIds,
+  question,
+  searchQuery,
+  selectedSubjectTags,
+}: {
+  activeAreaIds: string[];
+  activeTaskIds: string[];
+  question: DpeQuestion;
+  searchQuery: string;
+  selectedSubjectTags: string[];
+}) {
+  if (activeAreaIds.length > 0 && !activeAreaIds.includes(question.acsArea)) return false;
+  if (activeTaskIds.length > 0 && !activeTaskIds.includes(question.acsTask)) return false;
+
+  const questionTags = getQuestionSubjectTags(question).map((tag) => tag.toLowerCase());
+  if (
+    selectedSubjectTags.length > 0 &&
+    !selectedSubjectTags.some((tag) => questionTags.includes(tag.toLowerCase()))
+  ) {
+    return false;
+  }
+
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  if (!normalizedSearch) return true;
+
+  const searchableText = [
+    question.acsArea,
+    question.acsTask,
+    question.acsElementReference,
+    question.acsPath,
+    question.taskTitle,
+    question.primarySubject,
+    question.keywords,
+    question.questionText,
+    question.aiContext,
+    question.answerKey?.sourceReferences.join(" "),
+    question.provisionalAnswerKey,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return searchableText.includes(normalizedSearch);
+}
+
+function countQuestionsForArea(questions: DpeQuestion[], areaId: string) {
+  return questions.filter((question) => question.acsArea === areaId).length;
+}
+
+function countQuestionsForTag(questions: DpeQuestion[], tag: string) {
+  const normalizedTag = tag.toLowerCase();
+  return questions.filter((question) =>
+    getQuestionSubjectTags(question).some((questionTag) => questionTag.toLowerCase() === normalizedTag),
+  ).length;
+}
+
+function buildTaskOptionDetail(
+  questions: DpeQuestion[],
+  selectedAreaIds: string[],
+  taskId: string,
+) {
+  const matchingQuestions = questions.filter(
+    (question) =>
+      question.acsTask === taskId &&
+      (selectedAreaIds.length === 0 || selectedAreaIds.includes(question.acsArea)),
+  );
+  const firstQuestion = matchingQuestions[0];
+  const title = firstQuestion?.taskTitle || "Details pending";
+  const areas = [...new Set(matchingQuestions.map((question) => question.acsArea))];
+  const areaText = areas.length > 0 ? areas.join(", ") : "selected area";
+  const promptText = `${matchingQuestions.length} prompt${matchingQuestions.length === 1 ? "" : "s"}`;
+
+  return {
+    description: `${areaText} - ${promptText}`,
+    title,
+  };
+}
+
+function clampQuestionCount(value: number) {
+  if (!Number.isFinite(value)) return 5;
+  return Math.min(Math.max(Math.round(value), 1), 50);
 }
 
 function reviewFromStoredSession(storedSession: StoredPracticeSession): LocalSession | null {
