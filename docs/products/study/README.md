@@ -96,6 +96,11 @@ The first Study slice is imported:
 - `drizzle/0080_add_study_card_explanations.sql` adds a dedicated
   learner-facing `study_cards.explanation` field. Expanded explanations should
   never be forced into `hint`, `sourceNotes`, or verification metadata.
+- `drizzle/0086_add_study_canonical_import_model.sql` adds the canonical Study
+  import model: `study_canonical_cards`, `study_deck_card_memberships`, and
+  `study_cards.canonical_card_id`. This lets official content packets store one
+  canonical fact while still materializing deck-facing cards for the current
+  Study UI.
 - `drizzle/0054_add_study_source_verification_metadata.sql` adds structured
   source metadata and verification status/evidence/verifier fields so rich CSV
   imports do not have to preserve chunk/page/visual details only inside labels
@@ -158,6 +163,13 @@ The first Study slice is imported:
   disposable rows. The smoke accepts `OPENAI_STUDY_TEST_TUNNEL_API_KEY`,
   `OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY`, `OPENAI_STUDY_API_KEY`, or
   `OPENAI_API_KEY`, without printing secrets.
+- canonical Study packet import coverage is available with
+  `node_modules/.bin/tsx scripts/study/import-canonical-study-packet.ts --dry-run`.
+  The canonical importer reads a canonical card CSV plus a deck-membership CSV,
+  validates canonical IDs, deck memberships, Official/Verified fields, source
+  evidence, and expert-review boundaries, then upserts canonical cards, decks,
+  deck-facing cards, memberships, source rows, and verification rows. Run
+  without `--dry-run` only after migrations through `0086` are applied.
 - `rich_csv_import_save` remains admin-only and can mark a deck Official only
   through this import path (`markDeckOfficial` or row-level `official=true`);
   card `isVerified` remains conservative and is only set true when verified
