@@ -23,7 +23,7 @@ export const dpeTargetTracks: DpeTargetTrack[] = [
     aircraftClass: "Single-Engine Land",
     certificate: "Instrument Airplane Land",
     code: "IRA",
-    contentReady: false,
+    contentReady: true,
     id: "instrument_airplane",
     title: "Instrument Airplane Land",
   },

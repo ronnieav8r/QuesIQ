@@ -12,12 +12,14 @@ import {
   ListChecks,
   PenLine,
   Shuffle,
+  Volume2,
   X,
   XCircle,
 } from "lucide-react";
 
 type Filter = "all" | "due" | "weak";
 type Modality = "handsfree" | "visual";
+type ModeKey = "flashcards" | "match" | "memorize" | "quiz" | "test" | "truefalse" | "written";
 type OrderMode = "ordered" | "random";
 type QueueMode = "once" | "srs";
 
@@ -36,7 +38,7 @@ function buildUrl(
   modality: Modality,
   orderMode: OrderMode,
   queueMode: QueueMode,
-  mode: "flashcards" | "match" | "quiz" | "test" | "truefalse" | "written",
+  mode: ModeKey,
 ) {
   const search = new URLSearchParams();
   search.set("filter", filter);
@@ -45,6 +47,10 @@ function buildUrl(
   }
   if (orderMode === "ordered") {
     search.set("order", "ordered");
+  }
+
+  if (modality === "handsfree" && mode === "memorize") {
+    return `/study/decks/${deckId}/study/memorize?${search.toString()}`;
   }
 
   if (modality === "handsfree") {
@@ -91,11 +97,12 @@ export function StudyPicker({ deckId, dueCount, totalCount, weakCount }: Props) 
   const modes: Array<{
     desc: string;
     icon: ReactNode;
-    key: "flashcards" | "match" | "quiz" | "test" | "truefalse" | "written";
+    key: ModeKey;
     label: string;
     visualOnly?: boolean;
   }> = [
     { key: "flashcards", label: "Flashcards", icon: <Layers size={18} />, desc: "Flip and rate cards" },
+    { key: "memorize", label: "Memorize", icon: <Volume2 size={18} />, desc: "Listen to each card and answer" },
     { key: "quiz", label: "Quiz Me", icon: <ListChecks size={18} />, desc: "Multiple choice mode" },
     { key: "truefalse", label: "True / False", icon: <span className="study-picker__tf-icons"><CheckCircle2 size={14} /><XCircle size={14} /></span>, desc: "Quick binary checks" },
     { key: "written", label: "Written", icon: <PenLine size={18} />, desc: "Type answers and self/AI rate", visualOnly: true },
@@ -103,7 +110,9 @@ export function StudyPicker({ deckId, dueCount, totalCount, weakCount }: Props) 
     { key: "test", label: "Test", icon: <ClipboardList size={18} />, desc: "Full test with final review", visualOnly: true },
   ];
   const selectedModality: Modality = modality ?? "visual";
-  const visibleModes = selectedModality === "handsfree" ? modes.filter((mode) => mode.key === "flashcards") : modes;
+  const visibleModes = selectedModality === "handsfree"
+    ? modes.filter((mode) => mode.key === "flashcards" || mode.key === "memorize")
+    : modes.filter((mode) => mode.key !== "memorize");
 
   if (!open) {
     return (
@@ -187,8 +196,8 @@ export function StudyPicker({ deckId, dueCount, totalCount, weakCount }: Props) 
           >
             <span className="study-picker__mode-card-icon">{mode.icon}</span>
             <span className="study-picker__mode-card-info">
-              <strong>{mode.label}</strong>
-              <small>{mode.desc}</small>
+              <strong>{selectedModality === "handsfree" && mode.key === "flashcards" ? "Answer Out Loud" : mode.label}</strong>
+              <small>{selectedModality === "handsfree" && mode.key === "flashcards" ? "Que asks, you answer" : mode.desc}</small>
             </span>
             <ChevronRight size={14} />
           </Link>

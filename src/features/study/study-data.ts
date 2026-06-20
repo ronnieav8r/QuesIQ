@@ -538,15 +538,18 @@ export async function getStudySubjectOptions() {
     return map;
   }, new Map<string, typeof rows>());
 
-  const options: Array<{ id: string; label: string; name: string }> = [];
-  function visit(parentId: string, depth: number) {
+  const options: Array<{ depth: number; id: string; label: string; name: string; rootName: string }> = [];
+  function visit(parentId: string, depth: number, rootName?: string) {
     for (const row of byParent.get(parentId) ?? []) {
+      const nextRootName = rootName ?? row.name;
       options.push({
+        depth,
         id: row.id,
         label: `${depth > 0 ? `${"  ".repeat(depth)}- ` : ""}${row.name}`,
         name: row.name,
+        rootName: nextRootName,
       });
-      visit(row.id, depth + 1);
+      visit(row.id, depth + 1, nextRootName);
     }
   }
   visit("root", 0);
@@ -958,6 +961,7 @@ export async function getStudyStackCards(
   const cards = await getDb()
     .select({
       answer: studyCards.answer,
+      canonicalCardId: studyCards.canonicalCardId,
       createdAt: studyCards.createdAt,
       deckId: studyCards.deckId,
       dueAt: studyCards.dueAt,

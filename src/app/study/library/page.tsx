@@ -1,11 +1,10 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { BookOpen, Layers3, Plus } from "lucide-react";
+import { BookOpen, BriefcaseBusiness, ChevronLeft, Database, GraduationCap, Layers3, Plus, Sparkles } from "lucide-react";
 
 import { auth } from "@/auth";
 import {
-  getStudyAudienceTags,
   getStudyLibraryDecks,
   getStudyStackCardStatsForStacks,
   getStudySubjectOptions,
@@ -19,9 +18,11 @@ import { StudyStackCard } from "@/features/study/study-stack-card";
 type Props = {
   searchParams: Promise<{
     official?: string;
+    path?: string;
     q?: string;
     scope?: string;
     subject?: string;
+    subjectRoot?: string;
     tag?: string;
     verified?: string;
   }>;
@@ -42,18 +43,85 @@ function normalizeScope(scope: string | undefined): StudyLibraryScope {
   return "all";
 }
 
+const studyPathOptions = [
+  {
+    body: "Licenses, certificates, and exam-oriented collections.",
+    href: { path: "exams" },
+    icon: GraduationCap,
+    key: "exams",
+    label: "Exams & Certifications",
+    topics: [
+      { label: "Private Pilot ASEL", params: { tag: "Private Pilot ASEL" } },
+      { label: "Instrument Rating", params: { tag: "Instrument Rating Airplane" } },
+      { label: "Security+", params: { q: "Security+" } },
+      { label: "TEAS", params: { q: "TEAS" } },
+      { label: "EMT", params: { q: "EMT" } },
+      { label: "AP Psychology", params: { q: "AP Psychology" } },
+    ],
+  },
+  {
+    body: "Browse by academic area before choosing a topic.",
+    href: { path: "school" },
+    icon: BookOpen,
+    key: "school",
+    label: "School Subjects",
+    topics: [
+      { label: "Biology", params: { subjectRoot: "Biology" } },
+      { label: "Chemistry", params: { subjectRoot: "Chemistry" } },
+      { label: "Physics", params: { subjectRoot: "Physics" } },
+      { label: "Psychology", params: { subjectRoot: "Psychology" } },
+      { label: "Medicine & Health", params: { subjectRoot: "Medicine & Health" } },
+    ],
+  },
+  {
+    body: "Career prep, licensing, and job-aligned study paths.",
+    href: { path: "careers" },
+    icon: BriefcaseBusiness,
+    key: "careers",
+    label: "Careers & Licensing",
+    topics: [
+      { label: "Aviation", params: { subjectRoot: "Aviation" } },
+      { label: "Real Estate Exam", params: { tag: "Real Estate Exam" } },
+      { label: "Healthcare", params: { subjectRoot: "Medicine & Health" } },
+      { label: "Information Technology", params: { q: "CompTIA" } },
+      { label: "Law", params: { subjectRoot: "Law" } },
+    ],
+  },
+  {
+    body: "Curiosity, refreshers, and broad study collections.",
+    href: { path: "general" },
+    icon: Sparkles,
+    key: "general",
+    label: "General Interest",
+    topics: [
+      { label: "General / Curious", params: { tag: "General / Curious" } },
+      { label: "Personal Interest", params: { tag: "Personal Interest" } },
+      { label: "Study Library", params: {} },
+    ],
+  },
+] as const;
+
+type StudyPathKey = (typeof studyPathOptions)[number]["key"];
+
+function normalizePath(path: string | undefined): StudyPathKey | null {
+  const match = studyPathOptions.find((item) => item.key === path);
+  return match?.key ?? null;
+}
+
 export default async function StudyLibraryPage({ searchParams }: Props) {
-  const { official, q, scope, subject, tag, verified } = await searchParams;
+  const { official, path, q, scope, subject, subjectRoot, tag, verified } = await searchParams;
   const session = await auth();
   const userId = session?.user?.id;
+  const selectedPath = normalizePath(path);
   const query = normalize(q);
   const subjectFilter = normalize(subject);
+  const subjectRootFilter = normalize(subjectRoot);
   const tagFilter = normalize(tag);
   const officialOnly = official === "1";
   const verifiedOnly = verified === "1";
   const scopeFilter = normalizeScope(scope);
 
-  const [filteredDecks, optionDecks, subjectTaxonomyOptions, audienceTags, stacks] = await Promise.all([
+  const [filteredDecks, optionDecks, subjectTaxonomyOptions, stacks] = await Promise.all([
     getStudyLibraryDecks({
       officialOnly,
       query,
@@ -68,7 +136,6 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
       userId,
     }),
     getStudySubjectOptions(),
-    getStudyAudienceTags(),
     getVisibleStudyStacks(userId),
   ]);
 
@@ -77,15 +144,6 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
   );
   const taxonomyNames = new Set(subjectTaxonomyOptions.map((item) => item.name));
   const extraDeckSubjects = deckSubjects.filter((value) => !taxonomyNames.has(value));
-  const tags = Array.from(
-    new Set(
-      optionDecks
-        .flatMap((deck) => deck.tags ?? [])
-        .map((value) => value.trim())
-        .filter((value): value is string => Boolean(value)),
-    ),
-  ).sort((a, b) => a.localeCompare(b));
-
   const stackStatsById = await getStudyStackCardStatsForStacks(
     stacks.map((stack) => stack.id),
     userId,
@@ -118,45 +176,57 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
     }
     return [stack.title, stack.description ?? "", stack.subject ?? ""].join(" ").toLowerCase().includes(query);
   });
-  const totalResults = filteredStacks.length + filteredDecks.length;
   const hasFilters = Boolean(
-    query || subjectFilter || tagFilter || officialOnly || verifiedOnly || scopeFilter !== "all",
+    selectedPath || query || subjectFilter || subjectRootFilter || tagFilter || officialOnly || verifiedOnly || scopeFilter !== "all",
   );
-  const resultLabel = `${totalResults} result${totalResults === 1 ? "" : "s"}`;
   const subjectOptions = [
-    ...subjectTaxonomyOptions.map((value) => ({ label: value.label, value: value.name })),
-    ...extraDeckSubjects.map((value) => ({ label: value, value })),
-  ];
-  const audienceTagOptions = audienceTags.map((value) => ({ label: value.label, value: value.label }));
-  const deckTagOptions = tags
-    .filter((value) => !audienceTags.some((audienceTag) => audienceTag.label.toLowerCase() === value.toLowerCase()))
-    .map((value) => ({ label: value, value }));
-  const primaryAudienceTagOptions = audienceTagOptions.slice(0, 8);
-  const overflowAudienceTagOptions = audienceTagOptions.slice(8);
-  const tagOptions = [...audienceTagOptions, ...deckTagOptions];
-  const activeTagOption = tagFilter
-    ? tagOptions.find((value) => value.value.toLowerCase() === tagFilter)
-    : undefined;
-  const moreTagCount = overflowAudienceTagOptions.length + deckTagOptions.length;
+    ...subjectTaxonomyOptions.map((value) => ({
+      depth: value.depth,
+      label: value.label,
+      rootName: value.rootName,
+      value: value.name,
+    })),
+    ...extraDeckSubjects.map((value) => ({ depth: 0, label: value, rootName: value, value })),
+  ].sort((left, right) => left.label.trim().localeCompare(right.label.trim()));
+  const subjectRootByName = new Map(subjectOptions.map((value) => [value.value.toLowerCase(), value.rootName.toLowerCase()]));
+
+  function subjectMatchesRoot(value: string | null | undefined) {
+    if (!subjectRootFilter) return true;
+    const normalized = value?.trim().toLowerCase() ?? "";
+    return normalized === subjectRootFilter || subjectRootByName.get(normalized) === subjectRootFilter;
+  }
+
+  const rootFilteredDecks = subjectFilter ? filteredDecks : filteredDecks.filter((deck) => subjectMatchesRoot(deck.subject));
+  const rootFilteredStacks = subjectFilter ? filteredStacks : filteredStacks.filter((stack) => subjectMatchesRoot(stack.subject));
+  const visibleDecks = subjectRootFilter ? rootFilteredDecks : filteredDecks;
+  const visibleStacks = subjectRootFilter ? rootFilteredStacks : filteredStacks;
+  const visibleTotalResults = visibleStacks.length + visibleDecks.length;
+  const visibleResultLabel = `${visibleTotalResults} result${visibleTotalResults === 1 ? "" : "s"}`;
 
   function libraryHref(next: {
     official?: string | null;
+    path?: string | null;
     q?: string | null;
     scope?: StudyLibraryScope | null;
     subject?: string | null;
+    subjectRoot?: string | null;
     tag?: string | null;
     verified?: string | null;
   }) {
     const params = new URLSearchParams();
+    const nextPath = next.path === undefined ? selectedPath : next.path;
     const nextScope = next.scope === undefined ? scopeFilter : next.scope;
     const nextQuery = next.q === undefined ? cleanParam(q) : cleanParam(next.q);
+    const nextSubjectRoot = next.subjectRoot === undefined ? cleanParam(subjectRoot) : cleanParam(next.subjectRoot);
     const nextSubject = next.subject === undefined ? cleanParam(subject) : cleanParam(next.subject);
     const nextTag = next.tag === undefined ? cleanParam(tag) : cleanParam(next.tag);
     const nextOfficial = next.official === undefined ? official : next.official;
     const nextVerified = next.verified === undefined ? verified : next.verified;
 
+    if (nextPath) params.set("path", nextPath);
     if (nextScope && nextScope !== "all") params.set("scope", nextScope);
     if (nextQuery) params.set("q", nextQuery);
+    if (nextSubjectRoot) params.set("subjectRoot", nextSubjectRoot);
     if (nextSubject) params.set("subject", nextSubject);
     if (nextTag) params.set("tag", nextTag);
     if (nextOfficial === "1") params.set("official", "1");
@@ -165,6 +235,10 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
     const suffix = params.toString();
     return suffix ? `/study/library?${suffix}` : "/study/library";
   }
+
+  const selectedPathOption = selectedPath
+    ? studyPathOptions.find((item) => item.key === selectedPath)
+    : null;
 
   return (
     <div className="screen study-dashboard-screen">
@@ -175,6 +249,12 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
           <p>Browse stacks or open any deck directly, including decks that also belong to a stack.</p>
         </div>
         <div className="inline-actions">
+          {process.env.NODE_ENV !== "production" && (
+            <Link className="button-link secondary" href="/study/local-import-review">
+              <Database size={14} aria-hidden="true" />
+              Local Import Review
+            </Link>
+          )}
           {userId && (
             <Link className="button-link secondary" href="/study/stacks/new">
               <Layers3 size={14} aria-hidden="true" />
@@ -194,7 +274,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
         <BookOpen size={20} aria-hidden="true" />
         <div>
           <h2>
-            {filteredStacks.length} stack{filteredStacks.length === 1 ? "" : "s"} - {filteredDecks.length} deck{filteredDecks.length === 1 ? "" : "s"}
+            {visibleStacks.length} stack{visibleStacks.length === 1 ? "" : "s"} - {visibleDecks.length} deck{visibleDecks.length === 1 ? "" : "s"}
           </h2>
           <p>Open a stack to study all included decks together, or open a deck directly.</p>
         </div>
@@ -206,7 +286,9 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
             <span>Search</span>
             <input defaultValue={q ?? ""} name="q" placeholder="Search title, description, subject, tags..." type="search" />
           </label>
+          {selectedPath && <input name="path" type="hidden" value={selectedPath} />}
           {scopeFilter !== "all" && <input name="scope" type="hidden" value={scopeFilter} />}
+          {subjectRootFilter && <input name="subjectRoot" type="hidden" value={subjectRoot ?? ""} />}
           {subjectFilter && <input name="subject" type="hidden" value={subjectFilter} />}
           {tagFilter && <input name="tag" type="hidden" value={tagFilter} />}
           {officialOnly && <input name="official" type="hidden" value="1" />}
@@ -219,133 +301,116 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
                 Clear
               </Link>
             )}
-            <span>{resultLabel}</span>
+            <span>{visibleResultLabel}</span>
           </div>
         </form>
-
-        <div className="study-library-filter-groups">
-          <div className="study-library-filter-group">
-            <span>Ownership & Visibility</span>
-            <div className="study-filter-pills">
-              <Link className={scopeFilter === "all" ? "active" : ""} href={libraryHref({ scope: "all" })}>
-                {userId ? "Public + Mine" : "Public"}
-              </Link>
-              {userId && (
-                <Link className={scopeFilter === "mine" ? "active" : ""} href={libraryHref({ scope: "mine" })}>
-                  Mine
-                </Link>
-              )}
-            </div>
-          </div>
-
-          <div className="study-library-filter-group">
-            <span>Trust & Source</span>
-            <div className="study-filter-pills">
-              <Link
-                className={!officialOnly && !verifiedOnly ? "active" : ""}
-                href={libraryHref({ official: null, verified: null })}
-              >
-                Any
-              </Link>
-              <Link className={officialOnly ? "active" : ""} href={libraryHref({ official: "1", verified: null })}>
-                Official
-              </Link>
-              <Link className={verifiedOnly ? "active" : ""} href={libraryHref({ official: null, verified: "1" })}>
-                Verified
-              </Link>
-            </div>
-            <p className="field-note">Official is QuesIQ-curated. Verified is card/source checked.</p>
-          </div>
-
-          <div className="study-library-filter-group">
-            <span>Subject</span>
-            <div className="study-filter-pills">
-              <Link className={!subjectFilter ? "active" : ""} href={libraryHref({ subject: null })}>
-                All
-              </Link>
-              {subjectOptions.map((value) => (
-                <Link
-                  className={subjectFilter === value.value.toLowerCase() ? "active" : ""}
-                  href={libraryHref({ subject: value.value })}
-                  key={value.value}
-                >
-                  {value.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          <div className="study-library-filter-group">
-            <span>Audience / Exam</span>
-            <div className="study-filter-pills">
-              <Link className={!tagFilter ? "active" : ""} href={libraryHref({ tag: null })}>
-                All
-              </Link>
-              {primaryAudienceTagOptions.map((value) => (
-                <Link
-                  className={tagFilter === value.value.toLowerCase() ? "active" : ""}
-                  href={libraryHref({ tag: value.value })}
-                  key={value.value}
-                >
-                  {value.label}
-                </Link>
-              ))}
-              {activeTagOption &&
-                !primaryAudienceTagOptions.some((value) => value.value.toLowerCase() === activeTagOption.value.toLowerCase()) && (
-                  <Link className="active" href={libraryHref({ tag: activeTagOption.value })}>
-                    {activeTagOption.label}
-                  </Link>
-                )}
-            </div>
-          </div>
-
-          {moreTagCount > 0 && (
-            <details className={styles.filterMore} open={Boolean(tagFilter)}>
-              <summary>
-                <span>More audience and tags</span>
-                <small>{moreTagCount} filters</small>
-              </summary>
-              <div className={styles.filterMoreBody}>
-                {overflowAudienceTagOptions.length > 0 && (
-                  <div className="study-library-filter-group">
-                    <span>Additional Audience / Exam</span>
-                    <div className="study-filter-pills">
-                      {overflowAudienceTagOptions.map((value) => (
-                        <Link
-                          className={tagFilter === value.value.toLowerCase() ? "active" : ""}
-                          href={libraryHref({ tag: value.value })}
-                          key={value.value}
-                        >
-                          {value.label}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {deckTagOptions.length > 0 && (
-                  <div className="study-library-filter-group">
-                    <span>Topic Tags</span>
-                    <div className={`study-filter-pills ${styles.compactPills}`}>
-                      {deckTagOptions.map((value) => (
-                        <Link
-                          className={tagFilter === value.value.toLowerCase() ? "active" : ""}
-                          href={libraryHref({ tag: value.value })}
-                          key={value.value}
-                        >
-                          {value.label}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </details>
-          )}
-        </div>
       </section>
 
-      {totalResults === 0 ? (
+      <section className={`panel ${styles.pathBrowser}`} aria-label="Browse by study path">
+        <div className={styles.pathHeader}>
+          <div>
+            <p className="eyebrow">Browse</p>
+            <h2>{selectedPathOption ? selectedPathOption.label : "Choose a study path"}</h2>
+          </div>
+          {selectedPathOption && (
+            <Link
+              className={styles.pathBack}
+              href={libraryHref({ path: null, q: null, subject: null, subjectRoot: null, tag: null })}
+            >
+              <ChevronLeft aria-hidden="true" size={16} />
+              Back to paths
+            </Link>
+          )}
+        </div>
+
+        {!selectedPathOption && (
+          <div className={styles.pathGrid}>
+            {studyPathOptions.map((item) => (
+              <Link
+                className={styles.pathCard}
+                href={libraryHref({ path: item.key, q: null, subject: null, subjectRoot: null, tag: null })}
+                key={item.key}
+              >
+                <item.icon aria-hidden="true" size={18} />
+                <strong>{item.label}</strong>
+                <span>{item.body}</span>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {selectedPathOption ? (
+          <div className={styles.topicRail}>
+            <div className={styles.topicRailHeader}>
+              <span>Choices in this path</span>
+            </div>
+            <div className={styles.topicChips}>
+              {selectedPathOption.topics.map((topic) => {
+                const topicQuery = "q" in topic.params ? topic.params.q : null;
+                const topicSubjectRoot = "subjectRoot" in topic.params ? topic.params.subjectRoot : null;
+                const topicTag = "tag" in topic.params ? topic.params.tag : null;
+                return (
+                  <Link
+                    className={styles.topicChip}
+                    href={libraryHref({
+                      path: selectedPath,
+                      q: topicQuery,
+                      subject: null,
+                      subjectRoot: topicSubjectRoot,
+                      tag: topicTag,
+                  })}
+                  key={topic.label}
+                >
+                    <span>{topic.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <p className={styles.pathHint}>Start broad, then tap a popular pick. Search still works when you know exactly what you want.</p>
+        )}
+
+        <details className={styles.advancedFilters} open={Boolean(scopeFilter !== "all" || officialOnly || verifiedOnly)}>
+          <summary>Visibility and trust filters</summary>
+          <div className="study-library-filter-groups">
+            <div className="study-library-filter-group">
+              <span>Ownership & Visibility</span>
+              <div className="study-filter-pills">
+                <Link className={scopeFilter === "all" ? "active" : ""} href={libraryHref({ scope: "all" })}>
+                  {userId ? "Public + Mine" : "Public"}
+                </Link>
+                {userId && (
+                  <Link className={scopeFilter === "mine" ? "active" : ""} href={libraryHref({ scope: "mine" })}>
+                    Mine
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            <div className="study-library-filter-group">
+              <span>Trust & Source</span>
+              <div className="study-filter-pills">
+                <Link
+                  className={!officialOnly && !verifiedOnly ? "active" : ""}
+                  href={libraryHref({ official: null, verified: null })}
+                >
+                  Any
+                </Link>
+                <Link className={officialOnly ? "active" : ""} href={libraryHref({ official: "1", verified: null })}>
+                  Official
+                </Link>
+                <Link className={verifiedOnly ? "active" : ""} href={libraryHref({ official: null, verified: "1" })}>
+                  Verified
+                </Link>
+              </div>
+              <p className="field-note">Official is QuesIQ-curated. Verified is card/source checked.</p>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      {visibleTotalResults === 0 ? (
         <section className="panel study-empty-panel">
           {!hasFilters ? (
             <>
@@ -367,7 +432,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
         </section>
       ) : (
         <>
-          {filteredStacks.length > 0 && (
+          {visibleStacks.length > 0 && (
             <>
               <section className="section-head">
                 <div>
@@ -376,14 +441,14 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
                 </div>
               </section>
               <section className="study-deck-grid" aria-label="Study stacks">
-                {filteredStacks.map((stack) => (
+                {visibleStacks.map((stack) => (
                   <StudyStackCard currentUserId={userId} key={stack.id} stack={stack} />
                 ))}
               </section>
             </>
           )}
 
-          {filteredDecks.length > 0 && (
+          {visibleDecks.length > 0 && (
             <>
               <section className="section-head">
                 <div>
@@ -392,7 +457,7 @@ export default async function StudyLibraryPage({ searchParams }: Props) {
                 </div>
               </section>
               <section className="study-deck-grid" aria-label="Study decks">
-                {filteredDecks.map((deck) => (
+                {visibleDecks.map((deck) => (
                   <StudyDeckCard currentUserId={userId} deck={deck} key={deck.id} />
                 ))}
               </section>

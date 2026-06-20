@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  Database,
   History,
   Home,
   LogOut,
@@ -56,6 +57,16 @@ const studyNavItems: StudyNavItem[] = [
       pathname === "/study/stacks" ||
       (pathname.startsWith("/study/stacks/") && pathname !== "/study/stacks/new"),
   },
+  ...(process.env.NODE_ENV !== "production"
+    ? [
+        {
+          href: "/study/local-import-review",
+          icon: Database,
+          label: "Imports",
+          match: (pathname: string) => pathname === "/study/local-import-review",
+        },
+      ]
+    : []),
   {
     href: "/study/decks/new",
     icon: Plus,

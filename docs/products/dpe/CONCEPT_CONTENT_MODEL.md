@@ -1,53 +1,30 @@
-# DPE Concept Content Model
+# DPE Content Model V2
 
 ## Storage Rule
 
-DPE content is stored as narrow source-backed Concepts with authored,
-repeatable learner-facing variants. The runtime must select stored prompts; it
-must not invent learner questions at practice time.
+DPE content is concept-first, but not every learner experience is a question
+variant.
 
-A Concept must have:
+Use four content families:
 
-1. One certificate.
-2. One ACS area/task/element location.
-3. One narrow testable title.
-4. At least one source reference.
-5. At least one subject tag.
-6. At least one complete question or prompt variant.
+1. `Concepts`: one narrow, source-backed checkride knowledge or risk point.
+2. `Drill variants`: rapid fire, coaching, multiple choice, true/false, and
+   fill-in-the-blank prompts that test one Concept.
+3. `Scenario cases`: applied walkthroughs with real setup, ordered steps, AI
+   checkpoints, and linked Concepts/stimuli.
+4. `Mock oral blueprints`: voice-session plans that select from Concepts,
+   scenario cases, weak areas, and coverage policy.
 
-Partial mode coverage is allowed. A Concept with only multiple-choice and
-rapid-fire variants is available only in those two modes.
+Runtime must select stored authored prompts, scenarios, and blueprints. AI may
+evaluate, coach, ask follow-ups, and summarize, but it must not invent the
+learner-facing content path at runtime.
 
-## Mode Contract
+## Drill Concept Packet
 
-Supported repeatable variant modes:
+Concept packets import only drill variants. Do not include `scenario` or
+`mock_oral` inside `variants`; those are separate V2 content families.
 
-1. `multiple_choice`
-2. `fill_blank`
-3. `true_false`
-4. `scenario`
-5. `coaching`
-6. `rapid_fire`
-7. `mock_oral`
-
-Visual modes must be scoreable from authored answer fields. Spoken modes must
-use authored prompts, expected answer elements, acceptable phrases, or rubrics.
-AI may evaluate, coach, and summarize spoken answers, but the prompt itself is
-stored content.
-
-## Content Creator Prompt
-
-```text
-You are creating source-backed QuesIQ DPE content.
-
-Create structured JSON for DPE Concepts and repeatable question variants.
-
-A Concept is one narrow, testable checkride idea under a specific certificate and ACS area/task/element. It is not a broad lesson, not a study note, and not a blob of source content. Every Concept must include at least one exact learner-facing question or prompt variant.
-
-Return JSON only.
-
-Required shape:
-
+```json
 {
   "certificate": {
     "id": "private-pilot-asel",
@@ -64,81 +41,159 @@ Required shape:
     "elementReference": "PA.I.A.K1"
   },
   "concept": {
-    "id": "stable-slug-or-id",
+    "id": "required-pilot-documents",
     "title": "Required pilot documents",
-    "subjectTags": ["pilot qualifications", "documents", "medical", "BasicMed"],
-    "difficulty": "foundation | intermediate | checkride",
+    "subjectTags": ["pilot qualifications", "documents"],
+    "difficulty": "foundation",
     "searchKeywords": ["certificate", "photo ID", "medical", "BasicMed"],
     "sources": [
       {
-        "label": "FAA source name",
-        "reference": "Exact ACS, FAR, AIM, handbook, or FAA source reference",
-        "url": "source URL if available",
-        "notes": "What this source supports"
+        "label": "14 CFR 61.3",
+        "reference": "14 CFR 61.3",
+        "url": "https://www.ecfr.gov/current/title-14/section-61.3",
+        "notes": "Supports required pilot document answer."
       }
     ]
   },
   "variants": {
     "multiple_choice": {
-      "prompt": "Exact multiple-choice question stem",
+      "prompt": "Which documents must a private pilot have available to act as PIC?",
       "choices": [
-        { "id": "A", "text": "Choice text" },
-        { "id": "B", "text": "Choice text" },
-        { "id": "C", "text": "Choice text" },
-        { "id": "D", "text": "Choice text" }
+        { "id": "A", "text": "Pilot certificate, photo ID, and medical or BasicMed when required" },
+        { "id": "B", "text": "Aircraft registration, radio license, and logbook" },
+        { "id": "C", "text": "Photo ID only" },
+        { "id": "D", "text": "Pilot certificate and aircraft insurance card" }
       ],
       "correctChoiceIds": ["A"],
-      "explanation": "Why the answer is correct",
-      "commonMisses": ["Common misconception"]
-    },
-    "fill_blank": {
-      "prompt": "Exact fill-in-the-blank prompt",
-      "acceptedAnswers": ["accepted answer", "alternate accepted answer"],
-      "explanation": "Concise explanation"
-    },
-    "true_false": {
-      "statement": "Exact true/false statement",
-      "correctAnswer": true,
-      "correctionIfFalse": "Corrected statement if false",
-      "explanation": "Concise explanation"
-    },
-    "scenario": {
-      "scenarioSetup": "Short realistic checkride/preflight scenario",
-      "question": "Exact learner-facing scenario question",
-      "expectedAnswerElements": ["Element 1", "Element 2"],
-      "debrief": "Scenario debrief"
-    },
-    "coaching": {
-      "openerPrompt": "Exact spoken coaching prompt",
-      "hintSequence": ["Hint 1", "Hint 2"],
-      "teachingPoints": ["Point 1", "Point 2"],
-      "expectedAnswerElements": ["Element 1", "Element 2"]
+      "explanation": "The question asks for pilot documents, not aircraft documents.",
+      "commonMisses": ["Confusing pilot documents with aircraft documents."]
     },
     "rapid_fire": {
-      "shortPrompt": "Exact rapid-fire oral prompt",
-      "idealShortAnswer": "Concise expected answer",
-      "acceptablePhrases": ["Alternate phrasing"]
-    },
-    "mock_oral": {
-      "openerPrompt": "Exact DPE-style oral prompt",
-      "followUps": ["Follow-up 1", "Follow-up 2"],
-      "rubric": {
-        "knowledge": "What must be correct",
-        "riskManagement": "What safety judgment must appear",
-        "communication": "What clear answer sounds like",
-        "checkrideReadiness": "How to judge readiness"
-      }
+      "shortPrompt": "What documents do you need to act as PIC as a private pilot?",
+      "idealShortAnswer": "Pilot certificate, government photo ID, and medical or BasicMed when required.",
+      "acceptablePhrases": ["pilot certificate", "photo ID", "medical", "BasicMed"]
     }
   }
 }
-
-Rules:
-- Every Concept must have required source references.
-- Every Concept must include at least one subject tag.
-- Every Concept must include at least one complete variant.
-- Include all applicable variants, but omit modes that do not fit the concept.
-- Visual variants must be deterministically scorable.
-- Spoken variants must include authored prompts and rubrics.
-- Do not invent source references.
-- Do not output placeholders.
 ```
+
+Quality rules:
+
+- One Concept tests one specific point.
+- Multiple choice must have one defensible best answer.
+- Distractors should be plausible misconceptions, not random true facts from
+  nearby topics.
+- Mnemonics belong in answers or explanations, not as clues in stems.
+- Fill-in-the-blank is only for exact recall facts.
+- True/false is only for one unambiguous claim.
+
+## Stimulus Packet
+
+Stimulus packets are reusable display/context objects for images, charts,
+METARs, TAFs, airport diagrams, excerpts, examples, and documents.
+
+The learner sees the asset. The AI receives the structured context. Do not rely
+on live image interpretation for correctness.
+
+```json
+{
+  "stimulusPacket": {
+    "id": "stimulus-kapa-metar-taf-marginal-vfr",
+    "certificateTypeId": "private-pilot-asel",
+    "displayTitle": "KAPA METAR/TAF marginal VFR trend",
+    "assetType": "metar_taf",
+    "learnerDescription": "A METAR/TAF example for a marginal VFR preflight decision.",
+    "aiContext": "This packet shows a marginal VFR trend with lowering ceilings and gusty winds. The AI should use the decoded ceiling, visibility, wind, and timing from this context rather than inferring from an image.",
+    "keyDetails": ["Ceiling is marginal.", "Wind is gusty.", "Forecast timing matters."],
+    "interpretationNotes": ["Compare the current METAR with the forecast trend before deciding."],
+    "commonMisreads": ["Treating a temporary improvement as the whole forecast."],
+    "sourceLabel": "NOAA Aviation Weather Center",
+    "sourceReference": "Training METAR/TAF example",
+    "sourceUrl": "https://aviationweather.gov/",
+    "assets": [
+      {
+        "type": "text",
+        "label": "KAPA METAR/TAF text",
+        "textContent": "KAPA 151853Z 18012G22KT 6SM BKN025..."
+      }
+    ],
+    "links": [
+      {
+        "targetType": "concept",
+        "targetId": "weather-go-no-go-trend",
+        "requiredToAnswer": true,
+        "usage": "Weather interpretation example for risk discussion."
+      }
+    ]
+  }
+}
+```
+
+## Scenario Case
+
+Scenario cases are not wrapper prompts. They are ordered applied cases where the
+student walks the AI through decisions and the AI checks specific points.
+
+```json
+{
+  "scenarioCase": {
+    "id": "scenario-ifr-weather-diversion",
+    "certificateTypeId": "instrument-rating-airplane",
+    "title": "IFR Deteriorating Destination Weather",
+    "summary": "IFR weather deterioration and diversion decision scenario.",
+    "aiInstructions": "Let the learner explain the decision flow, then ask checkpoints in order.",
+    "steps": [
+      {
+        "title": "Destination weather is deteriorating",
+        "scenarioText": "You are IMC near your destination and the reported ceiling is dropping.",
+        "aiPrompt": "Ask what information the pilot needs before continuing.",
+        "expectedPilotActions": ["Assess weather trend", "Confirm fuel and alternate options"],
+        "riskPoints": ["Press-on bias"],
+        "conceptIds": ["ifr-alternate-planning"],
+        "stimulusPacketIds": ["stimulus-kapa-metar-taf-marginal-vfr"],
+        "checkpoints": [
+          {
+            "prompt": "What are your first decision points before continuing this IFR flight?",
+            "expectedAnswerElements": ["Weather trend", "Fuel and alternate", "ATC communication"],
+            "aiEvaluationNotes": "Look for a conservative decision flow, not a memorized rule only.",
+            "conceptIds": ["ifr-alternate-planning"],
+            "stimulusPacketIds": ["stimulus-kapa-metar-taf-marginal-vfr"]
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+## Mock Oral Blueprint
+
+Mock oral blueprints define voice-session behavior. They are broader than a
+single concept and should drive real-time examiner flow.
+
+```json
+{
+  "mockOralBlueprint": {
+    "id": "mock-oral-private-pilot-area-i",
+    "certificateTypeId": "private-pilot-asel",
+    "title": "Private Pilot Area I Mock Oral",
+    "sessionMode": "voice",
+    "durationMinutes": 20,
+    "coveragePolicy": {
+      "requiredAreas": ["I"],
+      "targetQuestionCount": 8,
+      "includeWeakAreas": true
+    },
+    "examinerStyle": "Direct, realistic, and safety-focused.",
+    "aiInstructions": "Run a voice mock oral using authored Concepts and scenario cases only.",
+    "conceptPool": ["required-pilot-documents"],
+    "scenarioPool": ["scenario-ifr-weather-diversion"],
+    "stimulusPacketIds": ["stimulus-kapa-metar-taf-marginal-vfr"]
+  }
+}
+```
+
+## Import Status
+
+V2 content is content-side readiness only. It does not imply app publication,
+Official status, production import, or human/expert review.

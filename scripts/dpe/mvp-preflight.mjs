@@ -10,6 +10,7 @@ const requiredFiles = [
   "drizzle/0053_add_dpe_progression.sql",
   "drizzle/0074_add_dpe_button_practice.sql",
   "drizzle/0084_add_dpe_concept_variants.sql",
+  "drizzle/0085_add_dpe_content_model_v2.sql",
   "src/app/dpe/page.tsx",
   "src/app/api/dpe/me/route.ts",
   "src/app/api/dpe/practice-sessions/route.ts",
@@ -23,17 +24,22 @@ const requiredFiles = [
   "src/app/api/dpe/status/route.ts",
   "src/app/api/dpe/content/concepts/route.ts",
   "src/app/api/dpe/content/filters/route.ts",
+  "src/app/api/dpe/content/mock-oral/route.ts",
+  "src/app/api/dpe/content/scenarios/route.ts",
+  "src/app/api/dpe/content/stimuli/route.ts",
   "src/app/api/dpe/content/variants/route.ts",
   "src/features/dpe/dpe-app.tsx",
   "src/features/dpe/question-format.ts",
   "src/features/dpe/target-tracks.ts",
   "src/server/dpe/dpe-answer-evaluator.ts",
   "src/server/dpe/concept-content.ts",
+  "src/server/dpe/content-v2.ts",
   "src/server/dpe/dpe-data.ts",
   "src/server/dpe/dpe-progression.ts",
   "scripts/dpe/answer-smoke.ts",
   "scripts/dpe/concept-content-smoke.ts",
   "docs/products/dpe/CONCEPT_CONTENT_MODEL.md",
+  "docs/products/dpe/pilots/ira-v2-pilot.json",
 ];
 
 const requiredTracks = [
@@ -84,16 +90,29 @@ const codeContracts = [
     ],
   },
   {
+    file: "drizzle/0085_add_dpe_content_model_v2.sql",
+    checks: [
+      "dpe_stimulus_packets",
+      "dpe_stimulus_assets",
+      "dpe_stimulus_links",
+      "dpe_scenario_cases",
+      "dpe_scenario_steps",
+      "dpe_scenario_checkpoints",
+      "dpe_mock_oral_blueprints",
+      "required_to_answer",
+      "ai_context",
+    ],
+  },
+  {
     file: "src/server/dpe/concept-content.ts",
     checks: [
       "dpeConceptVariantModes",
       "multiple_choice",
       "fill_blank",
       "true_false",
-      "scenario",
       "coaching",
       "rapid_fire",
-      "mock_oral",
+      "Scenario cases and mock oral blueprints are V2 content families",
       "concept.sources requires at least one source",
       "concept.subjectTags",
       "At least one complete learner-facing variant is required.",
@@ -102,6 +121,22 @@ const codeContracts = [
       "listDpeConceptFilters",
       "listDpeQuestionVariants",
       "countReadyDpeConceptVariants",
+    ],
+  },
+  {
+    file: "src/server/dpe/content-v2.ts",
+    checks: [
+      "parseDpeStimulusPacket",
+      "parseDpeScenarioCase",
+      "parseDpeMockOralBlueprint",
+      "upsertDpeStimulusPacket",
+      "upsertDpeScenarioCase",
+      "upsertDpeMockOralBlueprint",
+      "listDpeStimulusPackets",
+      "listDpeScenarioCases",
+      "listDpeMockOralBlueprints",
+      "aiContext",
+      "requiredToAnswer",
     ],
   },
   {
@@ -135,23 +170,71 @@ const codeContracts = [
     ],
   },
   {
+    file: "src/app/api/dpe/content/stimuli/route.ts",
+    checks: [
+      "parseDpeStimulusPacket",
+      "upsertDpeStimulusPacket",
+      "listDpeStimulusPackets",
+      "requireAdminSession",
+    ],
+  },
+  {
+    file: "src/app/api/dpe/content/scenarios/route.ts",
+    checks: [
+      "parseDpeScenarioCase",
+      "upsertDpeScenarioCase",
+      "listDpeScenarioCases",
+      "requireAdminSession",
+    ],
+  },
+  {
+    file: "src/app/api/dpe/content/mock-oral/route.ts",
+    checks: [
+      "parseDpeMockOralBlueprint",
+      "upsertDpeMockOralBlueprint",
+      "listDpeMockOralBlueprints",
+      "requireAdminSession",
+    ],
+  },
+  {
     file: "scripts/dpe/concept-content-smoke.ts",
     checks: [
       "packet without sources should fail",
       "packet without subject tags should fail",
       "packet without variants should fail",
       "multiple choice without a correct choice should fail",
-      "DPE concept content smoke passed",
+      "IRA V2 pilot should include 10 concept packets",
+      "IRA V2 pilot should include 2 stimulus packets",
+      "IRA V2 pilot should include 1 scenario case",
+      "IRA V2 pilot should include 1 mock oral blueprint",
+      "scenario variants should not be accepted inside concept drill packets",
+      "mock oral variants should not be accepted inside concept drill packets",
+      "stimulus without AI context should fail",
+      "DPE concept and V2 content smoke passed",
+    ],
+  },
+  {
+    file: "docs/products/dpe/pilots/ira-v2-pilot.json",
+    checks: [
+      "\"conceptPackets\"",
+      "\"stimulusPackets\"",
+      "\"scenarioCases\"",
+      "\"mockOralBlueprints\"",
+      "ira-ceiling-visibility-metar",
+      "stimulus-ira-kapa-metar-taf-marginal",
+      "scenario-ira-weather-alternate-diversion",
+      "mock-oral-ira-preflight-approach-mini",
     ],
   },
   {
     file: "docs/products/dpe/CONCEPT_CONTENT_MODEL.md",
     checks: [
-      "DPE content is stored as narrow source-backed Concepts",
-      "runtime must select stored prompts",
-      "Partial mode coverage is allowed",
-      "Content Creator Prompt",
-      "Do not invent source references",
+      "DPE content is concept-first",
+      "Concept packets import only drill variants",
+      "Stimulus packets are reusable display/context objects",
+      "Scenario cases are not wrapper prompts",
+      "Mock oral blueprints define voice-session behavior",
+      "Do not include `scenario` or",
     ],
   },
   {
@@ -654,8 +737,9 @@ if (await fileExists("src/features/dpe/target-tracks.ts")) {
     }
   }
 
-  const nonPrivateReady = requiredTracks
-    .filter((code) => code !== "PPL-ASEL")
+  const expectedReadyTracks = new Set(["PPL-ASEL", "IRA"]);
+  const unexpectedReadyTracks = requiredTracks
+    .filter((code) => !expectedReadyTracks.has(code))
     .filter((code) => {
       const index = tracks.indexOf(`code: "${code}"`);
       if (index === -1) return false;
@@ -663,10 +747,10 @@ if (await fileExists("src/features/dpe/target-tracks.ts")) {
       return nextBlock.includes("contentReady: true");
     });
 
-  if (nonPrivateReady.length === 0) {
-    pass("content boundary", "non-Private MVP tracks remain scaffolded/content pending");
+  if (unexpectedReadyTracks.length === 0) {
+    pass("content boundary", "Private and Instrument ready; remaining MVP tracks stay scaffolded/content pending");
   } else {
-    fail("content boundary", `unexpected contentReady=true for ${nonPrivateReady.join(", ")}`);
+    fail("content boundary", `unexpected contentReady=true for ${unexpectedReadyTracks.join(", ")}`);
   }
 
   for (const expected of requiredTrackMetadata) {

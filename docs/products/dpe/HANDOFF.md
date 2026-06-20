@@ -1,75 +1,79 @@
 # QuesIQ DPE Handoff
 
-Last updated: 2026-06-15
+Last updated: 2026-06-17
 
 ## Current State
 
-DPE is open on the shared QuesIQ app route at `/dpe`. The learner Practice
-setup now has a guided flow from certificate, to focus filters, to practice
-style and question count, but it still runs the existing button-driven DPE
-practice loop backed by the older `dpe_oral_questions`,
-`dpe_session_questions`, and answer-attempt tables.
+DPE is open at `/dpe` in the shared QuesIQ app. The current learner practice
+loop still supports the older button-driven DPE tables for compatibility, while
+the content foundation is moving to DPE Content Model V2.
 
-The latest backend slice added the new Concept + repeatable question-variant
-content foundation in commit `018579e`.
+`0084_add_dpe_concept_variants.sql` added the first concept/variant foundation.
+`0085_add_dpe_content_model_v2.sql` extends that foundation with first-class
+stimulus packets, real scenario cases, and mock oral blueprints.
 
-The latest learner setup slice landed in commit `8a62b75`
-(`Redesign DPE practice setup flow`).
+## V2 Content Rule
 
-Implemented in that learner setup slice:
-
-1. Certificate selection moved to the top of Practice setup.
-2. ACS area/task focus changed from dropdowns to multi-select cards.
-3. Subject/tag multi-select and prompt/source/keyword search were added.
-4. Coaching and Rapid Fire remain the functional drill modes.
-5. On-screen drills and Scenario/Mock Oral are separated as variant-backed
-   mode groups for the next content-runtime slice.
-6. Drill-style sessions now expose quick question-count choices plus a custom
-   count.
-7. Desktop and mobile browser checks passed; mobile stat overflow for long
-   prompt-certificate labels was fixed.
-
-Implemented in that slice:
-
-1. Migration `0084_add_dpe_concept_variants.sql`.
-2. Schema exports for Concepts, Concept sources, subject tags, question
-   variants, variant assets, selected session variants, and attempts.
-3. Admin-only Concept import endpoint at `/api/dpe/content/concepts`.
-4. Signed-in filter endpoint at `/api/dpe/content/filters`.
-5. Signed-in variant query endpoint at `/api/dpe/content/variants`.
-6. DPE public status now includes `conceptVariantCount`.
-7. Content creator prompt and model contract in `CONCEPT_CONTENT_MODEL.md`.
-8. Smoke command `npm run smoke:dpe-concepts`.
-
-## Content Model Rule
-
-The new DPE content path uses Concepts as parent records, but Concepts are not
-runtime blobs. Each Concept is one narrow, source-backed checkride idea under a
-certificate and ACS area/task/element.
-
-Required before import:
-
-1. At least one source reference.
-2. At least one subject tag.
-3. At least one authored learner-facing variant.
-
-Supported variant modes:
+Concepts are narrow, source-backed knowledge or risk points. Drill variants are
+the only variants attached directly to Concepts:
 
 1. `multiple_choice`
 2. `fill_blank`
 3. `true_false`
-4. `scenario`
-5. `coaching`
-6. `rapid_fire`
-7. `mock_oral`
+4. `coaching`
+5. `rapid_fire`
 
-Practice must select stored authored prompts. AI may evaluate, coach, or
-summarize spoken answers, but it must not invent learner-facing prompts at
-runtime.
+New concept imports must not include `scenario` or `mock_oral` variants. Those
+are separate content families:
+
+1. Scenario cases: ordered walkthroughs with setup, steps, checkpoints,
+   linked Concepts, and linked stimulus packets.
+2. Mock oral blueprints: voice-session plans with coverage policy, examiner
+   style, allowed Concept/scenario pools, and instructions.
+3. Stimulus packets: learner-visible assets plus AI-readable context. The AI
+   must not be expected to infer chart/image meaning from pixels alone.
+
+## Content-Side Prompt Suite
+
+DPE V2 content generation prompts live in the content library, not in this app
+repo:
+
+```text
+E:\Codex\QuesIQ\QuesIQ Content Management\QuesIQ Content Library\planning\dpe-v2-prompts
+```
+
+Start with `00_PROMPT_INDEX.md` before generating or converting DPE content.
+Those prompts enforce the V2 workflow: reviewed source packet or exact
+ACS-mapped Study row, narrow Concept extraction, Concept QA, drill generation by
+mode, stimulus generation, scenario/mock oral generation, then import QA.
+
+The prompt suite is a content-side drafting aid only. It does not import app
+data, publish content, mark Official, mark app-side Verified, or mark
+expert-reviewed.
+
+## API Surfaces
+
+Admin import:
+
+- `POST /api/dpe/content/concepts`
+- `POST /api/dpe/content/stimuli`
+- `POST /api/dpe/content/scenarios`
+- `POST /api/dpe/content/mock-oral`
+
+Signed-in read:
+
+- `GET /api/dpe/content/filters`
+- `GET /api/dpe/content/variants`
+- `GET /api/dpe/content/stimuli`
+- `GET /api/dpe/content/scenarios`
+- `GET /api/dpe/content/mock-oral`
+
+Quick-practice variant APIs expose drill modes only. Scenario and mock oral are
+kept separate until their runtime experiences are intentionally wired.
 
 ## Verification Commands
 
-Run these after DPE content-model work:
+Run after DPE content-model work:
 
 ```powershell
 npm run smoke:dpe-concepts
@@ -79,54 +83,18 @@ npm run readiness:dpe
 npm run build
 ```
 
-`readiness:dpe` may warn about missing local env vars when run outside a fully
-configured app shell. Those warnings are not concept-model blockers.
-
-## Browser Review Decision
-
-After reviewing the new Practice setup in the in-app browser, the next UX pass
-should simplify the focus step before wiring the variant APIs:
-
-1. Remove ACS Area as its own learner-facing selector.
-2. Make Task selection the primary content boundary, labeled with area context
-   such as `Area I, Task A: Pilot Qualifications`.
-3. Keep task multi-select.
-4. Keep subject/tag multi-select, but make tags contextual to selected tasks:
-   tags available inside selected tasks stay active, while tags outside the
-   selected task pool should be disabled/gray or hidden behind an intentional
-   "show more" affordance.
-5. Remove the search box from the primary learner setup flow for now. Tags
-   should be the main learner-facing refinement control. Search can return
-   later as an advanced/admin/content-browser tool when the content library is
-   large enough to justify it.
-6. Keep Scenario and Mock Oral visually separate from quick drills.
+`readiness:dpe` may warn about missing local env vars outside a fully
+configured app shell. Those warnings are not V2 content-model blockers.
 
 ## Next Builder Slice
 
-Wire learner Practice setup to the new Concept variant APIs after the task-first
-UX cleanup:
+Wire learner Practice setup to the V2 drill APIs first:
 
-1. Keep certificate selection at the top of Practice setup.
-2. Replace learner-facing ACS area selection with task cards that include ACS
-   area/task labels and descriptive task titles.
-3. Make subject tags contextual to selected task cards.
-4. Show only modes available for the selected Concept/filters.
-5. Start sessions from selected `dpe_question_variants`, snapshotting rows into
-   `dpe_session_variants`.
-6. Score visual modes deterministically from authored fields.
-7. Keep coaching, rapid-fire, scenarios, and mock oral grounded in authored
-   prompts and rubrics.
+1. Keep certificate selection at the top.
+2. Use task cards as the primary learner content boundary.
+3. Make subject tags contextual to selected tasks.
+4. Show only available drill modes.
+5. Snapshot selected drill variants into `dpe_session_variants`.
 
-Do not remove the old DPE practice tables yet. Keep compatibility until the new
-variant-backed flow has session persistence, attempts, History/review display,
-and deploy QA.
-
-## Content Creator Handoff
-
-Give content creators the prompt in:
-
-`docs/products/dpe/CONCEPT_CONTENT_MODEL.md`
-
-The importer rejects packets with no sources, no subject tags, or no variants.
-Partial mode coverage is allowed; a Concept only appears in modes for which it
-has complete variants.
+Do not remove old DPE practice tables until V2 sessions, attempts,
+History/review display, and deploy QA are complete.

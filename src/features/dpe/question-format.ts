@@ -106,7 +106,17 @@ function inferPromptType(questionText: string): DpeQuestion["promptType"] {
 }
 
 function normalizeAnswerKeyStatus(value: string): DpeQuestion["answerKeyStatus"] {
-  if (value === "provisional" || value === "placeholder" || value === "pending") {
+  if (
+    value === "draft" ||
+    value === "missing" ||
+    value === "placeholder" ||
+    value === "provisional" ||
+    value === "ready" ||
+    value === "review" ||
+    value === "published" ||
+    value === "verified" ||
+    value === "pending"
+  ) {
     return value;
   }
   return "pending";

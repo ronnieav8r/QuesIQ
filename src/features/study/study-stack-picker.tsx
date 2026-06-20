@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Eye, Headphones, ListChecks, Shuffle, X } from "lucide-react";
+import { ChevronRight, Eye, Headphones, Layers, ListChecks, Shuffle, Volume2, X } from "lucide-react";
 
 type Filter = "all" | "due" | "weak";
+type HandsFreeMode = "answer" | "memorize";
 type Modality = "handsfree" | "visual";
 type OrderMode = "ordered" | "random";
 type QueueMode = "once" | "srs";
@@ -22,6 +23,7 @@ function buildUrl(
   modality: Modality,
   orderMode: OrderMode,
   queueMode: QueueMode,
+  handsFreeMode: HandsFreeMode = "answer",
 ) {
   const search = new URLSearchParams();
   search.set("filter", filter);
@@ -30,6 +32,9 @@ function buildUrl(
     search.set("srs", "1");
   }
   if (modality === "handsfree") {
+    if (handsFreeMode === "memorize") {
+      return `/study/stacks/${stackId}/study/memorize?${search.toString()}`;
+    }
     search.set("hf", "1");
     return `/study/stacks/${stackId}/study/verbal?${search.toString()}`;
   }
@@ -122,9 +127,36 @@ export function StudyStackPicker({ readyCount, stackId, totalCount, weakCount }:
           Smart Review
         </button>
       </div>
-      <Link className="button-link study-picker__launch" href={buildUrl(stackId, filter, modality, orderMode, queueMode)}>
-        Start {modality === "handsfree" ? "Hands-Free" : "Visual"} Stack
-      </Link>
+      {modality === "handsfree" ? (
+        <div className="study-picker__mode-cards">
+          <Link
+            className="study-picker__mode-card"
+            href={buildUrl(stackId, filter, modality, orderMode, queueMode, "answer")}
+          >
+            <span className="study-picker__mode-card-icon"><Layers size={18} aria-hidden="true" /></span>
+            <span className="study-picker__mode-card-info">
+              <strong>Answer Out Loud</strong>
+              <small>Que asks, you answer</small>
+            </span>
+            <ChevronRight size={14} aria-hidden="true" />
+          </Link>
+          <Link
+            className="study-picker__mode-card"
+            href={buildUrl(stackId, filter, modality, orderMode, queueMode, "memorize")}
+          >
+            <span className="study-picker__mode-card-icon"><Volume2 size={18} aria-hidden="true" /></span>
+            <span className="study-picker__mode-card-info">
+              <strong>Memorize</strong>
+              <small>Listen to each card and answer</small>
+            </span>
+            <ChevronRight size={14} aria-hidden="true" />
+          </Link>
+        </div>
+      ) : (
+        <Link className="button-link study-picker__launch" href={buildUrl(stackId, filter, modality, orderMode, queueMode)}>
+          Start Visual Stack
+        </Link>
+      )}
     </section>
   );
 }

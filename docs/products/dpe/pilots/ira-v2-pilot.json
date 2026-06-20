@@ -1,0 +1,642 @@
+{
+  "id": "ira-v2-pilot",
+  "track": "IRA",
+  "reviewStatus": "draft",
+  "purpose": "Tiny Instrument Rating Airplane V2 pilot used to validate concept drills, stimulus packets, scenario cases, and mock oral blueprint import shape before broad content generation.",
+  "conceptPackets": [
+    {
+      "certificate": {
+        "id": "instrument-rating-airplane",
+        "code": "IRA",
+        "title": "Instrument Rating Airplane"
+      },
+      "acs": {
+        "title": "Instrument Rating Airplane ACS",
+        "area": "I",
+        "areaTitle": "Preflight Preparation",
+        "task": "B",
+        "taskTitle": "Weather Information",
+        "elementType": "K",
+        "elementReference": "IR.I.B.K1"
+      },
+      "concept": {
+        "id": "ira-ceiling-visibility-metar",
+        "title": "Read ceiling and visibility from a METAR",
+        "difficulty": "foundation",
+        "subjectTags": ["weather", "metar", "preflight"],
+        "searchKeywords": ["ceiling", "visibility", "BKN", "OVC", "SM"],
+        "sources": [
+          {
+            "label": "AIM",
+            "reference": "AIM 7-1-30, Key to Aerodrome Forecast and Aviation Routine Weather Report",
+            "url": "https://www.faa.gov/air_traffic/publications/atpubs/aim_html/",
+            "notes": "Supports METAR weather code interpretation."
+          }
+        ]
+      },
+      "variants": {
+        "rapid_fire": {
+          "shortPrompt": "In a METAR, which cloud layers count as a ceiling?",
+          "idealShortAnswer": "The lowest broken, overcast, or obscuration layer counts as the ceiling.",
+          "acceptablePhrases": ["lowest broken", "lowest overcast", "obscuration", "BKN", "OVC"]
+        },
+        "multiple_choice": {
+          "prompt": "A METAR reports SCT018 BKN032. What is the reported ceiling?",
+          "choices": [
+            { "id": "A", "text": "1,800 feet AGL" },
+            { "id": "B", "text": "3,200 feet AGL" },
+            { "id": "C", "text": "No ceiling is reported" },
+            { "id": "D", "text": "3,200 feet MSL" }
+          ],
+          "correctChoiceIds": ["B"],
+          "explanation": "Scattered is not a ceiling; broken at 3,200 feet AGL is the lowest ceiling layer.",
+          "commonMisses": ["Treating scattered clouds as a ceiling.", "Calling reported cloud heights MSL instead of AGL."]
+        }
+      }
+    },
+    {
+      "certificate": {
+        "id": "instrument-rating-airplane",
+        "code": "IRA",
+        "title": "Instrument Rating Airplane"
+      },
+      "acs": {
+        "title": "Instrument Rating Airplane ACS",
+        "area": "I",
+        "areaTitle": "Preflight Preparation",
+        "task": "B",
+        "taskTitle": "Weather Information",
+        "elementType": "K",
+        "elementReference": "IR.I.B.K2"
+      },
+      "concept": {
+        "id": "ira-taf-tempo-window",
+        "title": "Apply a TEMPO group only during its forecast time window",
+        "difficulty": "foundation",
+        "subjectTags": ["weather", "taf", "preflight"],
+        "searchKeywords": ["TAF", "TEMPO", "forecast window"],
+        "sources": [
+          {
+            "label": "AIM",
+            "reference": "AIM 7-1-30, TAF format and change groups",
+            "url": "https://www.faa.gov/air_traffic/publications/atpubs/aim_html/",
+            "notes": "Supports TAF change group timing interpretation."
+          }
+        ]
+      },
+      "variants": {
+        "rapid_fire": {
+          "shortPrompt": "When does a TAF TEMPO group apply?",
+          "idealShortAnswer": "Only during the valid time window printed with that TEMPO group.",
+          "acceptablePhrases": ["valid time", "time window", "temporary conditions"]
+        },
+        "true_false": {
+          "statement": "A TAF TEMPO group describes temporary forecast conditions during its stated valid period.",
+          "correctAnswer": true,
+          "explanation": "TEMPO is tied to its listed time range and should not be applied to the whole TAF.",
+          "correctionIfFalse": null
+        }
+      }
+    },
+    {
+      "certificate": {
+        "id": "instrument-rating-airplane",
+        "code": "IRA",
+        "title": "Instrument Rating Airplane"
+      },
+      "acs": {
+        "title": "Instrument Rating Airplane ACS",
+        "area": "I",
+        "areaTitle": "Preflight Preparation",
+        "task": "C",
+        "taskTitle": "Cross-Country Flight Planning",
+        "elementType": "K",
+        "elementReference": "IR.I.C.K1"
+      },
+      "concept": {
+        "id": "ira-alternate-precision-weather",
+        "title": "Recognize standard alternate weather minima for a precision approach",
+        "difficulty": "foundation",
+        "subjectTags": ["alternates", "ifr planning", "regulations"],
+        "searchKeywords": ["alternate", "600-2", "precision approach"],
+        "sources": [
+          {
+            "label": "14 CFR",
+            "reference": "14 CFR 91.169(c)",
+            "url": "https://www.ecfr.gov/current/title-14/section-91.169",
+            "notes": "Defines standard IFR alternate weather minima."
+          }
+        ]
+      },
+      "variants": {
+        "fill_blank": {
+          "prompt": "Standard alternate weather minimums for an airport with a precision approach are ceiling ____ feet and visibility ____ statute miles.",
+          "acceptedAnswers": ["600 and 2", "600 feet and 2 miles", "600 ft and 2 SM"],
+          "explanation": "Unless alternate minimums are published, a precision approach alternate needs a 600-foot ceiling and 2 statute miles visibility."
+        },
+        "multiple_choice": {
+          "prompt": "No alternate minimums are published. Your alternate has a usable precision approach. Which forecast weather minimum applies?",
+          "choices": [
+            { "id": "A", "text": "400-foot ceiling and 1 mile visibility" },
+            { "id": "B", "text": "600-foot ceiling and 2 miles visibility" },
+            { "id": "C", "text": "800-foot ceiling and 2 miles visibility" },
+            { "id": "D", "text": "1,000-foot ceiling and 3 miles visibility" }
+          ],
+          "correctChoiceIds": ["B"],
+          "explanation": "For a precision approach alternate, the standard forecast minimum is 600-2 unless another alternate minimum is published.",
+          "commonMisses": ["Using nonprecision 800-2 minimums for a precision approach."]
+        }
+      }
+    },
+    {
+      "certificate": {
+        "id": "instrument-rating-airplane",
+        "code": "IRA",
+        "title": "Instrument Rating Airplane"
+      },
+      "acs": {
+        "title": "Instrument Rating Airplane ACS",
+        "area": "I",
+        "areaTitle": "Preflight Preparation",
+        "task": "C",
+        "taskTitle": "Cross-Country Flight Planning",
+        "elementType": "K",
+        "elementReference": "IR.I.C.K2"
+      },
+      "concept": {
+        "id": "ira-alternate-nonprecision-weather",
+        "title": "Recognize standard alternate weather minima for a nonprecision approach",
+        "difficulty": "foundation",
+        "subjectTags": ["alternates", "ifr planning", "regulations"],
+        "searchKeywords": ["alternate", "800-2", "nonprecision approach"],
+        "sources": [
+          {
+            "label": "14 CFR",
+            "reference": "14 CFR 91.169(c)",
+            "url": "https://www.ecfr.gov/current/title-14/section-91.169",
+            "notes": "Defines standard IFR alternate weather minima."
+          }
+        ]
+      },
+      "variants": {
+        "rapid_fire": {
+          "shortPrompt": "What are the standard alternate minimums for a nonprecision approach?",
+          "idealShortAnswer": "An 800-foot ceiling and 2 statute miles visibility, unless different alternate minimums are published.",
+          "acceptablePhrases": ["800-2", "800 feet", "2 statute miles"]
+        },
+        "true_false": {
+          "statement": "For an alternate with only a nonprecision approach, the standard forecast minimum is 800-2 unless different alternate minimums apply.",
+          "correctAnswer": true,
+          "explanation": "The standard nonprecision alternate minimum is 800 feet ceiling and 2 statute miles visibility.",
+          "correctionIfFalse": null
+        }
+      }
+    },
+    {
+      "certificate": {
+        "id": "instrument-rating-airplane",
+        "code": "IRA",
+        "title": "Instrument Rating Airplane"
+      },
+      "acs": {
+        "title": "Instrument Rating Airplane ACS",
+        "area": "II",
+        "areaTitle": "Preflight Procedures",
+        "task": "A",
+        "taskTitle": "Aircraft Systems Related to IFR Operations",
+        "elementType": "K",
+        "elementReference": "IR.II.A.K1"
+      },
+      "concept": {
+        "id": "ira-vor-check-interval",
+        "title": "Know the VOR operational check interval for IFR use",
+        "difficulty": "foundation",
+        "subjectTags": ["navigation", "vor", "ifr equipment"],
+        "searchKeywords": ["VOR check", "30 days", "91.171"],
+        "sources": [
+          {
+            "label": "14 CFR",
+            "reference": "14 CFR 91.171",
+            "url": "https://www.ecfr.gov/current/title-14/section-91.171",
+            "notes": "States VOR equipment check requirements for IFR operations."
+          }
+        ]
+      },
+      "variants": {
+        "fill_blank": {
+          "prompt": "For IFR operations using VOR equipment, the VOR operational check must have been completed within the preceding ____ days.",
+          "acceptedAnswers": ["30", "30 days"],
+          "explanation": "The VOR equipment check must be within the preceding 30 days for IFR use."
+        },
+        "multiple_choice": {
+          "prompt": "You plan to use VOR navigation under IFR. Your last VOR check was 35 days ago. What is required before relying on it?",
+          "choices": [
+            { "id": "A", "text": "Nothing; VOR checks are annual." },
+            { "id": "B", "text": "Complete and record an acceptable VOR operational check." },
+            { "id": "C", "text": "Only verify the CDI centers during taxi." },
+            { "id": "D", "text": "Ask ATC to confirm the VOR is monitored." }
+          ],
+          "correctChoiceIds": ["B"],
+          "explanation": "A VOR check older than 30 days does not satisfy the IFR equipment check requirement.",
+          "commonMisses": ["Confusing station monitoring with the aircraft equipment check."]
+        }
+      }
+    },
+    {
+      "certificate": {
+        "id": "instrument-rating-airplane",
+        "code": "IRA",
+        "title": "Instrument Rating Airplane"
+      },
+      "acs": {
+        "title": "Instrument Rating Airplane ACS",
+        "area": "II",
+        "areaTitle": "Preflight Procedures",
+        "task": "A",
+        "taskTitle": "Aircraft Systems Related to IFR Operations",
+        "elementType": "K",
+        "elementReference": "IR.II.A.K2"
+      },
+      "concept": {
+        "id": "ira-static-system-check-interval",
+        "title": "Know the altimeter and static system inspection interval",
+        "difficulty": "foundation",
+        "subjectTags": ["ifr equipment", "inspections", "static system"],
+        "searchKeywords": ["91.411", "altimeter", "static system", "24 months"],
+        "sources": [
+          {
+            "label": "14 CFR",
+            "reference": "14 CFR 91.411",
+            "url": "https://www.ecfr.gov/current/title-14/section-91.411",
+            "notes": "States altimeter and static system inspection requirements for IFR."
+          }
+        ]
+      },
+      "variants": {
+        "rapid_fire": {
+          "shortPrompt": "How often must the altimeter and static pressure system be inspected for IFR operations?",
+          "idealShortAnswer": "Within the preceding 24 calendar months.",
+          "acceptablePhrases": ["24 calendar months", "preceding 24 months"]
+        },
+        "true_false": {
+          "statement": "For IFR operations in controlled airspace, the altimeter and static system inspection is due every 24 calendar months.",
+          "correctAnswer": true,
+          "explanation": "The required inspection interval is within the preceding 24 calendar months.",
+          "correctionIfFalse": null
+        }
+      }
+    },
+    {
+      "certificate": {
+        "id": "instrument-rating-airplane",
+        "code": "IRA",
+        "title": "Instrument Rating Airplane"
+      },
+      "acs": {
+        "title": "Instrument Rating Airplane ACS",
+        "area": "II",
+        "areaTitle": "Preflight Procedures",
+        "task": "A",
+        "taskTitle": "Aircraft Systems Related to IFR Operations",
+        "elementType": "K",
+        "elementReference": "IR.II.A.K3"
+      },
+      "concept": {
+        "id": "ira-transponder-check-interval",
+        "title": "Know the transponder inspection interval",
+        "difficulty": "foundation",
+        "subjectTags": ["ifr equipment", "inspections", "transponder"],
+        "searchKeywords": ["91.413", "transponder", "24 months"],
+        "sources": [
+          {
+            "label": "14 CFR",
+            "reference": "14 CFR 91.413",
+            "url": "https://www.ecfr.gov/current/title-14/section-91.413",
+            "notes": "States transponder test and inspection interval."
+          }
+        ]
+      },
+      "variants": {
+        "fill_blank": {
+          "prompt": "A transponder test and inspection under 14 CFR 91.413 is required within the preceding ____ calendar months.",
+          "acceptedAnswers": ["24", "24 months", "24 calendar months"],
+          "explanation": "The transponder inspection interval is 24 calendar months."
+        },
+        "multiple_choice": {
+          "prompt": "Your transponder inspection expired last month. Which statement is correct for IFR flight requiring transponder use?",
+          "choices": [
+            { "id": "A", "text": "The inspection must be current before using that transponder." },
+            { "id": "B", "text": "The inspection is only required for turbine aircraft." },
+            { "id": "C", "text": "The inspection is optional if ADS-B Out works." },
+            { "id": "D", "text": "A VOR check satisfies the transponder inspection." }
+          ],
+          "correctChoiceIds": ["A"],
+          "explanation": "Transponder test and inspection requirements are separate from ADS-B and navigation equipment checks.",
+          "commonMisses": ["Substituting ADS-B status for the transponder inspection requirement."]
+        }
+      }
+    },
+    {
+      "certificate": {
+        "id": "instrument-rating-airplane",
+        "code": "IRA",
+        "title": "Instrument Rating Airplane"
+      },
+      "acs": {
+        "title": "Instrument Rating Airplane ACS",
+        "area": "III",
+        "areaTitle": "Air Traffic Control Clearances and Procedures",
+        "task": "A",
+        "taskTitle": "Air Traffic Control Clearances",
+        "elementType": "K",
+        "elementReference": "IR.III.A.K1"
+      },
+      "concept": {
+        "id": "ira-clearance-limit-hold",
+        "title": "Respond when reaching a clearance limit without further clearance",
+        "difficulty": "application",
+        "subjectTags": ["atc", "clearances", "holding"],
+        "searchKeywords": ["clearance limit", "hold", "91.185"],
+        "sources": [
+          {
+            "label": "AIM",
+            "reference": "AIM 5-3-8, Holding",
+            "url": "https://www.faa.gov/air_traffic/publications/atpubs/aim_html/",
+            "notes": "Supports clearance limit and holding expectations."
+          }
+        ]
+      },
+      "variants": {
+        "coaching": {
+          "openerPrompt": "ATC clears you to a fix and you reach that clearance limit without further clearance. What should your plan include?",
+          "hintSequence": ["Name the clearance limit.", "Explain holding or expected further clearance logic.", "Mention communication with ATC."],
+          "teachingPoints": ["Do not proceed beyond the clearance limit without authorization.", "Clarify or request further clearance before reaching the limit when possible."],
+          "expectedAnswerElements": ["Recognize the clearance limit.", "Hold as instructed or as published/appropriate.", "Communicate with ATC."]
+        },
+        "rapid_fire": {
+          "shortPrompt": "What is a clearance limit?",
+          "idealShortAnswer": "The fix, point, or airport to which an aircraft is cleared when issued an ATC clearance.",
+          "acceptablePhrases": ["point cleared to", "fix cleared to", "airport cleared to"]
+        }
+      }
+    },
+    {
+      "certificate": {
+        "id": "instrument-rating-airplane",
+        "code": "IRA",
+        "title": "Instrument Rating Airplane"
+      },
+      "acs": {
+        "title": "Instrument Rating Airplane ACS",
+        "area": "VI",
+        "areaTitle": "Instrument Approach Procedures",
+        "task": "A",
+        "taskTitle": "Nonprecision Approach",
+        "elementType": "K",
+        "elementReference": "IR.VI.A.K1"
+      },
+      "concept": {
+        "id": "ira-mda-versus-da",
+        "title": "Distinguish MDA from DA/DH",
+        "difficulty": "foundation",
+        "subjectTags": ["approaches", "minimums", "decision altitude"],
+        "searchKeywords": ["MDA", "DA", "DH", "minimum descent altitude"],
+        "sources": [
+          {
+            "label": "FAA Instrument Procedures Handbook",
+            "reference": "IPH, Approach minimums discussion",
+            "url": "https://www.faa.gov/regulations_policies/handbooks_manuals/aviation/instrument_procedures_handbook",
+            "notes": "Supports approach minimum terminology."
+          }
+        ]
+      },
+      "variants": {
+        "multiple_choice": {
+          "prompt": "Which statement correctly distinguishes MDA from DA?",
+          "choices": [
+            { "id": "A", "text": "MDA is a hard altitude floor unless visual references allow descent; DA is where the decision is made to continue or miss." },
+            { "id": "B", "text": "DA applies only to circling approaches; MDA applies only to ILS approaches." },
+            { "id": "C", "text": "MDA and DA mean the same thing operationally." },
+            { "id": "D", "text": "MDA is always lower than DA." }
+          ],
+          "correctChoiceIds": ["A"],
+          "explanation": "MDA is not descended below until requirements are met; DA/DH is the decision point on approaches that use it.",
+          "commonMisses": ["Treating MDA and DA as interchangeable."]
+        },
+        "rapid_fire": {
+          "shortPrompt": "Can you descend below MDA before meeting the required visual-reference conditions?",
+          "idealShortAnswer": "No. You must remain at or above MDA until the required conditions for descent are met.",
+          "acceptablePhrases": ["no", "remain at or above MDA", "visual references"]
+        }
+      }
+    },
+    {
+      "certificate": {
+        "id": "instrument-rating-airplane",
+        "code": "IRA",
+        "title": "Instrument Rating Airplane"
+      },
+      "acs": {
+        "title": "Instrument Rating Airplane ACS",
+        "area": "VI",
+        "areaTitle": "Instrument Approach Procedures",
+        "task": "B",
+        "taskTitle": "Precision Approach",
+        "elementType": "K",
+        "elementReference": "IR.VI.B.K1"
+      },
+      "concept": {
+        "id": "ira-approach-lost-comms-avemea",
+        "title": "Apply the AVE-F and MEA lost-communications priorities",
+        "difficulty": "application",
+        "subjectTags": ["lost communications", "ifr procedures", "approaches"],
+        "searchKeywords": ["91.185", "AVEF", "MEA"],
+        "sources": [
+          {
+            "label": "14 CFR",
+            "reference": "14 CFR 91.185(c)",
+            "url": "https://www.ecfr.gov/current/title-14/section-91.185",
+            "notes": "Defines route and altitude rules for IFR two-way radio communications failure."
+          }
+        ]
+      },
+      "variants": {
+        "coaching": {
+          "openerPrompt": "You lose communications in IMC after being assigned a route and altitude. How do you choose the route and altitude to fly?",
+          "hintSequence": ["Separate route priority from altitude priority.", "Use assigned, vectored, expected, and filed for route.", "Use the highest of MEA, expected, or assigned for altitude."],
+          "teachingPoints": ["Route and altitude priorities are separate.", "The answer must use the regulation rather than preference."],
+          "expectedAnswerElements": ["AVE-F route priority.", "Highest of MEA, expected, assigned altitude.", "Continue under 91.185 if VFR cannot be maintained."]
+        },
+        "multiple_choice": {
+          "prompt": "For IFR lost communications altitude selection, which altitude should you fly?",
+          "choices": [
+            { "id": "A", "text": "The lowest published altitude for the route only" },
+            { "id": "B", "text": "The highest of the minimum IFR altitude, expected altitude, or assigned altitude" },
+            { "id": "C", "text": "The altitude filed in the flight plan in every case" },
+            { "id": "D", "text": "Any VFR cruising altitude" }
+          ],
+          "correctChoiceIds": ["B"],
+          "explanation": "91.185 uses the highest of the applicable minimum IFR altitude, expected altitude, or assigned altitude.",
+          "commonMisses": ["Using only the filed altitude.", "Confusing route priority with altitude priority."]
+        }
+      }
+    }
+  ],
+  "stimulusPackets": [
+    {
+      "id": "stimulus-ira-kapa-metar-taf-marginal",
+      "certificateTypeId": "instrument-rating-airplane",
+      "displayTitle": "KAPA METAR/TAF marginal VFR trend",
+      "assetType": "metar_taf",
+      "learnerDescription": "A METAR/TAF text packet for a preflight IFR weather and alternate-planning discussion.",
+      "aiContext": "The learner sees a METAR with 6 statute miles visibility, a broken ceiling at 2,500 feet AGL, gusty southerly wind, and a TAF showing temporary 3 statute miles visibility with an overcast 900-foot ceiling during the proposed arrival window. The AI should use these decoded values directly and should not infer weather from imagery.",
+      "keyDetails": ["METAR ceiling is BKN025.", "TAF TEMPO group includes OVC009.", "Arrival timing overlaps the temporary lower ceiling."],
+      "interpretationNotes": ["Ask whether the learner applies the TEMPO group to the correct time window.", "Use the decoded ceiling and visibility when discussing alternate requirements."],
+      "commonMisreads": ["Treating SCT as a ceiling.", "Ignoring the TEMPO valid time.", "Calling cloud heights MSL."],
+      "sourceLabel": "AIM",
+      "sourceReference": "AIM 7-1-30 METAR/TAF code interpretation",
+      "sourceUrl": "https://www.faa.gov/air_traffic/publications/atpubs/aim_html/",
+      "reviewStatus": "draft",
+      "assets": [
+        {
+          "type": "text",
+          "label": "KAPA METAR/TAF excerpt",
+          "textContent": "KAPA 151853Z 18012G22KT 6SM BKN025 12/08 A2992\nTAF KAPA 151720Z 1518/1618 18012G22KT P6SM SCT020 BKN035 TEMPO 1521/1601 3SM -RA OVC009",
+          "instructions": "Display as preformatted aviation weather text."
+        }
+      ],
+      "links": [
+        {
+          "targetType": "concept",
+          "targetId": "ira-ceiling-visibility-metar",
+          "usage": "Decode current ceiling and visibility.",
+          "requiredToAnswer": true
+        },
+        {
+          "targetType": "concept",
+          "targetId": "ira-taf-tempo-window",
+          "usage": "Apply TEMPO timing to arrival planning.",
+          "requiredToAnswer": true
+        }
+      ],
+      "active": true
+    },
+    {
+      "id": "stimulus-ira-ils-minimums-excerpt",
+      "certificateTypeId": "instrument-rating-airplane",
+      "displayTitle": "ILS approach minimums excerpt",
+      "assetType": "image",
+      "learnerDescription": "A simplified approach-minimums excerpt showing DA and visibility values for an ILS approach.",
+      "aiContext": "The learner sees an ILS minimums excerpt with DA 5,420 feet MSL and required visibility 1/2 SM. The airport elevation is 5,280 feet MSL. The AI should explain that DA is the decision point and should not assume any other chart details beyond the displayed excerpt.",
+      "keyDetails": ["DA is 5,420 feet MSL.", "Required visibility is 1/2 SM.", "Airport elevation is 5,280 feet MSL."],
+      "interpretationNotes": ["Use this stimulus to test DA/DH versus MDA language.", "Do not ask chart-briefing questions that require omitted plan-view or profile-view data."],
+      "commonMisreads": ["Calling DA an MDA.", "Treating the simplified excerpt as a complete approach plate."],
+      "sourceLabel": "FAA Instrument Procedures Handbook",
+      "sourceReference": "Approach minimums terminology",
+      "sourceUrl": "https://www.faa.gov/regulations_policies/handbooks_manuals/aviation/instrument_procedures_handbook",
+      "reviewStatus": "draft",
+      "assets": [
+        {
+          "type": "image",
+          "label": "Simplified ILS minimums excerpt",
+          "url": "quesiq://fixtures/dpe/ira/ils-minimums-excerpt.png",
+          "instructions": "Display as a small approach-minimums excerpt. The AI context contains the full meaning of the image.",
+          "metadata": {
+            "altText": "Simplified ILS minimums excerpt showing DA 5420 and visibility one-half statute mile."
+          }
+        }
+      ],
+      "links": [
+        {
+          "targetType": "concept",
+          "targetId": "ira-mda-versus-da",
+          "usage": "Identify DA as a decision point rather than a descent floor.",
+          "requiredToAnswer": true
+        }
+      ],
+      "active": true
+    }
+  ],
+  "scenarioCases": [
+    {
+      "id": "scenario-ira-weather-alternate-diversion",
+      "certificateTypeId": "instrument-rating-airplane",
+      "title": "IFR weather trend and alternate decision",
+      "summary": "A two-step scenario where the learner interprets weather, applies alternate logic, and explains a conservative diversion posture.",
+      "aiInstructions": "Run this as a guided scenario. Let the learner reason aloud, then ask the checkpoint prompts only when needed. Do not invent weather or chart facts beyond the linked stimulus packets.",
+      "reviewStatus": "draft",
+      "steps": [
+        {
+          "title": "Decode the weather trend",
+          "scenarioText": "You are planning an IFR arrival at KAPA during the period covered by the provided METAR/TAF packet.",
+          "aiPrompt": "Ask the learner what ceiling and visibility values matter for the proposed arrival window.",
+          "expectedPilotActions": ["Decode the METAR ceiling.", "Apply the TAF TEMPO group only to its valid window.", "State the practical weather risk."],
+          "riskPoints": ["Ignoring a temporary low ceiling during the arrival window.", "Treating the current METAR as the whole forecast."],
+          "conceptIds": ["ira-ceiling-visibility-metar", "ira-taf-tempo-window"],
+          "stimulusPacketIds": ["stimulus-ira-kapa-metar-taf-marginal"],
+          "checkpoints": [
+            {
+              "prompt": "Which reported ceiling and visibility values are you using for the arrival decision?",
+              "expectedAnswerElements": ["BKN025 current ceiling", "TEMPO OVC009", "3SM temporary visibility", "arrival timing matters"],
+              "aiEvaluationNotes": "Credit answers that identify both the current METAR and the lower temporary forecast conditions.",
+              "conceptIds": ["ira-ceiling-visibility-metar", "ira-taf-tempo-window"],
+              "stimulusPacketIds": ["stimulus-ira-kapa-metar-taf-marginal"]
+            }
+          ]
+        },
+        {
+          "title": "Choose an alternate posture",
+          "scenarioText": "Your destination weather may remain legal but is trending down near your arrival time. You are considering an alternate with only a nonprecision approach.",
+          "aiPrompt": "Ask the learner how they would decide whether the alternate is legal and operationally useful.",
+          "expectedPilotActions": ["Use the correct nonprecision alternate minimum.", "Separate legal minimums from personal risk management.", "Explain a conservative go/no-go or diversion trigger."],
+          "riskPoints": ["Using 600-2 for a nonprecision-only alternate.", "Treating legality as the only risk-control decision."],
+          "conceptIds": ["ira-alternate-nonprecision-weather"],
+          "stimulusPacketIds": ["stimulus-ira-kapa-metar-taf-marginal"],
+          "checkpoints": [
+            {
+              "prompt": "What standard forecast weather minimum applies to the nonprecision alternate if no different alternate minimum is published?",
+              "expectedAnswerElements": ["800-foot ceiling", "2 statute miles visibility", "unless different alternate minimums are published"],
+              "aiEvaluationNotes": "This checkpoint tests the specific 800-2 data point, not broad weather judgment.",
+              "conceptIds": ["ira-alternate-nonprecision-weather"],
+              "stimulusPacketIds": []
+            }
+          ]
+        }
+      ],
+      "active": true
+    }
+  ],
+  "mockOralBlueprints": [
+    {
+      "id": "mock-oral-ira-preflight-approach-mini",
+      "certificateTypeId": "instrument-rating-airplane",
+      "title": "IRA preflight and approach mini mock oral",
+      "sessionMode": "voice",
+      "durationMinutes": 18,
+      "examinerStyle": "Practical, direct, and scenario-led. Ask concise follow-ups and require the learner to commit to a decision when risk is involved.",
+      "coveragePolicy": {
+        "minimumConcepts": 6,
+        "requiredAreas": ["weather", "alternates", "ifr equipment", "approach minimums"],
+        "scenarioRequired": true,
+        "allowWeakAreaExpansion": true
+      },
+      "aiInstructions": "Use authored concepts, stimulus packets, and scenario cases only. Keep the session oral and adaptive, but do not create new facts, chart data, or weather values beyond the selected content.",
+      "conceptPool": [
+        "ira-ceiling-visibility-metar",
+        "ira-taf-tempo-window",
+        "ira-alternate-precision-weather",
+        "ira-alternate-nonprecision-weather",
+        "ira-vor-check-interval",
+        "ira-static-system-check-interval",
+        "ira-transponder-check-interval",
+        "ira-clearance-limit-hold",
+        "ira-mda-versus-da",
+        "ira-approach-lost-comms-avemea"
+      ],
+      "scenarioPool": ["scenario-ira-weather-alternate-diversion"],
+      "stimulusPacketIds": ["stimulus-ira-kapa-metar-taf-marginal", "stimulus-ira-ils-minimums-excerpt"],
+      "reviewStatus": "draft",
+      "active": true
+    }
+  ]
+}

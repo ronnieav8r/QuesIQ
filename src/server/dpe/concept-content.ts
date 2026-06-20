@@ -15,10 +15,8 @@ export const dpeConceptVariantModes = [
   "multiple_choice",
   "fill_blank",
   "true_false",
-  "scenario",
   "coaching",
   "rapid_fire",
-  "mock_oral",
 ] as const;
 
 export type DpeConceptVariantMode = (typeof dpeConceptVariantModes)[number];
@@ -43,13 +41,10 @@ type DpeConceptVariantInput = {
   debrief?: string | null;
   explanation?: string | null;
   expectedAnswerElements?: string[];
-  followUps?: string[];
   hintSequence?: string[];
   idealShortAnswer?: string | null;
   mode: DpeConceptVariantMode;
   prompt: string;
-  rubric?: Record<string, unknown> | null;
-  scenarioSetup?: string | null;
   teachingPoints?: string[];
 };
 
@@ -196,18 +191,6 @@ function parseChoices(value: unknown, field: string) {
   return { ok: true as const, value: choices };
 }
 
-function parseRubric(value: unknown, field: string) {
-  const rubric = objectValue(value, field);
-  if (!rubric.ok) return rubric;
-
-  for (const key of ["checkrideReadiness", "communication", "knowledge", "riskManagement"]) {
-    const text = cleanText(rubric.value[key], `${field}.${key}`, 3000);
-    if (!text.ok) return text;
-  }
-
-  return { ok: true as const, value: rubric.value };
-}
-
 function parseVariant(mode: DpeConceptVariantMode, rawVariant: unknown): ValidationResult<DpeConceptVariantInput> {
   const candidate = objectValue(rawVariant, `variants.${mode}`);
   if (!candidate.ok) return candidate;
@@ -271,27 +254,6 @@ function parseVariant(mode: DpeConceptVariantMode, rawVariant: unknown): Validat
     };
   }
 
-  if (mode === "scenario") {
-    const scenarioSetup = cleanText(candidate.value.scenarioSetup, "variants.scenario.scenarioSetup");
-    const question = cleanText(candidate.value.question, "variants.scenario.question");
-    const expectedAnswerElements = cleanStringList(candidate.value.expectedAnswerElements, "variants.scenario.expectedAnswerElements", true);
-    const debrief = cleanText(candidate.value.debrief, "variants.scenario.debrief");
-    if (!scenarioSetup.ok) return scenarioSetup;
-    if (!question.ok) return question;
-    if (!expectedAnswerElements.ok) return expectedAnswerElements;
-    if (!debrief.ok) return debrief;
-    return {
-      ok: true,
-      value: {
-        debrief: debrief.value,
-        expectedAnswerElements: expectedAnswerElements.value,
-        mode,
-        prompt: question.value,
-        scenarioSetup: scenarioSetup.value,
-      },
-    };
-  }
-
   if (mode === "coaching") {
     const openerPrompt = cleanText(candidate.value.openerPrompt, "variants.coaching.openerPrompt");
     const hintSequence = cleanStringList(candidate.value.hintSequence, "variants.coaching.hintSequence");
@@ -331,26 +293,20 @@ function parseVariant(mode: DpeConceptVariantMode, rawVariant: unknown): Validat
     };
   }
 
-  const openerPrompt = cleanText(candidate.value.openerPrompt, "variants.mock_oral.openerPrompt");
-  const followUps = cleanStringList(candidate.value.followUps, "variants.mock_oral.followUps", true);
-  const rubric = parseRubric(candidate.value.rubric, "variants.mock_oral.rubric");
-  if (!openerPrompt.ok) return openerPrompt;
-  if (!followUps.ok) return followUps;
-  if (!rubric.ok) return rubric;
-  return {
-    ok: true,
-    value: {
-      followUps: followUps.value,
-      mode,
-      prompt: openerPrompt.value,
-      rubric: rubric.value,
-    },
-  };
+  return { error: `Unsupported drill variant mode: ${mode}.`, ok: false };
 }
 
 function parseVariants(value: unknown) {
   const variantsObject = objectValue(value, "variants");
   if (!variantsObject.ok) return variantsObject;
+
+  if (variantsObject.value.scenario !== undefined || variantsObject.value.mock_oral !== undefined) {
+    return {
+      error:
+        "Scenario cases and mock oral blueprints are V2 content families, not drill variants. Submit them through their dedicated DPE content endpoints.",
+      ok: false as const,
+    };
+  }
 
   const variants: DpeConceptVariantInput[] = [];
   for (const mode of dpeConceptVariantModes) {
@@ -606,14 +562,14 @@ export async function upsertDpeConceptPacket(packet: DpeConceptPacket) {
           debrief: variant.debrief,
           explanation: variant.explanation,
           expectedAnswerElements: variant.expectedAnswerElements,
-          followUps: variant.followUps,
+          followUps: undefined,
           hintSequence: variant.hintSequence,
           idealShortAnswer: variant.idealShortAnswer,
           mode: variant.mode,
           prompt: variant.prompt,
           reviewStatus: "ready",
-          rubricJson: variant.rubric,
-          scenarioSetup: variant.scenarioSetup,
+          rubricJson: undefined,
+          scenarioSetup: undefined,
           sortOrder: index,
           teachingPoints: variant.teachingPoints,
         })),
@@ -651,6 +607,7 @@ export async function listDpeConceptFilters(input: { certificateTypeId?: string 
         eq(dpeConcepts.reviewStatus, "ready"),
         eq(dpeQuestionVariants.active, true),
         eq(dpeQuestionVariants.reviewStatus, "ready"),
+        inArray(dpeQuestionVariants.mode, [...dpeConceptVariantModes]),
         input.certificateTypeId ? eq(dpeConcepts.certificateTypeId, input.certificateTypeId) : undefined,
       ),
     )
@@ -744,6 +701,7 @@ export async function listDpeQuestionVariants(input: DpeConceptFilters = {}) {
         eq(dpeConcepts.reviewStatus, "ready"),
         eq(dpeQuestionVariants.active, true),
         eq(dpeQuestionVariants.reviewStatus, "ready"),
+        inArray(dpeQuestionVariants.mode, [...dpeConceptVariantModes]),
         input.certificateTypeId ? eq(dpeConcepts.certificateTypeId, input.certificateTypeId) : undefined,
         input.acsArea ? eq(dpeConcepts.acsArea, input.acsArea) : undefined,
         input.acsTask ? eq(dpeConcepts.acsTask, input.acsTask) : undefined,
@@ -810,6 +768,7 @@ export async function countReadyDpeConceptVariants() {
         eq(dpeConcepts.reviewStatus, "ready"),
         eq(dpeQuestionVariants.active, true),
         eq(dpeQuestionVariants.reviewStatus, "ready"),
+        inArray(dpeQuestionVariants.mode, [...dpeConceptVariantModes]),
       ),
     );
 

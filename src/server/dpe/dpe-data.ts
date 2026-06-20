@@ -13,6 +13,10 @@ import { getDb } from "@/server/db/client";
 import {
   dpeCertificateTypes,
   dpeCheckrideTargets,
+  dpeAttempts,
+  dpeConcepts,
+  dpeConceptSources,
+  dpeConceptTags,
   dpeContentVersions,
   dpeDiagnosticEvents,
   dpeAnswerAttempts,
@@ -22,7 +26,11 @@ import {
   dpeQuestionAssets,
   dpeQuestionAnswerKeys,
   dpeQuestionRubrics,
+  dpeQuestionVariants,
+  dpeSessionVariants,
   dpeSessionQuestions,
+  dpeSubjectTags,
+  dpeVariantAssets,
 } from "@/server/db/schema";
 
 type SessionAnswer = {
@@ -30,6 +38,18 @@ type SessionAnswer = {
   response: string;
   skipped: boolean;
 };
+
+const dpeDrillVariantModes = [
+  "coaching",
+  "fill_blank",
+  "multiple_choice",
+  "rapid_fire",
+  "true_false",
+] as const;
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
 
 export type DpeReviewJson = {
   model: string | null;
@@ -83,12 +103,292 @@ export function fallbackQuestionResponse(): QuestionApiResponse {
   return buildQuestionResponse(questions, false);
 }
 
+function sourceReferenceText(source: {
+  label: string;
+  reference: string;
+  sourceUrl: string | null;
+}) {
+  return [source.label, source.reference, source.sourceUrl].filter(Boolean).join(" - ");
+}
+
+function correctChoiceTexts(input: {
+  choices: Array<{ id: string; text: string }> | null;
+  correctChoiceIds: string[] | null;
+}) {
+  const choices = input.choices ?? [];
+  const correctIds = new Set(input.correctChoiceIds ?? []);
+  return choices
+    .filter((choice) => correctIds.has(choice.id))
+    .map((choice) => choice.text)
+    .filter(Boolean);
+}
+
+function variantAnswerElements(row: {
+  acceptedAnswers: string[] | null;
+  acceptablePhrases: string[] | null;
+  choices: Array<{ id: string; text: string }> | null;
+  correctAnswerBoolean: boolean | null;
+  correctChoiceIds: string[] | null;
+  expectedAnswerElements: string[] | null;
+  explanation: string | null;
+  idealShortAnswer: string | null;
+  mode: string;
+}) {
+  if (row.mode === "multiple_choice") {
+    return correctChoiceTexts({ choices: row.choices, correctChoiceIds: row.correctChoiceIds });
+  }
+  if (row.mode === "true_false") {
+    return [
+      row.correctAnswerBoolean === true
+        ? `True. ${row.explanation ?? ""}`.trim()
+        : `False. ${row.explanation ?? ""}`.trim(),
+    ];
+  }
+  if (row.expectedAnswerElements?.length) return row.expectedAnswerElements;
+  if (row.acceptedAnswers?.length) return row.acceptedAnswers;
+  if (row.idealShortAnswer) return [row.idealShortAnswer];
+  if (row.acceptablePhrases?.length) return row.acceptablePhrases;
+  return [row.explanation ?? "Answer key elements are pending."].filter(Boolean);
+}
+
+async function listDpeVariantQuestions(input?: {
+  acsArea?: string;
+  acsTask?: string;
+  certificateTypeId?: string;
+  limit?: number;
+}): Promise<QuestionApiResponse | null> {
+  const limit = Math.min(Math.max(input?.limit ?? 5000, 1), 5000);
+  const db = getDb();
+  const baseWhere = and(
+    eq(dpeConcepts.active, true),
+    eq(dpeConcepts.reviewStatus, "ready"),
+    eq(dpeQuestionVariants.active, true),
+    eq(dpeQuestionVariants.reviewStatus, "ready"),
+    inArray(dpeQuestionVariants.mode, [...dpeDrillVariantModes]),
+    input?.certificateTypeId ? eq(dpeConcepts.certificateTypeId, input.certificateTypeId) : undefined,
+  );
+
+  const rows = await db
+    .select({
+      acceptedAnswers: dpeQuestionVariants.acceptedAnswers,
+      acceptablePhrases: dpeQuestionVariants.acceptablePhrases,
+      acsArea: dpeConcepts.acsArea,
+      acsAreaTitle: dpeConcepts.acsAreaTitle,
+      acsElementReference: dpeConcepts.acsElementReference,
+      acsElementType: dpeConcepts.acsElementType,
+      acsTask: dpeConcepts.acsTask,
+      acsTaskTitle: dpeConcepts.acsTaskTitle,
+      acsTitle: dpeConcepts.acsTitle,
+      certificateCode: dpeCertificateTypes.code,
+      certificateId: dpeCertificateTypes.id,
+      certificateTitle: dpeCertificateTypes.title,
+      choices: dpeQuestionVariants.choicesJson,
+      commonMisses: dpeQuestionVariants.commonMisses,
+      conceptId: dpeConcepts.id,
+      conceptSearchText: dpeConcepts.searchText,
+      conceptTitle: dpeConcepts.title,
+      contentStatus: dpeContentVersions.status,
+      contentTitle: dpeContentVersions.title,
+      contentVersion: dpeContentVersions.version,
+      contentVersionId: dpeContentVersions.id,
+      correctAnswerBoolean: dpeQuestionVariants.correctAnswerBoolean,
+      correctChoiceIds: dpeQuestionVariants.correctChoiceIds,
+      difficulty: dpeConcepts.difficulty,
+      explanation: dpeQuestionVariants.explanation,
+      expectedAnswerElements: dpeQuestionVariants.expectedAnswerElements,
+      idealShortAnswer: dpeQuestionVariants.idealShortAnswer,
+      mode: dpeQuestionVariants.mode,
+      prompt: dpeQuestionVariants.prompt,
+      teachingPoints: dpeQuestionVariants.teachingPoints,
+      variantId: dpeQuestionVariants.id,
+    })
+    .from(dpeQuestionVariants)
+    .innerJoin(dpeConcepts, eq(dpeConcepts.id, dpeQuestionVariants.conceptId))
+    .innerJoin(dpeCertificateTypes, eq(dpeCertificateTypes.id, dpeConcepts.certificateTypeId))
+    .leftJoin(dpeContentVersions, eq(dpeContentVersions.id, dpeConcepts.contentVersionId))
+    .where(
+      and(
+        baseWhere,
+        input?.acsArea ? eq(dpeConcepts.acsArea, input.acsArea) : undefined,
+        input?.acsTask ? eq(dpeConcepts.acsTask, input.acsTask) : undefined,
+      ),
+    )
+    .orderBy(
+      dpeCertificateTypes.title,
+      dpeConcepts.acsArea,
+      dpeConcepts.acsTask,
+      dpeConcepts.id,
+      dpeQuestionVariants.sortOrder,
+    )
+    .limit(limit);
+
+  const allRows = await db
+    .select({
+      acsArea: dpeConcepts.acsArea,
+      acsTask: dpeConcepts.acsTask,
+      certificateCode: dpeCertificateTypes.code,
+      certificateId: dpeCertificateTypes.id,
+      certificateTitle: dpeCertificateTypes.title,
+      conceptId: dpeConcepts.id,
+    })
+    .from(dpeQuestionVariants)
+    .innerJoin(dpeConcepts, eq(dpeConcepts.id, dpeQuestionVariants.conceptId))
+    .innerJoin(dpeCertificateTypes, eq(dpeCertificateTypes.id, dpeConcepts.certificateTypeId))
+    .where(baseWhere);
+
+  if (allRows.length === 0) return null;
+
+  const conceptIds = [...new Set(rows.map((row) => row.conceptId))];
+  const variantIds = rows.map((row) => row.variantId);
+  const [sourceRows, tagRows, assetRows] = await Promise.all([
+    conceptIds.length > 0
+      ? db
+          .select()
+          .from(dpeConceptSources)
+          .where(inArray(dpeConceptSources.conceptId, conceptIds))
+          .orderBy(dpeConceptSources.conceptId, dpeConceptSources.sortOrder)
+      : [],
+    conceptIds.length > 0
+      ? db
+          .select({
+            conceptId: dpeConceptTags.conceptId,
+            label: dpeSubjectTags.label,
+          })
+          .from(dpeConceptTags)
+          .innerJoin(dpeSubjectTags, eq(dpeSubjectTags.id, dpeConceptTags.tagId))
+          .where(inArray(dpeConceptTags.conceptId, conceptIds))
+      : [],
+    variantIds.length > 0 || conceptIds.length > 0
+      ? db
+          .select()
+          .from(dpeVariantAssets)
+          .where(
+            and(
+              variantIds.length > 0 ? inArray(dpeVariantAssets.variantId, variantIds) : undefined,
+              conceptIds.length > 0 ? inArray(dpeVariantAssets.conceptId, conceptIds) : undefined,
+            ),
+          )
+          .orderBy(dpeVariantAssets.variantId, dpeVariantAssets.sortOrder)
+      : [],
+  ]);
+
+  const sourcesByConceptId = sourceRows.reduce<Record<string, Array<(typeof sourceRows)[number]>>>(
+    (accumulator, source) => {
+      accumulator[source.conceptId] ??= [];
+      accumulator[source.conceptId].push(source);
+      return accumulator;
+    },
+    {},
+  );
+  const tagsByConceptId = tagRows.reduce<Record<string, string[]>>((accumulator, tag) => {
+    accumulator[tag.conceptId] ??= [];
+    accumulator[tag.conceptId].push(tag.label);
+    return accumulator;
+  }, {});
+  const assetsByVariantId = assetRows.reduce<Record<string, DpeQuestion["assets"]>>(
+    (accumulator, asset) => {
+      if (!asset.variantId) return accumulator;
+      accumulator[asset.variantId] ??= [];
+      accumulator[asset.variantId].push({
+        id: asset.id,
+        instructions: asset.instructions,
+        label: asset.label,
+        metadata: asset.metadata ?? null,
+        sortOrder: asset.sortOrder,
+        storageKey: asset.storageKey,
+        transcript: asset.transcript,
+        type: asset.type,
+        url: asset.url,
+      });
+      return accumulator;
+    },
+    {},
+  );
+
+  const questions = rows.map((row) => {
+    const answerElements = variantAnswerElements(row);
+    const sourceReferences = (sourcesByConceptId[row.conceptId] ?? []).map(sourceReferenceText);
+    const subjectTags = tagsByConceptId[row.conceptId] ?? [];
+    const practiceLane =
+      row.mode === "multiple_choice" || row.mode === "true_false" || row.mode === "fill_blank"
+        ? "visual"
+        : "oral";
+
+    return formatQuestion({
+      active: true,
+      acsArea: row.acsArea,
+      acsElementReference: row.acsElementReference,
+      acsElementType: row.acsElementType,
+      acsTask: row.acsTask,
+      acsTitle: row.acsTitle,
+      aiContext: JSON.stringify({
+        answerKeyStatus: "ready",
+        practiceLane,
+        promptType: practiceLane === "visual" ? "recall" : "oral",
+        provisionalAnswerKey: answerElements.join("; "),
+        supportsHandsFree: practiceLane === "oral",
+        taskTitle: row.acsTaskTitle ?? undefined,
+      }),
+      answerKey: {
+        acceptableVariations: [
+          ...(row.acceptablePhrases ?? []),
+          ...(row.acceptedAnswers ?? []),
+        ],
+        commonMisses: row.commonMisses ?? [],
+        correctAnswerElements: answerElements,
+        notes: row.explanation,
+        sourceReferences,
+        status: "ready",
+      },
+      assets: assetsByVariantId[row.variantId] ?? [],
+      certificateType: {
+        code: row.certificateCode,
+        id: row.certificateId,
+        title: row.certificateTitle,
+      },
+      contentVersion: row.contentVersionId
+        ? {
+            id: row.contentVersionId,
+            status: row.contentStatus ?? "",
+            title: row.contentTitle ?? "",
+            version: row.contentVersion ?? 1,
+          }
+        : null,
+      difficulty: row.difficulty,
+      id: row.variantId,
+      keywords: [...subjectTags, row.conceptSearchText].filter(Boolean).join(" | "),
+      primarySubject: row.conceptTitle,
+      questionMode: row.mode,
+      questionText: row.prompt,
+      rubric: {
+        checkrideReadiness: "Answer covers the authored concept and is usable in an oral checkride setting.",
+        communication: "Answer is concise, clear, and organized.",
+        knowledge: "Answer includes the expected elements from the authored V2 drill variant.",
+        riskManagement: "Answer connects the concept to safe operating judgment when applicable.",
+        scenarioJudgment: "Answer can be applied to the practical ACS task context when applicable.",
+        scoringNotes: row.explanation,
+        status: "ready",
+      },
+      visualImage: null,
+    });
+  });
+
+  return buildQuestionResponse(
+    questions,
+    true,
+    allRows.map((row) => ({ acsArea: row.acsArea, acsTask: row.acsTask })),
+  );
+}
+
 export async function listDpeQuestions(input?: {
   acsArea?: string;
   acsTask?: string;
   certificateTypeId?: string;
   limit?: number;
 }): Promise<QuestionApiResponse> {
+  const variantResponse = await listDpeVariantQuestions(input);
+  if (variantResponse) return variantResponse;
+
   const limit = Math.min(Math.max(input?.limit ?? 100, 1), 100);
 
   const rows = await getDb()
@@ -379,10 +679,19 @@ export async function createDpePracticeSession(input: {
     .filter((id): id is string => Boolean(id));
 
   if (requestedQuestionIds.length > 0) {
-    const existingQuestions = await getDb()
-      .select({ id: dpeOralQuestions.id })
-      .from(dpeOralQuestions)
-      .where(inArray(dpeOralQuestions.id, requestedQuestionIds));
+    const requestedVariantIds = requestedQuestionIds.filter(isUuid);
+    const [existingQuestions, existingVariants] = await Promise.all([
+      getDb()
+        .select({ id: dpeOralQuestions.id })
+        .from(dpeOralQuestions)
+        .where(inArray(dpeOralQuestions.id, requestedQuestionIds)),
+      requestedVariantIds.length > 0
+        ? getDb()
+            .select({ conceptId: dpeQuestionVariants.conceptId, id: dpeQuestionVariants.id })
+            .from(dpeQuestionVariants)
+            .where(inArray(dpeQuestionVariants.id, requestedVariantIds))
+        : Promise.resolve([]),
+    ]);
     const existingIds = new Set(existingQuestions.map((question) => question.id));
     const sessionQuestionRows = requestedQuestionIds
       .filter((questionId) => existingIds.has(questionId))
@@ -394,6 +703,35 @@ export async function createDpePracticeSession(input: {
 
     if (sessionQuestionRows.length > 0) {
       await getDb().insert(dpeSessionQuestions).values(sessionQuestionRows).onConflictDoNothing();
+    }
+
+    const variantsById = new Map(existingVariants.map((variant) => [variant.id, variant]));
+    const sessionVariantRows = input.questions
+      .map((question, index) => {
+        const questionId =
+          typeof question === "object" &&
+          question !== null &&
+          !Array.isArray(question) &&
+          "id" in question &&
+          typeof question.id === "string"
+            ? question.id
+            : null;
+        const variant = questionId ? variantsById.get(questionId) : null;
+        if (!questionId || !variant || typeof question !== "object" || question === null || Array.isArray(question)) {
+          return null;
+        }
+        return {
+          conceptId: variant.conceptId,
+          sessionId: session.id,
+          snapshotJson: question as Record<string, unknown>,
+          sortOrder: index,
+          variantId: questionId,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => Boolean(row));
+
+    if (sessionVariantRows.length > 0) {
+      await getDb().insert(dpeSessionVariants).values(sessionVariantRows).onConflictDoNothing();
     }
   }
 
@@ -556,6 +894,114 @@ export async function saveDpeAnswerAttempt(input: {
       question.id === input.question.id,
   );
   const sortOrder = questionIndex >= 0 ? questionIndex : 0;
+
+  const [variantQuestion] = isUuid(input.question.id)
+    ? await getDb()
+        .select({ conceptId: dpeQuestionVariants.conceptId, id: dpeQuestionVariants.id })
+        .from(dpeQuestionVariants)
+        .where(eq(dpeQuestionVariants.id, input.question.id))
+        .limit(1)
+    : [];
+
+  if (variantQuestion) {
+    const [sessionVariant] = await getDb()
+      .insert(dpeSessionVariants)
+      .values({
+        conceptId: variantQuestion.conceptId,
+        response: input.attempt.transcriptText,
+        sessionId: input.sessionId,
+        snapshotJson: input.question as unknown as Record<string, unknown>,
+        sortOrder,
+        variantId: input.question.id,
+      })
+      .onConflictDoUpdate({
+        set: {
+          response: input.attempt.transcriptText,
+          snapshotJson: input.question as unknown as Record<string, unknown>,
+          variantId: input.question.id,
+        },
+        target: [dpeSessionVariants.sessionId, dpeSessionVariants.sortOrder],
+      })
+      .returning();
+
+    const [latestAttempt] = await getDb()
+      .select({ attemptNumber: dpeAttempts.attemptNumber })
+      .from(dpeAttempts)
+      .where(eq(dpeAttempts.sessionVariantId, sessionVariant.id))
+      .orderBy(desc(dpeAttempts.attemptNumber))
+      .limit(1);
+    const attemptNumber = (latestAttempt?.attemptNumber ?? 0) + 1;
+
+    const [attempt] = await getDb()
+      .insert(dpeAttempts)
+      .values({
+        aiRunId: input.aiRunId ?? undefined,
+        attemptNumber,
+        evaluationJson: input.evaluation,
+        mode: input.question.questionMode,
+        sessionId: input.sessionId,
+        sessionVariantId: sessionVariant.id,
+        submittedAt: new Date(input.attempt.submittedAt),
+        transcriptSource: input.attempt.transcriptSource,
+        userResponseJson: {
+          transcriptText: input.attempt.transcriptText,
+        },
+        userResponseText: input.attempt.transcriptText,
+        variantId: input.question.id,
+      })
+      .returning();
+
+    const answers = Array.isArray(transcript.answers) ? [...transcript.answers] : [];
+    const displayAnswer = {
+      aiRunId: input.aiRunId ?? null,
+      attemptId: attempt.id,
+      attemptNumber,
+      evaluation: input.evaluation,
+      evaluatorModel: input.evaluatorModel,
+      evaluatorPromptKey: input.attempt.evaluatorPromptKey,
+      evaluatorPromptVersion: input.attempt.evaluatorPromptVersion,
+      question: input.question,
+      response: input.attempt.transcriptText,
+      skipped: false,
+      submittedAt: input.attempt.submittedAt,
+      transcriptSource: input.attempt.transcriptSource,
+    };
+    const existingAnswerIndex = answers.findIndex(
+      (answer) =>
+        typeof answer === "object" &&
+        answer !== null &&
+        "question" in answer &&
+        typeof answer.question === "object" &&
+        answer.question !== null &&
+        "id" in answer.question &&
+        answer.question.id === input.question.id,
+    );
+
+    if (existingAnswerIndex >= 0) {
+      answers[existingAnswerIndex] = displayAnswer;
+    } else {
+      answers.push(displayAnswer);
+    }
+
+    await getDb()
+      .update(dpePracticeSessions)
+      .set({
+        transcriptJson: {
+          ...transcript,
+          answers,
+        },
+        updatedAt: new Date(),
+      })
+      .where(eq(dpePracticeSessions.id, input.sessionId));
+
+    return {
+      attempt: {
+        ...displayAnswer,
+        id: attempt.id,
+      },
+      attemptRow: attempt,
+    };
+  }
 
   const [sessionQuestion] = await getDb()
     .insert(dpeSessionQuestions)

@@ -453,6 +453,7 @@ export default function App() {
   const [recordingStatus, setRecordingStatus] = useState<"idle" | "recorded" | "recording">("idle");
   const [rapidQuestionCount, setRapidQuestionCount] = useState(5);
   const [certificateTypeId, setCertificateTypeId] = useState("");
+  const [certificateManuallySelected, setCertificateManuallySelected] = useState(false);
   const [selectedAreaIds, setSelectedAreaIds] = useState<string[]>([]);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [selectedSubjectTags, setSelectedSubjectTags] = useState<string[]>([]);
@@ -480,9 +481,10 @@ export default function App() {
     selectedTargetTrack,
     certificateOptions,
   );
+  const resolvedCertificateTypeId =
+    certificateTypeId || (!certificateManuallySelected ? targetCertificateOption?.id : "") || "";
   const selectedCertificateType =
-    targetCertificateOption ??
-    certificateOptions.find((certificateType) => certificateType.id === certificateTypeId) ??
+    certificateOptions.find((certificateType) => certificateType.id === resolvedCertificateTypeId) ??
     certificateOptions[0] ??
     null;
   const certificateQuestions = useMemo(
@@ -542,6 +544,17 @@ export default function App() {
       questionSearchQuery,
       selectedSubjectTags,
     ],
+  );
+  const practiceQuestions = useMemo(
+    () =>
+      selectedQuestions.filter((question) => {
+        if (mode === "dpe_coaching") return question.questionMode === "coaching";
+        if (mode === "dpe_rapid_fire") return question.questionMode === "rapid_fire";
+        if (mode === "visual") return question.practiceLane === "visual";
+        if (mode === "oral") return question.practiceLane === "oral";
+        return true;
+      }),
+    [mode, selectedQuestions],
   );
 
   useEffect(() => {
@@ -788,6 +801,7 @@ export default function App() {
     const nextArea = nextScope.areas[0] ?? "I";
     const nextTask = nextScope.tasksByArea[nextArea]?.[0] ?? "A";
 
+    setCertificateManuallySelected(true);
     setCertificateTypeId(nextCertificateTypeId);
     setArea(nextArea);
     setSelectedAreaIds([nextArea]);
@@ -838,6 +852,7 @@ export default function App() {
       }));
     }
     if (certificateType?.id) {
+      setCertificateManuallySelected(true);
       setCertificateTypeId(certificateType.id);
     }
     if (storedSession.acsArea) {
@@ -885,7 +900,7 @@ export default function App() {
 
     const sessionQuestionLimit =
       mode === "dpe_coaching" || mode === "dpe_rapid_fire" ? rapidQuestionCount : 5;
-    const questions = selectedQuestions.slice(0, sessionQuestionLimit);
+    const questions = practiceQuestions.slice(0, sessionQuestionLimit);
     if (questions.length === 0) return;
     setSessionStarting(true);
     setPracticeNotice(null);
@@ -1504,7 +1519,7 @@ export default function App() {
                 draftAnswer={draftAnswer}
                 mode={mode}
                 focusQuestions={certificateQuestions}
-                questions={selectedQuestions}
+                questions={practiceQuestions}
                 certificateOptions={certificateOptions}
                 selectedCertificateType={selectedCertificateType}
                 dpeProfile={dpeProfile}
@@ -2700,7 +2715,12 @@ function PracticeSetupScreen({
     selectedTargetTrack,
     certificateOptions,
   );
-  const certificateAlignedToTarget = Boolean(targetAlignedCertificate);
+  const certificateAlignedToTarget = Boolean(
+    targetAlignedCertificate && selectedCertificateType?.id === targetAlignedCertificate.id,
+  );
+  const handleCertificateSelection = (event: React.FormEvent<HTMLSelectElement>) => {
+    onCertificateChange(event.currentTarget.value);
+  };
   const stepReady = {
     certificate: Boolean(selectedCertificateType),
     focus: questions.length > 0,
@@ -2733,8 +2753,9 @@ function PracticeSetupScreen({
             <span>Target certificate or rating</span>
             <select
               value={selectedCertificateType?.id ?? ""}
-              onChange={(event) => onCertificateChange(event.target.value)}
-              disabled={certificateOptions.length <= 1 || certificateAlignedToTarget}
+              onChange={handleCertificateSelection}
+              onInput={handleCertificateSelection}
+              disabled={certificateOptions.length <= 1}
               title={
                 certificateAlignedToTarget
                   ? "Certificate follows target track"
@@ -2749,7 +2770,7 @@ function PracticeSetupScreen({
               {certificateOptions.length === 0 && <option value="">Certificate pending</option>}
             </select>
             {certificateAlignedToTarget && (
-              <small>Certificate follows the target track selected in Me.</small>
+              <small>Defaulted from the target track selected in Me.</small>
             )}
           </label>
         </div>
@@ -4414,6 +4435,9 @@ function QuestionPreview({
   selectedTask: string;
   questions: DpeQuestion[];
 }) {
+  const previewQuestions = questions.slice(0, 40);
+  const hiddenCount = Math.max(0, questions.length - previewQuestions.length);
+
   return (
     <div className="panel">
       <div className="section-head">
@@ -4435,7 +4459,7 @@ function QuestionPreview({
             </p>
           </div>
         )}
-        {questions.map((question) => (
+        {previewQuestions.map((question) => (
           <article className="raised-card" key={question.id}>
             <div className="question-meta">
               <span className="pill">{question.id}</span>
@@ -4452,6 +4476,12 @@ function QuestionPreview({
             <strong>{question.questionText}</strong>
           </article>
         ))}
+        {hiddenCount > 0 && (
+          <div className="raised-card">
+            <strong>{hiddenCount} more prompts match this setup</strong>
+            <p>Narrow the ACS task, subject tags, or search text to inspect a smaller set.</p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1632,8 +1632,40 @@ export const studyDeckStackItems = pgTable(
   }),
 );
 
+export const studyCanonicalCards = pgTable(
+  "study_canonical_cards",
+  {
+    answer: text("answer").notNull(),
+    canonicalStatus: text("canonical_status").notNull(),
+    contentMetadata: jsonb("content_metadata").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    explanation: text("explanation"),
+    externalCardId: text("external_card_id").notNull(),
+    hint: text("hint"),
+    id: uuid("id").defaultRandom().primaryKey(),
+    isOfficial: boolean("is_official").default(false).notNull(),
+    isVerified: boolean("is_verified").default(false).notNull(),
+    level: text("level"),
+    question: text("question").notNull(),
+    sourceLabel: text("source_label"),
+    sourceMetadata: jsonb("source_metadata").$type<Record<string, unknown>>(),
+    sourceUrl: text("source_url"),
+    tags: text("tags").array(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    verificationMetadata: jsonb("verification_metadata").$type<Record<string, unknown>>(),
+  },
+  (card) => ({
+    externalCardIdIdx: uniqueIndex("study_canonical_cards_external_card_id_idx").on(
+      card.externalCardId,
+    ),
+  }),
+);
+
 export const studyCards = pgTable("study_cards", {
   answer: text("answer").notNull(),
+  canonicalCardId: uuid("canonical_card_id").references(() => studyCanonicalCards.id, {
+    onDelete: "set null",
+  }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   deckId: uuid("deck_id")
     .notNull()
@@ -1658,6 +1690,44 @@ export const studyCards = pgTable("study_cards", {
   verifiedAt: timestamp("verified_at", { withTimezone: true }),
   verifiedBy: text("verified_by"),
 });
+
+export const studyDeckCardMemberships = pgTable(
+  "study_deck_card_memberships",
+  {
+    audience: text("audience"),
+    canonicalCardId: uuid("canonical_card_id")
+      .notNull()
+      .references(() => studyCanonicalCards.id, { onDelete: "cascade" }),
+    cardId: uuid("card_id")
+      .notNull()
+      .references(() => studyCards.id, { onDelete: "cascade" }),
+    certification: text("certification"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    deckCardId: text("deck_card_id").notNull(),
+    deckId: uuid("deck_id")
+      .notNull()
+      .references(() => studyDecks.id, { onDelete: "cascade" }),
+    deckOrder: integer("deck_order").default(0).notNull(),
+    deckTags: text("deck_tags").array(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    originalExternalId: text("original_external_id").notNull(),
+    originalFile: text("original_file"),
+    overrides: jsonb("overrides").$type<Record<string, unknown>>(),
+    reusePolicy: text("reuse_policy").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (membership) => ({
+    cardIdx: uniqueIndex("study_deck_card_memberships_card_idx").on(membership.cardId),
+    deckCanonicalIdx: uniqueIndex("study_deck_card_memberships_deck_canonical_idx").on(
+      membership.deckId,
+      membership.canonicalCardId,
+    ),
+    deckCardIdIdx: uniqueIndex("study_deck_card_memberships_deck_card_id_idx").on(
+      membership.deckCardId,
+    ),
+    deckIdx: index("study_deck_card_memberships_deck_idx").on(membership.deckId),
+  }),
+);
 
 export const studyDeckAudienceTags = pgTable(
   "study_deck_audience_tags",
@@ -2633,6 +2703,185 @@ export const dpeAttempts = pgTable(
       attempt.sessionId,
       attempt.submittedAt,
     ),
+  }),
+);
+
+export const dpeStimulusPackets = pgTable(
+  "dpe_stimulus_packets",
+  {
+    active: boolean("active").default(true).notNull(),
+    aiContext: text("ai_context").notNull(),
+    assetType: text("asset_type").notNull(),
+    certificateTypeId: text("certificate_type_id").references(() => dpeCertificateTypes.id, {
+      onDelete: "set null",
+    }),
+    commonMisreads: jsonb("common_misreads").$type<string[]>().default([]).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    displayTitle: text("display_title").notNull(),
+    id: text("id").primaryKey(),
+    interpretationNotes: jsonb("interpretation_notes").$type<string[]>().default([]).notNull(),
+    keyDetails: jsonb("key_details").$type<string[]>().default([]).notNull(),
+    learnerDescription: text("learner_description").notNull(),
+    reviewStatus: text("review_status").default("draft").notNull(),
+    sourceLabel: text("source_label").notNull(),
+    sourceReference: text("source_reference").notNull(),
+    sourceUrl: text("source_url"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (packet) => ({
+    certificateStatusIdx: index("dpe_stimulus_packets_certificate_status_idx").on(
+      packet.certificateTypeId,
+      packet.reviewStatus,
+      packet.active,
+    ),
+  }),
+);
+
+export const dpeStimulusAssets = pgTable(
+  "dpe_stimulus_assets",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    instructions: text("instructions"),
+    label: text("label").notNull(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    stimulusPacketId: text("stimulus_packet_id")
+      .notNull()
+      .references(() => dpeStimulusPackets.id, { onDelete: "cascade" }),
+    storageKey: text("storage_key"),
+    textContent: text("text_content"),
+    transcript: text("transcript"),
+    type: text("type").$type<"audio" | "chart" | "document" | "image" | "metar_taf" | "other" | "text">().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    url: text("url"),
+  },
+  (asset) => ({
+    packetIdx: index("dpe_stimulus_assets_packet_idx").on(asset.stimulusPacketId, asset.sortOrder),
+  }),
+);
+
+export const dpeScenarioCases = pgTable(
+  "dpe_scenario_cases",
+  {
+    active: boolean("active").default(true).notNull(),
+    aiInstructions: text("ai_instructions").notNull(),
+    certificateTypeId: text("certificate_type_id").references(() => dpeCertificateTypes.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: text("id").primaryKey(),
+    reviewStatus: text("review_status").default("draft").notNull(),
+    summary: text("summary").notNull(),
+    title: text("title").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (scenario) => ({
+    certificateStatusIdx: index("dpe_scenario_cases_certificate_status_idx").on(
+      scenario.certificateTypeId,
+      scenario.reviewStatus,
+      scenario.active,
+    ),
+  }),
+);
+
+export const dpeScenarioSteps = pgTable(
+  "dpe_scenario_steps",
+  {
+    aiPrompt: text("ai_prompt").notNull(),
+    conceptIds: jsonb("concept_ids").$type<string[]>().default([]).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    expectedPilotActions: jsonb("expected_pilot_actions").$type<string[]>().default([]).notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    riskPoints: jsonb("risk_points").$type<string[]>().default([]).notNull(),
+    scenarioCaseId: text("scenario_case_id")
+      .notNull()
+      .references(() => dpeScenarioCases.id, { onDelete: "cascade" }),
+    scenarioText: text("scenario_text").notNull(),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    stimulusPacketIds: jsonb("stimulus_packet_ids").$type<string[]>().default([]).notNull(),
+    title: text("title").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (step) => ({
+    caseIdx: index("dpe_scenario_steps_case_idx").on(step.scenarioCaseId, step.sortOrder),
+  }),
+);
+
+export const dpeScenarioCheckpoints = pgTable(
+  "dpe_scenario_checkpoints",
+  {
+    aiEvaluationNotes: text("ai_evaluation_notes").notNull(),
+    conceptIds: jsonb("concept_ids").$type<string[]>().default([]).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    expectedAnswerElements: jsonb("expected_answer_elements").$type<string[]>().default([]).notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    prompt: text("prompt").notNull(),
+    scenarioStepId: uuid("scenario_step_id")
+      .notNull()
+      .references(() => dpeScenarioSteps.id, { onDelete: "cascade" }),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    stimulusPacketIds: jsonb("stimulus_packet_ids").$type<string[]>().default([]).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (checkpoint) => ({
+    stepIdx: index("dpe_scenario_checkpoints_step_idx").on(
+      checkpoint.scenarioStepId,
+      checkpoint.sortOrder,
+    ),
+  }),
+);
+
+export const dpeMockOralBlueprints = pgTable(
+  "dpe_mock_oral_blueprints",
+  {
+    active: boolean("active").default(true).notNull(),
+    aiInstructions: text("ai_instructions").notNull(),
+    certificateTypeId: text("certificate_type_id").references(() => dpeCertificateTypes.id, {
+      onDelete: "set null",
+    }),
+    conceptPool: jsonb("concept_pool").$type<string[]>().default([]).notNull(),
+    coveragePolicy: jsonb("coverage_policy").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    durationMinutes: integer("duration_minutes"),
+    examinerStyle: text("examiner_style").notNull(),
+    id: text("id").primaryKey(),
+    reviewStatus: text("review_status").default("draft").notNull(),
+    scenarioPool: jsonb("scenario_pool").$type<string[]>().default([]).notNull(),
+    sessionMode: text("session_mode").default("voice").notNull(),
+    stimulusPacketIds: jsonb("stimulus_packet_ids").$type<string[]>().default([]).notNull(),
+    title: text("title").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (blueprint) => ({
+    certificateStatusIdx: index("dpe_mock_oral_blueprints_certificate_status_idx").on(
+      blueprint.certificateTypeId,
+      blueprint.reviewStatus,
+      blueprint.active,
+    ),
+  }),
+);
+
+export const dpeStimulusLinks = pgTable(
+  "dpe_stimulus_links",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    requiredToAnswer: boolean("required_to_answer").default(false).notNull(),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    stimulusPacketId: text("stimulus_packet_id")
+      .notNull()
+      .references(() => dpeStimulusPackets.id, { onDelete: "cascade" }),
+    targetId: text("target_id").notNull(),
+    targetType: text("target_type")
+      .$type<"concept" | "drill_variant" | "mock_oral_blueprint" | "scenario_case" | "scenario_step">()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    usage: text("usage"),
+  },
+  (link) => ({
+    packetIdx: index("dpe_stimulus_links_packet_idx").on(link.stimulusPacketId, link.sortOrder),
+    targetIdx: index("dpe_stimulus_links_target_idx").on(link.targetType, link.targetId),
   }),
 );
 
