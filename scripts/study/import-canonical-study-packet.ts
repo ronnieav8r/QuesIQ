@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { getDb } from "@/server/db/client";
 import {
@@ -507,7 +507,7 @@ async function verifyDatabaseImport(deckTitles: string[]) {
       ? await getDb()
           .select({ count: sql<number>`count(*)::int` })
           .from(studyCards)
-          .where(andInDecksVerified(deckIds))
+          .where(and(inArray(studyCards.deckId, deckIds), eq(studyCards.isVerified, true)))
       : [{ count: 0 }];
 
   return {
@@ -518,10 +518,6 @@ async function verifyDatabaseImport(deckTitles: string[]) {
     studyDeckMemberships: membershipCount.count,
     verifiedDeckCards: verifiedCards.count,
   };
-}
-
-function andInDecksVerified(deckIds: string[]) {
-  return sql`${studyCards.deckId} = any(${deckIds}) and ${studyCards.isVerified} = true`;
 }
 
 async function main() {
