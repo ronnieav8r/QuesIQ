@@ -24,6 +24,7 @@
     "readiness:mvp": "node scripts/mvp-readiness.mjs",
     "readiness:nclex": "node scripts/nclex/readiness-check.mjs",
     "readiness:study": "node scripts/study/readiness-check.mjs",
+    "study:import-canonical": "tsx scripts/study/import-canonical-study-packet.ts",
     "smoke:dpe": "tsx scripts/dpe/answer-smoke.ts",
     "smoke:dpe-concepts": "tsx scripts/dpe/concept-content-smoke.ts",
     "smoke:interview-turns": "tsx scripts/interview/turn-based-smoke.ts",

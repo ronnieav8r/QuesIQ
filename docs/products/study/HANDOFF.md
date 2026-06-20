@@ -267,6 +267,17 @@ the visual/UI level during the conversation:
   `study_deck_imports` metadata, can mark the deck Public/Official, and can add
   the deck to a Study stack while keeping conservative card Verified policy
   checks (status must be `verified`, confidence >= 0.8, verifier present).
+- Canonical Study packets now have a separate local importer:
+  `scripts/study/import-canonical-study-packet.ts`. It is for packets with a
+  canonical-card CSV plus a deck-membership CSV, such as the promoted
+  A&P/TEAS/HESI healthcare packet. Do not route those through the flat rich CSV
+  importer. The script dry-run validates the promoted healthcare packet at
+  1,935 canonical cards, 1,961 memberships, and 40 decks with zero validation
+  issues.
+- `drizzle/0086_add_study_canonical_import_model.sql` adds
+  `study_canonical_cards`, `study_deck_card_memberships`, and
+  `study_cards.canonical_card_id` so canonical facts can be stored once while
+  deck-facing Study cards remain readable by the current UI.
 - `drizzle/0054_add_study_source_verification_metadata.sql` adds structured
   metadata storage for rich admin imports: `study_card_sources.source_metadata`
   and `study_verifications.verification_status`, `evidence`, and `verifier`.
