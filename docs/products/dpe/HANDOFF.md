@@ -1,6 +1,6 @@
 # QuesIQ DPE Handoff
 
-Last updated: 2026-06-17
+Last updated: 2026-06-21
 
 ## Current State
 
@@ -11,6 +11,20 @@ the content foundation is moving to DPE Content Model V2.
 `0084_add_dpe_concept_variants.sql` added the first concept/variant foundation.
 `0085_add_dpe_content_model_v2.sql` extends that foundation with first-class
 stimulus packets, real scenario cases, and mock oral blueprints.
+
+Local DPE V2 drill import state:
+
+- The local DB has the clean 2026-06-19 DPE V2 drill packets imported from
+  `01-ready-to-import/dpe`.
+- Imported Private Pilot ASEL: 294 concepts and 1,470 drill variants.
+- Imported Instrument Rating Airplane: 266 concepts and 1,330 drill variants.
+- Total imported DPE drill content: 560 concepts and 2,800 drill variants.
+- Every imported concept has the five required drill families:
+  `rapid_fire`, `coaching`, `multiple_choice`, `true_false`, and `fill_blank`.
+- Scenario, mock oral, and stimulus content was not imported from these drill
+  packets. The held/later-review folder was not imported.
+- Content was imported app-side only; content-library source files were treated
+  as read-only.
 
 ## V2 Content Rule
 
@@ -86,6 +100,13 @@ npm run build
 `readiness:dpe` may warn about missing local env vars outside a fully
 configured app shell. Those warnings are not V2 content-model blockers.
 
+Latest local verification after the Study canonical import setup fix:
+
+- `npm run db:local:migrate` applied migrations through `0086`.
+- `npm run readiness:dpe` passed with env warnings only.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+
 ## Next Builder Slice
 
 Wire learner Practice setup to the V2 drill APIs first:
@@ -98,3 +119,7 @@ Wire learner Practice setup to the V2 drill APIs first:
 
 Do not remove old DPE practice tables until V2 sessions, attempts,
 History/review display, and deploy QA are complete.
+
+Keep scenario and mock oral runtime work as a separate slice. The database/API
+foundation exists, but no scenario/mock oral content is imported into the
+current local DPE learner experience.

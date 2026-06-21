@@ -1,6 +1,51 @@
 # Handoff
 
-Last updated: 2026-06-15
+Last updated: 2026-06-21
+
+## 2026-06-21 Immediate Handoff Snapshot
+
+- Active dev checkout:
+  `E:\Codex\QuesIQ\QuesIQ App Worktrees\QuesIQ-dev`
+- Active dev branch: `main`, aligned with `origin/main` at
+  `832da59 Fix canonical Study import setup`.
+- Local app/database:
+  - Next dev server: `http://127.0.0.1:3100`
+  - QuesIQ local Postgres: Docker container `quesiq-local-postgres` on
+    `127.0.0.1:5433`
+  - Migrations applied locally through `0086_add_study_canonical_import_model`
+- DPE local content state:
+  - Private Pilot ASEL clean DPE V2 drill import: 294 concepts, 1,470 variants
+  - Instrument Rating Airplane clean DPE V2 drill import: 266 concepts,
+    1,330 variants
+  - Total: 560 concepts, 2,800 drill variants
+  - Imported drill modes only: `rapid_fire`, `coaching`, `multiple_choice`,
+    `true_false`, and `fill_blank`
+  - No DPE scenario, mock oral, stimulus, held/later-review, deprecated, or
+    review-only content was imported
+- Study local content state:
+  - 52 parser-clean non-NCLEX Study CSVs imported locally, totaling 7,908 rows
+  - Promoted A&P/TEAS/HESI canonical healthcare packet imported locally:
+    1,935 canonical cards, 1,961 memberships, 40 public/official decks, all
+    imported deck-facing cards linked to canonical cards and marked Verified,
+    0 expert-reviewed claims
+  - Study `Memorize` listening mode exists for decks and stacks
+- Setup fixes already pushed:
+  - `drizzle/meta/_journal.json` includes migrations `0085` and `0086`
+  - `npm run study:import-canonical` loads `.env.local`
+- Latest verification:
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npm run readiness:dpe`
+  - `npm run readiness:study`
+  - `npm run study:import-canonical -- --dry-run`
+  - `npm run study:import-canonical`
+  - direct DB count readback for canonical cards, memberships, healthcare decks,
+    public/official decks, and linked Verified deck-facing cards
+  - Study library/deck/session route checks
+- Current blocker/gap for the next builder: the imported healthcare Study stack
+  renders but took about 26 seconds locally. Optimize large stack loading before
+  production import/release.
+- No production import or deploy was requested in the latest local content work.
 
 ## 2026-06-14 Live Snapshot
 
@@ -680,69 +725,80 @@ path until Phase 2 navigation is completed unless the product direction changes.
 
 ## Next Best Work
 
-1. Deploy/user-confirm QA the latest Story Lab, prompt, debrief, progression,
+1. Optimize and QA the imported healthcare Study stack. The local stack renders
+   but took about 26 seconds; profile stack stats/deck/card loading before any
+   production content release.
+2. Plan production Study import/release only after explicit confirmation and a
+   backup/export plan. Production must apply migrations through
+   `0086_add_study_canonical_import_model.sql` before importing canonical
+   healthcare content.
+3. Wire DPE learner Practice setup to the V2 drill APIs and snapshot selected
+   variants into `dpe_session_variants`. Keep scenario/mock oral as separate
+   future runtime slices.
+4. Deploy/user-confirm QA the latest Story Lab, prompt, debrief, progression,
    job-target UI changes, Study import work, and Quira hybrid support on
    `quesiq-web`. Confirm migrations through
    `0070_expand_quira_hybrid_support.sql` run before testing Introduction
    Builder, Intro Practice, verbal Debrief, Story Practice coaching history,
    Tell Que story capture, saved Job Targets, Admin Diagnostics, AI Usage prompt
    links/raw metadata, Study library taxonomy, and Quira public/signed-in chat.
-2. Run/user-confirm Study library taxonomy QA: run
+5. Run/user-confirm Study library taxonomy QA: run
    `scripts/study/seed_test_decks.sql`, confirm mapped audience-tag filters in
    `/study/library`, then run `scripts/study/cleanup_test_decks.sql`.
-3. Run/user-confirm database migration QA for the imported levels and quests:
+6. Run/user-confirm database migration QA for the imported levels and quests:
    Progression > Levels shows Rookie through Master, Progression > Quests shows
    37 active quest definitions, level/quest edits save from Admin, and Home
    awards quest XP only once per quest.
-4. User-confirm QA the Admin tab: Prompts, Modes, Questions, Styles, API Calls,
+7. User-confirm QA the Admin tab: Prompts, Modes, Questions, Styles, API Calls,
    Realtime Sessions, Pricing, Feedback/Bugs, Progression, Levels, and Data.
-5. Scheduled pricing checks are retired; use manual Admin pricing review only
+8. Scheduled pricing checks are retired; use manual Admin pricing review only
    if needed.
-6. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
+9. Deploy/user-confirm progression QA: existing reviewed sessions backfill XP,
    new completed reviews award XP once, Home shows saved streak/level/latest
    next action, level thresholds load from Admin, and retry/reopen does not
    double-count.
-7. QA scoring polish: Recent Scores reflects the latest 10 reviewed sessions,
+10. QA scoring polish: Recent Scores reflects the latest 10 reviewed sessions,
    Skill Scores remains all-time, Overall is highlighted, and sub-120-second
    sessions appear in History without scoring or XP.
-8. QA rotating post-review beta feedback prompts in production and confirm Admin
+11. QA rotating post-review beta feedback prompts in production and confirm Admin
    Feedback stores the exact `rating_prompt` for review usefulness, voice
    realism, transcript accuracy, and scoring fairness.
-9. Continue Story Lab QA: deploy/user-confirm the Practice Story voice flow,
+12. Continue Story Lab QA: deploy/user-confirm the Practice Story voice flow,
    Intro Practice voice flow, hideable navigation, saved coaching history on
    Story records, saved intro coaching history, and top Introduction/TMAAT
    selector alignment across desktop and mobile.
-10. QA Admin Diagnostics in production: trigger or observe a failed API response
+13. QA Admin Diagnostics in production: trigger or observe a failed API response
    and a Realtime connection issue, then confirm the Diagnostics tab shows
    sanitized event rows without secrets, raw audio, or large transcripts.
-11. QA the Introduction Builder AI draft/extraction step in production: after
+14. QA the Introduction Builder AI draft/extraction step in production: after
    Talk with Que transcript capture, verify `/api/introductions/draft` runs,
    fills structured intro fields, and saves the polished introduction with raw
    notes retained.
-12. Investigate any production `client.session.error` from the Story Lab
+15. Investigate any production `client.session.error` from the Story Lab
    Realtime entry points, starting with the Introduction Builder conversation
    endpoint.
-13. QA installable app behavior on iOS and Android: add QuesIQ to the home
+16. QA installable app behavior on iOS and Android: add QuesIQ to the home
    screen, launch it, and confirm standalone mode uses the expected icon,
    splash/background color, and app start URL.
-14. Consider mobile bottom-nav auto-hide later as a guarded UX experiment:
+17. Consider mobile bottom-nav auto-hide later as a guarded UX experiment:
    visible by default, hide only on meaningful downward scroll, show
    immediately on upward scroll, and never hide during active voice/session,
    error, modal, save, or onboarding states.
-15. Work the remaining highest-value Bubble reference gaps into upcoming phases:
+18. Work the remaining highest-value Bubble reference gaps into upcoming phases:
    richer coaching memory controls, beta tuning for XP rules, and AI-backed
    Quira support.
-16. Defer or avoid lower-value parity work until the beta needs it: standalone
+19. Defer or avoid lower-value parity work until the beta needs it: standalone
    anonymous bug-report page, in-app marketing/blog pages, payments, industry
    packs, mascot work, and VAPI parity.
-17. Later Quira work: replace the curated Help panel with an AI chat assistant
+20. Later Quira work: replace the curated Help panel with an AI chat assistant
    that uses a maintained QuesIQ knowledge base and can submit structured bugs,
    feedback, screenshots, and current screen/session context.
-18. Continue deploy/user-confirmed QA for changes because localhost preview is
-   deprecated in this environment.
-19. Keep verifying that `Launch Voice Session` creates a Session id before direct
+21. Use local preview at `http://127.0.0.1:3100` for dev verification when the
+   local Docker DB is running, but still use deploy/user-confirmed QA for
+   production release confidence.
+22. Keep verifying that `Launch Voice Session` creates a Session id before direct
    voice opens.
-20. Establish the branch/release flow before broader live traffic: keep `main` as
+23. Establish the branch/release flow before broader live traffic: keep `main` as
     stable integration, create/confirm `live` from the actual production commit,
     and promote intentional releases from `main` to `live`.
 
@@ -761,9 +817,9 @@ path until Phase 2 navigation is completed unless the product direction changes.
 - The Render Postgres connection URL was pasted during setup; rotate that
   database credential after the wiring test and replace `DATABASE_URL`.
 - Owned practice launch now requires Auth.js sign-in by design.
-- Localhost preview is deprecated on any port in this Codex environment until
-  we intentionally invest time to fix it. Prefer deploy-based or
-  user-confirmed QA instead.
+- Local preview currently works at `http://127.0.0.1:3100` when the local
+  Docker DB is running. Do not treat local preview as production QA; use deploy
+  or user-confirmed checks before release.
 - Render currently also has a separate free `quesiq-interview-rebuild` web
   service. Decide whether to keep, suspend, or remove it after `quesiq-web` is
   confirmed as the active rebuild service.

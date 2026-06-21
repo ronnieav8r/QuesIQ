@@ -61,6 +61,7 @@ Current product docs:
 - `docs/products/study/HANDOFF.md`
 - `docs/products/nclex/README.md`
 - `docs/products/dpe/README.md`
+- `docs/products/dpe/HANDOFF.md`
 - `docs/products/quira/README.md`
 
 ## Strategy Docs

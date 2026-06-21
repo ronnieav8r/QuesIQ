@@ -23,6 +23,9 @@ The first Study slice is imported:
 - `/study/decks/[deckId]/import` supports dependency-free pasted text/CSV card
   import
 - `/study/decks/[deckId]/study` supports the first visual flashcard review mode
+- `/study/decks/[deckId]/study/memorize` supports passive listening review:
+  Que reads each prompt and answer aloud without scoring or changing SRS
+  progress
 - `/study/decks/[deckId]/study/verbal` supports typed verbal-answer practice
   with AI verdict/feedback and saved Study attempts
 - `/study/decks/[deckId]/study/written` supports typed written-answer practice
@@ -164,12 +167,20 @@ The first Study slice is imported:
   `OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY`, `OPENAI_STUDY_API_KEY`, or
   `OPENAI_API_KEY`, without printing secrets.
 - canonical Study packet import coverage is available with
-  `node_modules/.bin/tsx scripts/study/import-canonical-study-packet.ts --dry-run`.
+  `npm run study:import-canonical -- --dry-run`.
   The canonical importer reads a canonical card CSV plus a deck-membership CSV,
   validates canonical IDs, deck memberships, Official/Verified fields, source
   evidence, and expert-review boundaries, then upserts canonical cards, decks,
   deck-facing cards, memberships, source rows, and verification rows. Run
   without `--dry-run` only after migrations through `0086` are applied.
+- The promoted A&P/TEAS/HESI canonical healthcare packet was imported into the
+  local DB on 2026-06-21 using the canonical importer: 1,935 canonical cards,
+  1,961 deck memberships, 40 public/official decks, all imported deck-facing
+  cards linked to canonical cards and marked Verified, and zero expert-reviewed
+  claims. No production import was performed in that slice.
+  Canonical packets use the content-manager S12 promotion report as the
+  Official/Verified authority; the rich CSV confidence/verifier rule below is
+  for flat rich CSV imports.
 - `rich_csv_import_save` remains admin-only and can mark a deck Official only
   through this import path (`markDeckOfficial` or row-level `official=true`);
   card `isVerified` remains conservative and is only set true when verified
@@ -208,6 +219,9 @@ Operational fields:
   A card is only marked Verified when the CSV explicitly sets
   `isVerified=true`, `verificationStatus=verified`,
   `verificationConfidence >= 0.8`, and `verifier` is present.
+  Canonical Study packets are imported through the canonical importer instead;
+  for those packets, the S12 promotion report is the app-side Verified source
+  of truth.
 - `expertReviewStatus` is a separate human/expert review layer. It accepts
   `not_required`, `needs_expert_review`, `expert_reviewed`, or `rejected`.
   Do not use `isVerified=true` as a substitute for expert review.
@@ -241,9 +255,10 @@ Private Pilot Airplane - Weather,Private Pilot,What is a METAR?,A routine aviati
   import smoke checks for raw source-to-Study import work
 - `0049_seed_study_library_taxonomy.sql` seeds the imported source taxonomy
   labels for subjects and audience tags
-- remaining work is mostly migration/seed QA, production permission QA, R2 env
-  verification, mobile visual QA, Study progression tuning/quest expansion, and
-  real library content curation
+- remaining work is mostly large-stack performance optimization for the
+  imported healthcare stack, production import/release planning, production
+  permission QA, R2 env verification, mobile visual QA, and Study progression
+  tuning/quest expansion
 
 Detailed import parity, divergence, and remaining-slice notes live in
 `docs/products/study/HANDOFF.md`.
@@ -275,7 +290,9 @@ V1 readiness for this lane means:
   statically detectable
 - Study answer evaluator smoke coverage is present, model-key gated, and cleans
   up disposable DB rows
-- Publish, Official, and broad Verified promotion remain disabled
+- Publish remains separately gated. Broad ad hoc Official/Verified promotion is
+  disabled, but S12-promoted canonical packets can be imported Official/Verified
+  through the canonical importer.
 
 ## Boundaries
 
@@ -302,5 +319,6 @@ The intended path is:
 3. source review plus verifier checks
 4. Study Admin CSV import through `/admin?product=study`
 
-The current contract/preview layer intentionally stops before publish, Official,
-Verified, or Study library/runtime writes.
+The current source-pack contract/preview layer intentionally stops before
+publish or Study library/runtime writes. Official/Verified writes require either
+the admin rich CSV save path or the S12-promoted canonical importer path.

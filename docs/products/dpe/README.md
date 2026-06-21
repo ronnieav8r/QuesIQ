@@ -1580,7 +1580,24 @@ runtime query surfaces are available at `/api/dpe/content/filters` and
 The importer enforces the core content rules: every Concept needs source
 references, subject tags, and at least one authored learner-facing variant.
 Supported variant modes are `multiple_choice`, `fill_blank`, `true_false`,
-`scenario`, `coaching`, `rapid_fire`, and `mock_oral`.
+`coaching`, and `rapid_fire`.
+
+Scenario cases and mock oral blueprints are separate DPE V2 content families,
+not Concept drill variants. `0085_add_dpe_content_model_v2.sql` adds the
+separate stimulus, scenario, and mock oral tables/API surfaces; those runtime
+experiences should stay separate from quick drill practice.
+
+Current local DPE V2 drill import state:
+
+1. Private Pilot ASEL clean 2026-06-19 packet: 294 concepts and 1,470 drill
+   variants.
+2. Instrument Rating Airplane clean 2026-06-19 packet: 266 concepts and 1,330
+   drill variants.
+3. Total local imported drill content: 560 concepts and 2,800 drill variants.
+4. Every imported concept has the five drill families:
+   `rapid_fire`, `coaching`, `multiple_choice`, `true_false`, and `fill_blank`.
+5. Scenario, mock oral, stimulus, held/later-review, deprecated, or review-only
+   content was not imported in that local drill import.
 
 This storage slice does not yet switch the learner Practice UI to the new
 variant-backed flow. The current learner setup screen has been reshaped into a

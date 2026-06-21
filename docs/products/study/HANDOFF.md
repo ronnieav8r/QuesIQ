@@ -1,6 +1,65 @@
 # QuesIQ Study Import Handoff
 
-Last updated: 2026-05-29
+Last updated: 2026-06-21
+
+## 2026-06-21 Local App Snapshot
+
+Active app worktree:
+`E:\Codex\QuesIQ\QuesIQ App Worktrees\QuesIQ-dev`
+
+Current branch state at this handoff: `main` aligned with `origin/main` at
+`832da59 Fix canonical Study import setup`.
+
+Local Study content state:
+
+- The local DB contains the 52 parser-clean non-NCLEX Study CSV imports from
+  `01-ready-to-import`, totaling 7,908 flat rich-CSV rows. Private Pilot was
+  replaced locally instead of duplicated.
+- The promoted A&P/TEAS/HESI canonical healthcare packet was imported locally
+  through the canonical importer, not the flat rich CSV importer.
+- Canonical healthcare import readback:
+  - 1,935 `study_canonical_cards`
+  - 1,961 `study_deck_card_memberships`
+  - 40 imported public/official decks
+  - 1,961 deck-facing Study cards linked by `study_cards.canonical_card_id`
+  - 1,961 imported deck-facing cards marked Verified
+  - 0 expert-reviewed claims
+- Imported healthcare stack:
+  `Healthcare A&P, TEAS 7, and HESI A2 Official Study Stack`
+  (`b8e962f8-35c9-464c-9d07-2f03e588bbdf` in the current local DB).
+
+Important local-only note: the import was performed against local Postgres on
+`127.0.0.1:5433`. No production import was requested or performed in this
+slice.
+
+Recent setup fixes:
+
+- `drizzle/meta/_journal.json` now includes migrations `0085` and `0086`, so
+  the local migration runner applies the DPE V2 and Study canonical schema.
+- `npm run study:import-canonical` now loads `.env.local`, so it uses the local
+  `DATABASE_URL` instead of failing or falling back to an empty connection.
+
+Current Study UI state:
+
+- `/study/library?q=HESI` renders the imported healthcare content.
+- A sample imported deck page and study session render.
+- The imported healthcare stack page renders, but the first server render took
+  about 26 seconds locally. Treat this as the next Study performance/UI gap for
+  large stacks.
+- Study now has a passive listening `Memorize` mode for decks and stacks:
+  `/study/decks/[deckId]/study/memorize` and
+  `/study/stacks/[stackId]/study/memorize`.
+
+Recent verification:
+
+- `npm run db:local:migrate`
+- `npm run study:import-canonical -- --dry-run`
+- `npm run study:import-canonical`
+- DB readback for canonical/membership/deck/Official/Verified/expert-review
+  counts
+- Sample Study library/deck/session route checks
+- `npm run typecheck`
+- `npm run lint`
 
 ## V1 Readiness Quick Check (Non-Voice, Static)
 
@@ -118,6 +177,7 @@ Current imported Study routes and APIs:
 - `/study/decks/[deckId]/import`
 - `/study/decks/[deckId]/stats`
 - `/study/decks/[deckId]/study`
+- `/study/decks/[deckId]/study/memorize`
 - `/study/decks/[deckId]/study/verbal`
 - `/study/decks/[deckId]/study/written`
 - `/study/decks/[deckId]/study/match`
@@ -150,6 +210,7 @@ Current imported Study feature files:
 - `src/features/study/study-home.tsx`
 - `src/features/study/study-import-wizard.tsx`
 - `src/features/study/study-match.tsx`
+- `src/features/study/study-memorize.tsx`
 - `src/features/study/study-picker.tsx`
 - `src/features/study/study-public-toggle.tsx`
 - `src/features/study/study-quiz.tsx`
@@ -173,6 +234,8 @@ Current Study schema lives in `src/server/db/schema.ts` and includes:
 - `study_card_sources`
 - `study_verifications`
 - `study_deck_imports`
+- `study_canonical_cards`
+- `study_deck_card_memberships`
 
 The current Study schema already has several source-compatible card fields:
 
@@ -225,6 +288,8 @@ the visual/UI level during the conversation:
   routing
 - hands-free verbal and quiz paths with speech recognition, TTS, and resume
   behavior
+- passive `Memorize` listening mode that reads each prompt and answer aloud
+  without scoring or changing card progress
 - `/api/study/tts` with AI Usage instrumentation
 - AI-assisted import from PDF, image, pasted text, and URLs through
   `/api/study/decks/[deckId]/import`
@@ -274,6 +339,11 @@ the visual/UI level during the conversation:
   importer. The script dry-run validates the promoted healthcare packet at
   1,935 canonical cards, 1,961 memberships, and 40 decks with zero validation
   issues.
+- The promoted A&P/TEAS/HESI healthcare packet has also been imported into the
+  local DB through that canonical importer with the same 1,935 canonical cards,
+  1,961 memberships, 40 public/official decks, all imported deck-facing cards
+  linked to canonical cards and marked Verified, and zero expert-reviewed
+  claims.
 - `drizzle/0086_add_study_canonical_import_model.sql` adds
   `study_canonical_cards`, `study_deck_card_memberships`, and
   `study_cards.canonical_card_id` so canonical facts can be stored once while
@@ -310,9 +380,13 @@ Latest known full code verification before this handoff:
 
 - `npm run lint`
 - `npm run typecheck`
-- `npm run build`
+- `npm run readiness:study`
+- `npm run study:import-canonical -- --dry-run`
 
-Those checks passed after the Study brand/platform logo updates on 2026-05-29.
+`npm run typecheck` and `npm run lint` passed after the canonical import setup
+fix on 2026-06-21. `readiness:study` passed in the same import window with env
+warnings only when local DB/API/R2 env vars were not loaded by that static
+readiness script.
 
 ## Known Divergences From Source
 
@@ -392,9 +466,9 @@ These are the remaining practical gaps after the broad Study import passes.
    applied. Use `scripts/study/cleanup_test_decks.sql` to delete the generated
    decks afterward.
 
-2. Migration/seed QA still needs a database with `DATABASE_URL` configured.
-   Local `npm run db:migrate` was attempted on 2026-05-29 but could not run
-   because `DATABASE_URL` was not configured in this workspace.
+2. Large imported stack pages need performance work. The healthcare official
+   stack rendered locally, but first render took about 26 seconds because stack
+   totals and ordered deck/card data are computed synchronously.
 
 3. Permission and production QA still needs deployed or local signed-in and
    signed-out browser checks after migrations and seed data are available.
@@ -408,9 +482,9 @@ These are the remaining practical gaps after the broad Study import passes.
    runtime failed in the local Windows sandbox during the last pass, so code
    verification passed but a screenshot/browser pass was not completed.
 
-6. Real Study library content curation remains. The taxonomy labels are seeded,
-   and QA seed decks exist, but production official decks/content are not
-   curated as part of this port.
+6. Production Study content release remains separate. Local imports now include
+   official/verified healthcare content and other ready Study decks, but no
+   production import was performed in this slice.
 
 7. Study progression v1 is intentionally narrow. It currently awards XP only on
    Study card-rating attempts and ships a small starter quest/rule set.
@@ -426,17 +500,17 @@ These are the remaining practical gaps after the broad Study import passes.
 
 Recommended order from least risky/confusing to largest:
 
-1. Migration and seed QA.
-   Apply migrations through `0049_seed_study_library_taxonomy.sql`, then run
-   `scripts/study/seed_test_decks.sql` against the target database. Verify
-   `/study/library` filters by subject, text tags, and mapped audience tags.
-   Run `scripts/study/cleanup_test_decks.sql` after QA.
+1. Large-stack performance QA and optimization.
+   The canonical healthcare official stack renders locally but took about 26
+   seconds on first request. Profile `getStudyStackWithDecks`,
+   `getStudyStackCardStats`, and stack card rendering before moving this
+   content to production.
 
 2. Permission and production QA.
-   Re-run library/fork/export/deck/card permission checks after migrations and
-   seed data exist: private decks stay private, official decks are not
-   exportable, public deck copy works, owners edit only their content, and
-   signed-out users see only public library content.
+   Re-run library/fork/export/deck/card permission checks after the imported
+   official healthcare decks are visible: private decks stay private, official
+   decks are not exportable, public deck copy works, owners edit only their
+   content, and signed-out users see only public library content.
 
 3. R2 config QA.
    Configure the R2 env vars in production if cached generated audio should be
@@ -448,9 +522,10 @@ Recommended order from least risky/confusing to largest:
    `/study/decks`, `/study/library`, deck detail, import, Study picker, folder
    manager, and the study modes on mobile and desktop.
 
-5. Library content curation.
-   Add or import real official/public Study library decks after permission and
-   taxonomy QA passes.
+5. Production import/release planning.
+   Local imports are complete for the ready Study packets, including canonical
+   healthcare. Production import still needs explicit confirmation, backup or
+   export plan, migration verification through `0086`, and post-import readback.
 
 6. Study progression v1 tuning.
    Validate XP pace and quest thresholds with real usage, then expand
@@ -459,21 +534,20 @@ Recommended order from least risky/confusing to largest:
 
 ## Recommended Next Slice
 
-Run migration/seed QA for the Study library taxonomy path next in an environment
-with `DATABASE_URL` configured.
+Optimize and QA the imported large Study stack path next.
 
-Reason: the code now has taxonomy tables, mapped audience-tag filtering, and
-test deck SQL, but this path needs real database rows to verify end-to-end.
+Reason: the promoted healthcare canonical packet is imported locally and
+visible in Study, but the large stack route is too slow for a polished user
+experience.
 
 Minimum acceptance for that slice:
 
-- migrations apply through `0049_seed_study_library_taxonomy.sql`
-- `scripts/study/seed_test_decks.sql` creates three `[TEST_DELETE]` public decks
-  with three cards each
-- `/study/library?tag=Beginner` returns the Algebra and US Capitals test decks
-- `/study/library?tag=Quick+Review` returns the Algebra and STAR test decks
-- `/study/library?tag=Interview+Prep` returns the STAR test deck
-- `scripts/study/cleanup_test_decks.sql` removes the seeded decks
+- `/study/library?q=HESI` remains visibly correct.
+- The healthcare stack page renders quickly enough for normal browsing.
+- Stack card/deck counts remain correct after optimization.
+- Deck study, stack study, and Memorize routes continue to render.
+- Canonical relationships remain intact:
+  `study_cards.canonical_card_id` matches `study_deck_card_memberships`.
 
 ## Handoff Rules For The Next Agent
 
