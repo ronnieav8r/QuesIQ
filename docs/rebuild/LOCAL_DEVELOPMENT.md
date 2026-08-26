@@ -81,7 +81,20 @@ are applied, and `.env.local` points at the local database:
 npm run test:e2e
 ```
 
-The test harness starts `http://127.0.0.1:3100` automatically unless
+For the dedicated Interview + Study regression gate, prefer the newer focused
+commands documented in `docs/rebuild/INTERVIEW_STUDY_REGRESSION.md`:
+
+```powershell
+npm run test:interview-study:all
+npm run test:interview-study:live-ai
+```
+
+That gate starts an isolated server on `http://127.0.0.1:3210`, seeds
+deterministic `[TEST_DELETE]` Interview and Study data, runs desktop Chromium
+and Pixel-sized mobile Playwright coverage, mocks AI/TTS/media by default, and
+writes artifacts under `artifacts/interview-study-regression/`.
+
+The general `test:e2e` harness starts `http://127.0.0.1:3100` automatically unless
 `PLAYWRIGHT_SKIP_WEB_SERVER=1` is set. It seeds a verified local admin test
 account with:
 

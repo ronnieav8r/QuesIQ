@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+import {
+  deterministicBoolean,
+  deterministicIndex,
+  deterministicShuffle,
+} from "@/features/study/deterministic-shuffle";
+
 type StudyQuizCard = {
   answer: string;
   id: string;
@@ -55,15 +61,6 @@ type StudyQuizProps = {
 
 const LABELS = ["A", "B", "C", "D"] as const;
 
-function shuffle<T>(items: T[]) {
-  const next = [...items];
-  for (let index = next.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
-  }
-  return next;
-}
-
 function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
   if (typeof window === "undefined") {
     return null;
@@ -72,10 +69,11 @@ function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
   return maybe.SpeechRecognition ?? maybe.webkitSpeechRecognition ?? null;
 }
 
-function buildQuestions(activeCards: StudyQuizCard[], allCards: StudyQuizCard[]) {
-  return shuffle(activeCards).map((card) => {
-    const distractors = shuffle(
+function buildQuestions(activeCards: StudyQuizCard[], allCards: StudyQuizCard[], seed: string) {
+  return deterministicShuffle(activeCards, `${seed}:cards`).map((card) => {
+    const distractors = deterministicShuffle(
       allCards.filter((candidate) => candidate.id !== card.id).map((candidate) => candidate.answer),
+      `${seed}:choices:${card.id}`,
     ).slice(0, 3);
     const choices = [card.answer, ...distractors].slice(0, 4).sort((a, b) => a.localeCompare(b));
     return {
@@ -87,9 +85,9 @@ function buildQuestions(activeCards: StudyQuizCard[], allCards: StudyQuizCard[])
   });
 }
 
-function buildTrueFalseQuestions(activeCards: StudyQuizCard[], allCards: StudyQuizCard[]) {
-  return shuffle(activeCards).map((card) => {
-    const showTrue = Math.random() < 0.5;
+function buildTrueFalseQuestions(activeCards: StudyQuizCard[], allCards: StudyQuizCard[], seed: string) {
+  return deterministicShuffle(activeCards, `${seed}:cards`).map((card) => {
+    const showTrue = deterministicBoolean(`${seed}:truefalse:${card.id}`);
     if (showTrue) {
       return {
         card,
@@ -111,7 +109,7 @@ function buildTrueFalseQuestions(activeCards: StudyQuizCard[], allCards: StudyQu
       }
     }
     const foilPool = allCards.filter((candidate) => candidate.id !== card.id);
-    const foil = foilPool[Math.floor(Math.random() * foilPool.length)];
+    const foil = foilPool[deterministicIndex(foilPool.length, `${seed}:foil:${card.id}`)];
     return {
       card,
       correctIndex: 1 as const,
@@ -126,10 +124,11 @@ function buildQuizQuestions(
   mode: "quiz" | "truefalse",
   activeCards: StudyQuizCard[],
   allCards: StudyQuizCard[],
+  seed: string,
 ) {
   return mode === "truefalse"
-    ? (buildTrueFalseQuestions(activeCards, allCards) as QuizQuestion[])
-    : (buildQuestions(activeCards, allCards) as QuizQuestion[]);
+    ? (buildTrueFalseQuestions(activeCards, allCards, seed) as QuizQuestion[])
+    : (buildQuestions(activeCards, allCards, seed) as QuizQuestion[]);
 }
 
 function buildPromptText(question: QuizQuestion, index: number, total: number) {
@@ -163,7 +162,7 @@ function ttsPayload(question: QuizQuestion, index: number, total: number) {
 
 export function StudyQuiz({ activeCards, allCards, deckId, filter, handsFree, mode = "quiz", srs }: StudyQuizProps) {
   const [questions, setQuestions] = useState<QuizQuestion[]>(() =>
-    buildQuizQuestions(mode, activeCards, allCards),
+    buildQuizQuestions(mode, activeCards, allCards, `quiz:${deckId}:${mode}`),
   );
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<"answering" | "feedback" | "speaking" | "start" | "summary">(
@@ -173,7 +172,7 @@ export function StudyQuiz({ activeCards, allCards, deckId, filter, handsFree, mo
   const [results, setResults] = useState<Record<string, "correct" | "missed">>({});
   const [heard, setHeard] = useState("");
   const [usePremiumTts, setUsePremiumTts] = useState(false);
-  const [micSupported] = useState(() => Boolean(getSpeechRecognitionCtor()));
+  const [micSupported, setMicSupported] = useState(false);
   const sessionIdRef = useRef<string | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const prefetchedAudioRef = useRef<Map<number, string>>(new Map());
@@ -181,8 +180,12 @@ export function StudyQuiz({ activeCards, allCards, deckId, filter, handsFree, mo
   const total = questions.length;
 
   useEffect(() => {
+    const supportTimeout = window.setTimeout(() => {
+      setMicSupported(Boolean(getSpeechRecognitionCtor()));
+    }, 0);
     const prefetchedAudio = prefetchedAudioRef.current;
     return () => {
+      window.clearTimeout(supportTimeout);
       recognitionRef.current?.stop();
       window.speechSynthesis.cancel();
       prefetchedAudio.forEach((url) => URL.revokeObjectURL(url));
@@ -422,7 +425,7 @@ export function StudyQuiz({ activeCards, allCards, deckId, filter, handsFree, mo
   function restart() {
     prefetchedAudioRef.current.forEach((url) => URL.revokeObjectURL(url));
     prefetchedAudioRef.current.clear();
-    setQuestions(buildQuizQuestions(mode, activeCards, allCards));
+    setQuestions(buildQuizQuestions(mode, activeCards, allCards, `quiz:${deckId}:${mode}:restart:${Date.now()}`));
     setIndex(0);
     setPhase(handsFree ? "start" : "answering");
     setSelected(null);

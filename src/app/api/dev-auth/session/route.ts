@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import {
   devAuthCookieName,
   devAuthUsers,
+  getDevAuthUser,
   getDevAuthSession,
   isDevAuthBypassEnabled,
   normalizeDevAuthRole,
@@ -30,6 +31,10 @@ async function ensureDevAuthUserTable() {
 }
 
 async function ensureDevAuthUser(role: DevAuthRole) {
+  if (role === "e2e-admin") {
+    return;
+  }
+
   const devUser = devAuthUsers[role];
 
   await ensureDevAuthUserTable();
@@ -75,6 +80,11 @@ export async function POST(request: NextRequest) {
 
   let seeded = true;
   let seedError: string | undefined;
+  const user = await getDevAuthUser(role);
+
+  if (!user) {
+    return NextResponse.json({ error: "Dev auth user is unavailable." }, { status: 404 });
+  }
 
   try {
     await ensureDevAuthUser(role);
@@ -88,7 +98,7 @@ export async function POST(request: NextRequest) {
     ok: true,
     seedError,
     seeded,
-    user: devAuthUsers[role],
+    user,
   });
 
   response.cookies.set(devAuthCookieName, role, {

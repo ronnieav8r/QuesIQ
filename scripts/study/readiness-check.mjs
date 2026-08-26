@@ -66,11 +66,17 @@ const requiredFiles = [
   "src/app/api/study/stacks/route.ts",
   "src/app/api/study/stacks/[stackId]/route.ts",
   "src/app/api/study/stacks/[stackId]/items/route.ts",
+  "src/app/api/study/decks/[deckId]/card-feedback/route.ts",
   "src/app/api/admin/study/rich-csv-import/route.ts",
   "drizzle/0079_add_study_deck_stacks.sql",
+  "drizzle/0087_add_study_card_feedback.sql",
   "src/server/study/study-answer-evaluator.ts",
   "src/server/study/study-rich-flashcard-import.ts",
   "src/features/admin/study-admin-csv-import.tsx",
+  "playwright.interview-study.config.ts",
+  "scripts/test/interview-study-regression.ts",
+  "scripts/test/interview-study-services.ts",
+  "tests/interview-study/study-regression.spec.ts",
   "scripts/study/evaluate-smoke.ts",
   "scripts/study/rich-csv-import-smoke.ts",
   "docs/products/study/README.md",
@@ -118,6 +124,28 @@ if (exists("src/app/api/study/stacks/[stackId]/items/route.ts")) {
   checkPattern(route, /addDeckToStudyStack/, "Study stack item add route wired", true);
   checkPattern(route, /removeDeckFromStudyStack/, "Study stack item remove route wired", true);
   checkPattern(route, /reorderStudyStackDecks/, "Study stack item reorder route wired", true);
+}
+
+if (exists("src/app/api/study/decks/[deckId]/card-feedback/route.ts")) {
+  const route = read("src/app/api/study/decks/[deckId]/card-feedback/route.ts");
+  checkPattern(route, /recordStudyCardFeedback/, "Study card feedback route persists card-specific feedback", true);
+  checkPattern(route, /feedbackType/, "Study card feedback route validates feedback type", true);
+  checkPattern(route, /require|auth\(/, "Study card feedback route is auth gated", true);
+}
+
+if (exists("tests/interview-study/study-regression.spec.ts")) {
+  const e2e = read("tests/interview-study/study-regression.spec.ts");
+  checkPattern(e2e, /visual flashcards flip both ways/, "Study browser regression covers flip-back behavior", true);
+  checkPattern(e2e, /Flag issue/, "Study browser regression covers factual issue feedback", true);
+  checkPattern(e2e, /study\/stacks\/.*study\/memorize/, "Study browser regression covers stack memorize path", true);
+}
+
+if (exists("package.json")) {
+  const pkg = read("package.json");
+  checkPattern(pkg, /test:interview-study:static/, "Interview + Study static test command present", true);
+  checkPattern(pkg, /test:interview-study:services/, "Interview + Study service test command present", true);
+  checkPattern(pkg, /test:interview-study:e2e/, "Interview + Study e2e test command present", true);
+  checkPattern(pkg, /test:interview-study:all/, "Interview + Study all-up test command present", true);
 }
 
 if (exists("src/server/study/study-rich-flashcard-import.ts")) {

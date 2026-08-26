@@ -29,6 +29,17 @@ Last updated: 2026-06-21
     imported deck-facing cards linked to canonical cards and marked Verified,
     0 expert-reviewed claims
   - Study `Memorize` listening mode exists for decks and stacks
+- Interview + Study local regression gate:
+  - canonical guide:
+    `docs/rebuild/INTERVIEW_STUDY_REGRESSION.md`
+  - command family:
+    `test:interview-study:static`, `test:interview-study:services`,
+    `test:interview-study:e2e`, `test:interview-study:live-ai`, and
+    `test:interview-study:all`
+  - E2E uses an isolated server on `http://127.0.0.1:3210`, desktop Chromium
+    plus Pixel-sized mobile, deterministic `[TEST_DELETE]` Interview/Study
+    seed data, mocked AI/TTS/media by default, and artifacts under
+    `artifacts/interview-study-regression/`
 - Setup fixes already pushed:
   - `drizzle/meta/_journal.json` includes migrations `0085` and `0086`
   - `npm run study:import-canonical` loads `.env.local`
@@ -42,6 +53,15 @@ Last updated: 2026-06-21
   - direct DB count readback for canonical cards, memberships, healthcare decks,
     public/official decks, and linked Verified deck-facing cards
   - Study library/deck/session route checks
+  - `npm run test:interview-study:all`
+    - Interview readiness: 40 pass, 3 expected warnings, 0 fail
+    - Study readiness: 85 pass, 3 expected warnings, 0 fail
+    - TypeScript and ESLint passed
+    - seeded DB service checks passed
+    - Playwright desktop/mobile matrix passed: 14 tests
+  - `npm run test:interview-study:live-ai`
+    - live Interview turn-based smoke passed through the test-tunnel key
+    - live Study evaluator smoke passed through the accepted test key path
 - Current blocker/gap for the next builder: the imported healthcare Study stack
   renders but took about 26 seconds locally. Optimize large stack loading before
   production import/release.

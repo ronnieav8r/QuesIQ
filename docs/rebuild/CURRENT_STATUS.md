@@ -32,9 +32,16 @@ Last updated: 2026-06-21
   - Drizzle journal now includes `0085_add_dpe_content_model_v2` and
     `0086_add_study_canonical_import_model`.
   - `npm run study:import-canonical` loads `.env.local`.
+- Interview + Study regression coverage is now implemented and documented at
+  `docs/rebuild/INTERVIEW_STUDY_REGRESSION.md`. The local gate is
+  `npm run test:interview-study:all`; it runs readiness checks, typecheck, lint,
+  seeded DB-backed service checks, and desktop/mobile Playwright E2E on isolated
+  port 3210. The opt-in live model smoke is
+  `npm run test:interview-study:live-ai`.
 - Recent checks: `npm run typecheck`, `npm run lint`, `npm run readiness:dpe`,
   `npm run readiness:study`, canonical import dry-run/import, DB count readback,
-  and sample Study UI route checks.
+  sample Study UI route checks, `npm run test:interview-study:all`, and
+  `npm run test:interview-study:live-ai`.
 
 Current next local work: optimize and QA the imported healthcare Study stack,
 then plan any production import/release separately with explicit confirmation

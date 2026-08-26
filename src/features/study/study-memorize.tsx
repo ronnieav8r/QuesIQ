@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw, SkipBack, SkipForward, Volume2 } from "lucide-react";
 
+import { deterministicShuffle } from "@/features/study/deterministic-shuffle";
 import { StudyCardBack, type StudyCardSourceForBack } from "@/features/study/study-card-back";
 
 type StudyMemorizeCard = {
@@ -29,15 +30,6 @@ type StudyMemorizeProps = {
 type MemorizeStatus = "complete" | "error" | "idle" | "loading" | "paused" | "speaking";
 
 const SPEEDS = [0.85, 1, 1.15, 1.3];
-
-function shuffle<T>(items: T[]) {
-  const next = [...items];
-  for (let index = next.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
-  }
-  return next;
-}
 
 function cleanSpokenText(text: string, maxLength = 700) {
   return text
@@ -69,7 +61,9 @@ export function StudyMemorize({
   filter,
   order = "random",
 }: StudyMemorizeProps) {
-  const [deck] = useState(() => (order === "ordered" ? cards : shuffle(cards)));
+  const [deck] = useState(() =>
+    order === "ordered" ? cards : deterministicShuffle(cards, `memorize:${deckId}`),
+  );
   const [index, setIndex] = useState(0);
   const [status, setStatus] = useState<MemorizeStatus>("idle");
   const [error, setError] = useState("");

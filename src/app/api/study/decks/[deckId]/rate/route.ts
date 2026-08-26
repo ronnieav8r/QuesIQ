@@ -36,7 +36,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = (await request.json()) as {
+  const body = (await request.json().catch(() => ({}))) as {
     aiFeedback?: string;
     cardId?: string;
     mode?: "quiz" | "truefalse" | "verbal" | "visual" | "written";
