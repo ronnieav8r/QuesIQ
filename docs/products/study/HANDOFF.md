@@ -49,9 +49,6 @@ Current Study UI state:
 - Study now has a passive listening `Memorize` mode for decks and stacks:
   `/study/decks/[deckId]/study/memorize` and
   `/study/stacks/[stackId]/study/memorize`.
-- The canonical local Interview + Study regression guide is
-  `docs/rebuild/INTERVIEW_STUDY_REGRESSION.md`. Use it before changing the
-  Study test harness or reporting full Study local QA status.
 
 Recent verification:
 
@@ -63,13 +60,6 @@ Recent verification:
 - Sample Study library/deck/session route checks
 - `npm run typecheck`
 - `npm run lint`
-- `npm run test:interview-study:all`
-  - static readiness/typecheck/lint passed
-  - seeded DB service checks passed
-  - Playwright desktop/mobile matrix passed with 14 tests
-- `npm run test:interview-study:live-ai`
-  - live Interview turn smoke passed
-  - live Study evaluator smoke passed
 
 ## V1 Readiness Quick Check (Non-Voice, Static)
 
@@ -77,16 +67,13 @@ Run these before Study V1 QA handoff:
 
 - `node scripts/study/readiness-check.mjs`
 - `node_modules/.bin/tsx scripts/study/rich-csv-import-smoke.ts --parse-only`
-- `npm run test:interview-study:all` for the full local Study + Interview
-  automated regression gate
 
 Interpretation:
 
 - readiness script fails only on blocker gaps in Study lane contract wiring
 - missing local `DATABASE_URL`, R2, and OpenAI env vars are warnings, not
   blockers
-- the full regression gate validates desktop/mobile browser behavior but still
-  does not validate real microphone hardware or live voice quality
+- this check does not validate browser/mobile visual QA or voice hardware
 
 ## Objective
 

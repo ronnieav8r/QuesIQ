@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 
-import { deterministicShuffle } from "@/features/study/deterministic-shuffle";
-
 type StudyTestCard = {
   answer: string;
   id: string;
@@ -26,11 +24,19 @@ type StudyTestProps = {
 
 const LABELS = ["A", "B", "C", "D"] as const;
 
-function buildQuestions(activeCards: StudyTestCard[], allCards: StudyTestCard[], seed: string) {
-  return deterministicShuffle(activeCards, `${seed}:cards`).map((card) => {
-    const pool = deterministicShuffle(
+function shuffle<T>(items: T[]) {
+  const next = [...items];
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+  }
+  return next;
+}
+
+function buildQuestions(activeCards: StudyTestCard[], allCards: StudyTestCard[]) {
+  return shuffle(activeCards).map((card) => {
+    const pool = shuffle(
       allCards.filter((candidate) => candidate.id !== card.id).map((candidate) => candidate.answer),
-      `${seed}:choices:${card.id}`,
     );
     const choices = [card.answer, ...pool.slice(0, 3)].sort((a, b) => a.localeCompare(b));
     return {
@@ -42,9 +48,7 @@ function buildQuestions(activeCards: StudyTestCard[], allCards: StudyTestCard[],
 }
 
 export function StudyTest({ activeCards, allCards, deckId, filter }: StudyTestProps) {
-  const [questions, setQuestions] = useState<MCQuestion[]>(() =>
-    buildQuestions(activeCards, allCards, `test:${deckId}`),
-  );
+  const [questions, setQuestions] = useState<MCQuestion[]>(() => buildQuestions(activeCards, allCards));
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Array<number | null>>(() => new Array(activeCards.length).fill(null));
   const [phase, setPhase] = useState<"answering" | "summary">("answering");
@@ -74,7 +78,7 @@ export function StudyTest({ activeCards, allCards, deckId, filter }: StudyTestPr
   }
 
   function restart() {
-    setQuestions(buildQuestions(activeCards, allCards, `test:${deckId}:restart:${Date.now()}`));
+    setQuestions(buildQuestions(activeCards, allCards));
     setAnswers(new Array(activeCards.length).fill(null));
     setIndex(0);
     setPhase("answering");

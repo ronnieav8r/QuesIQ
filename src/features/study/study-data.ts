@@ -4,7 +4,6 @@ import { getDb } from "@/server/db/client";
 import {
   studyAudienceTags,
   studyCardAttempts,
-  studyCardFeedback,
   studyCardSources,
   studyCards,
   studyDeckStackItems,
@@ -21,8 +20,6 @@ import { computeNextStudyReview, type StudyVerdict } from "@/features/study/stud
 
 export type StudyLevel = "advanced" | "beginner" | "intermediate";
 export type StudyLibraryScope = "all" | "mine" | "public";
-export type StudyCardFeedbackType = "accurate" | "issue";
-export type StudyCardFeedbackIssueType = "incorrect" | "other" | "source_issue" | "typo" | "unclear";
 export type StudyStackCardStats = {
   due: number;
   fluencyScore: number | null;
@@ -1337,52 +1334,6 @@ export async function rateStudyCard(data: {
   });
 
   return { nextReview: nextReview.dueAt, sessionId: activeSessionId };
-}
-
-export async function recordStudyCardFeedback(data: {
-  cardId: string;
-  deckId: string;
-  feedbackType: StudyCardFeedbackType;
-  issueType?: StudyCardFeedbackIssueType | null;
-  metadata?: Record<string, unknown>;
-  note?: string | null;
-  screen?: string | null;
-  userId: string;
-}) {
-  const [card] = await getDb()
-    .select({
-      canonicalCardId: studyCards.canonicalCardId,
-      deckId: studyCards.deckId,
-      id: studyCards.id,
-    })
-    .from(studyCards)
-    .where(and(eq(studyCards.id, data.cardId), eq(studyCards.deckId, data.deckId)))
-    .limit(1);
-
-  if (!card) {
-    return null;
-  }
-
-  const [feedback] = await getDb()
-    .insert(studyCardFeedback)
-    .values({
-      canonicalCardId: card.canonicalCardId,
-      cardId: card.id,
-      deckId: card.deckId,
-      feedbackType: data.feedbackType,
-      issueType: data.feedbackType === "issue" ? (data.issueType ?? null) : null,
-      metadata: data.metadata ?? {},
-      note: data.note?.trim() || null,
-      screen: data.screen?.trim() || null,
-      userId: data.userId,
-    })
-    .returning({
-      feedbackType: studyCardFeedback.feedbackType,
-      id: studyCardFeedback.id,
-      status: studyCardFeedback.status,
-    });
-
-  return feedback;
 }
 
 function computeStreak(dates: string[]) {

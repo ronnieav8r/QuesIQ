@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 
-import { deterministicShuffle } from "@/features/study/deterministic-shuffle";
 import { StudyCardBack, type StudyCardSourceForBack } from "@/features/study/study-card-back";
 import type { StudyVerdict } from "@/features/study/study-srs";
 
@@ -28,8 +27,17 @@ type Feedback = {
   verdict: StudyVerdict;
 };
 
+function shuffle<T>(items: T[]) {
+  const next = [...items];
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+  }
+  return next;
+}
+
 export function StudyWritten({ cards, deckId, filter, srs }: StudyWrittenProps) {
-  const [deck, setDeck] = useState(() => deterministicShuffle(cards, `written:${deckId}`));
+  const [deck, setDeck] = useState(() => shuffle(cards));
   const [index, setIndex] = useState(0);
   const [typed, setTyped] = useState("");
   const [phase, setPhase] = useState<"answering" | "evaluating" | "feedback" | "summary">("answering");
@@ -134,7 +142,7 @@ export function StudyWritten({ cards, deckId, filter, srs }: StudyWrittenProps) 
   }
 
   function restart() {
-    setDeck(deterministicShuffle(cards, `written:${deckId}:restart:${Date.now()}`));
+    setDeck(shuffle(cards));
     setIndex(0);
     setTyped("");
     setFeedback(null);

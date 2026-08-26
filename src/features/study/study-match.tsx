@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { deterministicShuffle } from "@/features/study/deterministic-shuffle";
 import type { StudyVerdict } from "@/features/study/study-srs";
 
 type StudyMatchCard = {
@@ -29,6 +28,15 @@ type StudyMatchProps = {
 
 const ROUND_SIZE = 6;
 
+function shuffle<T>(items: T[]) {
+  const next = [...items];
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+  }
+  return next;
+}
+
 function verdictFromMismatchCount(mismatches: number): StudyVerdict {
   if (mismatches === 0) {
     return "easy";
@@ -43,25 +51,23 @@ function verdictFromMismatchCount(mismatches: number): StudyVerdict {
 }
 
 export function StudyMatch({ cards, deckId, filter }: StudyMatchProps) {
-  const [orderedCards] = useState(() => deterministicShuffle(cards, `match:${deckId}:cards`));
+  const [orderedCards] = useState(() => shuffle(cards));
   const initialRoundCards = orderedCards.slice(0, ROUND_SIZE);
-  const initialQuestionTiles = deterministicShuffle(
+  const initialQuestionTiles = shuffle(
     initialRoundCards.map((card) => ({
       cardId: card.id,
       text: card.question,
       tileId: `q-${card.id}`,
       type: "question" as const,
     })),
-    `match:${deckId}:questions:0`,
   );
-  const initialAnswerTiles = deterministicShuffle(
+  const initialAnswerTiles = shuffle(
     initialRoundCards.map((card) => ({
       cardId: card.id,
       text: card.answer,
       tileId: `a-${card.id}`,
       type: "answer" as const,
     })),
-    `match:${deckId}:answers:0`,
   );
   const initialTiles = [...initialQuestionTiles, ...initialAnswerTiles];
   const initialTileMap = new Map(initialTiles.map((tile) => [tile.tileId, tile]));
@@ -92,23 +98,21 @@ export function StudyMatch({ cards, deckId, filter }: StudyMatchProps) {
   const buildRound = useCallback(
     (index: number) => {
       const roundCards = getRoundCards(index);
-      const nextQuestions = deterministicShuffle(
+      const nextQuestions = shuffle(
         roundCards.map((card) => ({
           cardId: card.id,
           text: card.question,
           tileId: `q-${card.id}`,
           type: "question" as const,
         })),
-        `match:${deckId}:questions:${index}`,
       );
-      const nextAnswers = deterministicShuffle(
+      const nextAnswers = shuffle(
         roundCards.map((card) => ({
           cardId: card.id,
           text: card.answer,
           tileId: `a-${card.id}`,
           type: "answer" as const,
         })),
-        `match:${deckId}:answers:${index}`,
       );
       const allTiles = [...nextQuestions, ...nextAnswers];
       const nextStates: Record<string, TileState> = {};
@@ -126,7 +130,7 @@ export function StudyMatch({ cards, deckId, filter }: StudyMatchProps) {
       mismatchRef.current = {};
       lockedRef.current = false;
     },
-    [deckId, getRoundCards],
+    [getRoundCards],
   );
 
   useEffect(() => {

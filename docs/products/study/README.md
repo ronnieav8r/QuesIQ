@@ -166,12 +166,6 @@ The first Study slice is imported:
   disposable rows. The smoke accepts `OPENAI_STUDY_TEST_TUNNEL_API_KEY`,
   `OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY`, `OPENAI_STUDY_API_KEY`, or
   `OPENAI_API_KEY`, without printing secrets.
-- full Interview + Study local regression coverage is documented in
-  `docs/rebuild/INTERVIEW_STUDY_REGRESSION.md`. Run
-  `npm run test:interview-study:all` for static checks, deterministic seeded
-  DB service checks, and desktop/mobile Playwright coverage. Run
-  `npm run test:interview-study:live-ai` only when intentionally exercising
-  live model-backed Interview and Study smoke paths with accepted test keys.
 - canonical Study packet import coverage is available with
   `npm run study:import-canonical -- --dry-run`.
   The canonical importer reads a canonical card CSV plus a deck-membership CSV,
@@ -278,13 +272,6 @@ hardware, run:
 - `node_modules/.bin/tsx scripts/study/rich-csv-import-smoke.ts --parse-only`
 - `npm run smoke:study` when local Postgres/migrations and an accepted test key
   are available
-
-For the current full local Study regression path, use
-`docs/rebuild/INTERVIEW_STUDY_REGRESSION.md` and run:
-
-- `npm run test:interview-study:all`
-- `npm run test:interview-study:live-ai` when live test keys are intentionally
-  available
 
 Readiness check behavior:
 

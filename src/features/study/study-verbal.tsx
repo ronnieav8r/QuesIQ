@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { deterministicShuffle } from "@/features/study/deterministic-shuffle";
 import { StudyCardBack, type StudyCardSourceForBack } from "@/features/study/study-card-back";
 import type { StudyVerdict } from "@/features/study/study-srs";
 
@@ -62,6 +61,15 @@ const VERDICT_LABELS: Record<StudyVerdict, string> = {
   missed: "Missed",
 };
 
+function shuffle<T>(items: T[]) {
+  const next = [...items];
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+  }
+  return next;
+}
+
 function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
   if (typeof window === "undefined") {
     return null;
@@ -87,7 +95,32 @@ export function StudyVerbal({
   visualHref,
 }: StudyVerbalProps) {
   const resumeKey = `quesiq-study-verbal-session-${deckId}`;
-  const [deck, setDeck] = useState(() => deterministicShuffle(cards, `verbal:${deckId}`));
+  const [deck, setDeck] = useState(() => {
+    if (resume && typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem(resumeKey);
+        const saved = raw
+          ? (JSON.parse(raw) as {
+              orderedIds?: string[];
+              ratedCount?: number;
+            })
+          : null;
+        if (saved?.orderedIds && typeof saved.ratedCount === "number") {
+          const cardMap = new Map(cards.map((currentCard) => [currentCard.id, currentCard]));
+          const remaining = saved.orderedIds
+            .slice(saved.ratedCount)
+            .map((id) => cardMap.get(id))
+            .filter((currentCard): currentCard is StudyVerbalCard => Boolean(currentCard));
+          if (remaining.length > 0) {
+            return remaining;
+          }
+        }
+      } catch {
+        // Ignore broken saved verbal sessions.
+      }
+    }
+    return shuffle(cards);
+  });
   const [mode, setMode] = useState<"handsfree" | "manual">(hf ? "handsfree" : "manual");
   const [phase, setPhase] = useState<VerbalPhase>("start");
   const [silenceMs, setSilenceMs] = useState(1500);
@@ -100,7 +133,7 @@ export function StudyVerbal({
   const [error, setError] = useState<string>("");
   const [countdown, setCountdown] = useState<number | null>(null);
   const [handsFreeStatus, setHandsFreeStatus] = useState<HandsFreeStatus>("idle");
-  const [supported, setSupported] = useState(false);
+  const [supported] = useState(() => Boolean(getSpeechRecognitionCtor()));
   const sessionIdRef = useRef<string | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -113,42 +146,6 @@ export function StudyVerbal({
 
   const card = deck[index];
   const handsFree = mode === "handsfree";
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      setSupported(Boolean(getSpeechRecognitionCtor()));
-    }, 0);
-
-    return () => window.clearTimeout(timeout);
-  }, []);
-
-  useEffect(() => {
-    if (!resume) {
-      return;
-    }
-
-    try {
-      const raw = window.localStorage.getItem(resumeKey);
-      const saved = raw
-        ? (JSON.parse(raw) as {
-            orderedIds?: string[];
-            ratedCount?: number;
-          })
-        : null;
-      if (saved?.orderedIds && typeof saved.ratedCount === "number") {
-        const cardMap = new Map(cards.map((currentCard) => [currentCard.id, currentCard]));
-        const remaining = saved.orderedIds
-          .slice(saved.ratedCount)
-          .map((id) => cardMap.get(id))
-          .filter((currentCard): currentCard is StudyVerbalCard => Boolean(currentCard));
-        if (remaining.length > 0) {
-          window.setTimeout(() => setDeck(remaining), 0);
-        }
-      }
-    } catch {
-      // Ignore broken saved verbal sessions.
-    }
-  }, [cards, resume, resumeKey]);
 
   const saveVerbalSession = useCallback(
     (orderedIds: string[], ratedCount: number) => {
@@ -547,7 +544,7 @@ export function StudyVerbal({
   function restart() {
     stopRatingCountdown();
     ratingActiveRef.current = false;
-    const nextDeck = deterministicShuffle(cards, `verbal:${deckId}:restart:${Date.now()}`);
+    const nextDeck = shuffle(cards);
     setDeck(nextDeck);
     setIndex(0);
     setTyped("");

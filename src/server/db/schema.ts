@@ -1817,42 +1817,6 @@ export const studyCardAttempts = pgTable("study_card_attempts", {
   verdict: text("verdict").$type<"again" | "almost" | "correct" | "easy" | "good" | "hard" | "missed">(),
 });
 
-export const studyCardFeedback = pgTable(
-  "study_card_feedback",
-  {
-    canonicalCardId: uuid("canonical_card_id").references(() => studyCanonicalCards.id, {
-      onDelete: "set null",
-    }),
-    cardId: uuid("card_id")
-      .notNull()
-      .references(() => studyCards.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    deckId: uuid("deck_id")
-      .notNull()
-      .references(() => studyDecks.id, { onDelete: "cascade" }),
-    feedbackType: text("feedback_type").$type<"accurate" | "issue">().notNull(),
-    id: uuid("id").defaultRandom().primaryKey(),
-    issueType: text("issue_type").$type<"incorrect" | "other" | "source_issue" | "typo" | "unclear">(),
-    metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}).notNull(),
-    note: text("note"),
-    screen: text("screen"),
-    status: text("status").$type<"new" | "reviewed" | "resolved">().default("new").notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-  },
-  (feedback) => ({
-    cardStatusIdx: index("study_card_feedback_card_status_idx").on(
-      feedback.cardId,
-      feedback.status,
-    ),
-    createdAtIdx: index("study_card_feedback_created_at_idx").on(feedback.createdAt),
-    deckIdx: index("study_card_feedback_deck_idx").on(feedback.deckId),
-    userIdx: index("study_card_feedback_user_idx").on(feedback.userId),
-  }),
-);
-
 export const studyProgressionEvents = pgTable(
   "study_progression_events",
   {

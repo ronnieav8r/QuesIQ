@@ -1,10 +1,8 @@
 "use client";
 
-import { Check, Send, X } from "lucide-react";
 import Link from "next/link";
-import { type KeyboardEvent, type MouseEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { deterministicShuffle } from "@/features/study/deterministic-shuffle";
 import { StudyCardBack, type StudyCardSourceForBack } from "@/features/study/study-card-back";
 import type { StudyVerdict } from "@/features/study/study-srs";
 
@@ -39,17 +37,18 @@ type SavedSession = {
   startedAt: number;
 };
 
-type FeedbackIssueType = "incorrect" | "other" | "source_issue" | "typo" | "unclear";
-
-const feedbackIssueOptions: Array<{ label: string; value: FeedbackIssueType }> = [
-  { label: "Incorrect", value: "incorrect" },
-  { label: "Unclear", value: "unclear" },
-  { label: "Source issue", value: "source_issue" },
-  { label: "Typo", value: "typo" },
-  { label: "Other", value: "other" },
-];
-
 const sessionKey = (deckId: string) => `quesiq-study-session-${deckId}`;
+
+function shuffle<T>(items: T[]) {
+  const next = [...items];
+
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+  }
+
+  return next;
+}
 
 export function StudyVisual({
   backHref,
@@ -64,46 +63,36 @@ export function StudyVisual({
 }: StudyVisualProps) {
   const sessionScopeId = collectionId ?? deckId;
   const [deck, setDeck] = useState<StudyVisualCard[]>(() => {
-    return order === "random" ? deterministicShuffle(cards, `visual:${sessionScopeId}`) : cards;
+    if (resume && typeof window !== "undefined") {
+      try {
+        const saved = JSON.parse(
+          window.localStorage.getItem(sessionKey(sessionScopeId)) ?? "null",
+        ) as SavedSession | null;
+
+        if (saved?.orderedIds && typeof saved.ratedCount === "number") {
+          const cardMap = new Map(cards.map((card) => [card.id, card]));
+          const remaining = saved.orderedIds
+            .slice(saved.ratedCount)
+            .map((id) => cardMap.get(id))
+            .filter((card): card is StudyVisualCard => Boolean(card));
+
+          if (remaining.length > 0) {
+            return remaining;
+          }
+        }
+      } catch {
+        // Ignore invalid saved sessions.
+      }
+    }
+
+    return order === "random" ? shuffle(cards) : cards;
   });
   const [flipped, setFlipped] = useState(false);
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<"studying" | "summary">("studying");
   const [ratings, setRatings] = useState<Record<string, StudyVerdict>>({});
   const [selfRate, setSelfRate] = useState(false);
-  const [feedbackByCardId, setFeedbackByCardId] = useState<Record<string, string>>({});
-  const [feedbackError, setFeedbackError] = useState<string | null>(null);
-  const [feedbackSaving, setFeedbackSaving] = useState<"accurate" | "issue" | null>(null);
-  const [issueNote, setIssueNote] = useState("");
-  const [issueOpen, setIssueOpen] = useState(false);
-  const [issueType, setIssueType] = useState<FeedbackIssueType>("incorrect");
   const sessionIdRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!resume) {
-      return;
-    }
-
-    try {
-      const saved = JSON.parse(
-        window.localStorage.getItem(sessionKey(sessionScopeId)) ?? "null",
-      ) as SavedSession | null;
-
-      if (saved?.orderedIds && typeof saved.ratedCount === "number") {
-        const cardMap = new Map(cards.map((savedCard) => [savedCard.id, savedCard]));
-        const remaining = saved.orderedIds
-          .slice(saved.ratedCount)
-          .map((id) => cardMap.get(id))
-          .filter((savedCard): savedCard is StudyVisualCard => Boolean(savedCard));
-
-        if (remaining.length > 0) {
-          window.setTimeout(() => setDeck(remaining), 0);
-        }
-      }
-    } catch {
-      // Ignore invalid saved sessions.
-    }
-  }, [cards, resume, sessionScopeId]);
 
   useEffect(() => {
     if (resume) {
@@ -150,8 +139,6 @@ export function StudyVisual({
   function rate(verdict: StudyVerdict) {
     recordRate(card.id, verdict);
     setRatings((current) => ({ ...current, [card.id]: verdict }));
-    setFeedbackError(null);
-    setIssueOpen(false);
 
     const willRequeue = srs && (verdict === "again" || verdict === "missed");
 
@@ -189,86 +176,9 @@ export function StudyVisual({
     setFlipped(false);
   }
 
-  function showQuestionFromAnswer(event: MouseEvent<HTMLDivElement>) {
-    const target = event.target as HTMLElement | null;
-    const selectedText = typeof window !== "undefined" ? window.getSelection()?.toString() : "";
-
-    if (selectedText?.trim()) {
-      return;
-    }
-
-    if (target?.closest("a, button, input, label, select, textarea")) {
-      return;
-    }
-
-    setFlipped(false);
-  }
-
-  function showQuestionFromAnswerKey(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.target !== event.currentTarget) {
-      return;
-    }
-
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      setFlipped(false);
-    }
-  }
-
-  async function submitCardFeedback(feedbackType: "accurate" | "issue") {
-    const feedbackDeckId = card.deckId ?? deckId;
-    setFeedbackError(null);
-    setFeedbackSaving(feedbackType);
-
-    try {
-      const response = await fetch(`/api/study/decks/${feedbackDeckId}/card-feedback`, {
-        body: JSON.stringify({
-          cardId: card.id,
-          feedbackType,
-          issueType: feedbackType === "issue" ? issueType : undefined,
-          metadata: {
-            answer: card.answer,
-            collectionId,
-            question: card.question,
-            sessionScopeId,
-            url: typeof window !== "undefined" ? window.location.pathname : undefined,
-          },
-          note: feedbackType === "issue" ? issueNote : undefined,
-          screen: "study_visual",
-        }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      });
-
-      if (response.status === 401) {
-        setFeedbackError("Sign in to save card feedback.");
-        return;
-      }
-
-      if (!response.ok) {
-        setFeedbackError("Feedback could not be saved.");
-        return;
-      }
-
-      setFeedbackByCardId((current) => ({
-        ...current,
-        [card.id]:
-          feedbackType === "accurate"
-            ? "Marked accurate."
-            : "Issue sent for review.",
-      }));
-      setIssueNote("");
-      setIssueOpen(false);
-    } catch {
-      setFeedbackError("Feedback could not be saved.");
-    } finally {
-      setFeedbackSaving(null);
-    }
-  }
-
   function restart() {
     sessionIdRef.current = null;
-    const freshDeck = order === "random" ? deterministicShuffle(cards, `visual:${sessionScopeId}:restart:${Date.now()}`) : cards;
+    const freshDeck = order === "random" ? shuffle(cards) : cards;
     const session: SavedSession = {
       deckId: sessionScopeId,
       filter: filter ?? "all",
@@ -281,9 +191,6 @@ export function StudyVisual({
     window.localStorage.setItem(sessionKey(sessionScopeId), JSON.stringify(session));
     setDeck(freshDeck);
     setFlipped(false);
-    setFeedbackError(null);
-    setIssueNote("");
-    setIssueOpen(false);
     setIndex(0);
     setPhase("studying");
     setRatings({});
@@ -355,14 +262,7 @@ export function StudyVisual({
       </div>
 
       {flipped ? (
-        <div
-          aria-label="Answer. Press to show question"
-          className="study-flip-card flipped"
-          onClick={showQuestionFromAnswer}
-          onKeyDown={showQuestionFromAnswerKey}
-          role="button"
-          tabIndex={0}
-        >
+        <div className="study-flip-card flipped">
           <span className="study-card-label">Answer</span>
           <StudyCardBack
             answer={card.answer}
@@ -370,7 +270,6 @@ export function StudyVisual({
             sources={card.sources}
           />
           {card.hint && <span className="study-card-hint">{card.hint}</span>}
-          <span className="study-card-tap">Tap to show question</span>
         </div>
       ) : (
         <button className="study-flip-card" onClick={() => setFlipped(true)} type="button">
@@ -378,120 +277,6 @@ export function StudyVisual({
           <span className="study-card-text">{card.question}</span>
           <span className="study-card-tap">Tap to reveal answer</span>
         </button>
-      )}
-
-      {flipped && (
-        <div className="study-card-feedback" aria-label="Card accuracy feedback">
-          <div className="study-card-feedback__copy">
-            <span>Was this card accurate?</span>
-            <small>This is separate from your study rating.</small>
-          </div>
-          <div className="study-card-feedback__actions">
-            <button
-              className="secondary study-card-feedback__button study-card-feedback__button--accurate"
-              disabled={feedbackSaving !== null}
-              onClick={() => void submitCardFeedback("accurate")}
-              type="button"
-            >
-              <Check size={16} aria-hidden="true" />
-              Accurate
-            </button>
-            <button
-              className="secondary study-card-feedback__button study-card-feedback__button--issue"
-              disabled={feedbackSaving !== null}
-              onClick={() => setIssueOpen(true)}
-              type="button"
-            >
-              <X size={16} aria-hidden="true" />
-              Flag issue
-            </button>
-          </div>
-          {feedbackByCardId[card.id] && (
-            <small className="study-card-feedback__status">{feedbackByCardId[card.id]}</small>
-          )}
-          {feedbackError && (
-            <small className="study-card-feedback__error" role="alert">
-              {feedbackError}
-            </small>
-          )}
-        </div>
-      )}
-
-      {issueOpen && (
-        <div
-          className="study-feedback-overlay"
-          onClick={() => {
-            if (feedbackSaving === null) {
-              setIssueOpen(false);
-            }
-          }}
-          role="presentation"
-        >
-          <div
-            aria-labelledby="study-feedback-title"
-            aria-modal="true"
-            className="study-feedback-dialog"
-            onClick={(event) => event.stopPropagation()}
-            role="dialog"
-          >
-            <div className="study-feedback-dialog__header">
-              <div>
-                <h2 id="study-feedback-title">Flag Card Issue</h2>
-                <p>Tell us what looks wrong or unsupported.</p>
-              </div>
-              <button
-                aria-label="Close issue feedback"
-                className="secondary icon-button"
-                disabled={feedbackSaving !== null}
-                onClick={() => setIssueOpen(false)}
-                type="button"
-              >
-                <X size={16} aria-hidden="true" />
-              </button>
-            </div>
-            <div className="study-feedback-issue-grid" aria-label="Issue type">
-              {feedbackIssueOptions.map((option) => (
-                <button
-                  className={issueType === option.value ? "active" : undefined}
-                  key={option.value}
-                  onClick={() => setIssueType(option.value)}
-                  type="button"
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            <label className="study-feedback-note">
-              <span>Context</span>
-              <textarea
-                maxLength={1500}
-                onChange={(event) => setIssueNote(event.target.value)}
-                placeholder="What should be corrected or checked?"
-                rows={5}
-                value={issueNote}
-              />
-            </label>
-            <div className="study-feedback-dialog__actions">
-              <button
-                className="secondary"
-                disabled={feedbackSaving !== null}
-                onClick={() => setIssueOpen(false)}
-                type="button"
-              >
-                Cancel
-              </button>
-              <button
-                className="button-link"
-                disabled={feedbackSaving !== null}
-                onClick={() => void submitCardFeedback("issue")}
-                type="button"
-              >
-                <Send size={16} aria-hidden="true" />
-                {feedbackSaving === "issue" ? "Sending..." : "Send issue"}
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       <div className={flipped ? "study-ratings visible" : "study-ratings"} aria-hidden={!flipped}>
