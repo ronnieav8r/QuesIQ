@@ -30,6 +30,10 @@ export function isDevAuthBypassEnabled() {
   return enabledValues.has((process.env.DEV_AUTH_BYPASS_ENABLED || "").trim().toLowerCase());
 }
 
+export function isLocalInterviewAutoEntryEnabled() {
+  return process.env.NODE_ENV !== "production" && isDevAuthBypassEnabled();
+}
+
 function isE2ETestMode() {
   return enabledValues.has((process.env.E2E_TEST_MODE || "").trim().toLowerCase());
 }

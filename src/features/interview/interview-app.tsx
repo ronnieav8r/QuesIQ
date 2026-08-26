@@ -57,7 +57,11 @@ const appTabs: { Icon: LucideIcon; key: AppView; label: string }[] = [
   { Icon: HistoryIcon, key: "history", label: "History" },
 ];
 
-export default function Home() {
+export default function InterviewApp({
+  autoDevAuthEnabled = false,
+}: {
+  autoDevAuthEnabled?: boolean;
+}) {
   const [activeView, setActiveView] = useState<AppView>("home");
   const [practiceStep, setPracticeStep] = useState<PracticeStep>("mode");
   const [selectedModeKey, setSelectedModeKey] = useState<PracticeMode["key"]>();
@@ -87,7 +91,9 @@ export default function Home() {
 
     return window.localStorage.getItem("quesiq:nav-collapsed") === "true";
   });
-  const authSession = useAuthSession();
+  const authSession = useAuthSession({
+    autoDevRole: autoDevAuthEnabled ? "admin" : undefined,
+  });
   const signedIn = Boolean(authSession?.user);
   const interviewCatalog = useInterviewCatalog();
   const { interviewStyles, practiceModes, questionTypes } = interviewCatalog.catalog;

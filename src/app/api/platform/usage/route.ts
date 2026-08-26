@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
   }
 
-  const input = parseProductUsageInput(await request.json());
+  const input = parseProductUsageInput(await request.json().catch(() => undefined));
 
   if (!input) {
     return NextResponse.json({ error: "Valid product usage data is required." }, { status: 400 });

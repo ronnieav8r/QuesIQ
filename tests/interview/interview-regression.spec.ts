@@ -36,6 +36,18 @@ test.afterEach(async ({ page }, testInfo) => {
   await expectNoBrowserErrors(page, testInfo);
 });
 
+test("Local root opens Interview and establishes dev access without login", async ({
+  context,
+  page,
+}) => {
+  await context.clearCookies();
+  await page.goto("/");
+
+  await expect(page).toHaveURL(/\/interview$/);
+  await expect(page.getByRole("heading", { name: "Practice interviews out loud." })).toBeVisible();
+  await expect(page.locator("body")).not.toContainText("Sign in to QuesIQ");
+});
+
 test("Interview shell, practice setup, Story Lab, history, and Me render", async ({ page }) => {
   await page.goto("/interview");
   await expect(page.getByRole("heading", { name: "Practice interviews out loud." })).toBeVisible();

@@ -107,6 +107,7 @@ tests/interview/interview-regression.spec.ts
 
 It verifies:
 
+- local root-to-Interview automatic dev entry without OAuth or a login screen
 - authenticated Interview shell navigation
 - Coaching, Rapid Fire, Mock Interview, and Hands-Free setup cards
 - Story Lab, History, and Me rendering

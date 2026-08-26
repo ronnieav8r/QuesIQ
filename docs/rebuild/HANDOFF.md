@@ -26,7 +26,8 @@ Last updated: 2026-08-26
   - readiness: 41 pass, 2 warnings, 0 fail
   - static gate: passed
   - DB-backed service gate: 2 passed
-  - Playwright matrix: 6 passed on desktop and mobile
+  - Playwright matrix: 8 passed on desktop and mobile, including direct local
+    Interview entry without OAuth/login
   - live turn-based AI: passed in intro, rapid-fire, and Story Lab modes
 - Automated desktop/mobile rendering is covered by the green Playwright matrix.
   The in-app browser declined localhost automation under its URL safety policy;

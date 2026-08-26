@@ -1042,12 +1042,21 @@ async function syncUserQuests(userId: string, summary: ProgressionSummaryRecord)
         awarded += 1;
       }
     } else if (!existing) {
-      await getDb().insert(userQuests).values({
-        progress,
-        questKey: quest.key,
-        updatedAt: now,
-        userId,
-      });
+      await getDb()
+        .insert(userQuests)
+        .values({
+          progress,
+          questKey: quest.key,
+          updatedAt: now,
+          userId,
+        })
+        .onConflictDoUpdate({
+          set: {
+            progress,
+            updatedAt: now,
+          },
+          target: [userQuests.userId, userQuests.questKey],
+        });
     } else {
       await getDb()
         .update(userQuests)

@@ -1,6 +1,6 @@
 # QuesIQ Interview QA Checklist
 
-Last updated: 2026-06-02
+Last updated: 2026-08-26
 
 Use this checklist for V1 beta QA. Local server/browser QA may be unavailable;
 when that happens, mark browser-specific checks as unavailable and continue
@@ -34,6 +34,8 @@ with production or static checks.
 
 ## Access And Navigation
 
+- In local non-production development with `DEV_AUTH_BYPASS_ENABLED=true`, `/`
+  redirects to Interview and establishes the local admin session without OAuth.
 - Signed-out visitor can reach the marketing homepage and sign in.
 - Signed-in user can reach Interview from QuesIQ Home.
 - Interview header shows signed-in account indicator.

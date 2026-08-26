@@ -6,19 +6,27 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { signOutFromApp } from "@/components/auth-client";
 
+type AuthSessionUser = {
+  email?: string | null;
+  name?: string | null;
+};
+
 type AuthSessionResponse = {
-  user?: {
-    email?: string | null;
-    name?: string | null;
-  };
+  user?: AuthSessionUser;
 } | null;
 
 export type AppAuthSession = AuthSessionResponse | undefined;
 
-export function useAuthSession() {
+type UseAuthSessionOptions = {
+  autoDevRole?: "user" | "admin";
+};
+
+export function useAuthSession({ autoDevRole }: UseAuthSessionOptions = {}) {
   const [authSession, setAuthSession] = useState<AuthSessionResponse>();
 
   useEffect(() => {
+    let active = true;
+
     async function loadAuthSession() {
       const devResponse = await fetch("/api/dev-auth/session");
 
@@ -26,23 +34,54 @@ export function useAuthSession() {
         const devSession = (await devResponse.json()) as AuthSessionResponse;
 
         if (devSession?.user) {
-          setAuthSession(devSession);
+          if (active) {
+            setAuthSession(devSession);
+          }
           return;
+        }
+
+        if (autoDevRole) {
+          const autoDevResponse = await fetch("/api/dev-auth/session", {
+            body: JSON.stringify({ role: autoDevRole }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+            method: "POST",
+          });
+
+          if (autoDevResponse.ok) {
+            const autoDevSession = (await autoDevResponse.json()) as {
+              user?: AuthSessionUser;
+            };
+
+            if (autoDevSession.user && active) {
+              setAuthSession({ user: autoDevSession.user });
+              return;
+            }
+          }
         }
       }
 
       const response = await fetch("/api/auth/session");
 
       if (!response.ok) {
-        setAuthSession(null);
+        if (active) {
+          setAuthSession(null);
+        }
         return;
       }
 
-      setAuthSession((await response.json()) as AuthSessionResponse);
+      if (active) {
+        setAuthSession((await response.json()) as AuthSessionResponse);
+      }
     }
 
     void loadAuthSession();
-  }, []);
+
+    return () => {
+      active = false;
+    };
+  }, [autoDevRole]);
 
   return authSession;
 }

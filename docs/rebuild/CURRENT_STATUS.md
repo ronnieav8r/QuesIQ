@@ -23,8 +23,8 @@ Last updated: 2026-08-26
     0 fail
   - `npm run test:interview:static`: passed
   - `npm run test:interview:services`: 2 passed
-  - `npm run test:interview:e2e`: 6 passed across desktop Chromium and
-    Pixel-sized mobile Chrome
+  - `npm run test:interview:e2e`: 8 passed across desktop Chromium and
+    Pixel-sized mobile Chrome, including local root-to-Interview automatic entry
   - `npm run test:interview:live-ai`: passed for intro practice, rapid fire,
     and Story Lab TMAAT
 - Automated rendered coverage is green on desktop and mobile. The in-app
@@ -32,6 +32,9 @@ Last updated: 2026-08-26
   visible user walkthrough and human microphone/speaker Realtime check remain
   manual at `http://127.0.0.1:3100`. The production browser warning is
   intentionally out of scope while deployment is paused.
+- Local development now skips OAuth and the login screen: with the ignored
+  `DEV_AUTH_BYPASS_ENABLED` marker enabled, `/` redirects to `/interview` and
+  establishes the local admin session automatically. Production is excluded.
 
 Current focus: continue Interview development locally from this green baseline;
 keep Study work parked and treat any later Render work as a separately approved

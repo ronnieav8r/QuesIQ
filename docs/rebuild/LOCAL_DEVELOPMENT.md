@@ -55,6 +55,11 @@ Start the local web app:
 npm run dev:local
 ```
 
+With `DEV_AUTH_BYPASS_ENABLED=true` in ignored `.env.local`, opening `/` in a
+non-production build redirects directly to `/interview` and establishes the
+local admin session automatically. OAuth and the sign-in screen are skipped.
+Production builds never use this automatic entry behavior.
+
 Open:
 
 ```text
