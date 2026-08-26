@@ -137,23 +137,22 @@ function run() {
     "src/server/coaching-memory/coaching-memory.ts",
   ]);
 
-  requireFiles("Interview + Study regression harness", [
-    "playwright.interview-study.config.ts",
-    "scripts/test/interview-study-regression.ts",
-    "scripts/test/interview-study-services.ts",
-    "scripts/test/interview-study-live-ai.ts",
-    "tests/interview-study/global-setup.ts",
-    "tests/interview-study/interview-regression.spec.ts",
-    "tests/interview-study/study-regression.spec.ts",
+  requireFiles("Interview regression harness", [
+    "playwright.interview.config.ts",
+    "scripts/test/interview-regression.ts",
+    "scripts/test/interview-services.ts",
+    "scripts/test/interview-live-ai.ts",
+    "tests/interview/global-setup.ts",
+    "tests/interview/interview-regression.spec.ts",
   ]);
-  requireMarkers("Interview + Study package commands", "package.json", [
-    "test:interview-study:static",
-    "test:interview-study:services",
-    "test:interview-study:e2e",
-    "test:interview-study:live-ai",
-    "test:interview-study:all",
+  requireMarkers("Interview package commands", "package.json", [
+    "test:interview:static",
+    "test:interview:services",
+    "test:interview:e2e",
+    "test:interview:live-ai",
+    "test:interview:all",
   ]);
-  requireMarkers("Interview browser regression coverage", "tests/interview-study/interview-regression.spec.ts", [
+  requireMarkers("Interview browser regression coverage", "tests/interview/interview-regression.spec.ts", [
     "Interview admin test tunnel status",
     "/api/interview/questions",
     "/api/admin/interview/test-tunnel/status",

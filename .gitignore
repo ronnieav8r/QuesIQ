@@ -1,6 +1,6 @@
 node_modules/
 .next/
-.next-interview-study-e2e/
+.next-interview-e2e/
 out/
 .tools/
 .npm-cache/

@@ -8,11 +8,11 @@ with production or static checks.
 
 ## Static Readiness
 
-- For the current local Interview + Study automated regression gate, start with
-  `docs/rebuild/INTERVIEW_STUDY_REGRESSION.md` and run:
-  `npm run test:interview-study:all`. This covers Interview static readiness,
-  seeded DB checks, and desktop/mobile Playwright coverage for Interview and
-  Study without real microphone hardware.
+- For the current local Interview automated regression gate, start with
+  `docs/rebuild/INTERVIEW_REGRESSION.md` and run:
+  `npm run test:interview:all`. This covers Interview static readiness, seeded
+  DB checks, and desktop/mobile Playwright coverage without real microphone
+  hardware.
 - Run `node scripts/interview/readiness-check.mjs`.
 - Confirm result has no FAIL blockers.
 - Confirm warnings are expected manual items only, such as voice hardware,
@@ -25,9 +25,9 @@ with production or static checks.
   are installed. This browser smoke checks public navigation, authenticated app
   routing, Quira chat UI, and shared admin surfaces without using real mic
   hardware.
-- Use `npm run test:interview-study:live-ai` only when intentionally exercising
-  live Interview turn-based and Study evaluator model paths with accepted test
-  keys. It is separate from the mocked default regression gate.
+- Use `npm run test:interview:live-ai` only when intentionally exercising live
+  Interview turn-based model paths with an accepted test key. It is separate
+  from the mocked default regression gate.
 - Run `npm run typecheck`.
 - Run `npm run lint`.
 - Run `npm run build`.

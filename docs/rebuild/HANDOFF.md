@@ -1,6 +1,38 @@
 # Handoff
 
-Last updated: 2026-06-21
+Last updated: 2026-08-26
+
+## 2026-08-26 Interview-Only Local Handoff
+
+- Work from `E:\Codex\QuesIQ\QuesIQ App Worktrees\QuesIQ-dev` on
+  `codex/interview-local`.
+- Recovery points:
+  - mixed Interview/Study checkpoint:
+    `checkpoint/interview-study-regression-20260826` at `38cb946`
+  - Study changes parked on the active branch at `006f26d`
+- Do not deploy to Render or change production state during this local phase.
+- Local services:
+  - app: `http://127.0.0.1:3100`
+  - Postgres: `127.0.0.1:5433`
+  - credentials: ignored `.env.local` only
+- Canonical Interview commands:
+  - `npm run readiness:interview`
+  - `npm run test:interview:static`
+  - `npm run test:interview:services`
+  - `npm run test:interview:e2e`
+  - `npm run test:interview:live-ai`
+  - `npm run test:interview:all`
+- Baseline verified on 2026-08-26:
+  - readiness: 41 pass, 2 warnings, 0 fail
+  - static gate: passed
+  - DB-backed service gate: 2 passed
+  - Playwright matrix: 6 passed on desktop and mobile
+  - live turn-based AI: passed in intro, rapid-fire, and Story Lab modes
+- Automated desktop/mobile rendering is covered by the green Playwright matrix.
+  The in-app browser declined localhost automation under its URL safety policy;
+  refresh `http://127.0.0.1:3100` directly for the remaining visible walkthrough
+  and human microphone/speaker Realtime check. Production browser QA remains an
+  intentionally deferred warning.
 
 ## 2026-06-21 Immediate Handoff Snapshot
 
@@ -29,7 +61,7 @@ Last updated: 2026-06-21
     imported deck-facing cards linked to canonical cards and marked Verified,
     0 expert-reviewed claims
   - Study `Memorize` listening mode exists for decks and stacks
-- Interview + Study local regression gate:
+- Historical Interview + Study local regression gate:
   - canonical guide:
     `docs/rebuild/INTERVIEW_STUDY_REGRESSION.md`
   - command family:

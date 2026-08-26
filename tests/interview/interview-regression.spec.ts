@@ -22,7 +22,7 @@ test.beforeEach(async ({ context, page, baseURL }) => {
           roleInterest: "E2E role interest.",
           script: "E2E introduction script.",
           strength: "E2E strength.",
-          title: "[TEST_DELETE] Interview Study Regression Draft",
+          title: "[TEST_DELETE] Interview Regression Draft",
           transition: "E2E transition.",
         },
       },
@@ -47,7 +47,7 @@ test("Interview shell, practice setup, Story Lab, history, and Me render", async
   await expect(page.getByRole("button", { name: /Hands-Free/i })).toBeVisible();
 
   await page.getByRole("button", { name: /^Story Lab$/ }).first().click();
-  await expect(page.getByText("[TEST_DELETE] Interview Study Regression Intro")).toBeVisible();
+  await expect(page.getByText("[TEST_DELETE] Interview Regression Intro")).toBeVisible();
   await expect(page.getByRole("button", { name: "Open Library" })).toBeVisible();
 
   await page.getByRole("button", { name: /^History$/ }).first().click();
@@ -86,7 +86,7 @@ test("Interview authenticated APIs cover profile targets, question queue, storie
     data: {
       compatibleModes: ["rapid_fire"],
       difficulty: "standard",
-      questionText: "[TEST_DELETE] Interview Study Regression API question",
+      questionText: "[TEST_DELETE] Interview Regression API question",
       questionTypeKey: "behavioral",
       roleFamily: "Operations",
       scoringHints: "E2E scoring hints.",
@@ -104,7 +104,7 @@ test("Interview authenticated APIs cover profile targets, question queue, storie
     `/api/interview/questions/${createQuestionBody.question.id}`,
     {
       data: {
-        questionText: "[TEST_DELETE] Interview Study Regression API question updated",
+        questionText: "[TEST_DELETE] Interview Regression API question updated",
       },
     },
   );

@@ -1,11 +1,11 @@
 import {
   ensureRegressionArtifactsDir,
   loadLocalEnv,
-  seedInterviewStudyRegressionData,
-} from "../../scripts/test/interview-study-regression";
+  seedInterviewRegressionData,
+} from "../../scripts/test/interview-regression";
 
 export default async function globalSetup() {
   loadLocalEnv();
   ensureRegressionArtifactsDir();
-  await seedInterviewStudyRegressionData();
+  await seedInterviewRegressionData();
 }

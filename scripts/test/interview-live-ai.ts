@@ -1,12 +1,10 @@
 import { spawn } from "node:child_process";
 
-import { ensureRegressionArtifactsDir, loadLocalEnv } from "./interview-study-regression";
+import { ensureRegressionArtifactsDir, loadLocalEnv } from "./interview-regression";
 
 const acceptedKeyNames = [
   "OPENAI_INTERVIEW_TEST_TUNNEL_API_KEY",
-  "OPENAI_STUDY_TEST_TUNNEL_API_KEY",
   "OPENAI_INTERVIEW_API_KEY",
-  "OPENAI_STUDY_API_KEY",
   "OPENAI_API_KEY",
 ];
 
@@ -58,7 +56,6 @@ async function main() {
   }
 
   await runNpmScript("smoke:interview-turns");
-  await runNpmScript("smoke:study");
 }
 
 main()

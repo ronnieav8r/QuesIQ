@@ -11,10 +11,9 @@ Start here for broad resume work and manager handoffs:
 - `docs/rebuild/HANDOFF.md`: current resume snapshot and product handoff.
 - `docs/rebuild/LOCAL_DEVELOPMENT.md`: local Windows/Docker/Postgres setup for
   running the app without Render.
-- `docs/rebuild/INTERVIEW_STUDY_REGRESSION.md`: canonical local regression
-  system for Interview and Study, including static checks, seeded DB service
-  checks, Playwright desktop/mobile E2E, live-AI smoke, artifacts, and
-  reimplementation notes.
+- `docs/rebuild/INTERVIEW_REGRESSION.md`: canonical Interview-only local
+  regression system, including static checks, seeded DB service checks,
+  Playwright desktop/mobile E2E, live-AI smoke, artifacts, and troubleshooting.
 - `docs/rebuild/CURRENT_STATUS.md`: current platform status and deployment
   context.
 - `docs/rebuild/DECISIONS.md`: durable product and architecture decisions.

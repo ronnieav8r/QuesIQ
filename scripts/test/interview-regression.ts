@@ -3,18 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { promisify } from "node:util";
 
-import { and, eq, inArray, like } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
-import {
-  addDeckToStudyStack,
-  createStudyCard,
-  createStudyDeck,
-  createStudyFolder,
-  createStudyStack,
-  rateStudyCard,
-  recordStudyCardFeedback,
-  reorderStudyStackDecks,
-} from "@/features/study/study-data";
 import type { SessionSetupSnapshot } from "@/product/interview-types";
 import { createCustomInterviewQuestion } from "@/server/interview/question-bank";
 import { saveIntroduction } from "@/server/introductions/introductions";
@@ -33,40 +23,29 @@ import {
   profiles,
   sessions,
   stories,
-  studyCardFeedback,
-  studyDecks,
-  studyDeckStacks,
-  studyFolders,
-  studySessions,
   users,
 } from "@/server/db/schema";
 
 const scrypt = promisify(scryptCallback);
 const hashLength = 64;
 
-export const interviewStudyRegressionPrefix = "[TEST_DELETE] Interview Study Regression";
+export const interviewRegressionPrefix = "[TEST_DELETE] Interview Regression";
 export const regressionArtifactsDir = path.join(
   process.cwd(),
   "artifacts",
-  "interview-study-regression",
+  "interview-regression",
 );
 export const regressionSeedStatePath = path.join(regressionArtifactsDir, "seed-state.json");
 export const regressionSummaryPath = path.join(regressionArtifactsDir, "service-summary.json");
 export const regressionReportPath = path.join(regressionArtifactsDir, "run-report.md");
 
-export type InterviewStudySeedState = {
+export type InterviewSeedState = {
   interview: {
     customQuestionId: string;
     introductionId: string;
     jobTargetId: string;
     sessionId: string;
     storyId: string;
-  };
-  study: {
-    cardIds: string[];
-    deckIds: string[];
-    folderId: string;
-    stackId: string;
   };
   user: {
     email: string;
@@ -119,7 +98,7 @@ async function hashPassword(password: string) {
   return `scrypt:v1:${salt}:${hash.toString("base64url")}`;
 }
 
-export async function ensureInterviewStudyRegressionUser() {
+export async function ensureInterviewRegressionUser() {
   const email = testEmail();
   const name = "QuesIQ E2E Admin";
   const now = new Date();
@@ -193,7 +172,7 @@ export async function ensureInterviewStudyRegressionUser() {
   return { email, id: userId, name };
 }
 
-export async function cleanupInterviewStudyRegressionData(userId?: string) {
+export async function cleanupInterviewRegressionData(userId?: string) {
   const db = getDb();
   const userIds = new Set<string>();
   if (userId) {
@@ -213,25 +192,15 @@ export async function cleanupInterviewStudyRegressionData(userId?: string) {
   }
 
   const ids = Array.from(userIds);
-  const titlePattern = `${interviewStudyRegressionPrefix}%`;
-
   await db.transaction(async (tx) => {
     await tx.delete(aiRuns).where(inArray(aiRuns.userId, ids));
     await tx.delete(evaluations).where(inArray(evaluations.userId, ids));
     await tx.delete(sessions).where(inArray(sessions.userId, ids));
-    await tx.delete(studySessions).where(inArray(studySessions.userId, ids));
-    await tx.delete(studyDeckStacks).where(inArray(studyDeckStacks.userId, ids));
-    await tx.delete(studyDecks).where(inArray(studyDecks.userId, ids));
-    await tx.delete(studyFolders).where(inArray(studyFolders.userId, ids));
-    await tx.delete(studyCardFeedback).where(inArray(studyCardFeedback.userId, ids));
     await tx.delete(interviewQuestions).where(inArray(interviewQuestions.ownerUserId, ids));
     await tx.delete(jobTargets).where(inArray(jobTargets.userId, ids));
     await tx.delete(stories).where(inArray(stories.userId, ids));
     await tx.delete(introductions).where(inArray(introductions.userId, ids));
     await tx.delete(profiles).where(inArray(profiles.userId, ids));
-
-    await tx.delete(studyDeckStacks).where(like(studyDeckStacks.title, titlePattern));
-    await tx.delete(studyDecks).where(like(studyDecks.title, titlePattern));
   });
 }
 
@@ -280,107 +249,22 @@ function sessionSnapshot(jobTargetId: string, questionId: string): SessionSetupS
   };
 }
 
-export async function seedInterviewStudyRegressionData() {
+export async function seedInterviewRegressionData() {
   ensureRegressionArtifactsDir();
-  const user = await ensureInterviewStudyRegressionUser();
-  await cleanupInterviewStudyRegressionData(user.id);
-
-  const folder = await createStudyFolder({
-    name: `${interviewStudyRegressionPrefix} Folder`,
-    userId: user.id,
-  });
-  const deckA = await createStudyDeck({
-    description: "Seeded deck for Interview + Study regression.",
-    folderId: folder.id,
-    isPublic: true,
-    subject: "Regression",
-    tags: ["__test_delete__", "regression"],
-    title: `${interviewStudyRegressionPrefix} Deck A`,
-    userId: user.id,
-  });
-  const deckB = await createStudyDeck({
-    description: "Second seeded deck for stack ordering coverage.",
-    isPublic: false,
-    subject: "Regression",
-    tags: ["__test_delete__", "stack"],
-    title: `${interviewStudyRegressionPrefix} Deck B`,
-    userId: user.id,
-  });
-  const cards = [
-    await createStudyCard({
-      answer: "Verify the route, seeded user, database writes, and visible UI state.",
-      deckId: deckA.id,
-      explanation:
-        "The regression system checks the browser and backend persistence paths together.",
-      hint: "Think local-first.",
-      question: "What does the Interview + Study regression gate verify?",
-    }),
-    await createStudyCard({
-      answer: "The mocked path is default; live AI runs only through the explicit live command.",
-      deckId: deckA.id,
-      explanation: "This protects local runs from needing paid provider credentials.",
-      hint: "Default versus opt-in.",
-      question: "How does the regression suite handle AI calls by default?",
-    }),
-    await createStudyCard({
-      answer: "Deck stacks preserve an ordered learning path across multiple decks.",
-      deckId: deckB.id,
-      explanation: "Stack tests create, add, reorder, and display deck groups.",
-      hint: "Multiple decks.",
-      question: "What is a Study stack used for?",
-    }),
-  ];
-  const stack = await createStudyStack({
-    description: "Seeded stack for regression coverage.",
-    isPublic: true,
-    subject: "Regression",
-    title: `${interviewStudyRegressionPrefix} Stack`,
-    userId: user.id,
-  });
-  await addDeckToStudyStack({ deckId: deckA.id, stackId: stack.id, userId: user.id });
-  await addDeckToStudyStack({ deckId: deckB.id, stackId: stack.id, userId: user.id });
-  await reorderStudyStackDecks({
-    deckIds: [deckB.id, deckA.id],
-    stackId: stack.id,
-    userId: user.id,
-  });
-  await rateStudyCard({
-    cardId: cards[0].id,
-    deckId: deckA.id,
-    mode: "visual",
-    userId: user.id,
-    verdict: "correct",
-  });
-  await recordStudyCardFeedback({
-    cardId: cards[0].id,
-    deckId: deckA.id,
-    feedbackType: "accurate",
-    metadata: { seeded: true },
-    screen: "service_seed",
-    userId: user.id,
-  });
-  await recordStudyCardFeedback({
-    cardId: cards[1].id,
-    deckId: deckA.id,
-    feedbackType: "issue",
-    issueType: "unclear",
-    metadata: { seeded: true },
-    note: "Seeded issue feedback for regression readback.",
-    screen: "service_seed",
-    userId: user.id,
-  });
+  const user = await ensureInterviewRegressionUser();
+  await cleanupInterviewRegressionData(user.id);
 
   const jobTarget = await saveJobTarget(user.id, {
     jobDescription:
       "Own customer-facing aviation operations workflows and explain tradeoffs to executives.",
-    label: `${interviewStudyRegressionPrefix} Target`,
+    label: `${interviewRegressionPrefix} Target`,
     targetCompany: "QuesIQ Test Co",
     targetRole: "Aviation Operations Manager",
   });
   const customQuestion = await createCustomInterviewQuestion(user.id, {
     compatibleModes: ["rapid_fire", "coaching"],
     difficulty: "standard",
-    questionText: `${interviewStudyRegressionPrefix}: Tell me about a time you improved a process under pressure.`,
+    questionText: `${interviewRegressionPrefix}: Tell me about a time you improved a process under pressure.`,
     questionTypeKey: "behavioral",
     roleFamily: "Operations",
     scoringHints: "Look for action, result, and ownership.",
@@ -398,7 +282,7 @@ export async function seedInterviewStudyRegressionData() {
     situation: "A time-sensitive operations handoff was breaking down.",
     summary: "Improved a high-pressure process with clear ownership.",
     task: "Create a repeatable process before the next shift.",
-    title: `${interviewStudyRegressionPrefix} Story`,
+    title: `${interviewRegressionPrefix} Story`,
   });
   const introduction = await saveIntroduction(user.id, {
     audience: "virtual",
@@ -410,24 +294,18 @@ export async function seedInterviewStudyRegressionData() {
     script:
       "I am an aviation operations leader who builds practical systems for training, support, and execution.",
     strength: "Turning messy operational problems into usable workflows.",
-    title: `${interviewStudyRegressionPrefix} Intro`,
+    title: `${interviewRegressionPrefix} Intro`,
     transition: "I would like to connect that to this role.",
   });
   const session = await createSession(sessionSnapshot(jobTarget.id, customQuestion.id), user.id);
 
-  const seedState: InterviewStudySeedState = {
+  const seedState: InterviewSeedState = {
     interview: {
       customQuestionId: customQuestion.id,
       introductionId: introduction.id,
       jobTargetId: jobTarget.id,
       sessionId: session.id,
       storyId: story.id,
-    },
-    study: {
-      cardIds: cards.map((card) => card.id),
-      deckIds: [deckA.id, deckB.id],
-      folderId: folder.id,
-      stackId: stack.id,
     },
     user,
   };
@@ -438,10 +316,10 @@ export async function seedInterviewStudyRegressionData() {
 
 export function readRegressionSeedState() {
   const text = fs.readFileSync(regressionSeedStatePath, "utf8");
-  return JSON.parse(text) as InterviewStudySeedState;
+  return JSON.parse(text) as InterviewSeedState;
 }
 
-export function writeRegressionSummary(checks: RegressionCheck[], seedState: InterviewStudySeedState) {
+export function writeRegressionSummary(checks: RegressionCheck[], seedState: InterviewSeedState) {
   ensureRegressionArtifactsDir();
   const passed = checks.filter((check) => check.status === "PASS").length;
   const skipped = checks.filter((check) => check.status === "SKIP").length;
@@ -456,7 +334,7 @@ export function writeRegressionSummary(checks: RegressionCheck[], seedState: Int
   fs.writeFileSync(
     regressionReportPath,
     [
-      "# Interview + Study Regression Run",
+      "# Interview Regression Run",
       "",
       `Generated: ${payload.generatedAt}`,
       `Passed checks: ${passed}`,
@@ -469,36 +347,13 @@ export function writeRegressionSummary(checks: RegressionCheck[], seedState: Int
   );
 }
 
-export async function verifySeededRegressionData(seedState: InterviewStudySeedState) {
+export async function verifySeededRegressionData(seedState: InterviewSeedState) {
   const db = getDb();
   const checks: RegressionCheck[] = [];
 
   function pass(name: string, detail: string) {
     checks.push({ detail, name, status: "PASS" });
   }
-
-  const [deckCount] = await db
-    .select({ id: studyDecks.id })
-    .from(studyDecks)
-    .where(
-      and(
-        eq(studyDecks.userId, seedState.user.id),
-        like(studyDecks.title, `${interviewStudyRegressionPrefix}%`),
-      ),
-    );
-  if (!deckCount) {
-    throw new Error("Seeded Study decks were not found.");
-  }
-  pass("Study seeded decks", "At least one seeded Study deck exists for the E2E user.");
-
-  const feedbackRows = await db
-    .select({ id: studyCardFeedback.id })
-    .from(studyCardFeedback)
-    .where(eq(studyCardFeedback.userId, seedState.user.id));
-  if (feedbackRows.length < 2) {
-    throw new Error("Expected seeded Study card feedback rows.");
-  }
-  pass("Study card feedback persistence", `${feedbackRows.length} feedback rows were written.`);
 
   const [session] = await db
     .select({ id: sessions.id })

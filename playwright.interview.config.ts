@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const port = process.env.INTERVIEW_STUDY_E2E_PORT || "3210";
+const port = process.env.INTERVIEW_E2E_PORT || "3210";
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || `http://127.0.0.1:${port}`;
 const e2eEmail = process.env.E2E_TEST_EMAIL || "quesiq-e2e-admin@example.com";
 const e2ePassword = process.env.E2E_TEST_PASSWORD || "QuesIQe2e12345";
@@ -11,20 +11,20 @@ export default defineConfig({
     timeout: 10_000,
   },
   fullyParallel: false,
-  globalSetup: "./tests/interview-study/global-setup.ts",
-  outputDir: "artifacts/interview-study-regression/playwright-results",
+  globalSetup: "./tests/interview/global-setup.ts",
+  outputDir: "artifacts/interview-regression/playwright-results",
   reporter: [
     ["list"],
     [
       "html",
       {
         open: "never",
-        outputFolder: "artifacts/interview-study-regression/playwright-report",
+        outputFolder: "artifacts/interview-regression/playwright-report",
       },
     ],
   ],
   retries: process.env.CI ? 2 : 0,
-  testDir: "./tests/interview-study",
+  testDir: "./tests/interview",
   timeout: 90_000,
   use: {
     baseURL,
@@ -33,7 +33,7 @@ export default defineConfig({
     video: "retain-on-failure",
   },
   webServer: {
-    command: `node scripts/test/interview-study-e2e-server.mjs ${port}`,
+    command: `node scripts/test/interview-e2e-server.mjs ${port}`,
     env: {
       ...process.env,
       ADMIN_EMAILS: adminEmails,
@@ -42,7 +42,7 @@ export default defineConfig({
       E2E_TEST_EMAIL: e2eEmail,
       E2E_TEST_MODE: "1",
       E2E_TEST_PASSWORD: e2ePassword,
-      NEXT_DIST_DIR: ".next-interview-study-e2e",
+      NEXT_DIST_DIR: ".next-interview-e2e",
       NEXTAUTH_URL: baseURL,
     },
     reuseExistingServer: false,

@@ -1,6 +1,41 @@
 # Current Status
 
-Last updated: 2026-06-21
+Last updated: 2026-08-26
+
+## 2026-08-26 Interview-Only Local Snapshot
+
+- Active local checkout:
+  `E:\Codex\QuesIQ\QuesIQ App Worktrees\QuesIQ-dev` on
+  `codex/interview-local`.
+- The original mixed Interview/Study worktree is preserved on
+  `checkpoint/interview-study-regression-20260826` at commit `38cb946`.
+  The active branch parks Study-specific work separately at commit `006f26d`.
+- This lane is local-only. No Render deploy, production import, push, or
+  production credential change is part of the current work.
+- Dependencies were rebuilt and repaired locally. Local Postgres is healthy on
+  `127.0.0.1:5433`, and `npm run db:local:migrate` reports migrations current.
+- Interview admin/API/Realtime credentials are configured only in ignored
+  `.env.local`; no credential values are committed or documented.
+- Interview regression is separated from Study under
+  `docs/rebuild/INTERVIEW_REGRESSION.md` and the `test:interview:*` commands.
+- Verified local baseline:
+  - `npm run readiness:interview`: 41 pass, 2 manual/production warnings,
+    0 fail
+  - `npm run test:interview:static`: passed
+  - `npm run test:interview:services`: 2 passed
+  - `npm run test:interview:e2e`: 6 passed across desktop Chromium and
+    Pixel-sized mobile Chrome
+  - `npm run test:interview:live-ai`: passed for intro practice, rapid fire,
+    and Story Lab TMAAT
+- Automated rendered coverage is green on desktop and mobile. The in-app
+  browser declined localhost automation under its URL safety policy, so the
+  visible user walkthrough and human microphone/speaker Realtime check remain
+  manual at `http://127.0.0.1:3100`. The production browser warning is
+  intentionally out of scope while deployment is paused.
+
+Current focus: continue Interview development locally from this green baseline;
+keep Study work parked and treat any later Render work as a separately approved
+release phase.
 
 ## 2026-06-21 Dev Snapshot
 
@@ -32,11 +67,11 @@ Last updated: 2026-06-21
   - Drizzle journal now includes `0085_add_dpe_content_model_v2` and
     `0086_add_study_canonical_import_model`.
   - `npm run study:import-canonical` loads `.env.local`.
-- Interview + Study regression coverage is now implemented and documented at
-  `docs/rebuild/INTERVIEW_STUDY_REGRESSION.md`. The local gate is
-  `npm run test:interview-study:all`; it runs readiness checks, typecheck, lint,
+- Interview + Study regression coverage was implemented and documented at the
+  time as `docs/rebuild/INTERVIEW_STUDY_REGRESSION.md`. The historical gate was
+  `npm run test:interview-study:all`; it ran readiness checks, typecheck, lint,
   seeded DB-backed service checks, and desktop/mobile Playwright E2E on isolated
-  port 3210. The opt-in live model smoke is
+  port 3210. The historical opt-in live model smoke was
   `npm run test:interview-study:live-ai`.
 - Recent checks: `npm run typecheck`, `npm run lint`, `npm run readiness:dpe`,
   `npm run readiness:study`, canonical import dry-run/import, DB count readback,

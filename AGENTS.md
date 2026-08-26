@@ -3,8 +3,8 @@
 Use `docs/README.md` for the document map.
 Read `docs/rebuild/HANDOFF.md`, `docs/rebuild/CURRENT_STATUS.md`, and
 `docs/rebuild/DECISIONS.md` before broad resume exploration.
-Read `docs/rebuild/INTERVIEW_STUDY_REGRESSION.md` before changing or relying on
-the Interview + Study local regression gate.
+Read `docs/rebuild/INTERVIEW_REGRESSION.md` before changing or relying on
+the Interview local regression gate.
 Read `docs/platform/ONE_SERVICE_PLATFORM.md` and
 `docs/platform/PARALLEL_DEVELOPMENT.md` before importing another product,
 changing route structure, or editing shared platform/auth/schema files.
@@ -43,8 +43,8 @@ They should not override the active docs listed above.
   instrumentation in the same slice: Responses API calls should create
   `ai_runs` records, and app-owned Realtime voice sessions should save usage
   after artifacts persist.
-- For Interview or Study regression work, prefer the dedicated local gate:
-  `npm run test:interview-study:all`. Use
-  `npm run test:interview-study:live-ai` only when intentionally exercising
-  real model paths with accepted test keys. The detailed setup, coverage, and
-  reimplementation guide is `docs/rebuild/INTERVIEW_STUDY_REGRESSION.md`.
+- For Interview regression work, prefer the dedicated local gate:
+  `npm run test:interview:all`. Use `npm run test:interview:live-ai` only when
+  intentionally exercising real model paths with accepted test keys. The
+  detailed setup, coverage, and reimplementation guide is
+  `docs/rebuild/INTERVIEW_REGRESSION.md`.

@@ -1,11 +1,11 @@
 import {
-  cleanupInterviewStudyRegressionData,
+  cleanupInterviewRegressionData,
   ensureRegressionArtifactsDir,
   loadLocalEnv,
-  seedInterviewStudyRegressionData,
+  seedInterviewRegressionData,
   verifySeededRegressionData,
   writeRegressionSummary,
-} from "./interview-study-regression";
+} from "./interview-regression";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -14,13 +14,13 @@ function assert(condition: unknown, message: string): asserts condition {
 async function main() {
   loadLocalEnv();
   ensureRegressionArtifactsDir();
-  assert(process.env.DATABASE_URL, "DATABASE_URL is required for Interview + Study service tests.");
+  assert(process.env.DATABASE_URL, "DATABASE_URL is required for Interview service tests.");
 
-  const seedState = await seedInterviewStudyRegressionData();
+  const seedState = await seedInterviewRegressionData();
   const checks = await verifySeededRegressionData(seedState);
   writeRegressionSummary(checks, seedState);
 
-  console.log("Interview + Study service checks passed.");
+  console.log("Interview service checks passed.");
   for (const check of checks) {
     console.log(`- ${check.name}: ${check.detail}`);
   }
@@ -30,7 +30,7 @@ main()
   .then(() => process.exit(0))
   .catch(async (error) => {
     try {
-      await cleanupInterviewStudyRegressionData();
+      await cleanupInterviewRegressionData();
     } catch {
       // Keep the original failure visible.
     }

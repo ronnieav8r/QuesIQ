@@ -1,6 +1,6 @@
 # Local Development Handoff
 
-Last updated: 2026-06-02
+Last updated: 2026-08-26
 
 ## Current Local Setup
 
@@ -8,7 +8,7 @@ The QuesIQ manager app can now run locally on this Windows PC without deploying
 to Render.
 
 - Workspace:
-  `C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-manager`
+  `E:\Codex\QuesIQ\QuesIQ App Worktrees\QuesIQ-dev`
 - Local app URL:
   `http://127.0.0.1:3100`
 - Local Postgres:
@@ -34,7 +34,7 @@ to Render.
 Run these from:
 
 ```powershell
-C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-manager
+E:\Codex\QuesIQ\QuesIQ App Worktrees\QuesIQ-dev
 ```
 
 Start local Postgres:
@@ -81,18 +81,18 @@ are applied, and `.env.local` points at the local database:
 npm run test:e2e
 ```
 
-For the dedicated Interview + Study regression gate, prefer the newer focused
-commands documented in `docs/rebuild/INTERVIEW_STUDY_REGRESSION.md`:
+For the dedicated Interview regression gate, prefer the newer focused
+commands documented in `docs/rebuild/INTERVIEW_REGRESSION.md`:
 
 ```powershell
-npm run test:interview-study:all
-npm run test:interview-study:live-ai
+npm run test:interview:all
+npm run test:interview:live-ai
 ```
 
 That gate starts an isolated server on `http://127.0.0.1:3210`, seeds
-deterministic `[TEST_DELETE]` Interview and Study data, runs desktop Chromium
-and Pixel-sized mobile Playwright coverage, mocks AI/TTS/media by default, and
-writes artifacts under `artifacts/interview-study-regression/`.
+deterministic `[TEST_DELETE]` Interview data, runs desktop Chromium and
+Pixel-sized mobile Playwright coverage, mocks AI/media by default, and writes
+artifacts under `artifacts/interview-regression/`.
 
 The general `test:e2e` harness starts `http://127.0.0.1:3100` automatically unless
 `PLAYWRIGHT_SKIP_WEB_SERVER=1` is set. It seeds a verified local admin test

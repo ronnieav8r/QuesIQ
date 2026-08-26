@@ -28,7 +28,7 @@ function restoreGeneratedFiles() {
 const playwrightCli = path.join(process.cwd(), "node_modules", "playwright", "cli.js");
 const child = spawn(
   process.execPath,
-  [playwrightCli, "test", "--config=playwright.interview-study.config.ts", ...process.argv.slice(2)],
+  [playwrightCli, "test", "--config=playwright.interview.config.ts", ...process.argv.slice(2)],
   {
     env: process.env,
     stdio: "inherit",
