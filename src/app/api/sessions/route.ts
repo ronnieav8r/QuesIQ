@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/auth";
 import { parseSessionSetupSnapshot } from "@/product/session-snapshot";
 import { canUseHandsFreeCoaching, handsFreeCoachingModeKey } from "@/server/interview/hands-free-coaching";
 import {
@@ -10,6 +9,7 @@ import {
 import { getOrCreateInterviewResumeSummary } from "@/server/profiles/resume-summary";
 import { createSession } from "@/server/sessions/create-session";
 import { listOwnedSessions } from "@/server/sessions/list-owned-sessions";
+import { resolveRequestUser } from "@/server/mobile-auth/mobile-auth";
 
 export const runtime = "nodejs";
 
@@ -17,10 +17,10 @@ function uniqueQuestionIds(ids: Array<string | undefined>) {
   return Array.from(new Set(ids.filter((id): id is string => Boolean(id)))).slice(0, 10);
 }
 
-export async function GET() {
-  const appSession = await auth();
+export async function GET(request: Request) {
+  const appUser = await resolveRequestUser(request);
 
-  if (!appSession?.user?.id) {
+  if (!appUser) {
     return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
   }
 
@@ -35,7 +35,7 @@ export async function GET() {
   }
 
   try {
-    const sessions = await listOwnedSessions(appSession.user.id, 50);
+    const sessions = await listOwnedSessions(appUser.id, 50);
 
     return NextResponse.json({ sessions });
   } catch (error) {
@@ -52,9 +52,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const appSession = await auth();
+  const appUser = await resolveRequestUser(request);
 
-  if (!appSession?.user?.id) {
+  if (!appUser) {
     return NextResponse.json(
       {
         detail: "Sign in before launching a saved practice session.",
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
 
   if (
     parsedSnapshot.modeKey === handsFreeCoachingModeKey &&
-    !canUseHandsFreeCoaching(appSession.user.email)
+    !canUseHandsFreeCoaching(appUser.email)
   ) {
     return NextResponse.json(
       {
@@ -109,7 +109,7 @@ export async function POST(request: Request) {
       for (const selectedQuestionId of selectedQuestionIds) {
         const question = await getAccessibleInterviewQuestion(
           selectedQuestionId,
-          appSession.user.id,
+          appUser.id,
         );
         if (question) {
           questions.push(question);
@@ -140,7 +140,7 @@ export async function POST(request: Request) {
       resumeName: snapshot.interviewContext.resumeName,
       resumeParsedAt: snapshot.interviewContext.resumeParsedAt,
       resumeText: snapshot.interviewContext.resumeText,
-      userId: appSession.user.id,
+      userId: appUser.id,
     });
 
     if (resumeSummaryResult.summary) {
@@ -153,7 +153,7 @@ export async function POST(request: Request) {
       };
     }
 
-    const session = await createSession(snapshot, appSession.user.id);
+    const session = await createSession(snapshot, appUser.id);
 
     return NextResponse.json(
       {

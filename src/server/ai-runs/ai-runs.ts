@@ -23,6 +23,7 @@ type CompleteAiRunInput = {
   estimatedCostMicroUsd?: number;
   inputAudioTokens?: number;
   inputTokens?: number;
+  mergeRawJson?: boolean;
   outputAudioTokens?: number;
   outputTokens?: number;
   providerRequestId?: string;
@@ -123,11 +124,17 @@ export async function startAiRun(input: StartAiRunInput) {
 export async function completeAiRun(id: string, input: CompleteAiRunInput) {
   const now = new Date();
   const [current] = await getDb()
-    .select({ startedAt: aiRuns.startedAt })
+    .select({ rawJson: aiRuns.rawJson, startedAt: aiRuns.startedAt })
     .from(aiRuns)
     .where(eq(aiRuns.id, id))
     .limit(1);
   const durationMs = current ? now.getTime() - current.startedAt.getTime() : undefined;
+  const rawJson = input.mergeRawJson
+    ? {
+        ...(current?.rawJson ?? {}),
+        ...(input.rawJson ?? {}),
+      }
+    : input.rawJson;
 
   await getDb()
     .update(aiRuns)
@@ -142,7 +149,7 @@ export async function completeAiRun(id: string, input: CompleteAiRunInput) {
       outputAudioTokens: input.outputAudioTokens,
       outputTokens: input.outputTokens,
       providerRequestId: input.providerRequestId,
-      rawJson: input.rawJson,
+      rawJson,
       status: input.status,
       totalTokens: input.totalTokens,
       updatedAt: now,

@@ -85,6 +85,27 @@ export const authSessions = pgTable("session", {
     .references(() => users.id, { onDelete: "cascade" }),
 });
 
+export const mobileRefreshTokens = pgTable(
+  "mobile_refresh_tokens",
+  {
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    familyId: uuid("family_id").notNull(),
+    id: uuid("id").defaultRandom().primaryKey(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    tokenHash: text("token_hash").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (token) => ({
+    familyIdx: index("mobile_refresh_tokens_family_idx").on(token.familyId),
+    tokenHashIdx: uniqueIndex("mobile_refresh_tokens_token_hash_idx").on(token.tokenHash),
+    userIdx: index("mobile_refresh_tokens_user_idx").on(token.userId),
+  }),
+);
+
 export const platformUserProfiles = pgTable("platform_user_profiles", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   firstName: text("first_name").default("").notNull(),

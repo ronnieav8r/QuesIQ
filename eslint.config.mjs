@@ -8,6 +8,7 @@ export default defineConfig([
   globalIgnores([
     ".next/**",
     ".next-interview-e2e/**",
+    "apps/mobile/**",
     "out/**",
     "build/**",
     ".tools/**",

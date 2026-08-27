@@ -1194,19 +1194,6 @@ async function generateTurnDecision(input: {
     configuredModel: input.config.textModel,
     snapshot: input.snapshot,
   });
-  const run = await startAiRun({
-    model: promptRuntime.model,
-    rawJson: {
-      coachingChoiceIntent: input.coachingChoiceIntent,
-      modeKey: input.snapshot.modeKey,
-      promptConfigKeys: promptRuntime.promptConfigKeys,
-      turnIndex: input.turnIndex,
-    },
-    runType: "interview_turn",
-    sessionId: input.sessionId,
-    userId: input.userId,
-  });
-
   const payload = {
     task: buildTurnTaskInstruction(
       input.snapshot,
@@ -1312,75 +1299,96 @@ async function generateTurnDecision(input: {
       title: archetype.title,
     })),
   };
+  const requestBody = {
+    input: [
+      {
+        content: promptRuntime.systemPrompt,
+        role: "system",
+      },
+      {
+        content: JSON.stringify(payload),
+        role: "user",
+      },
+    ],
+    model: promptRuntime.model,
+    reasoning: { effort: "low" },
+    text: {
+      format: {
+        name: "interview_turn",
+        schema: {
+          additionalProperties: false,
+          properties: {
+            archetypeId: { type: "string" },
+            detectedUserIntent: {
+              enum: [
+                "opening_question",
+                "awaiting_answer",
+                "brief_feedback_choice",
+                "more_feedback",
+                "retry_answer",
+                "move_on",
+                "wrap_up",
+              ],
+              type: "string",
+            },
+            done: { type: "boolean" },
+            feedback: { type: "string" },
+            question: { type: "string" },
+            routingReason: { type: "string" },
+            state: {
+              enum: [
+                "opening_question",
+                "awaiting_answer",
+                "brief_feedback_choice",
+                "more_feedback",
+                "retry_answer",
+                "move_on",
+                "wrap_up",
+              ],
+              type: "string",
+            },
+            targetSkill: { type: "string" },
+          },
+          required: [
+            "archetypeId",
+            "detectedUserIntent",
+            "done",
+            "feedback",
+            "question",
+            "routingReason",
+            "state",
+            "targetSkill",
+          ],
+          type: "object",
+        },
+        type: "json_schema",
+      },
+    },
+  };
+  const run = await startAiRun({
+    model: promptRuntime.model,
+    promptSnapshot: promptRuntime.systemPrompt,
+    rawJson: {
+      coachingChoiceIntent: input.coachingChoiceIntent,
+      modeKey: input.snapshot.modeKey,
+      promptConfigKeys: promptRuntime.promptConfigKeys,
+      request: {
+        endpoint: "/v1/responses",
+        payload,
+        responseContract: "interview_turn",
+      },
+      traceVersion: 1,
+      turnIndex: input.turnIndex,
+    },
+    runType: "interview_turn",
+    sessionId: input.sessionId,
+    userId: input.userId,
+  });
+  let runCompleted = false;
 
   try {
     const response = await fetch("https://api.openai.com/v1/responses", {
-      body: JSON.stringify({
-        input: [
-          {
-            content: promptRuntime.systemPrompt,
-            role: "system",
-          },
-          {
-            content: JSON.stringify(payload),
-            role: "user",
-          },
-        ],
-        model: promptRuntime.model,
-        reasoning: { effort: "low" },
-        text: {
-          format: {
-            name: "interview_turn",
-            schema: {
-              additionalProperties: false,
-              properties: {
-                archetypeId: { type: "string" },
-                detectedUserIntent: {
-                  enum: [
-                    "opening_question",
-                    "awaiting_answer",
-                    "brief_feedback_choice",
-                    "more_feedback",
-                    "retry_answer",
-                    "move_on",
-                    "wrap_up",
-                  ],
-                  type: "string",
-                },
-                done: { type: "boolean" },
-                feedback: { type: "string" },
-                question: { type: "string" },
-                routingReason: { type: "string" },
-                state: {
-                  enum: [
-                    "opening_question",
-                    "awaiting_answer",
-                    "brief_feedback_choice",
-                    "more_feedback",
-                    "retry_answer",
-                    "move_on",
-                    "wrap_up",
-                  ],
-                  type: "string",
-                },
-                targetSkill: { type: "string" },
-              },
-              required: [
-                "archetypeId",
-                "detectedUserIntent",
-                "done",
-                "feedback",
-                "question",
-                "routingReason",
-                "state",
-                "targetSkill",
-              ],
-              type: "object",
-            },
-            type: "json_schema",
-          },
-        },
-      }),
+      body: JSON.stringify(requestBody),
       headers: {
         Authorization: `Bearer ${input.apiKey}`,
         "Content-Type": "application/json",
@@ -1392,9 +1400,11 @@ async function generateTurnDecision(input: {
       const detail = await response.text();
       await completeAiRun(run.id, {
         errorMessage: `Interview turn failed: ${detail.slice(0, 300)}`,
-        rawJson: { status: response.status },
+        mergeRawJson: true,
+        rawJson: { response: { status: response.status } },
         status: "failed",
       });
+      runCompleted = true;
       throw new Error("Interview turn generation failed.");
     }
 
@@ -1411,17 +1421,6 @@ async function generateTurnDecision(input: {
       body.usage?.output_tokens,
     );
 
-    await completeAiRun(run.id, {
-      costSource: estimatedCostMicroUsd === undefined ? "unavailable" : "estimated",
-      estimatedCostMicroUsd,
-      inputTokens: body.usage?.input_tokens,
-      outputTokens: body.usage?.output_tokens,
-      providerRequestId: providerRequestId || body.id,
-      rawJson: { responseId: body.id },
-      status: "succeeded",
-      totalTokens: body.usage?.total_tokens,
-    });
-
     const decision = normalizeCoachingDecision({
       choiceIntent: input.coachingChoiceIntent,
       decision: parseDecision(outputText, {
@@ -1435,26 +1434,51 @@ async function generateTurnDecision(input: {
       retryAlreadyOffered,
       snapshot: input.snapshot,
     });
-    if (
+    const finalDecision =
       retryAlreadyOffered &&
       decision.state !== "more_feedback" &&
       decision.question &&
       /\bretry\b|\btry again\b/i.test(decision.question)
-    ) {
-      return {
-        ...decision,
-        question:
-          "Let's move to a different scenario. Tell me about a time you had to adapt quickly when conditions changed.",
-        routingReason: `${decision.routingReason} Replaced repeated retry with a new primary question.`,
-      };
-    }
+        ? {
+            ...decision,
+            question:
+              "Let's move to a different scenario. Tell me about a time you had to adapt quickly when conditions changed.",
+            routingReason: `${decision.routingReason} Replaced repeated retry with a new primary question.`,
+          }
+        : decision;
 
-    return decision;
-  } catch (error) {
     await completeAiRun(run.id, {
-      errorMessage: error instanceof Error ? error.message : "Interview turn failed.",
-      status: "failed",
+      costSource: estimatedCostMicroUsd === undefined ? "unavailable" : "estimated",
+      estimatedCostMicroUsd,
+      inputTokens: body.usage?.input_tokens,
+      mergeRawJson: true,
+      outputTokens: body.usage?.output_tokens,
+      providerRequestId: providerRequestId || body.id,
+      rawJson: {
+        response: {
+          decision: finalDecision,
+          responseId: body.id,
+        },
+      },
+      status: "succeeded",
+      totalTokens: body.usage?.total_tokens,
     });
+    runCompleted = true;
+
+    return finalDecision;
+  } catch (error) {
+    if (!runCompleted) {
+      await completeAiRun(run.id, {
+        errorMessage: error instanceof Error ? error.message : "Interview turn failed.",
+        mergeRawJson: true,
+        rawJson: {
+          response: {
+            error: error instanceof Error ? error.message : "Interview turn failed.",
+          },
+        },
+        status: "failed",
+      });
+    }
     throw error;
   }
 }

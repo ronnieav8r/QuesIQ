@@ -199,12 +199,12 @@ function run() {
   ]);
 
   requireMarkers("Auth/session ownership guards", "src/app/api/realtime/session/route.ts", [
-    "const appSession = await auth()",
-    "getOwnedSession(body.sessionId, appSession.user.id)",
+    "const appUser = await resolveRequestUser(request)",
+    "getOwnedSession(body.sessionId, appUser.id)",
   ]);
   requireMarkers("Owned session guards for artifacts", "src/app/api/sessions/[sessionId]/artifact/route.ts", [
-    "const appSession = await auth()",
-    "saveSessionArtifact(sessionId, appSession.user.id",
+    "const appUser = await resolveRequestUser(request)",
+    "saveSessionArtifact(sessionId, appUser.id",
   ]);
   requireMarkers("Admin Prompt Test Tunnel access guard", "src/app/api/admin/interview/test-tunnel/turn/route.ts", [
     "requireAdminSession",

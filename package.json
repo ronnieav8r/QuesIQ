@@ -2,9 +2,16 @@
   "name": "quesiq-platform",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/mobile",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev",
     "dev:local": "next dev -H 127.0.0.1 -p 3100",
+    "dev:mobile": "npm run start --workspace @quesiq/interview-mobile",
+    "dev:mobile:android": "npm run android --workspace @quesiq/interview-mobile",
+    "mobile:android:prepare": "node scripts/mobile/prepare-android-local.mjs",
     "build": "next build",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/db-migrate.mjs",
@@ -34,6 +41,11 @@
     "test:interview:e2e": "node scripts/test/interview-e2e-runner.mjs",
     "test:interview:live-ai": "tsx scripts/test/interview-live-ai.ts",
     "test:interview:all": "npm run test:interview:static && npm run test:interview:services && npm run test:interview:e2e",
+    "test:mobile": "npm run test:contracts && npm run test:mobile:api && npm run test --workspace @quesiq/interview-mobile",
+    "test:mobile:api": "node --env-file=.env.local ./node_modules/tsx/dist/cli.mjs scripts/test/mobile-auth-services.ts",
+    "test:mobile:proof": "node --env-file=.env.local ./node_modules/tsx/dist/cli.mjs scripts/mobile/verify-native-voice-proof.ts",
+    "test:contracts": "tsx --test packages/interview-contracts/src/index.test.ts",
+    "typecheck:mobile": "npm run typecheck --workspace @quesiq/interview-mobile",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
@@ -48,12 +60,14 @@
     "@aws-sdk/client-s3": "^3.1056.0",
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.16.0",
+    "jose": "^6.2.10",
     "next": "^16.2.0",
     "next-auth": "^5.0.0-beta.31",
     "pdf-parse": "^1.1.1",
     "pg": "^8.21.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
@@ -69,5 +83,8 @@
   },
   "engines": {
     "node": ">=24.14.0 <25"
+  },
+  "overrides": {
+    "react-native": "0.86.3"
   }
 }

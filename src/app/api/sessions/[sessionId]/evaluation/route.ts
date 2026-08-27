@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/auth";
 import {
   getOpenAiApiKey,
   getOpenAiInterviewTestTunnelApiKey,
 } from "@/server/openai/keys";
 import { createSessionEvaluation } from "@/server/sessions/create-session-evaluation";
+import { resolveRequestUser } from "@/server/mobile-auth/mobile-auth";
 
 export const runtime = "nodejs";
 
@@ -15,10 +15,10 @@ type RouteContext = {
   }>;
 };
 
-export async function POST(_request: Request, context: RouteContext) {
-  const appSession = await auth();
+export async function POST(request: Request, context: RouteContext) {
+  const appUser = await resolveRequestUser(request);
 
-  if (!appSession?.user?.id) {
+  if (!appUser) {
     return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
   }
 
@@ -50,7 +50,7 @@ export async function POST(_request: Request, context: RouteContext) {
   const { sessionId } = await context.params;
 
   try {
-    const evaluation = await createSessionEvaluation(sessionId, appSession.user.id, {
+    const evaluation = await createSessionEvaluation(sessionId, appUser.id, {
       apiKeyOverride: localTestApiKeyOverride,
     });
 

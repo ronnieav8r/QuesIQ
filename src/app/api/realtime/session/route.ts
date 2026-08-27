@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/auth";
 import type {
   CoachingMemoryRecord,
   InterviewResumeSummary,
@@ -24,6 +23,7 @@ import {
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 import { buildRealtimeAudioInputConfig } from "@/server/realtime/audio-config";
 import { getOwnedSession } from "@/server/sessions/get-owned-session";
+import { resolveRequestUser } from "@/server/mobile-auth/mobile-auth";
 import { saveRealtimeSessionConfig } from "@/server/sessions/save-realtime-call";
 import {
   listStoryLibraryContext,
@@ -269,16 +269,16 @@ function getRealtimeCallId(location?: string | null) {
 }
 
 export async function POST(request: Request) {
-  const appSession = await auth();
+  const appUser = await resolveRequestUser(request);
 
-  if (!appSession?.user?.id) {
+  if (!appUser) {
     return NextResponse.json({ error: "Authentication is required." }, { status: 401 });
   }
 
   const body = (await request.json()) as RealtimeSessionRequest;
   const useTestTunnelKey = body.testTunnel === true;
 
-  if (useTestTunnelKey && !isAdminEmail(appSession.user.email)) {
+  if (useTestTunnelKey && !isAdminEmail(appUser.email)) {
     return NextResponse.json({ error: "Admin access is required." }, { status: 403 });
   }
 
@@ -300,7 +300,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing WebRTC SDP offer." }, { status: 400 });
   }
 
-  if (!body.sessionId || !(await getOwnedSession(body.sessionId, appSession.user.id))) {
+  if (!body.sessionId || !(await getOwnedSession(body.sessionId, appUser.id))) {
     return NextResponse.json({ error: "Session was not found." }, { status: 404 });
   }
 
@@ -314,7 +314,7 @@ export async function POST(request: Request) {
         }
       : body.snapshot;
 
-  if (isHandsFreeCoaching && !canUseHandsFreeCoaching(appSession.user.email)) {
+  if (isHandsFreeCoaching && !canUseHandsFreeCoaching(appUser.email)) {
     return NextResponse.json(
       {
         detail: "Hands-Free Coaching is a premium feature that is not enabled for this account.",
@@ -343,14 +343,14 @@ export async function POST(request: Request) {
     effectiveSnapshot
       ? getSessionPromptComponents(effectiveSnapshot)
       : Promise.resolve({} as SessionPromptComponents),
-    getCoachingMemory(appSession.user.id),
-    listStoryLibraryContext(appSession.user.id),
+    getCoachingMemory(appUser.id),
+    listStoryLibraryContext(appUser.id),
     effectiveSnapshot
       ? getOrCreateInterviewResumeSummary({
         resumeName: effectiveSnapshot.interviewContext.resumeName,
         resumeParsedAt: effectiveSnapshot.interviewContext.resumeParsedAt,
         resumeText: effectiveSnapshot.interviewContext.resumeText,
-        userId: appSession.user.id,
+        userId: appUser.id,
       })
       : Promise.resolve<ResumeSummaryResult>({
           unavailableReason: "missing_session_snapshot",
@@ -387,17 +387,6 @@ export async function POST(request: Request) {
     storyLibraryContextCount: rankedStoryLibrary.length,
     storyPracticePromptApplied,
   };
-  const aiRun = await startAiRun({
-    model: activeRealtimeConfig.model,
-    promptConfigId: activeRealtimeConfig.id,
-    promptConfigKey: activeRealtimeConfig.key,
-    promptConfigVersion: activeRealtimeConfig.version,
-    promptSnapshot: activeRealtimeConfig.instructions,
-    rawJson: realtimeRunMetadata,
-    runType: "realtime",
-    sessionId: body.sessionId,
-    userId: appSession.user.id,
-  });
   const sessionConfig = {
     type: "realtime",
     model: activeRealtimeConfig.model,
@@ -422,6 +411,25 @@ export async function POST(request: Request) {
       },
     },
   };
+  const aiRun = await startAiRun({
+    model: activeRealtimeConfig.model,
+    promptConfigId: activeRealtimeConfig.id,
+    promptConfigKey: activeRealtimeConfig.key,
+    promptConfigVersion: activeRealtimeConfig.version,
+    promptSnapshot: sessionConfig.instructions,
+    rawJson: {
+      ...realtimeRunMetadata,
+      request: {
+        audio: sessionConfig.audio,
+        endpoint: "/v1/realtime/calls",
+        model: sessionConfig.model,
+      },
+      traceVersion: 1,
+    },
+    runType: "realtime",
+    sessionId: body.sessionId,
+    userId: appUser.id,
+  });
   const formData = new FormData();
 
   formData.set("sdp", body.sdp);
@@ -441,9 +449,9 @@ export async function POST(request: Request) {
       await completeAiRun(aiRun.id, {
         costSource: "unavailable",
         errorMessage: detail,
+        mergeRawJson: true,
         rawJson: {
-          ...realtimeRunMetadata,
-          status: realtimeResponse.status,
+          response: { status: realtimeResponse.status },
         },
         status: "failed",
       });
@@ -461,7 +469,7 @@ export async function POST(request: Request) {
 
     if (realtimeCallId) {
       try {
-        await saveRealtimeSessionConfig(body.sessionId, appSession.user.id, {
+        await saveRealtimeSessionConfig(body.sessionId, appUser.id, {
           model: activeRealtimeConfig.model,
           promptConfigKey: activeRealtimeConfig.key,
           promptConfigVersion: activeRealtimeConfig.version,
@@ -473,7 +481,7 @@ export async function POST(request: Request) {
       }
     } else {
       try {
-        await saveRealtimeSessionConfig(body.sessionId, appSession.user.id, {
+        await saveRealtimeSessionConfig(body.sessionId, appUser.id, {
           model: activeRealtimeConfig.model,
           promptConfigKey: activeRealtimeConfig.key,
           promptConfigVersion: activeRealtimeConfig.version,
@@ -485,10 +493,10 @@ export async function POST(request: Request) {
     }
     await completeAiRun(aiRun.id, {
       costSource: "unavailable",
+      mergeRawJson: true,
       providerRequestId: realtimeCallId,
       rawJson: {
-        ...realtimeRunMetadata,
-        providerRequestId: realtimeCallId,
+        response: { providerRequestId: realtimeCallId },
       },
       status: "succeeded",
     });
@@ -502,8 +510,11 @@ export async function POST(request: Request) {
     await completeAiRun(aiRun.id, {
       costSource: "unavailable",
       errorMessage: error instanceof Error ? error.message : "Unknown network error.",
+      mergeRawJson: true,
       rawJson: {
-        ...realtimeRunMetadata,
+        response: {
+          error: error instanceof Error ? error.message : "Unknown network error.",
+        },
       },
       status: "failed",
     });

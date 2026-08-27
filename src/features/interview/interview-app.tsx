@@ -11,6 +11,7 @@ import {
   Menu,
   Mic,
   ShieldCheck,
+  Smartphone,
   UserRound,
   ChevronDown,
   ChevronUp,
@@ -913,6 +914,10 @@ export default function InterviewApp({
                     <UserRound aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
                     <span>Me</span>
                   </button>
+                  <Link href="/interview/mobile-preview" role="menuitem">
+                    <Smartphone aria-hidden="true" className="tab-icon" strokeWidth={2.2} />
+                    <span>Mobile Preview Lab</span>
+                  </Link>
                   <div className="app-menu-separator" role="separator" />
                   <div className="app-menu-section-label" role="presentation">Account</div>
                   {authSession?.user && (
