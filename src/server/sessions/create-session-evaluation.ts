@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import { parseSessionEvaluation } from "@/product/session-evaluation";
 import {
@@ -81,6 +81,14 @@ type ResponsesApiBody = {
     total_tokens?: number;
   };
 };
+
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function cleanArchetypePerformanceId(value: unknown) {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return uuidPattern.test(trimmed) ? trimmed : undefined;
+}
 
 const evaluationSchema = {
   additionalProperties: false,
@@ -394,7 +402,7 @@ function buildEvaluationInput(
             title: turn.title || turn.targetSkill || "Unknown archetype",
             turnIndex: turn.turnIndex,
           }))
-        : "No turn archetype metadata was recorded for this session.",
+        : "No turn archetype metadata was recorded for this session. Return an empty archetypePerformance array and do not invent archetype IDs.",
     answerEvaluations:
       answerEvaluations.length > 0
         ? answerEvaluations.map((evaluation) => ({
@@ -578,12 +586,26 @@ async function saveArchetypePerformanceResults(
   sessionId: string,
   result: SessionEvaluationResult,
 ) {
-  const entries = result.archetypePerformance?.filter((entry) => entry.archetypeId) ?? [];
+  const entriesById = new Map(
+    (result.archetypePerformance ?? []).flatMap((entry) => {
+      const archetypeId = cleanArchetypePerformanceId(entry.archetypeId);
+      return archetypeId ? [[archetypeId, { ...entry, archetypeId }] as const] : [];
+    }),
+  );
+  const entries = [...entriesById.values()];
+
+  if (entries.length === 0) return;
+
+  const knownArchetypes = await getDb()
+    .select({ id: interviewQuestionArchetypes.id })
+    .from(interviewQuestionArchetypes)
+    .where(inArray(interviewQuestionArchetypes.id, [...entriesById.keys()]));
+  const knownArchetypeIds = new Set(knownArchetypes.map((archetype) => archetype.id));
 
   for (const entry of entries) {
     const archetypeId = entry.archetypeId;
 
-    if (!archetypeId) {
+    if (!knownArchetypeIds.has(archetypeId)) {
       continue;
     }
 

@@ -7,6 +7,7 @@ import {
   writeRegressionSummary,
 } from "./interview-regression";
 import { buildInterviewRealtimeAudioInputConfig } from "../../src/server/realtime/audio-config";
+import { cleanArchetypePerformanceId } from "../../src/server/sessions/create-session-evaluation";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -20,6 +21,11 @@ async function main() {
   const audioInput = buildInterviewRealtimeAudioInputConfig();
   assert(audioInput.turn_detection.create_response === false, "Interview Realtime responses must remain client-triggered.");
   assert(audioInput.turn_detection.threshold === 0.5, "Interview Realtime VAD must retain the native microphone threshold.");
+  assert(cleanArchetypePerformanceId("behavioral_star") === undefined, "Archetype labels must not be treated as UUID foreign keys.");
+  assert(
+    cleanArchetypePerformanceId("0fb8c5e5-9731-44fd-88d7-908fae127618") === "0fb8c5e5-9731-44fd-88d7-908fae127618",
+    "Valid archetype UUIDs must remain eligible for performance tracking.",
+  );
 
   const seedState = await seedInterviewRegressionData();
   const checks = await verifySeededRegressionData(seedState);
