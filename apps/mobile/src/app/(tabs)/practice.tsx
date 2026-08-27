@@ -25,7 +25,7 @@ const stylesList: { key: InterviewStyleKey; label: string }[] = [{ key: "friendl
 const questionTypes: { key: QuestionTypeKey; label: string }[] = [{ key: "behavioral", label: "Behavioral" }, { key: "technical", label: "Technical" }, { key: "hypothetical", label: "Situational" }, { key: "motivational", label: "Motivation" }];
 
 function Choice({ active, detail, label, onPress }: { active: boolean; detail?: string; label: string; onPress: () => void }) {
-  return <Pressable accessibilityRole="radio" accessibilityState={{ checked: active }} onPress={onPress} style={[choiceStyles.wrap, active && choiceStyles.active]}><View style={choiceStyles.copy}><Text style={choiceStyles.label}>{label}</Text>{detail ? <Text style={choiceStyles.detail}>{detail}</Text> : null}</View>{active ? <Check color={colors.background} size={17} /> : <ChevronRight color={colors.muted} size={18} />}</Pressable>;
+  return <Pressable accessibilityRole="radio" accessibilityState={{ checked: active }} onPress={onPress} style={[choiceStyles.wrap, active && choiceStyles.active]}><View style={choiceStyles.copy}><Text style={[choiceStyles.label, active && choiceStyles.activeText]}>{label}</Text>{detail ? <Text style={[choiceStyles.detail, active && choiceStyles.activeText]}>{detail}</Text> : null}</View>{active ? <Check color={colors.background} size={17} /> : <ChevronRight color={colors.muted} size={18} />}</Pressable>;
 }
 
 export default function PracticeScreen() {
@@ -44,7 +44,7 @@ export default function PracticeScreen() {
 
   const chosenTarget = useMemo(() => bootstrap.data?.jobTargets.find((item) => item.id === targetId) ?? bootstrap.data?.jobTargets[0], [bootstrap.data?.jobTargets, targetId]);
   if (bootstrap.isLoading) return <LoadingState />;
-  if (bootstrap.isError || !bootstrap.data) return <ErrorState message="Practice setup could not be loaded." onRetry={() => bootstrap.refetch()} />;
+  if (!bootstrap.data) return <ErrorState message={bootstrap.error instanceof Error ? bootstrap.error.message : "Practice setup could not be loaded."} onRetry={() => bootstrap.refetch()} />;
 
   const launch = async () => {
     const connectivity = await NetInfo.fetch();
@@ -88,7 +88,7 @@ export default function PracticeScreen() {
 }
 
 const choiceStyles = StyleSheet.create({
-  active: { backgroundColor: colors.cyan, borderColor: colors.cyan }, chip: { borderColor: colors.borderStrong, borderRadius: radius.pill, borderWidth: 1, minHeight: 42, paddingHorizontal: spacing.md, justifyContent: "center" },
+  active: { backgroundColor: colors.cyan, borderColor: colors.cyan }, activeText: { color: colors.background }, chip: { borderColor: colors.borderStrong, borderRadius: radius.pill, borderWidth: 1, minHeight: 42, paddingHorizontal: spacing.md, justifyContent: "center" },
   chipActive: { backgroundColor: colors.cyanDark, borderColor: colors.cyan }, chipText: { color: colors.textSoft, fontSize: 14, fontWeight: "700" }, chipTextActive: { color: colors.cyan }, chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   copy: { flex: 1, gap: 2 }, detail: { color: colors.muted, fontSize: 13, lineHeight: 18 }, error: { color: colors.danger, fontSize: 14 }, label: { color: colors.text, fontSize: 16, fontWeight: "700" },
   wrap: { alignItems: "center", borderColor: colors.border, borderRadius: radius.md, borderWidth: 1, flexDirection: "row", gap: spacing.sm, minHeight: 62, padding: spacing.md },

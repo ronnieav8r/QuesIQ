@@ -1,6 +1,12 @@
 import { spawnSync } from "node:child_process";
 
-const adb = process.env.ADB_PATH || "adb";
+import { findAndroidTool } from "./android-tools.mjs";
+
+const adb = findAndroidTool("adb", process.env.ADB_PATH);
+if (!adb) {
+  console.error("Android adb was not found. Install Android SDK Platform Tools or set ADB_PATH, then retry.");
+  process.exit(1);
+}
 const check = spawnSync(adb, ["version"], { encoding: "utf8" });
 if (check.error || check.status !== 0) {
   console.error("Android adb was not found. Install Android Studio/SDK Platform Tools or set ADB_PATH, then retry.");

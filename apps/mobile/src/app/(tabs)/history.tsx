@@ -13,7 +13,7 @@ const labels = { coaching: "Coaching", first_impression: "First Impression", moc
 export default function HistoryScreen() {
   const bootstrap = useBootstrap();
   if (bootstrap.isLoading) return <LoadingState />;
-  if (bootstrap.isError || !bootstrap.data) return <ErrorState message="History could not be loaded." onRetry={() => bootstrap.refetch()} />;
+  if (!bootstrap.data) return <ErrorState message={bootstrap.error instanceof Error ? bootstrap.error.message : "History could not be loaded."} onRetry={() => bootstrap.refetch()} />;
   return <Screen eyebrow="Your progress" subtitle="Saved transcripts and coaching reviews. QuesIQ does not retain raw session audio." title="History">
     {bootstrap.data.sessions.length ? bootstrap.data.sessions.map((session) => <Card key={session.id} onPress={() => router.push(`/review/${session.id}`)} trailing={<ArrowRight color={colors.cyan} size={20} />} title={labels[session.modeKey]}>
       <Text style={styles.role}>{session.targetRole}{session.targetCompany ? ` · ${session.targetCompany}` : ""}</Text>

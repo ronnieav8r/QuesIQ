@@ -16,7 +16,7 @@ function average(scores: { score: number }[]) {
 export default function HomeScreen() {
   const bootstrap = useBootstrap();
   if (bootstrap.isLoading) return <LoadingState />;
-  if (bootstrap.isError || !bootstrap.data) return <ErrorState message={bootstrap.error instanceof Error ? bootstrap.error.message : "Your workspace could not be loaded."} onRetry={() => bootstrap.refetch()} />;
+  if (!bootstrap.data) return <ErrorState message={bootstrap.error instanceof Error ? bootstrap.error.message : "Your workspace could not be loaded."} onRetry={() => bootstrap.refetch()} />;
   const { jobTargets, profile, sessions, user } = bootstrap.data;
   const target = jobTargets.find((item) => item.id === profile?.jobTargetId) ?? jobTargets[0];
   const latest = sessions.find((session) => session.hasEvaluation);

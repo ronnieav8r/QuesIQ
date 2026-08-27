@@ -9,9 +9,11 @@
   "scripts": {
     "dev": "next dev",
     "dev:local": "next dev -H 127.0.0.1 -p 3100",
-    "dev:mobile": "npm run start --workspace @quesiq/interview-mobile",
-    "dev:mobile:android": "npm run android --workspace @quesiq/interview-mobile",
+    "dev:mobile": "node scripts/mobile/run-android-local.mjs start",
+    "dev:mobile:android": "node scripts/mobile/run-android-local.mjs",
+    "mobile:android:emulator": "node scripts/mobile/start-android-emulator.mjs",
     "mobile:android:prepare": "node scripts/mobile/prepare-android-local.mjs",
+    "mobile:android:proof-log": "node scripts/mobile/capture-android-proof-log.mjs",
     "build": "next build",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/db-migrate.mjs",
