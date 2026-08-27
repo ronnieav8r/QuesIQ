@@ -21,7 +21,7 @@ import {
   type ResumeSummaryResult,
 } from "@/server/profiles/resume-summary";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
-import { buildRealtimeAudioInputConfig } from "@/server/realtime/audio-config";
+import { buildInterviewRealtimeAudioInputConfig } from "@/server/realtime/audio-config";
 import { getOwnedSession } from "@/server/sessions/get-owned-session";
 import { resolveRequestUser } from "@/server/mobile-auth/mobile-auth";
 import { saveRealtimeSessionConfig } from "@/server/sessions/save-realtime-call";
@@ -259,6 +259,7 @@ function buildQueInstructions(
     formatResumeContext(snapshot, resumeSummary, resumeSummaryUnavailableReason),
     technicalSpecificityGuard(snapshot),
     strictSpokenTurnContract(snapshot?.modeKey),
+    "Language requirement: speak and respond only in clear American English for the entire session. Never switch to French or another language, even if other session context contains non-English text.",
   ]
     .filter(Boolean)
     .join(" ");
@@ -401,11 +402,7 @@ export async function POST(request: Request) {
       resumeSummaryResult.unavailableReason,
     ),
     audio: {
-      input: buildRealtimeAudioInputConfig({
-        createResponse: false,
-        silenceDurationMs: 1500,
-        threshold: 0.78,
-      }),
+      input: buildInterviewRealtimeAudioInputConfig(),
       output: {
         voice: activeRealtimeConfig.voice || process.env.OPENAI_REALTIME_VOICE || "marin",
       },

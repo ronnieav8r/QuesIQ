@@ -27,7 +27,13 @@ import {
 } from "react-native-webrtc";
 
 import { Button } from "@/components/ui/button";
-import { claimFinalization, createVerificationPhrase } from "@/lib/voice-proof-utils";
+import {
+  claimFinalization,
+  createVerificationPhrase,
+  followUpResponseInstructions,
+  isUserSpeechEvent,
+  openingResponseInstructions,
+} from "@/lib/voice-proof-utils";
 import { useAuth } from "@/providers/auth-provider";
 import { colors, radius, spacing } from "@/theme/tokens";
 
@@ -41,6 +47,7 @@ type ProofMetrics = {
   peerConnected: boolean;
   remoteAudioTrackReceived: boolean;
   sessionId: string;
+  speechDetected: boolean;
   userTranscriptTurns: number;
   verificationPhrase: string;
 };
@@ -78,6 +85,7 @@ export function NativeVoiceSession({
   const [muted, setMuted] = useState(false);
   const [captions, setCaptions] = useState(false);
   const [error, setError] = useState("");
+  const [speechDetected, setSpeechDetected] = useState(false);
   const [turns, setTurns] = useState<VoiceTranscriptTurn[]>([]);
   const [startedAt] = useState(() => new Date().toISOString());
   const [startedMs] = useState(() => Date.now());
@@ -108,6 +116,7 @@ export function NativeVoiceSession({
     peerConnected: false,
     remoteAudioTrackReceived: false,
     sessionId,
+    speechDetected: false,
     userTranscriptTurns: 0,
     verificationPhrase,
   });
@@ -212,6 +221,8 @@ export function NativeVoiceSession({
     metricsRef.current.dataChannelOpen = false;
     metricsRef.current.peerConnected = false;
     metricsRef.current.remoteAudioTrackReceived = false;
+    metricsRef.current.speechDetected = false;
+    setSpeechDetected(false);
     setError("");
     setMuted(false);
     try {
@@ -270,7 +281,7 @@ export function NativeVoiceSession({
         channel.send(JSON.stringify({
           type: "response.create",
           response: {
-            instructions: "Welcome the candidate in one short sentence, then ask the first interview question.",
+            instructions: openingResponseInstructions,
           },
         }));
       };
@@ -291,6 +302,10 @@ export function NativeVoiceSession({
         }
         if (!message.type) return;
         addEvent(message.type);
+        if (isUserSpeechEvent(message.type)) {
+          metricsRef.current.speechDetected = true;
+          setSpeechDetected(true);
+        }
         if (message.type === "response.created") responseActiveRef.current = true;
         if (["response.done", "response.cancelled", "response.output_audio.done"].includes(message.type)) responseActiveRef.current = false;
         if (message.type === "conversation.item.input_audio_transcription.delta") pendingUserRef.current += message.delta || "";
@@ -299,7 +314,12 @@ export function NativeVoiceSession({
           pendingUserRef.current = "";
           if (channel.readyState === "open" && !endingRef.current) {
             setTimeout(() => {
-              if (channel.readyState === "open" && !endingRef.current) channel.send(JSON.stringify({ type: "response.create" }));
+              if (channel.readyState === "open" && !endingRef.current) {
+                channel.send(JSON.stringify({
+                  type: "response.create",
+                  response: { instructions: followUpResponseInstructions },
+                }));
+              }
             }, 500);
           }
         }
@@ -405,6 +425,9 @@ export function NativeVoiceSession({
           <View style={styles.proofPhrase}>
             <Text style={styles.proofLabel}>NATIVE PROOF PHRASE</Text>
             <Text selectable style={styles.proofText}>{verificationPhrase}</Text>
+            <Text style={[styles.micStatus, speechDetected && styles.micStatusDetected]}>
+              {speechDetected ? "VOICE DETECTED" : "WAITING FOR YOUR VOICE"}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -471,6 +494,8 @@ const styles = StyleSheet.create({
   errorActions: { gap: spacing.sm },
   liveDot: { backgroundColor: colors.muted, borderRadius: 99, height: 9, width: 9 },
   liveDotActive: { backgroundColor: colors.lime },
+  micStatus: { color: colors.muted, fontSize: 10, fontWeight: "900", letterSpacing: 1 },
+  micStatusDetected: { color: colors.lime },
   orb: { alignItems: "center", backgroundColor: colors.panel, borderColor: colors.borderStrong, borderRadius: 80, borderWidth: 1, height: 146, justifyContent: "center", width: 146 },
   orbLive: { backgroundColor: colors.cyanDark, borderColor: colors.cyan },
   phase: { color: colors.textSoft, fontSize: 13, fontWeight: "700" },

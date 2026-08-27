@@ -26,3 +26,11 @@ export function buildRealtimeAudioInputConfig({
     },
   };
 }
+
+export function buildInterviewRealtimeAudioInputConfig() {
+  return buildRealtimeAudioInputConfig({
+    createResponse: false,
+    silenceDurationMs: 1500,
+    threshold: 0.5,
+  });
+}

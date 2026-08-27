@@ -6,6 +6,7 @@ import {
   verifySeededRegressionData,
   writeRegressionSummary,
 } from "./interview-regression";
+import { buildInterviewRealtimeAudioInputConfig } from "../../src/server/realtime/audio-config";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -15,6 +16,10 @@ async function main() {
   loadLocalEnv();
   ensureRegressionArtifactsDir();
   assert(process.env.DATABASE_URL, "DATABASE_URL is required for Interview service tests.");
+
+  const audioInput = buildInterviewRealtimeAudioInputConfig();
+  assert(audioInput.turn_detection.create_response === false, "Interview Realtime responses must remain client-triggered.");
+  assert(audioInput.turn_detection.threshold === 0.5, "Interview Realtime VAD must retain the native microphone threshold.");
 
   const seedState = await seedInterviewRegressionData();
   const checks = await verifySeededRegressionData(seedState);
