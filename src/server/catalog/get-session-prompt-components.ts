@@ -1,9 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import type {
-  InterviewStyle,
-  PracticeMode,
-  QuestionType,
+  SessionPromptComponents,
   SessionSetupSnapshot,
 } from "@/product/interview-types";
 import { getDb } from "@/server/db/client";
@@ -13,15 +11,14 @@ import {
   questionTypes,
 } from "@/server/db/schema";
 
-export type SessionPromptComponents = {
-  mode?: Pick<PracticeMode, "description" | "key" | "name" | "promptInstructions" | "use">;
-  questionType?: Pick<QuestionType, "key" | "label" | "promptInstructions">;
-  style?: Pick<InterviewStyle, "description" | "key" | "label" | "promptInstructions">;
-};
+export type { SessionPromptComponents } from "@/product/interview-types";
 
 export async function getSessionPromptComponents(
   snapshot: SessionSetupSnapshot,
 ): Promise<SessionPromptComponents> {
+  if (snapshot.executionConfig && snapshot.executionPromptSnapshot) {
+    return snapshot.executionPromptSnapshot.components;
+  }
   const [modeRows, questionRows, styleRows] = await Promise.all([
     getDb()
       .select({

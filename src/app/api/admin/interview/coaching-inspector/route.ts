@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdminSession } from "@/server/admin";
 import { CoachingOperationError } from "@/server/interview/coaching-operations";
+import { CoachingExerciseError } from "@/server/interview/coaching-exercise";
 import { coachingInspectionCsv, executeInspectorAction, inspectorActionSchema, listCoachingInspections, readCoachingInspection, safeInspectionExport } from "@/server/interview/coaching-inspector";
 import { mobileApiError } from "@/server/mobile-auth/responses";
 
@@ -22,6 +23,7 @@ async function authorize(request: Request) {
   return (await requireAdminSession())?.user?.id;
 }
 function failure(error: unknown) {
+  if (error instanceof CoachingExerciseError) return mobileApiError(error.code, error.message, 409, false);
   if (error instanceof CoachingOperationError) return mobileApiError(error.code, error.message, error.status, ["turn_processing", "simulated_failure"].includes(error.code));
   return mobileApiError("inspector_failed", "The local Coaching inspector could not complete this request.", 503, true);
 }

@@ -4,7 +4,8 @@ import { completeAiRun, startAiRun } from "@/server/ai-runs/ai-runs";
 import { resolveRequestUser } from "@/server/mobile-auth/mobile-auth";
 import { mobileApiError } from "@/server/mobile-auth/responses";
 import { getOpenAiRealtimeApiKey } from "@/server/openai/keys";
-import { getOwnedSession } from "@/server/sessions/get-owned-session";
+import { ensureNativeExecutionSnapshot } from "@/server/interview/execution-config";
+import { CoachingOperationError } from "@/server/interview/coaching-operations";
 
 export const runtime = "nodejs";
 
@@ -19,8 +20,15 @@ export async function POST(request: Request) {
   if (!body.sdp || !sessionId) {
     return mobileApiError("invalid_payload", "An SDP offer and session are required.", 400);
   }
-  if (!(await getOwnedSession(sessionId, user.id))) {
-    return mobileApiError("session_not_found", "Session was not found.", 404);
+  let snapshot;
+  try {
+    snapshot = await ensureNativeExecutionSnapshot(sessionId, user.id);
+    if (snapshot.modeKey !== "coaching" || snapshot.executionConfig?.effective.engine !== "turn_based") {
+      return mobileApiError("wrong_engine", "Streaming transcription is only available for chained Coaching.", 409);
+    }
+  } catch (error) {
+    if (error instanceof CoachingOperationError) return mobileApiError(error.code, error.message, error.status);
+    return mobileApiError("configuration_failed", "Session configuration could not be loaded.", 503, true);
   }
 
   const apiKey = getOpenAiRealtimeApiKey("interview");
@@ -28,7 +36,7 @@ export async function POST(request: Request) {
     return mobileApiError("openai_not_configured", "The local Interview AI key is not configured.", 503);
   }
 
-  const model = "gpt-live-transcribe";
+  const model = snapshot.executionConfig!.effective.transcriptionModel;
   const sessionConfig = {
     audio: {
       input: {

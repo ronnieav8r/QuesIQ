@@ -5,7 +5,8 @@ Approved for sequential implementation: 2026-09-06.
 
 ## Current position
 
-- Phase 0 accepted. Next: P1.1 effective-mode/state contract design and tests.
+- Phases 0 and 1 accepted. Next: Phase 2 Coaching prompt candidate and truthful
+  validation. No new engine rollout or paid model test has been approved.
 - Starting HEAD: `66eafc9` on `codex/interview-mobile`, QuesIQ-dev.
 - Existing Interview mobile/Coaching/model-lab changes predate this execution.
   A checkpoint preserves them; it is not a fresh correctness certification.
@@ -21,7 +22,11 @@ Approved for sequential implementation: 2026-09-06.
 | Plan activation | Complete | Manager | Workspace/app AGENTS and docs map point to the approved roadmap and this status. |
 | P0 baseline/checkpoint | Complete | Manager | `0d5cd32`; static/services and mobile typecheck passed; unchanged browser rerun 14/14. Initial dev-auth connection reset retained as evidence. |
 | P0.1 direct owned review lookup | Accepted | Luna / low; manager reviewed | Direct owner+ID lookup, shared history mapper, malformed404; full payload parity behind150 newer sessions; auth/ownership tests pass. |
-| P1.1 effective-mode/state contracts | Not started | Manager-led | Starts after P0 acceptance; no mode-engine promotion in configuration cleanup. |
+| P1.1 effective-mode/state contracts | Accepted | Luna / low; manager corrected bounds/fallback versions | Shared strict contracts; 9 contract tests passed. |
+| P1.2 effective configuration | Accepted | Luna / low pure builder; manager server integration | Server-owned session pins, actual prompt bodies/catalog components, native/transcription/Realtime/inspector parity; mocked API request settings passed. |
+| P1.3 deterministic controller | Accepted | Luna / low reducer; manager adapter/ledger integration | Exact retry question, primary counts, replay-before-validation, late-result publication guard; 15 unit tests and service checks passed. |
+| P1.4 native parity | Accepted | Luna / low then Terra / medium | Catalog choices, active target, server config/engine routing; corrected hook ordering with loading-transition tests; mobile gate31/31 native tests. |
+| P2.1-2.6 Coaching prompt candidate | Next | Manager contract then bounded worker | `INTERVIEW_PHASE2_COACHING_CANDIDATE.md`; candidate remains inspector-only until separate quality gate. |
 
 ## Resume rules
 
@@ -83,14 +88,46 @@ correction rounds instead.
   infrastructure-run logs alongside successful reruns; do not claim flake-free
   certification. No native audio/device readiness claim.
 
-## Next bounded task: P1.1
+## Phase 1 implementation evidence (2026-09-06)
 
-Manager freezes versioned effective-mode and exercise-state contracts before
-assigning implementation. Account for the current native/web routing mismatch,
-retired catalog First Impression versus native availability, active Realtime
-prompt-model selection, legacy snapshots, server-owned configuration, and
-replay/idempotency. Schema/controller test implementation can use Luna low
-once behavior and interfaces are explicit; raise reasoning only for demonstrated
-ambiguity. Do not silently promote Rapid Fire/First Impression to a new engine.
-P1.2 resolution/inspector and P1.3 controller implementation follow acceptance
-of P1.1. The rest of the roadmap is not implemented or accepted yet.
+- Contract specification: `INTERVIEW_PHASE1_CONTRACTS.md`. Fallback prompt
+  versions remain zero, rather than being mislabeled as database versions.
+- Runtime configuration and prompt bodies are pinned in existing snapshot JSON;
+  no schema migration. Public create parsing discards client execution metadata.
+- Coaching's current engine/model/voice overrides are explicitly shown; disabled
+  catalog/runtime flags are respected. No Rapid Fire engine promotion.
+- Native and typed inspector use the same controller/generator. Retry/limit-end
+  transitions do not generate text. Native turn records still feed existing
+  evaluation services. Replayed text is reused; replayed speech may still incur
+  TTS, which remains part of later latency/cost/recovery work.
+- `p1-interview.log` stopped on one new test-fixture prefer-const lint error.
+  Corrected; `p1-interview-rerun.log` completed successfully: readiness41/2warn,
+  root typecheck/lint, old/new services,15 execution unit tests, and14/14 browser
+  tests. Post-gate edits (legacy inspector display, primary-count ceiling, and
+  native turn metadata preservation) passed root typecheck, targeted lint, and
+  both execution/Coaching service suites again before acceptance.
+- Manager inspected the generated framed Coaching screenshot from that run;
+  both phone frames contain learner controls, inspection remains outside.
+- TypeScript now excludes ignored `artifacts`, matching existing ESLint rules:
+  the preserved previous Next cache otherwise contributed malformed generated
+  declarations to root typecheck. The preserved cache was not deleted.
+- Delegation review: Luna succeeded on bounded contracts/pure modules but its
+  UI slice missed requirements and failed test setup after one correction;
+  escalated that bounded slice to Terra/medium. Manager found a conditional-hook
+  issue in Terra's first pass and required a loading-transition regression test.
+  Do not repeat broad UI tasks at Luna/low without shrinking their scope.
+- Final `p1-mobile.log`:9 contracts, API/auth/ownership checks,31 native tests
+  across9 suites all passed. Mobile typecheck passed. Terra's correction included
+  actual session-screen tests for engine selection and malformed/mismatched
+  saved metadata. Manager reviewed the final hooks/routing code before acceptance.
+- No real provider requests, microphone tests, desktop control, migrations,
+  deployment, or production changes. Mocked API fixtures use process-local dummy
+  credentials and intercept fetch; existing ignored credentials stay unchanged.
+
+## Next bounded task after Phase 1 acceptance: P2.1
+
+Write Coaching operation behavior and evidence contracts, then implement
+separate candidate question/feedback/clarification prompts with bounded context
+and truthful validation. Preserve current prompts for comparison. Candidate
+prompts remain local test candidates; paid-text quality and human calibration
+require separately bounded approval. The rest of the roadmap is not accepted.

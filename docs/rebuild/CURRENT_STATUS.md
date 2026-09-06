@@ -9,6 +9,12 @@ plan. `INTERVIEW_EXECUTION_STATUS.md` is the execution ledger and resume pointer
 Work sequentially in QuesIQ-dev with lowest-suitable-model workers and manager
 acceptance. Prior test results below remain historical, not new-phase evidence.
 
+Phases0/1 are accepted. Resume Phase2 via the execution ledger. Native sessions
+pin server configuration/prompt bodies; Coaching and the framed inspector share
+an application-owned controller. Catalog-driven native setup now respects
+disabled modes. Latest gate:31 native tests,9 shared contracts, ownership/API
+checks, and14 browser tests passed. These are not live model/audio quality proof.
+
 ## 2026-09-02 Interview Test Bed Default
 
 - Active local checkout: `QuesIQ-dev`, branch `codex/interview-mobile`.

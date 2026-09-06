@@ -287,6 +287,12 @@ export type SelectedQuestionContext = {
 };
 
 export type SessionSetupSnapshot = {
+  /** Server-owned metadata. The public request parser deliberately discards it. */
+  executionConfig?: import("@quesiq/interview-contracts").InterviewExecutionConfig;
+  executionPromptSnapshot?: {
+    configs: PromptConfigRecord[];
+    components: SessionPromptComponents;
+  };
   interviewContext: InterviewContext;
   introductionContext?: IntroductionRecord & {
     introductionId: string;
@@ -307,6 +313,12 @@ export type SessionSetupSnapshot = {
 export type SessionLaunchRecord = {
   id: string;
   status: SessionStatus;
+};
+
+export type SessionPromptComponents = {
+  mode?: Pick<PracticeMode, "description" | "key" | "name" | "promptInstructions" | "use">;
+  questionType?: Pick<QuestionType, "key" | "label" | "promptInstructions">;
+  style?: Pick<InterviewStyle, "description" | "key" | "label" | "promptInstructions">;
 };
 
 export type SessionHistoryItem = {

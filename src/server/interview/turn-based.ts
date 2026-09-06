@@ -30,6 +30,8 @@ import {
 import type { InterviewRuntimeConfigRecord } from "@/server/interview/runtime-configs";
 import { listStoryLibraryContext } from "@/server/stories/stories";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
+import { getExecutionPrompt } from "./execution-config";
+import { controlledCoachingPresentation, type ControlledCoachingTurn } from "./coaching-exercise-adapter";
 
 type PriorTurn = {
   feedback?: string;
@@ -1048,8 +1050,8 @@ async function getTurnPromptRuntime(input: {
   }
 
   const [plannerPrompt, responderPrompt] = await Promise.all([
-    getActivePromptConfig("turn_question_planner"),
-    getActivePromptConfig("turn_coaching_responder"),
+    getExecutionPrompt(input.snapshot, "turn_question_planner"),
+    getExecutionPrompt(input.snapshot, "turn_coaching_responder"),
   ]);
   const activeLayers = [
     plannerPrompt.active
@@ -1253,6 +1255,7 @@ async function resolveCoachingChoiceIntent(input: {
 }
 
 export async function generateTurnDecision(input: {
+  exerciseControl?: ControlledCoachingTurn;
   apiKey: string;
   coachingChoiceIntent?: CoachingChoiceIntent;
   config: InterviewRuntimeConfigRecord;
@@ -1291,12 +1294,13 @@ export async function generateTurnDecision(input: {
   );
   const maxTurns = turnLimit(input.snapshot, input.config.maxTurns);
   const retryAlreadyOffered =
-    input.snapshot.modeKey === "coaching" && latestAssistantPromptWasRetry(input.priorTurns);
+    input.exerciseControl ? input.exerciseControl.before.attemptIndex > 1
+      : input.snapshot.modeKey === "coaching" && latestAssistantPromptWasRetry(input.priorTurns);
   const isSingleAnswerPractice =
     Boolean(input.latestTranscript) &&
     Boolean(input.snapshot.introductionContext || input.snapshot.storyContext);
   const mustEnd =
-    Boolean(input.latestTranscript) &&
+    !input.exerciseControl && Boolean(input.latestTranscript) &&
     (input.endAfterAnswer === true ||
       isSingleAnswerPractice ||
       (input.turnIndex >= maxTurns && !retryAlreadyOffered));
@@ -1306,6 +1310,11 @@ export async function generateTurnDecision(input: {
     snapshot: input.snapshot,
   });
   const payload = {
+    exercise: input.exerciseControl ? {
+      operation: input.exerciseControl.plan.operation,
+      state: input.exerciseControl.before,
+      instruction: "The application owns transitions. Perform only this operation for the current question. Do not independently advance questions, request a retry, or end the session.",
+    } : undefined,
     task: buildTurnTaskInstruction(
       input.snapshot,
       mustEnd,
@@ -1565,12 +1574,17 @@ export async function generateTurnDecision(input: {
             routingReason: `${decision.routingReason} Replaced repeated retry with a new primary question.`,
           }
         : decision;
-    const finalDecision = input.forceConfiguredModel
+    const validatedDecision = input.forceConfiguredModel
       ? enforceChainedCoachingContract(mustEnd ? { ...normalizedFinalDecision, done: true, state: "wrap_up", question: "" } : normalizedFinalDecision, {
           choiceIntent: input.coachingChoiceIntent,
           hasLatestAnswer: Boolean(input.latestTranscript),
         })
       : normalizedFinalDecision;
+
+    const finalDecision = input.exerciseControl ? {
+      ...validatedDecision,
+      ...controlledCoachingPresentation(input.exerciseControl, validatedDecision),
+    } : validatedDecision;
 
     const inspection = {
       aiRunId: run.id, model: promptRuntime.model, promptSnapshot: promptRuntime.systemPrompt,

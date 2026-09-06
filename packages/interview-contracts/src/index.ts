@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { interviewExecutionConfigSchema } from "./execution";
+export * from "./execution";
 
 export const practiceModeKeySchema = z.enum([
   "first_impression",
@@ -37,6 +39,7 @@ export const sessionSetupSnapshotSchema = z.object({
   rapidFireQuestionCount: z.number().int().min(1).max(10).optional(),
   styleKey: interviewStyleKeySchema,
   turnBasedQuestionCount: z.number().int().min(1).max(10).optional(),
+  executionConfig: z.lazy(() => interviewExecutionConfigSchema).optional(),
 });
 
 export const voiceTranscriptTurnSchema = z.object({

@@ -119,6 +119,7 @@ export async function listInterviewInspectionRuns(limit = 50) {
   return sessionRows.map((session): InterviewInspectionRun => {
     const artifact = session.voiceArtifact as VoiceSessionArtifactDraft | null;
     const runtime = runtimeByMode.get(session.modeKey);
+    const effective = session.contextSnapshot.executionConfig?.effective;
 
     return {
       aiRuns: (aiRunsBySession.get(session.id) ?? []).map((aiRun) => ({
@@ -145,20 +146,20 @@ export async function listInterviewInspectionRuns(limit = 50) {
       contextSnapshot: session.contextSnapshot,
       createdAt: session.createdAt.toISOString(),
       endedAt: optionalIso(session.endedAt),
-      engine: runtime?.engine ?? (session.realtimeModel ? "realtime" : "turn_based"),
+      engine: effective?.engine ?? runtime?.engine ?? (session.realtimeModel ? "realtime" : "turn_based"),
       evaluationError: session.evaluationError ?? undefined,
       evaluationStatus: session.evaluationStatus,
       id: session.id,
       modeKey: session.modeKey,
       questionTypeKey: session.questionTypeKey ?? undefined,
       runtime: {
-        maxAnswerSeconds: runtime?.maxAnswerSeconds,
-        maxDurationSeconds: runtime?.maxDurationSeconds,
-        maxTurns: runtime?.maxTurns,
-        model: session.realtimeModel ?? runtime?.textModel,
+        maxAnswerSeconds: effective?.maxAnswerSeconds ?? runtime?.maxAnswerSeconds,
+        maxDurationSeconds: effective?.maxDurationSeconds ?? runtime?.maxDurationSeconds,
+        maxTurns: effective?.maxTurns ?? runtime?.maxTurns,
+        model: effective ? (effective.engine === "realtime" ? effective.realtimeModel : effective.textModel) : session.realtimeModel ?? runtime?.textModel,
         promptConfigKey: session.realtimePromptConfigKey ?? undefined,
         promptConfigVersion: session.realtimePromptConfigVersion ?? undefined,
-        voice: session.realtimeVoice ?? runtime?.ttsVoice,
+        voice: effective?.ttsVoice ?? session.realtimeVoice ?? runtime?.ttsVoice,
       },
       startedAt: optionalIso(session.startedAt),
       status: session.status,

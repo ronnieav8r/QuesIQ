@@ -1,4 +1,4 @@
-import type { VoiceSessionArtifact } from "@quesiq/interview-contracts";
+import { interviewExecutionConfigSchema, type VoiceSessionArtifact } from "@quesiq/interview-contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import { Redirect, router } from "expo-router";
 import { useRef, useState } from "react";
@@ -9,6 +9,7 @@ import { NativeVoiceSession } from "@/components/interview/native-voice-session"
 import { ChainedCoachingSession } from "@/components/interview/chained-coaching-session";
 import { Button } from "@/components/ui/button";
 import { bootstrapQueryKey } from "@/lib/bootstrap";
+import { resolveSessionExperience } from "@/lib/session-engine";
 import {
   deletePendingArtifact,
   savePendingArtifact,
@@ -31,6 +32,9 @@ export default function LiveSessionScreen() {
   const savingRef = useRef(false);
   const serverSavedRef = useRef(false);
   if (!activeSession) return <Redirect href="/(tabs)/practice" />;
+  const parsedExecution = activeSession.snapshot.executionConfig ? interviewExecutionConfigSchema.safeParse(activeSession.snapshot.executionConfig) : undefined;
+  const execution = parsedExecution?.success ? parsedExecution.data : undefined;
+  const experience = activeSession.snapshot.executionConfig && !parsedExecution?.success ? "blocked_invalid_configuration" : resolveSessionExperience(activeSession.snapshot.modeKey, execution);
 
   const persist = async (artifact: VoiceSessionArtifact) => {
     if (savingRef.current) return;
@@ -73,6 +77,14 @@ export default function LiveSessionScreen() {
     router.replace("/(tabs)/practice");
   };
 
+  if (experience === "blocked_disabled" || experience === "blocked_invalid_configuration") return (
+    <SafeAreaView edges={["top", "bottom"]} style={styles.saving}>
+      <Text style={styles.title}>This practice session is unavailable</Text>
+      <Text style={styles.body}>{experience === "blocked_disabled" ? "This practice mode is currently unavailable." : "This saved session configuration is no longer valid."}</Text>
+      <Button label="Back to practice" onPress={abandon} />
+    </SafeAreaView>
+  );
+
   if (pendingArtifact) return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.saving}>
       <Text style={styles.title}>
@@ -95,7 +107,7 @@ export default function LiveSessionScreen() {
     </SafeAreaView>
   );
 
-  if (activeSession.snapshot.modeKey === "coaching") {
+  if (experience === "chained_coaching") {
     return (
       <ChainedCoachingSession
         onArtifactFinalized={(artifact) => void persist(artifact)}
@@ -104,6 +116,8 @@ export default function LiveSessionScreen() {
       />
     );
   }
+
+  if (experience === "blocked_unsupported_turn_based") return <SafeAreaView><Text style={styles.body}>This execution mode is not supported.</Text></SafeAreaView>;
 
   return (
     <NativeVoiceSession

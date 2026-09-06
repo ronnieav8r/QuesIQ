@@ -7,6 +7,7 @@ import styles from "./coaching-text-inspector.module.css";
 type Result = {
   done?: boolean; question?: string; feedback?: string; transcript?: string; state?: string;
   durationMs?: number; choice?: string;
+  exerciseState?: unknown;
   usage?: { inputTokens?: number; outputTokens?: number; estimatedCostMicroUsd?: number };
   validation?: { corrected: boolean; passed: boolean; issues: string[] };
   inspection?: { model?: string; promptSnapshot?: string; promptConfigKeys?: unknown; request?: unknown; original?: unknown; normalized?: unknown; delivered?: unknown };
@@ -139,7 +140,7 @@ export function CoachingTextInspector({ renderDevices }: {
           <p>{result?.inspection?.model ?? "No model response yet"}{result?.durationMs !== undefined ? ` · ${result.durationMs} ms text processing` : ""}</p>
           {result?.usage && <p>{result.usage.inputTokens ?? "—"} input / {result.usage.outputTokens ?? "—"} output tokens · {result.usage.estimatedCostMicroUsd == null ? "Cost unavailable" : `$${(result.usage.estimatedCostMicroUsd / 1_000_000).toFixed(6)} estimated text cost`}</p>}
           <p>{result?.validation?.corrected ? "Delivered response was repaired. This is not an uncorrected model pass." : "No automatic correction recorded. Relevance and usefulness still need human review."}</p>
-          {[["Candidate snapshot", run.snapshot], ["Resolved configuration", run.config], ["Prompt versions", result?.inspection?.promptConfigKeys], ["Composed prompt", result?.inspection?.promptSnapshot], ["Supplied context and history", result?.inspection?.request], ["Original response", result?.inspection?.original], ["Normalized response", result?.inspection?.normalized], ["Validation changes", result?.validation], ["Delivered response", result?.inspection?.delivered]].map(([label, value]) => <details key={String(label)}><summary>{String(label)}</summary><pre>{typeof value === "string" ? value : JSON.stringify(value ?? "Not available", null, 2)}</pre></details>)}
+          {[["Candidate snapshot", run.snapshot], ["Resolved configuration", run.config], ["Exercise state", result?.exerciseState], ["Prompt versions", result?.inspection?.promptConfigKeys], ["Composed prompt", result?.inspection?.promptSnapshot], ["Supplied context and history", result?.inspection?.request], ["Original response", result?.inspection?.original], ["Normalized response", result?.inspection?.normalized], ["Validation changes", result?.validation], ["Delivered response", result?.inspection?.delivered ?? result]].map(([label, value]) => <details key={String(label)}><summary>{String(label)}</summary><pre>{typeof value === "string" ? value : JSON.stringify(value ?? "Not available", null, 2)}</pre></details>)}
         </div>
     </>}
     </aside>

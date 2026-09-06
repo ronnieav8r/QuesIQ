@@ -1,11 +1,12 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/server/db/client";
 import { aiRuns, interviewCoachingInspections as inspections } from "@/server/db/schema";
 import { getProfile } from "@/server/profiles/get-profile";
-import { getOpenAiApiKey } from "@/server/openai/keys";
-import { generateTurnDecision } from "./turn-based";
-import { assertCoachingAction, chainedCoachingConfig, operationHistory } from "./chained-coaching-service";
+import { operationHistory } from "./chained-coaching-service";
+import { planLegacyCoachingTurn } from "./coaching-exercise-adapter";
+import { generateControlledCoachingTurn } from "./controlled-coaching-turn";
+import { resolveInterviewExecutionSnapshot } from "./execution-config";
 import { CoachingOperationError, listCoachingOperations, runCoachingOperation } from "./coaching-operations";
 import type { InterviewRuntimeConfigRecord } from "./runtime-configs";
 
@@ -43,13 +44,14 @@ export async function executeInspectorAction(userId: string, body: z.infer<typeo
     if (body.execution === "live_text" && (!body.confirmLive || process.env.E2E_TEST_MODE === "1")) throw new CoachingOperationError("live_confirmation", "Live text must be explicitly enabled outside automated tests.", 400);
     const profile = body.usePersonalContext ? await getProfile(userId) : undefined;
     if (body.usePersonalContext && !profile) throw new CoachingOperationError("profile_missing", "No current profile is available.", 400);
+    const snapshot = await resolveInterviewExecutionSnapshot({ modeKey: "coaching", questionTypeKey: "behavioral", styleKey: "friendly", interviewContext: profile ?? body.context }, "inspector");
     const [run] = await getDb().insert(inspections).values({ userId, execution: body.execution, usePersonalContext: body.usePersonalContext,
-      snapshot: { modeKey: "coaching", questionTypeKey: "behavioral", styleKey: "friendly", interviewContext: profile ?? body.context },
-      config: await chainedCoachingConfig(),
+      snapshot,
+      config: { ...snapshot.executionConfig.effective, executionConfig: snapshot.executionConfig },
     }).returning();
     return { ...run, turns: [] };
   }
-  const run = await ownedInspection(body.id, userId);
+  let run = await ownedInspection(body.id, userId);
   if (body.action === "end") {
     await getDb().update(inspections).set({ status: "ended" }).where(eq(inspections.id, run.id));
     return readCoachingInspection(userId, run.id);
@@ -57,27 +59,29 @@ export async function executeInspectorAction(userId: string, body: z.infer<typeo
   if (run.status !== "active") throw new CoachingOperationError("run_ended", "This test run has ended.");
   if (run.execution === "live_text" && (!body.confirmLive || process.env.E2E_TEST_MODE === "1")) throw new CoachingOperationError("live_confirmation", "Live text requires explicit confirmation.", 400);
   if (run.execution === "simulation" && body.simulateFailure) throw new CoachingOperationError("simulated_failure", "Simulated connection failure. Retry this same turn.", 503);
+  if (!run.snapshot.executionConfig) {
+    const snapshot = await resolveInterviewExecutionSnapshot(run.snapshot, "inspector");
+    await getDb().update(inspections).set({ snapshot, config: { ...snapshot.executionConfig.effective, executionConfig: snapshot.executionConfig } })
+      .where(and(eq(inspections.id, run.id), eq(inspections.userId, userId), eq(inspections.status, "active"), sql`(${inspections.snapshot}->>'executionConfig') IS NULL`));
+    run = await ownedInspection(body.id, userId);
+    if (run.status !== "active") throw new CoachingOperationError("run_ended", "This test run has ended.");
+  }
   const rows = await listCoachingOperations(run.id, userId);
-  const completed = rows.filter((row) => row.status === "completed");
-  if (body.turnIndex > completed.length) throw new CoachingOperationError("turn_order", "Finish the current turn first.");
-  if (body.turnIndex > 0 && !body.answer) throw new CoachingOperationError("answer_required", "Type an answer or choose an action.", 400);
-  if (body.turnIndex === 0 && (body.answer || body.choice)) throw new CoachingOperationError("opening_input", "Start with an opening question.", 400);
-  if (body.turnIndex === completed.length && completed.at(-1)?.result?.done) throw new CoachingOperationError("run_complete", "This test conversation is complete.");
-  assertCoachingAction(rows.find((row) => row.turnIndex === body.turnIndex - 1)?.result, body.answer, body.choice);
-  const config = run.config as InterviewRuntimeConfigRecord;
-  const apiKey = run.execution === "simulation" ? "simulation-no-key" : getOpenAiApiKey("interview");
-  if (!apiKey) throw new CoachingOperationError("key_missing", "The local Interview key is not configured.", 503);
-  await runCoachingOperation({ targetId: run.id, userId, turnIndex: body.turnIndex, payload: { answer: body.answer, choice: body.choice },
+  const config = run.snapshot.executionConfig?.effective ?? run.config as InterviewRuntimeConfigRecord;
+  const plan = () => planLegacyCoachingTurn({ rows, turnIndex: body.turnIndex, answer: body.answer, choice: body.choice,
+    limit: Math.min(run.snapshot.turnBasedQuestionCount ?? config.maxTurns, config.maxTurns) });
+  await runCoachingOperation({ targetId: run.id, userId, turnIndex: body.turnIndex, parent: "inspection", payload: { answer: body.answer, choice: body.choice },
+    validate: () => { plan(); },
     generate: async () => {
       const started = Date.now();
-      const decision = await generateTurnDecision({ apiKey, config, forceConfiguredModel: true,
+      const decision = await generateControlledCoachingTurn({ control: plan(), config,
         inspectionId: run.id, simulation: run.execution === "simulation", usePersonalContext: run.usePersonalContext,
-        latestTranscript: body.answer, coachingChoiceIntent: body.choice,
+        answer: body.answer, choice: body.choice,
         priorTurns: operationHistory(rows.filter((row) => row.turnIndex < body.turnIndex)),
         snapshot: run.snapshot, turnIndex: body.turnIndex, userId,
       });
-      const [usage] = await getDb().select({ inputTokens: aiRuns.inputTokens, outputTokens: aiRuns.outputTokens, estimatedCostMicroUsd: aiRuns.estimatedCostMicroUsd }).from(aiRuns)
-        .where(eq(aiRuns.id, decision.inspection.aiRunId));
+      const [usage] = decision.inspection ? await getDb().select({ inputTokens: aiRuns.inputTokens, outputTokens: aiRuns.outputTokens, estimatedCostMicroUsd: aiRuns.estimatedCostMicroUsd }).from(aiRuns)
+        .where(eq(aiRuns.id, decision.inspection.aiRunId)) : [];
       return { ...decision, transcript: body.answer, choice: body.choice, durationMs: Date.now() - started, usage,
         validation: decision.validation ?? { corrected: false, issues: [], passed: true } };
     },
@@ -99,10 +103,10 @@ export function coachingInspectionCsv(run: Awaited<ReturnType<typeof readCoachin
     if (/^[\s]*[=+\-@]/.test(text)) text = `'${text}`;
     return `"${text.replaceAll('"', '""')}"`;
   };
-  return [["run_id", "execution", "turn", "status", "input", "choice", "question", "feedback", "validation", "original", "delivered", "model", "duration_ms", "usage"],
+  return [["run_id", "execution", "turn", "status", "input", "choice", "question", "feedback", "validation", "original", "delivered", "model", "duration_ms", "usage", "exercise_state", "execution_config"],
     ...run.turns.map((turn) => {
       const r = turn.result ?? {}; const trace = r.inspection as Record<string, unknown> | undefined;
-      return [run.id, run.execution, turn.turnIndex, turn.status, r.transcript, r.choice, r.question, r.feedback, r.validation, trace?.original, trace?.delivered, trace?.model, r.durationMs, r.usage];
+      return [run.id, run.execution, turn.turnIndex, turn.status, r.transcript, r.choice, r.question, r.feedback, r.validation, trace?.original, trace?.delivered ?? r, trace?.model, r.durationMs, r.usage, r.exerciseState, run.snapshot.executionConfig];
     }),
   ].map((row) => row.map(cell).join(",")).join("\r\n");
 }

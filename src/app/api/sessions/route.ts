@@ -10,6 +10,8 @@ import { getOrCreateInterviewResumeSummary } from "@/server/profiles/resume-summ
 import { createSession } from "@/server/sessions/create-session";
 import { listOwnedSessions } from "@/server/sessions/list-owned-sessions";
 import { resolveRequestUser } from "@/server/mobile-auth/mobile-auth";
+import { resolveInterviewExecutionSnapshot } from "@/server/interview/execution-config";
+import { CoachingOperationError } from "@/server/interview/coaching-operations";
 
 export const runtime = "nodejs";
 
@@ -136,6 +138,10 @@ export async function POST(request: Request) {
       };
     }
 
+    // The versioned route forwards this same Request; no client metadata/header is trusted.
+    const isNative = new URL(request.url).pathname === "/api/mobile/v1/interview/sessions";
+    if (isNative) snapshot = await resolveInterviewExecutionSnapshot(snapshot, "native");
+
     const resumeSummaryResult = await getOrCreateInterviewResumeSummary({
       resumeName: snapshot.interviewContext.resumeName,
       resumeParsedAt: snapshot.interviewContext.resumeParsedAt,
@@ -158,10 +164,14 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         session,
+        ...(isNative ? { executionConfig: snapshot.executionConfig } : {}),
       },
       { status: 201 },
     );
   } catch (error) {
+    if (error instanceof CoachingOperationError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+    }
     console.error("Session creation failed.", error);
 
     return NextResponse.json(

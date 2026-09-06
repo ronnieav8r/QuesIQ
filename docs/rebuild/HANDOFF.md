@@ -11,12 +11,14 @@ for the current task/checkpoint before resuming. Preserve the local-only,
 no-direct-PC-control and silent framed-test defaults. Paid AI/audio/release
 gates remain separate. Older roadmap suggestions do not override this plan.
 
-Phase0 is accepted: existing work checkpoint `0d5cd32`; direct owned review
-retrieval and regression checks completed using Luna/low plus manager review.
-Mobile gate passed (5 contracts, API ownership/auth,21 native tests); Interview
-static/services passed and browser14/14 after isolated-cache recovery. See the
-execution ledger for initial infrastructure failures and exact evidence. Next
-is P1.1 effective-mode/state contracts; no native UI/routing change yet.
+Phases0 and1 are accepted. Existing work checkpoint `0d5cd32`; direct owned
+review checkpoint `1de0e91`. Phase1 pins effective settings/prompt bodies, shares
+native/inspector control state, preserves exact retry questions, guards late
+results, and uses catalog-driven native setup. Final mobile gate:9 contracts,
+API ownership/auth,31 native tests; web gate14/14 plus static/services. See the
+execution ledger for failures/corrections and exact evidence. Next is Phase2
+candidate Coaching prompts; paid-text quality/audio/native release gates remain
+unmet. No Rapid Fire engine promotion or public deployment.
 
 ## 2026-09-02 Interview Coaching Local Work
 

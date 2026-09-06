@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/server/db/client";
-import { aiRuns, sessions, users } from "@/server/db/schema";
+import { aiRuns, sessions, users, interviewCoachingInspections } from "@/server/db/schema";
 import { coachingInspectionCsv, executeInspectorAction, readCoachingInspection, safeInspectionExport } from "@/server/interview/coaching-inspector";
 import { listCoachingOperations, requestFingerprint, runCoachingOperation } from "@/server/interview/coaching-operations";
 import { POST as mobileTurn } from "@/app/api/mobile/v1/interview/chained-coaching/turn/route";
@@ -37,11 +37,15 @@ async function main() {
     assert.ok(answer.inspection && answer.validation);
     const retry = await turn(2, "Try again", "try_again");
     assert.equal(retry.state, "retry_answer"); assert.ok(String(retry.question).includes(String(opening.question)));
+    assert.deepEqual((retry.exerciseState as { question: unknown }).question, (opening.exerciseState as { question: unknown }).question);
+    assert.equal((retry.exerciseState as { primaryQuestionIndex: number }).primaryQuestionIndex, 1);
+    assert.equal((retry.exerciseState as { attemptIndex: number }).attemptIndex, 2);
     assert.equal((await turn(3, "I assigned tasks and finished before the deadline.")).state, "brief_feedback_choice");
     assert.equal((await turn(4, "More feedback", "more_feedback")).state, "more_feedback");
     assert.equal((await turn(5, "Must I give a number?", "ask_que")).state, "brief_feedback_choice");
     const next = await turn(6, "Move on", "move_on");
     assert.equal(next.state, "move_on"); assert.notEqual(next.question, opening.question);
+    assert.equal((next.exerciseState as { primaryQuestionIndex: number }).primaryQuestionIndex, 2, "Choices and retries are not primary questions.");
     const priorCount = (await listCoachingOperations(id, userId)).length;
     await turn(6, "Move on", "move_on");
     assert.equal((await listCoachingOperations(id, userId)).length, priorCount);
@@ -56,7 +60,7 @@ async function main() {
     assert.ok(exported.includes("'=CMD()"));
     assert.equal((await getDb().select().from(sessions).where(eq(sessions.userId, userId))).length, 0, "Inspector must not create learner sessions.");
     const aiRows = await getDb().select().from(aiRuns).where(eq(aiRuns.userId, userId));
-    assert.equal(aiRows.length, 8); assert.ok(aiRows.every((row) => row.sessionId === null && row.inputTokens === 0));
+    assert.equal(aiRows.length, 7, "Try again is an application transition and must not create a model run."); assert.ok(aiRows.every((row) => row.sessionId === null && row.inputTokens === 0));
     await executeInspectorAction(userId, { action: "end", id });
     await assert.rejects(() => turn(8, "Late answer"), /ended/);
 
@@ -79,6 +83,26 @@ async function main() {
     release(); await first;
     assert.equal((await runCoachingOperation(args)).replayed, true); assert.equal(generated, 1);
     assert.equal(requestFingerprint({ a: 1, b: 2 }), requestFingerprint({ b: 2, a: 1 }));
+
+    // Invalid commands cannot reserve/poison a turn index; ended parents reject late publication.
+    const guardedRun = await executeInspectorAction(userId, { action: "create", context, execution: "simulation", usePersonalContext: false });
+    await assert.rejects(() => executeInspectorAction(userId, { action: "turn", id: guardedRun.id, turnIndex: 0, answer: "invalid opening" }), /opening/);
+    assert.equal((await listCoachingOperations(guardedRun.id, userId)).length, 0);
+    await executeInspectorAction(userId, { action: "turn", id: guardedRun.id, turnIndex: 0 });
+    let finishLate!: () => void; let beganLate!: () => void;
+    const lateGate = new Promise<void>((resolve) => { finishLate = resolve; });
+    const lateReady = new Promise<void>((resolve) => { beganLate = resolve; });
+    let finalized = false;
+    const late = runCoachingOperation({ targetId: guardedRun.id, userId, turnIndex: 1, parent: "inspection", payload: { answer: "pending" },
+      generate: async () => { beganLate(); await lateGate; return { question: "Must not be delivered" }; },
+      finalize: async () => { finalized = true; } });
+    const rejectedLate = assert.rejects(late, /ended/);
+    await lateReady;
+    await getDb().update(interviewCoachingInspections).set({ status: "ended" }).where(eq(interviewCoachingInspections.id, guardedRun.id));
+    finishLate(); await rejectedLate;
+    assert.equal(finalized, false);
+    assert.equal((await listCoachingOperations(guardedRun.id, userId)).at(-1)?.status, "uncertain");
+    assert.equal((await listCoachingOperations(guardedRun.id, userId)).at(-1)?.result, null);
 
     const tokens = await issueMobileTokenPair({ id: userId });
     const stranger = await issueMobileTokenPair({ id: strangerId });

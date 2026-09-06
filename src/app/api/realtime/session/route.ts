@@ -21,6 +21,8 @@ import {
   type ResumeSummaryResult,
 } from "@/server/profiles/resume-summary";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
+import { ensureNativeExecutionSnapshot, getExecutionPrompt } from "@/server/interview/execution-config";
+import { CoachingOperationError } from "@/server/interview/coaching-operations";
 import { buildInterviewRealtimeAudioInputConfig } from "@/server/realtime/audio-config";
 import { getOwnedSession } from "@/server/sessions/get-owned-session";
 import { resolveRequestUser } from "@/server/mobile-auth/mobile-auth";
@@ -277,6 +279,8 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json()) as RealtimeSessionRequest;
+  // Discard untrusted pins on every public boundary, including the web fallback.
+  if (body.snapshot) body.snapshot = { ...body.snapshot, executionConfig: undefined, executionPromptSnapshot: undefined };
   const useTestTunnelKey = body.testTunnel === true;
 
   if (useTestTunnelKey && !isAdminEmail(appUser.email)) {
@@ -303,6 +307,18 @@ export async function POST(request: Request) {
 
   if (!body.sessionId || !(await getOwnedSession(body.sessionId, appUser.id))) {
     return NextResponse.json({ error: "Session was not found." }, { status: 404 });
+  }
+
+  if (new URL(request.url).pathname === "/api/mobile/v1/interview/realtime") {
+    try {
+      body.snapshot = await ensureNativeExecutionSnapshot(body.sessionId, appUser.id);
+      if (body.snapshot.executionConfig?.effective.engine !== "realtime") {
+        return NextResponse.json({ error: "This session uses chained Coaching, not Realtime voice." }, { status: 409 });
+      }
+    } catch (error) {
+      if (error instanceof CoachingOperationError) return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+      return NextResponse.json({ error: "Session configuration could not be loaded." }, { status: 503 });
+    }
   }
 
   const isHandsFreeCoaching = body.snapshot?.modeKey === handsFreeCoachingModeKey;
@@ -334,12 +350,12 @@ export async function POST(request: Request) {
     storyLibrary,
     resumeSummaryResult,
   ] = await Promise.all([
-    getActivePromptConfig("realtime_interviewer"),
+    getExecutionPrompt(effectiveSnapshot, "realtime_interviewer"),
     isHandsFreeCoaching
       ? getActivePromptConfig("realtime_hands_free_coach")
       : Promise.resolve(undefined),
     !isHandsFreeCoaching && effectiveSnapshot?.storyContext
-      ? getActivePromptConfig("story_practice_realtime")
+      ? getExecutionPrompt(effectiveSnapshot, "story_practice_realtime")
       : Promise.resolve(undefined),
     effectiveSnapshot
       ? getSessionPromptComponents(effectiveSnapshot)
@@ -377,6 +393,7 @@ export async function POST(request: Request) {
   const realtimeRunMetadata = {
     activePromptConfigKey: activeRealtimeConfig.key,
     activePromptConfigVersion: activeRealtimeConfig.version,
+    executionRevision: effectiveSnapshot?.executionConfig?.revision,
     endpoint: "/api/realtime/session",
     modeKey: effectiveSnapshot?.modeKey,
     questionTypeKey: effectiveSnapshot?.questionTypeKey,
@@ -390,7 +407,7 @@ export async function POST(request: Request) {
   };
   const sessionConfig = {
     type: "realtime",
-    model: activeRealtimeConfig.model,
+    model: effectiveSnapshot?.executionConfig?.effective.realtimeModel ?? activeRealtimeConfig.model,
     instructions: buildQueInstructions(
       baseRealtimeConfig,
       effectiveSnapshot,
@@ -404,7 +421,7 @@ export async function POST(request: Request) {
     audio: {
       input: buildInterviewRealtimeAudioInputConfig(),
       output: {
-        voice: activeRealtimeConfig.voice || process.env.OPENAI_REALTIME_VOICE || "marin",
+        voice: effectiveSnapshot?.executionConfig?.effective.ttsVoice || activeRealtimeConfig.voice || process.env.OPENAI_REALTIME_VOICE || "marin",
       },
     },
   };

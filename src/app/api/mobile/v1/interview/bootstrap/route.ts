@@ -6,6 +6,7 @@ import { resolveRequestUser } from "@/server/mobile-auth/mobile-auth";
 import { mobileApiError } from "@/server/mobile-auth/responses";
 import { getProfile } from "@/server/profiles/get-profile";
 import { listOwnedSessions } from "@/server/sessions/list-owned-sessions";
+import { getInterviewRuntimeConfig } from "@/server/interview/runtime-configs";
 
 export const runtime = "nodejs";
 
@@ -24,10 +25,14 @@ export async function GET(request: Request) {
       listOwnedSessions(user.id, 50),
     ]);
 
+    const enabledModes = (await Promise.all(catalog.practiceModes
+      .filter((mode) => ["first_impression", "coaching", "rapid_fire", "mock_interview"].includes(mode.key))
+      .map(async (mode) => (await getInterviewRuntimeConfig(mode.key)).enabled ? mode : undefined)))
+      .filter((mode) => mode !== undefined);
     return NextResponse.json({
       catalog: {
         ...catalog,
-        practiceModes: catalog.practiceModes.filter((mode) => mode.key !== "hands_free_coaching"),
+        practiceModes: enabledModes,
       },
       jobTargets,
       profile,
