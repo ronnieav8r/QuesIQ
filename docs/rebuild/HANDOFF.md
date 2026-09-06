@@ -11,6 +11,13 @@ for the current task/checkpoint before resuming. Preserve the local-only,
 no-direct-PC-control and silent framed-test defaults. Paid AI/audio/release
 gates remain separate. Older roadmap suggestions do not override this plan.
 
+Phase0 is accepted: existing work checkpoint `0d5cd32`; direct owned review
+retrieval and regression checks completed using Luna/low plus manager review.
+Mobile gate passed (5 contracts, API ownership/auth,21 native tests); Interview
+static/services passed and browser14/14 after isolated-cache recovery. See the
+execution ledger for initial infrastructure failures and exact evidence. Next
+is P1.1 effective-mode/state contracts; no native UI/routing change yet.
+
 ## 2026-09-02 Interview Coaching Local Work
 
 - Active checkout remains `QuesIQ-dev`, branch `codex/interview-mobile`.
