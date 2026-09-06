@@ -11,6 +11,7 @@ import { CoachingOperationError, listCoachingOperations, runCoachingOperation } 
 import type { InterviewRuntimeConfigRecord } from "./runtime-configs";
 import { candidatePrompts, candidatePromptVersion } from "./coaching-candidate-contract";
 import { buildInterviewExecutionConfig } from "./execution-config-builder";
+import { deriveCoachingAttempts } from "@quesiq/interview-contracts";
 
 export const inspectorActionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("create"), execution: z.enum(["simulation", "live_text"]), usePersonalContext: z.boolean().default(false),
@@ -40,7 +41,10 @@ export async function readCoachingInspection(userId: string, id: string) {
     inputTokens: aiRuns.inputTokens, outputTokens: aiRuns.outputTokens, estimatedCostMicroUsd: aiRuns.estimatedCostMicroUsd,
     costSource: aiRuns.costSource, durationMs: aiRuns.durationMs, providerRequestId: aiRuns.providerRequestId })
     .from(aiRuns).where(and(eq(aiRuns.userId, userId), eq(aiRuns.status, "failed"), sql`${aiRuns.rawJson}->>'inspectionId' = ${id}`)).orderBy(desc(aiRuns.startedAt));
-  return { ...run, turns, rejectedTraces };
+  const attempts = deriveCoachingAttempts({ targetId: id, rows: turns,
+    promptProfile: run.snapshot.coachingPromptCandidate ? "candidate_v2" : run.snapshot.executionConfig ? "current" : "legacy",
+    model: run.snapshot.executionConfig?.effective.textModel, promptVersions: run.snapshot.executionConfig?.promptVersions });
+  return { ...run, turns, rejectedTraces, attempts };
 }
 
 export async function listCoachingInspections(userId: string) {

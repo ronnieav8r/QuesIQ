@@ -5,14 +5,16 @@ Approved for sequential implementation: 2026-09-06.
 
 ## Current position
 
-- Phases0/1 accepted; Phase2 deterministic/local candidate implementation
-  accepted. Phase2 paid-text/human quality gate awaits user input. No learner
+- Phases0/1/3 accepted for local automated implementation; Phase2 deterministic/local candidate implementation
+  accepted. User explicitly directed moving to Phase3 while the Phase2 paid-text/human quality gate awaits user input. No learner
   prompt promotion, new engine rollout or paid model test has been approved.
+- Next implementation task: Phase4 native experience, beginning with P4.1.
 - Starting HEAD: `66eafc9` on `codex/interview-mobile`, QuesIQ-dev.
 - Existing Interview mobile/Coaching/model-lab changes predate this execution.
   A checkpoint preserves them; it is not a fresh correctness certification.
 - Preservation/plan activation checkpoint: `0d5cd32` (local only).
 - Phase1 accepted checkpoint: `c774ca7` (local only).
+- Phase2 checkpoint: `d0cab4d`; Phase3 began from this clean checkpoint.
 - No schema change is part of P0.1. Database backup is mandatory before a later
   schema-changing task; it is not a prerequisite to this read-path change.
 - No paid API, direct PC/emulator control, audio testing, push, or deployment.
@@ -29,6 +31,11 @@ Approved for sequential implementation: 2026-09-06.
 | P1.3 deterministic controller | Accepted | Luna / low reducer; manager adapter/ledger integration | Exact retry question, primary counts, replay-before-validation, late-result publication guard; 15 unit tests and service checks passed. |
 | P1.4 native parity | Accepted | Luna / low then Terra / medium | Catalog choices, active target, server config/engine routing; corrected hook ordering with loading-transition tests; mobile gate31/31 native tests. |
 | P2.1-2.6 Coaching prompt candidate | No-audio implementation accepted; quality gate pending | Luna / medium contract and services; Luna / low fixtures; manager integration | `p2-interview-final.log`: full gate16/16 browser;11 candidate/fixture tests and services. `p2-mobile.log`: typecheck,9 contracts, API checks,31 native tests pass. |
+| P3.1 cursor History/direct detail | Accepted locally | Luna / medium services; Terra / medium native; manager review/corrections | 152 rows, UUID ties, microsecond cursor, owned direct read, lightweight payload, account-scoped cache and load-more error recovery. |
+| P3.2 safe review recovery | Accepted locally | Terra / medium initial UI; manager hook/atomic API integration | Bounded read-only polling, foreground/error handling, confirmed retry, failed refresh lock, concurrent claim and uncertain-provider rejection tests. |
+| P3.3 evidence before scores | Accepted locally | Terra / medium native; manager framed UI | Existing next action/evidence shown first; exact evidence opens highlighted transcript. No invented excerpts. |
+| P3.4/P3.5 attempt comparison | Accepted locally; semantic quality unreviewed | Manager shared projection/integration; Terra / medium native rendering | Persisted structured transitions identify first/assisted answers and versions. Typed retry/comparison/reload and native rendering pass; no score-gain claims. |
+| P3.6 inspection/learner separation | Accepted locally | Luna / medium tests; manager strengthened/fixed tests | Inspector reopen never writes learner sessions; synthetic owned DB records test actual History/detail routes independently of framed API fixtures. |
 
 ## Resume rules
 
@@ -172,7 +179,59 @@ The candidate contract documents an initial8-case current/candidate comparison
 and proposed $2 approval ceiling, plus a required dry-run manifest/spend stop
 before execution. No paid comparison or blind rating has been run.
 
-Phase3.1/3.2 History/detail/polling are the roadmap's permitted independent
-no-audio side lane after review-response contracts are frozen. Attempt comparison
-must preserve draft-versus-promoted feedback status. Phases3-7 are not accepted;
-do not skip gates or report the complete roadmap finished.
+Phase3 is now accepted for local automated behavior (see below). Resume at
+Phase4.1, retaining the separate Phase2 quality gate and unpromoted prompts.
+Phases4-7 and native operator/release gates remain unaccepted; do not report the
+complete roadmap finished or substitute frames for native-device evidence.
+
+## Phase 3 implementation and acceptance (2026-09-06)
+
+- Contract and explicit Expo parity checklist: `INTERVIEW_PHASE3_REVIEW_CONTRACT.md`.
+  Existing mobile API family remains authoritative; web list/bootstrap unchanged.
+  No schema migration, dependency install, credential-file changes, or deployment.
+- Native History no longer depends on the recent bootstrap window. Summary
+  keyset pages omit full snapshots/transcripts/reviews; detail uses owner+ID.
+- Review status comes from shared server eligibility and actual provider ledger.
+  Mobile evaluation claims lock the session row and recheck eligibility inside
+  the same transaction. Unknown/no-ledger failure, processing, completed-without-
+  review, and uncertain provider outcomes cannot start a repeat request. Confirmed
+  rejection requires an explicit action/confirmation. SQL/provider failure details
+  are kept off the phone. Existing web evaluation behavior stays compatible.
+- Native reads stop after six automatic status checks, pause in background, stop
+  on failure/terminal status, and permit a manual refresh. A duplicate tap stays
+  locked through authoritative refresh; failed refresh suppresses stale retry.
+  Account-specific query keys and captured mutation identity prevent cache bleed.
+- First/latest answers derive from persisted controller transitions, excluding
+  choice/clarification/rejected rows. Exact answer text, evidence offsets, prompt
+  profiles/versions and assisted labels survive reopen. No raw audio or invented
+  improvement percentages. Legacy rows without provenance show no fabricated pair.
+- Framed **Saved reviews** tab uses the same versioned endpoints; comparison,
+  transcript and selected record mirror across phones. Silent Simulation remains
+  the default. Inspection comparisons are also available after a typed retry.
+- Workers: `p3_history_tests` Luna/medium (service tests, then bounded browser
+  tests); `p3_native_reviews` Terra/medium. One consolidated native correction
+  pass was insufficient for hook coverage; manager took over hooks/tests. Manager
+  strengthened pagination/foreign-cursor/concurrency assertions and corrected
+  browser test discovery, await semantics and missing tab selection. No recursive
+  delegation; no invented per-agent cost saving.
+- Native lint exposed four earlier Practice effects copying derived defaults
+  into state. Manager removed those redundant effects; catalog/loading/session
+  tests still pass. Only deliberate choices now occupy that state.
+- Initial `p3-reviews-e2e.log` caught unmirrored comparison expansion; rerun caught
+  a comparison control enabled while a response was pending. Fixed shared state
+  and disabled that control until the response settles. Initial full
+  `p3-interview.log` stopped on a new initial-fetch effect lint error, corrected by
+  explicit asynchronous mount loading. Preserve failed logs; no flake-free claim.
+- Final `p3-interview-final.log`: full `npm run test:interview:all` passed:
+  readiness41/2manual warnings, root typecheck/lint, existing services,
+  15 execution tests,11 candidate/fixture tests and22/22 headless browser tests.
+- Final `p3-mobile-final.log`: mobile typecheck,11 shared contract tests,
+  authentication/ownership/refresh tests, new History/review services, and39 native
+  tests across11 suites passed. Mobile lint exits0 with20 test-style warnings,
+  no errors. Expected synthetic provider failure output tests safe error handling.
+- Manager inspected the generated iPhone393x852 and Pixel412x915 review captures
+  at small/large headless viewport profiles. Evidence appears before scores,
+  contained scrolling and graphite/cyan/lime styling verified. These are browser
+  images, not a native rendered-device or audio certification.
+- No real model call, microphone test or direct desktop/browser control. Native
+  compilation/device checks belong to Phase4; physical devices/release stay gated.

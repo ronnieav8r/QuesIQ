@@ -536,7 +536,8 @@ async function requestEvaluation(
   if (!response.ok) {
     throw Object.assign(
       new Error(body.error?.message || "OpenAI evaluation request failed."),
-      { providerRequestId: body.id, usage: body.usage },
+      { providerRequestId: body.id, usage: body.usage,
+        providerOutcome: response.status >= 400 && response.status < 500 && response.status !== 408 ? "confirmed_rejection" : "uncertain" },
     );
   }
 
@@ -666,11 +667,21 @@ async function saveArchetypePerformanceResults(
 export async function createSessionEvaluation(
   sessionId: string,
   userId: string,
-  options: { apiKeyOverride?: string } = {},
+  options: { apiKeyOverride?: string; mobileSafeRetry?: boolean; confirmRetry?: boolean } = {},
 ): Promise<SessionEvaluationRecord | undefined> {
   // Claim before any model work, including per-answer evaluation. Artifact retries
   // are immutable and cannot reset this processing guard.
-  const [claimed] = await getDb().update(sessions).set({ evaluationStatus: "processing", updatedAt: new Date() })
+  const [claimed] = options.mobileSafeRetry ? await getDb().transaction(async (tx) => {
+    const [owned] = await tx.select({ id: sessions.id, evaluationStatus: sessions.evaluationStatus }).from(sessions)
+      .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId))).for("update");
+    if (!owned) return [];
+    const { getMobileReviewAccess } = await import("./mobile-history");
+    const access = await getMobileReviewAccess(sessionId, userId, tx);
+    if (!access?.canRequest) throw new Error(access?.message ?? "This evaluation cannot be requested safely.");
+    if (owned.evaluationStatus === "failed" && !options.confirmRetry) throw new Error("Explicit confirmation is required before retrying evaluation.");
+    return tx.update(sessions).set({ evaluationStatus: "processing", updatedAt: new Date() })
+      .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId))).returning({ id: sessions.id });
+  }) : await getDb().update(sessions).set({ evaluationStatus: "processing", updatedAt: new Date() })
     .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId),
       inArray(sessions.evaluationStatus, ["pending", "failed", "not_started", "too_short", "completed"])))
     .returning({ id: sessions.id });
@@ -920,6 +931,7 @@ async function createSessionEvaluationOnce(
       rawJson: {
         providerRequestId: getProviderRequestId(error),
         usage,
+        providerOutcome: (error as { providerOutcome?: string })?.providerOutcome ?? "uncertain",
       },
       status: "failed",
       totalTokens: usage?.total_tokens,

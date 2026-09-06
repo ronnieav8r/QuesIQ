@@ -2,7 +2,7 @@ import { interviewExecutionConfigSchema, type InterviewStyleKey, type PracticeMo
 import NetInfo from "@react-native-community/netinfo";
 import { router, useLocalSearchParams } from "expo-router";
 import { Check, ChevronRight } from "lucide-react-native";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Button } from "@/components/ui/button";
@@ -42,12 +42,9 @@ export default function PracticeScreen() {
   const resolvedQuestionType = resolveCatalogChoice(questionType, questionTypes);
   const targets = data?.jobTargets ?? [];
   const resolvedTargetId = targetId && targets.some((target) => target.id === targetId) ? targetId : data ? preferredTargetId(data) : undefined;
-  const chosenTarget = useMemo(() => targets.find((item) => item.id === resolvedTargetId), [targets, resolvedTargetId]);
+  const chosenTarget = targets.find((item) => item.id === resolvedTargetId);
   const selectedMode = modes.find((item) => item.key === resolvedMode);
-  useEffect(() => { if (mode !== resolvedMode) setMode(resolvedMode); }, [mode, resolvedMode]);
-  useEffect(() => { if (style !== resolvedStyle) setStyle(resolvedStyle); }, [style, resolvedStyle]);
-  useEffect(() => { if (questionType !== resolvedQuestionType) setQuestionType(resolvedQuestionType); }, [questionType, resolvedQuestionType]);
-  useEffect(() => { if (targetId !== resolvedTargetId) setTargetId(resolvedTargetId); }, [targetId, resolvedTargetId]);
+  // Defaults are derived above; state records only deliberate user choices.
 
   if (bootstrap.isLoading) return <LoadingState />;
   if (!data) return <ErrorState message={bootstrap.error instanceof Error ? bootstrap.error.message : "Practice setup could not be loaded."} onRetry={() => bootstrap.refetch()} />;

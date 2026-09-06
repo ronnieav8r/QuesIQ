@@ -71,7 +71,10 @@ async function main() {
     const oldDetail = await getMobileSessionDetail(new Request("http://local.test/api/mobile/v1/interview/sessions/old/detail", { headers: { Authorization: `Bearer ${original.accessToken}` } }), detailContext);
     assert(oldDetail.status === 200, `Old owned session detail returned ${oldDetail.status} instead of 200.`);
     const oldBody = await oldDetail.json() as { session?: Record<string, unknown> };
-    deepStrictEqual(oldBody.session, JSON.parse(JSON.stringify(allOwned[150])), "Detail must preserve every list field, including evaluation, transcript, and answer evaluations.");
+    const { reviewAccess: additiveReviewAccess, attempts: additiveAttempts, ...oldBodyBase } = oldBody.session ?? {};
+    deepStrictEqual(oldBodyBase, JSON.parse(JSON.stringify(allOwned[150])), "Detail must preserve every pre-existing list field, including evaluation, transcript, and answer evaluations.");
+    assert(additiveReviewAccess && typeof additiveReviewAccess === "object" && "kind" in additiveReviewAccess, "Detail must include additive reviewAccess metadata.");
+    assert(Array.isArray(additiveAttempts), "Detail must include additive attempts metadata.");
     assert(allOwned[150].evaluation?.summary === "Saved review fixture" && allOwned[150].answerEvaluations?.length === 1, "Nonempty evaluation fixtures were not loaded.");
     const foreignDetail = await getMobileSessionDetail(new Request("http://local.test/api/mobile/v1/interview/sessions/foreign/detail", { headers: { Authorization: `Bearer ${stranger.accessToken}` } }), detailContext);
     assert(foreignDetail.status === 404, `Foreign session detail returned ${foreignDetail.status} instead of 404.`);

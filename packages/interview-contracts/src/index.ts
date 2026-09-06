@@ -151,6 +151,36 @@ export const sessionHistoryItemSchema = z.object({
   transcript: z.array(voiceTranscriptTurnSchema),
 });
 
+export { deriveCoachingAttempts } from "./attempts";
+
+export const sessionHistorySummarySchema = sessionHistoryItemSchema.pick({
+  id: true, createdAt: true, endedAt: true, durationSeconds: true, evaluationStatus: true,
+  hasEvaluation: true, modeKey: true, status: true, styleKey: true, targetCompany: true, targetRole: true,
+});
+export const sessionHistoryPageSchema = z.object({
+  sessions: z.array(sessionHistorySummarySchema), nextCursor: z.string().nullable(),
+});
+export const reviewAccessSchema = z.object({
+  kind: z.enum(["ready", "processing", "eligible", "too_short", "uncertain", "unavailable"]),
+  message: z.string(), canRequest: z.boolean(),
+});
+export const coachingAttemptSchema = z.object({
+  id: z.string(), questionId: z.string(), question: z.string(), attemptIndex: z.number().int().positive(),
+  answer: z.string(), feedback: z.string(), assisted: z.boolean(),
+  priority: z.string().optional(), evidence: z.array(z.object({ quote: z.string(), start: z.number().int().nonnegative(), end: z.number().int().nonnegative() })),
+  promptProfile: z.enum(["current", "candidate_v2", "legacy"]), model: z.string().optional(),
+  promptVersions: z.array(z.object({ key: z.string(), version: z.number().int().nonnegative() })),
+  semanticQuality: z.literal("unreviewed"),
+});
+export const sessionDetailSchema = sessionHistoryItemSchema.extend({
+  reviewAccess: reviewAccessSchema, attempts: z.array(coachingAttemptSchema),
+});
+export type SessionHistorySummary = z.infer<typeof sessionHistorySummarySchema>;
+export type SessionHistoryPage = z.infer<typeof sessionHistoryPageSchema>;
+export type ReviewAccess = z.infer<typeof reviewAccessSchema>;
+export type CoachingAttempt = z.infer<typeof coachingAttemptSchema>;
+export type SessionDetail = z.infer<typeof sessionDetailSchema>;
+
 export const jobTargetSchema = z.object({
   createdAt: z.string(),
   id: z.string(),

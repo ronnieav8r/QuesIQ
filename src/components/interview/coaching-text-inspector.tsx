@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Keyboard, MessageCircle, Plus, Send, Square } from "lucide-react";
 import styles from "./coaching-text-inspector.module.css";
+import type { CoachingAttempt } from "@quesiq/interview-contracts";
+import { AttemptComparison } from "./attempt-comparison";
 
 type Result = {
   done?: boolean; question?: string; feedback?: string; transcript?: string; state?: string;
@@ -17,6 +19,7 @@ type TestRun = {
   id: string; execution: "simulation" | "live_text"; status: string; createdAt: string;
   snapshot: unknown; config: unknown;
   rejectedTraces?: unknown[];
+  attempts?: CoachingAttempt[];
   turns: Array<{ id: string; turnIndex: number; status: string; result?: Result }>;
 };
 type Action = Record<string, unknown>;
@@ -36,6 +39,7 @@ export function CoachingTextInspector({ renderDevices }: {
   const [context, setContext] = useState({ preferredName: "Sample candidate", targetRole: "Operations manager", targetCompany: "Example company", jobDescription: "Coordinate a team and solve operational problems." });
   const [answer, setAnswer] = useState("");
   const [asking, setAsking] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
   const [failure, setFailure] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -73,6 +77,7 @@ export function CoachingTextInspector({ renderDevices }: {
       if (controller.signal.aborted) return;
       setRun(body); setSelected(body.turns.length ? body.turns.length - 1 : undefined);
       setPending(undefined); setAnswer(""); setAsking(false); setFailure(false);
+      setShowComparison(false);
       await refreshRuns();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Test failed.");
@@ -94,6 +99,7 @@ export function CoachingTextInspector({ renderDevices }: {
       const body = await response.json();
       if (!response.ok) throw new Error(body.error?.message || "Run could not load.");
       setRun(body); setSelected(body.turns.length - 1); setAsking(false); setPending(undefined); setAnswer(""); setConfirmLive(false);
+      setShowComparison(false);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Run could not load."); }
     finally { busyRef.current = false; setBusy(false); }
   };
@@ -117,12 +123,13 @@ export function CoachingTextInspector({ renderDevices }: {
     </header>
     <div className={styles.phoneStatus}><span><i />{busy ? "Working…" : run?.status === "ended" || last?.done ? "Test complete" : run ? "Practice with Que" : "Ready to practice"}</span><small>{(run?.execution ?? execution) === "simulation" ? "SIMULATION" : "LIVE TEXT"}</small></div>
     <div className={styles.testNotice}><Keyboard aria-hidden="true" /><span>Typed preview · microphone and speaker off</span></div>
-    <TurnList run={run} selected={selected} onSelect={setSelected}>
+    {showComparison ? <div className={styles.conversation} role="region" aria-label="Attempt comparison"><AttemptComparison attempts={run?.attempts ?? []} /></div> : <TurnList run={run} selected={selected} onSelect={setSelected}>
       {!run ? <div className={styles.welcome}><span className={styles.welcomeIcon}><MessageCircle aria-hidden="true" /></span><h4>One answer.<br />A stronger impression.</h4><p>Start a new test to practice with Que. Type instead of speaking, then choose what happens next.</p><small>Both phones mirror the same session.</small></div> : !run.turns.length ? <div className={styles.welcome}><h4>Let’s sharpen your answer.</h4><p>Your test is ready. Ask Que for the first question.</p><button className={styles.primary} disabled={!canRun} onClick={() => submitTurn()}>Generate opening question</button></div> : null}
-    </TurnList>
+    </TurnList>}
     <footer className={styles.phoneFooter}>
       {error && <div className={styles.error} role="alert">{error}{pending && <button disabled={busy} onClick={() => void send({ ...pending, confirmLive })}>Retry response</button>}</div>}
       {run && <>
+        {!!run.attempts?.length && <button disabled={busy} onClick={() => setShowComparison((value) => !value)}>{showComparison ? "Back to conversation" : "Compare attempts"}</button>}
         {atChoice && !asking && <div className={styles.actions} aria-label="Coaching choices">{choices.map(([key, label]) => <button key={key} disabled={!canRun || !!pending} onClick={() => key === "ask_que" ? setAsking(true) : submitTurn(label, key)}>{label}</button>)}</div>}
         {run.turns.length > 0 && (!atChoice || asking) && run.status === "active" && !last?.done && <form onSubmit={(e) => { e.preventDefault(); if (canRun && !pending && answer.trim()) submitTurn(answer, asking ? "ask_que" : undefined); }}>
           <label htmlFor={`${name}-coaching-answer`}>{asking ? "Ask Que a clarification" : "Your answer"}</label><textarea id={`${name}-coaching-answer`} rows={2} maxLength={12000} value={answer} disabled={!canRun || !!pending} onChange={(e) => setAnswer(e.target.value)} placeholder="Type what you would say…" />

@@ -1,5 +1,5 @@
-import type { PropsWithChildren, ReactNode } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import type { PropsWithChildren, ReactElement, ReactNode } from "react";
+import { type RefreshControlProps, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { colors, spacing } from "@/theme/tokens";
@@ -10,9 +10,10 @@ type ScreenProps = PropsWithChildren<{
   subtitle?: string;
   title?: string;
   trailing?: ReactNode;
+  refreshControl?: ReactElement<RefreshControlProps>;
 }>;
 
-export function Screen({ children, eyebrow, scroll = true, subtitle, title, trailing }: ScreenProps) {
+export function Screen({ children, eyebrow, refreshControl, scroll = true, subtitle, title, trailing }: ScreenProps) {
   const body = (
     <View style={styles.body}>
       {(eyebrow || title || subtitle) ? (
@@ -30,7 +31,7 @@ export function Screen({ children, eyebrow, scroll = true, subtitle, title, trai
   );
   return (
     <SafeAreaView style={styles.safe}>
-      {scroll ? <ScrollView contentContainerStyle={styles.scroll}>{body}</ScrollView> : body}
+      {scroll ? <ScrollView contentContainerStyle={styles.scroll} refreshControl={refreshControl}>{body}</ScrollView> : body}
     </SafeAreaView>
   );
 }

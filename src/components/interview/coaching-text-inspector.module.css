@@ -28,6 +28,10 @@
 .inspection details { margin-bottom:8px; border-bottom:1px solid #34434d; padding:8px 0; }
 .lab summary { cursor:pointer; min-height:44px; display:list-item; align-content:center; padding:6px; font-size:13px; }
 .phone { display:flex; flex-direction:column; height:100%; min-height:0; background:#10161c; font-size:14px; }
+.reviewPhone { font-family:Arial,Helvetica,sans-serif; }
+.reviewPhone blockquote { margin:12px 0; border-left:2px solid #65dcf2; padding-left:12px; color:#b7ccd5; }
+.reviewPhone .conversation > h4 { margin-top:20px; color:#c4ef76; }
+.reviewPhone .conversation > button { margin:8px 0; }
 .phoneHeader { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:14px 16px 12px; }
 .brand { display:flex; align-items:center; gap:9px; }
 .brand small { color:#93a7b4; font-size:9px; font-weight:700; letter-spacing:.08em; }

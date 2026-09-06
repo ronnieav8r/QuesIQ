@@ -24,7 +24,12 @@ mobile typecheck/9 contracts/API/31 native tests passed. Candidate remains
 inspector-only; paid-text quality and human ratings need separately bounded
 approval before promotion. See `INTERVIEW_PHASE2_COACHING_CANDIDATE.md` for the
 proposed8-case comparison/$2 approval ceiling. No paid calls or audio testing
-ran. Phases3-7 and native release gates remain unmet; no Rapid Fire promotion
+ran. Phase3 is now locally accepted: cursor History, safe evaluation recovery,
+evidence links and persisted assisted-attempt comparison. Final web gate22/22;
+mobile typecheck/11 contracts/API/history services/39 native tests pass; mobile
+lint has0 errors/20 warnings. See the execution ledger and Phase3 review contract
+for precise evidence and the Expo parity checklist. Resume Phase4.1; the user
+explicitly deferred Phase2's paid quality comparison. Phases4-7 and native release gates remain unmet; no Rapid Fire promotion
 or public deployment. Do not describe the complete roadmap as finished.
 
 ## 2026-09-02 Interview Coaching Local Work

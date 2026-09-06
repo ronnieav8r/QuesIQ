@@ -52,6 +52,9 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     const evaluation = await createSessionEvaluation(sessionId, appUser.id, {
       apiKeyOverride: localTestApiKeyOverride,
+      mobileSafeRetry: new URL(request.url).pathname.startsWith("/api/mobile/v1/interview/"),
+      confirmRetry: new URL(request.url).pathname.startsWith("/api/mobile/v1/interview/") &&
+        (await request.clone().json().catch(() => undefined))?.confirmRetry === true,
     });
 
     if (!evaluation) {

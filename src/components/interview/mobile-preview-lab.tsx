@@ -38,10 +38,11 @@ import {
 
 import styles from "./mobile-preview-lab.module.css";
 import { CoachingTextInspector } from "./coaching-text-inspector";
+import { MobileReviewTestbed } from "./mobile-review-testbed";
 
 type PreviewScreen = "home" | "practice" | "session" | "review" | "me";
 type DeviceKind = "iphone" | "pixel";
-type InspectorTab = "plan" | "prompts" | "runs" | "test";
+type InspectorTab = "plan" | "prompts" | "runs" | "test" | "history";
 
 type RuntimeConfig = {
   enabled: boolean;
@@ -198,7 +199,11 @@ export function MobilePreviewLab() {
         screen={screen}
       />
 
-      {inspectorTab === "test" ? <CoachingTextInspector renderDevices={(renderPhone) => (
+      {inspectorTab === "history" ? <MobileReviewTestbed renderDevices={(renderPhone) => (
+        <section className={`${styles.deviceStage} ${styles.testDeviceStage} ${scale === "full" ? styles.deviceStageFull : ""}`} aria-label="Mobile device previews">
+          {(["iphone", "pixel"] as const).map((device) => <DevicePreview key={device} device={device} mode={mode} onMode={changeMode} onScreen={changeScreen} onTab={selectTab} screen="session" showTranscript={showTranscript} onTranscript={setShowTranscript}>{renderPhone(device === "iphone" ? "iPhone" : "Pixel")}</DevicePreview>)}
+        </section>
+      )} /> : inspectorTab === "test" ? <CoachingTextInspector renderDevices={(renderPhone) => (
         <section className={`${styles.deviceStage} ${styles.testDeviceStage} ${scale === "full" ? styles.deviceStageFull : ""}`} aria-label="Mobile device previews">
           {(["iphone", "pixel"] as const).map((device) => <DevicePreview key={device} device={device} mode={mode} onMode={changeMode} onScreen={changeScreen} onTab={selectTab} screen="session" showTranscript={showTranscript} onTranscript={setShowTranscript}>
             {renderPhone(device === "iphone" ? "iPhone" : "Pixel")}
@@ -297,7 +302,7 @@ function BackendInspector({ activeTab, lastAction, mode, onMode, onTab, screen }
       ];
 
   return <section className={styles.inspector} aria-label="Backend Inspector">
-    {activeTab !== "test" && <>
+    {activeTab !== "test" && activeTab !== "history" && <>
     <div className={styles.inspectorHeader}>
       <div>
         <p className={styles.eyebrow}>CLICK-DRIVEN TRACE</p>
@@ -319,6 +324,7 @@ function BackendInspector({ activeTab, lastAction, mode, onMode, onTab, screen }
 
     <div className={styles.inspectorTabs} role="tablist" aria-label="Inspector views">
       <button aria-selected={activeTab === "test"} className={activeTab === "test" ? styles.inspectorTabActive : undefined} onClick={() => onTab("test")} role="tab" type="button">Test Coaching · no audio</button>
+      <button aria-selected={activeTab === "history"} className={activeTab === "history" ? styles.inspectorTabActive : undefined} onClick={() => onTab("history")} role="tab" type="button">Saved reviews</button>
       <button aria-selected={activeTab === "plan"} className={activeTab === "plan" ? styles.inspectorTabActive : undefined} onClick={() => onTab("plan")} role="tab" type="button"><Activity aria-hidden="true" />What will happen</button>
       <button aria-selected={activeTab === "prompts"} className={activeTab === "prompts" ? styles.inspectorTabActive : undefined} onClick={() => onTab("prompts")} role="tab" type="button"><FileJson aria-hidden="true" />Prompt stack</button>
       <button aria-selected={activeTab === "runs"} className={activeTab === "runs" ? styles.inspectorTabActive : undefined} onClick={() => onTab("runs")} role="tab" type="button"><Database aria-hidden="true" />Saved runs <span>{matchingRuns.length}</span></button>
