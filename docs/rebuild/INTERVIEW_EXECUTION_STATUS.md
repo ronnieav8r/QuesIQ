@@ -8,13 +8,15 @@ Approved for sequential implementation: 2026-09-06.
 - Phases0/1/3 accepted for local automated implementation; Phase2 deterministic/local candidate implementation
   accepted. User explicitly directed moving to Phase3 while the Phase2 paid-text/human quality gate awaits user input. No learner
   prompt promotion, new engine rollout or paid model test has been approved.
-- Next implementation task: Phase4 native experience, beginning with P4.1.
+- P4.1 native screen alignment is accepted for local automated implementation.
+- Next implementation task: P4.2 transcript accumulation and authoritative Done answering.
 - Starting HEAD: `66eafc9` on `codex/interview-mobile`, QuesIQ-dev.
 - Existing Interview mobile/Coaching/model-lab changes predate this execution.
   A checkpoint preserves them; it is not a fresh correctness certification.
 - Preservation/plan activation checkpoint: `0d5cd32` (local only).
 - Phase1 accepted checkpoint: `c774ca7` (local only).
 - Phase2 checkpoint: `d0cab4d`; Phase3 began from this clean checkpoint.
+- Phase3 checkpoint: `8b6926f`; P4.1 began from this clean checkpoint.
 - No schema change is part of P0.1. Database backup is mandatory before a later
   schema-changing task; it is not a prerequisite to this read-path change.
 - No paid API, direct PC/emulator control, audio testing, push, or deployment.
@@ -36,6 +38,7 @@ Approved for sequential implementation: 2026-09-06.
 | P3.3 evidence before scores | Accepted locally | Terra / medium native; manager framed UI | Existing next action/evidence shown first; exact evidence opens highlighted transcript. No invented excerpts. |
 | P3.4/P3.5 attempt comparison | Accepted locally; semantic quality unreviewed | Manager shared projection/integration; Terra / medium native rendering | Persisted structured transitions identify first/assisted answers and versions. Typed retry/comparison/reload and native rendering pass; no score-gain claims. |
 | P3.6 inspection/learner separation | Accepted locally | Luna / medium tests; manager strengthened/fixed tests | Inspector reopen never writes learner sessions; synthetic owned DB records test actual History/detail routes independently of framed API fixtures. |
+| P4.1 native screen alignment | Accepted locally; device interaction unverified | Luna / medium Home/Me and preview; one correction round, then manager takeover | Shared tokens, responsive controls/insets/forms, live scroll/footer shell, honest Home/Practice data, mirrored labelled samples. Full gate28 browser,50 native,11 contracts and API/history services; Android compile and Hermes export pass. See Phase4 contract for evidence and manual exclusions. |
 
 ## Resume rules
 

@@ -342,6 +342,19 @@ same inspector and exports, with no automatic regeneration. See
 
 ### Operator-only evidence
 
+P4.1 layout regression: `npm run test:interview:e2e --
+tests/interview/mobile-layout.spec.ts --workers=2` uses the existing dedicated
+Interview runner. It checks mirrored sample setup/profile/captions, read-only
+behavior, evidence ordering/linking and393/412-width phone overflow/touch sizes.
+The spec is also in the full suite. For lower local load use
+`npm run test:interview:all -- -- --workers=2`; the separators forward the
+worker limit without skipping any test.
+
+Screenshots cover Home, Practice, Live, Review and Me; the test changes only
+the isolated headless host viewport, never the user's desktop/browser. Native
+component tests and local Android compile/export are separate evidence. See
+`INTERVIEW_PHASE4_NATIVE_EXPERIENCE.md`; P4.2 onward and operator gates remain.
+
 Automation does not validate real microphone permission prompts, microphone
 selection, headset behavior, audio clipping, speaker quality, or genuine
 Realtime conversation quality. Verify those manually in the visible local app

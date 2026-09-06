@@ -16,6 +16,8 @@ Start here for broad resume work and manager handoffs:
   candidate behavior/evidence contract and separately approved quality gates.
 - `docs/rebuild/INTERVIEW_PHASE3_REVIEW_CONTRACT.md`: History pagination,
   review/retry safety, attempt provenance, framed review tab and Expo parity.
+- `docs/rebuild/INTERVIEW_PHASE4_NATIVE_EXPERIENCE.md`: native screen alignment,
+  shared tokens, simulated-preview boundaries and the separate audio gates.
 
 - `docs/rebuild/HANDOFF.md`: current resume snapshot and product handoff.
 - `docs/rebuild/LOCAL_DEVELOPMENT.md`: local Windows/Docker/Postgres setup for

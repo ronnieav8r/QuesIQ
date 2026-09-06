@@ -1,24 +1,22 @@
 .lab {
-  --preview-bg: #080c11;
-  --preview-raised: #0c1219;
-  --preview-border: #22303c;
-  --preview-border-strong: #365063;
-  --preview-cyan: #27d5ff;
-  --preview-cyan-dark: #083a48;
-  --preview-danger: #ff6b72;
-  --preview-lime: #b8f24a;
-  --preview-lime-dark: #263a0c;
-  --preview-muted: #8fa4b5;
-  --preview-panel: #111922;
-  --preview-panel-strong: #17222d;
-  --preview-text: #f4f8fb;
-  --preview-text-soft: #c1ced8;
   background:
     radial-gradient(circle at 50% -16rem, rgba(39, 213, 255, 0.13), transparent 42rem),
     #070a0e;
   color: var(--preview-text);
   min-height: 100vh;
   padding: 1.25rem;
+}
+
+.sampleNotice {
+  background: var(--preview-lime-dark);
+  border: 1px solid var(--preview-lime);
+  border-radius: 999px;
+  color: var(--preview-lime);
+  font-size: 0.63rem;
+  font-weight: 800;
+  justify-self: start;
+  margin: 0;
+  padding: 0.35rem 0.6rem;
 }
 
 .toolbar {
@@ -789,10 +787,48 @@
 }
 
 .mobilePage {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   display: grid;
   gap: 0.85rem;
   padding: 1rem 1.15rem 1.35rem;
 }
+
+.previewHeaderRow {
+  align-items: start;
+  display: flex;
+  gap: 16px;
+}
+.previewHeaderRow > header { flex: 1; min-width: 0; }
+.setupOption {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--preview-border);
+  border-radius: 16px;
+  color: var(--preview-text);
+  display: flex;
+  gap: 10px;
+  min-height: 62px;
+  padding: 16px;
+  text-align: left;
+  width: 100%;
+}
+.setupOption span { display: grid; flex: 1; gap: 4px; min-width: 0; }
+.setupOption small { color: var(--preview-muted); font-size: 13px; line-height: 1.4; }
+.setupOptionActive { background: var(--preview-cyan); border-color: var(--preview-cyan); color: var(--preview-bg); }
+.setupOptionActive small { color: var(--preview-bg); }
+.textAction { background: transparent; border: 0; color: var(--preview-cyan); min-height: 48px; padding: 8px 0; text-align: left; }
+.mobilePage button:focus-visible, .mobilePage input:focus-visible, .mobilePage textarea:focus-visible {
+  outline: 2px solid var(--preview-cyan);
+  outline-offset: 3px;
+}
+.mobilePage button { min-height: 48px; white-space: normal; }
+.mobilePage .profileBadge { min-width: 48px; flex-shrink: 0; }
+.mobilePage .mobileHeader h2 { font-size: 30px; }
+.mobilePage .mobileCard > strong { font-size: 17px; }
+.mobilePage .mobileCard p, .mobilePage .mobileHeader > p:not(.mobileEyebrow) { font-size: 14px; line-height: 1.5; }
+.mobilePage .mobilePrimary, .mobilePage .endButton { font-size: 16px; min-height: 54px; padding: 10px 16px; }
+.mobilePage .mobileCard input { font-size: 16px; min-height: 52px; }
+.mobilePage .mobileCard textarea { font-size: 16px; min-height: 120px; }
 
 .voiceDeckPage {
   align-content: start;
@@ -960,6 +996,62 @@
   flex-direction: column;
   padding: 1rem 0 0.65rem;
   text-align: center;
+}
+
+.voiceSetup {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem 0 0.65rem;
+}
+
+.voiceSetup h2,
+.voiceSetup p {
+  margin: 0;
+}
+
+.voiceSetup h2 {
+  color: var(--preview-text);
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+
+.setupSummary {
+  color: var(--preview-muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.setupChoices {
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.setupChoices strong {
+  color: var(--preview-muted);
+  font-size: 0.68rem;
+  grid-column: 1 / -1;
+  margin-top: 0.2rem;
+}
+
+.setupChoices button {
+  background: var(--preview-raised);
+  border: 1px solid var(--preview-border);
+  border-radius: 0.7rem;
+  color: var(--preview-text-soft);
+  min-height: 2.4rem;
+}
+
+.setupChoices button.choiceActive {
+  background: var(--preview-cyan-dark);
+  border-color: var(--preview-cyan);
+  color: var(--preview-cyan);
+}
+
+.evidenceQuote {
+  border-left: 2px solid var(--preview-lime);
+  color: var(--preview-text-soft) !important;
+  padding-left: 0.6rem;
 }
 
 .voicePrompt > p {
@@ -1343,9 +1435,16 @@
 }
 
 .sessionPage {
-  grid-template-rows: auto minmax(14rem, 1fr) auto auto auto;
+  display: flex;
+  flex-direction: column;
   height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
+.sessionHeader, .sessionFooter { display: grid; gap: 16px; flex-shrink: 0; }
+.sessionBody { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; gap: 16px; }
+.sessionBody .sessionCenter { flex: 1; min-height: 280px; }
+.sessionBody .captionPanel { flex-shrink: 0; }
 
 .sessionTop,
 .sessionTop span {

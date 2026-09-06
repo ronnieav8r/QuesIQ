@@ -1,11 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import {
   Activity,
-  AudioWaveform,
   ArrowLeft,
   ArrowRight,
   BriefcaseBusiness,
@@ -17,7 +15,6 @@ import {
   Download,
   Eye,
   FileJson,
-  Headphones,
   History,
   Home,
   Mic,
@@ -29,20 +26,19 @@ import {
   Save,
   Sparkles,
   Target,
-  TrendingUp,
   UserRound,
-  Users,
-  Zap,
   type LucideIcon,
 } from "lucide-react";
 
 import styles from "./mobile-preview-lab.module.css";
 import { CoachingTextInspector } from "./coaching-text-inspector";
 import { MobileReviewTestbed } from "./mobile-review-testbed";
+import { interviewPreviewCssVariables } from "@quesiq/interview-contracts";
 
 type PreviewScreen = "home" | "practice" | "session" | "review" | "me";
 type DeviceKind = "iphone" | "pixel";
 type InspectorTab = "plan" | "prompts" | "runs" | "test" | "history";
+type SampleForm = { saved?: boolean; preferredName: string; targetRole: string; company: string; jobDescription: string };
 
 type RuntimeConfig = {
   enabled: boolean;
@@ -132,12 +128,17 @@ export function MobilePreviewLab() {
   const [screen, setScreen] = useState<PreviewScreen>("practice");
   const [scale, setScale] = useState<"compact" | "full">("compact");
   const [showTranscript, setShowTranscript] = useState(false);
+  const [sampleMuted, setSampleMuted] = useState(false);
   const [mode, setMode] = useState("Coaching");
+  const [focus, setFocus] = useState("Behavioral");
+  const [style, setStyle] = useState("Warm");
+  const [form, setForm] = useState<SampleForm>({ preferredName: "Ronnie", targetRole: "First Officer", company: "NetJets Aviation", jobDescription: "Safety-focused flight operations, sound judgment, and exceptional passenger service." });
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("test");
   const [lastAction, setLastAction] = useState("Coaching selected in Practice");
 
   function changeScreen(nextScreen: PreviewScreen) {
     setScreen(nextScreen);
+    if (nextScreen === "session") { setShowTranscript(false); setSampleMuted(false); }
     setLastAction(
       nextScreen === "session"
         ? `Start answer clicked · ${mode} launch path selected`
@@ -157,7 +158,7 @@ export function MobilePreviewLab() {
   }
 
   return (
-    <main className={styles.lab}>
+    <main className={styles.lab} style={interviewPreviewCssVariables as CSSProperties}>
       <header className={`${styles.toolbar} ${inspectorTab === "test" ? styles.toolbarStatic : ""}`}>
         <div className={styles.toolbarCopy}>
           <Link className={styles.backLink} href="/interview">
@@ -176,7 +177,7 @@ export function MobilePreviewLab() {
         <div className={styles.controls} aria-label="Preview controls">
           <div className={styles.screenPicker} aria-label="Preview screen">
             {screens.map(({ Icon, key, label }) => (
-              <button aria-label={label} aria-pressed={screen === key && inspectorTab !== "test"} className={screen === key && inspectorTab !== "test" ? styles.controlActive : undefined} key={key} onClick={() => { changeScreen(key); if (inspectorTab === "test") setInspectorTab("plan"); }} type="button">
+              <button aria-label={label} aria-pressed={screen === key && inspectorTab !== "test" && inspectorTab !== "history"} className={screen === key && inspectorTab !== "test" && inspectorTab !== "history" ? styles.controlActive : undefined} key={key} onClick={() => { changeScreen(key); if (inspectorTab === "test" || inspectorTab === "history") setInspectorTab("plan"); }} type="button">
                 <Icon aria-hidden="true" />
                 <span>{label}</span>
               </button>
@@ -201,17 +202,17 @@ export function MobilePreviewLab() {
 
       {inspectorTab === "history" ? <MobileReviewTestbed renderDevices={(renderPhone) => (
         <section className={`${styles.deviceStage} ${styles.testDeviceStage} ${scale === "full" ? styles.deviceStageFull : ""}`} aria-label="Mobile device previews">
-          {(["iphone", "pixel"] as const).map((device) => <DevicePreview key={device} device={device} mode={mode} onMode={changeMode} onScreen={changeScreen} onTab={selectTab} screen="session" showTranscript={showTranscript} onTranscript={setShowTranscript}>{renderPhone(device === "iphone" ? "iPhone" : "Pixel")}</DevicePreview>)}
+          {(["iphone", "pixel"] as const).map((device) => <DevicePreview key={device} device={device} mode={mode} focus={focus} style={style} form={form} muted={sampleMuted} onMuted={setSampleMuted} onMode={changeMode} onFocus={setFocus} onStyle={setStyle} onForm={setForm} onScreen={changeScreen} onTab={selectTab} screen="session" showTranscript={showTranscript} onTranscript={setShowTranscript}>{renderPhone(device === "iphone" ? "iPhone" : "Pixel")}</DevicePreview>)}
         </section>
       )} /> : inspectorTab === "test" ? <CoachingTextInspector renderDevices={(renderPhone) => (
         <section className={`${styles.deviceStage} ${styles.testDeviceStage} ${scale === "full" ? styles.deviceStageFull : ""}`} aria-label="Mobile device previews">
-          {(["iphone", "pixel"] as const).map((device) => <DevicePreview key={device} device={device} mode={mode} onMode={changeMode} onScreen={changeScreen} onTab={selectTab} screen="session" showTranscript={showTranscript} onTranscript={setShowTranscript}>
+          {(["iphone", "pixel"] as const).map((device) => <DevicePreview key={device} device={device} mode={mode} focus={focus} style={style} form={form} muted={sampleMuted} onMuted={setSampleMuted} onMode={changeMode} onFocus={setFocus} onStyle={setStyle} onForm={setForm} onScreen={changeScreen} onTab={selectTab} screen="session" showTranscript={showTranscript} onTranscript={setShowTranscript}>
             {renderPhone(device === "iphone" ? "iPhone" : "Pixel")}
           </DevicePreview>)}
         </section>
       )} /> : <section className={`${styles.deviceStage} ${scale === "full" ? styles.deviceStageFull : ""}`} aria-label="Mobile device previews">
-        <DevicePreview device="iphone" mode={mode} onMode={changeMode} onScreen={changeScreen} onTab={selectTab} screen={screen} showTranscript={showTranscript} onTranscript={setShowTranscript} />
-        <DevicePreview device="pixel" mode={mode} onMode={changeMode} onScreen={changeScreen} onTab={selectTab} screen={screen} showTranscript={showTranscript} onTranscript={setShowTranscript} />
+        <DevicePreview device="iphone" mode={mode} focus={focus} style={style} form={form} muted={sampleMuted} onMuted={setSampleMuted} onMode={changeMode} onFocus={setFocus} onStyle={setStyle} onForm={setForm} onScreen={changeScreen} onTab={selectTab} screen={screen} showTranscript={showTranscript} onTranscript={setShowTranscript} />
+        <DevicePreview device="pixel" mode={mode} focus={focus} style={style} form={form} muted={sampleMuted} onMuted={setSampleMuted} onMode={changeMode} onFocus={setFocus} onStyle={setStyle} onForm={setForm} onScreen={changeScreen} onTab={selectTab} screen={screen} showTranscript={showTranscript} onTranscript={setShowTranscript} />
       </section>}
     </main>
   );
@@ -416,11 +417,19 @@ function ActualTrace({ onClose, run }: { onClose: () => void; run: InspectionRun
   </aside>;
 }
 
-function DevicePreview({ children, device, mode, onMode, onScreen, onTab, onTranscript, screen, showTranscript }: {
+function DevicePreview({ children, device, mode, focus, style, form, muted, onMuted, onMode, onFocus, onStyle, onForm, onScreen, onTab, onTranscript, screen, showTranscript }: {
   children?: ReactNode;
   device: DeviceKind;
+  muted: boolean;
+  onMuted: (muted: boolean) => void;
   mode: string;
+  focus: string;
+  style: string;
+  form: SampleForm;
   onMode: (mode: string) => void;
+  onFocus: (focus: string) => void;
+  onStyle: (style: string) => void;
+  onForm: (form: SampleForm) => void;
   onScreen: (screen: PreviewScreen) => void;
   onTab: (key: (typeof tabItems)[number]["key"]) => void;
   onTranscript: (show: boolean) => void;
@@ -436,11 +445,11 @@ function DevicePreview({ children, device, mode, onMode, onScreen, onTab, onTran
           <StatusBar device={device} />
           <div className={`${styles.appViewport} ${children ? styles.interactiveViewport : ""}`}>
             {children ?? <>
-            {screen === "home" && <HomeScreen onScreen={onScreen} />}
-            {screen === "practice" && <PracticeScreen mode={mode} onMode={onMode} onScreen={onScreen} />}
-            {screen === "session" && <SessionScreen onScreen={onScreen} />}
+            {screen === "home" && <HomeScreen form={form} onMode={onMode} onScreen={onScreen} />}
+            {screen === "practice" && <PracticeScreen form={form} focus={focus} mode={mode} style={style} onFocus={onFocus} onMode={onMode} onStyle={onStyle} onScreen={onScreen} />}
+            {screen === "session" && <SessionScreen muted={muted} onMuted={onMuted} onScreen={onScreen} onTranscript={onTranscript} showTranscript={showTranscript} />}
             {screen === "review" && <ReviewScreen onScreen={onScreen} onTranscript={onTranscript} showTranscript={showTranscript} />}
-            {screen === "me" && <MeScreen />}
+            {screen === "me" && <MeScreen form={form} onForm={onForm} />}
             </>}
           </div>
           {!children && screen !== "session" && screen !== "review" ? <MobileTabs active={screen} onTab={onTab} /> : null}
@@ -459,93 +468,70 @@ function MobileHeader({ eyebrow, subtitle, title }: { eyebrow: string; subtitle?
   return <header className={styles.mobileHeader}><p className={styles.mobileEyebrow}>{eyebrow}</p><h2>{title}</h2>{subtitle ? <p>{subtitle}</p> : null}</header>;
 }
 
-function HomeScreen({ onScreen }: { onScreen: (screen: PreviewScreen) => void }) {
+function HomeScreen({ form, onMode, onScreen }: { form: SampleForm; onMode: (mode: string) => void; onScreen: (screen: PreviewScreen) => void }) {
   return <div className={styles.mobilePage}>
-    <MobileHeader eyebrow="QuesIQ Interview" subtitle="One focused conversation at a time." title="Ready, Ronnie?" />
+    <p className={styles.sampleNotice}>Sample / simulation · no learner data</p>
+    <MobileHeader eyebrow="QuesIQ Interview" subtitle="One focused conversation at a time." title={`Ready, ${form.preferredName || "there"}?`} />
     <section className={`${styles.mobileCard} ${styles.cyanCard}`}>
       <div className={styles.cardLead}><span className={styles.iconTile}><Sparkles aria-hidden="true" /></span><div><p className={styles.mobileEyebrow}>QUICK PRACTICE</p><h3>Make your first 90 seconds count.</h3><p>Que will help you sharpen your introduction for this role.</p></div></div>
-      <MobileButton Icon={ArrowRight} label="Start First Impression" onClick={() => onScreen("practice")} />
+      <MobileButton Icon={ArrowRight} label="Start First Impression" onClick={() => { onMode("First Impression"); onScreen("practice"); }} />
     </section>
     <section className={styles.mobileCard}>
       <div className={styles.cardTitle}><strong>Active target</strong><BriefcaseBusiness aria-hidden="true" className={styles.limeIcon} /></div>
-      <h3>First Officer</h3><p>NetJets Aviation</p>
+      <h3>{form.targetRole || "Add a target"}</h3><p>{form.company}</p><button className={styles.textAction} onClick={() => onScreen("me")} type="button">Edit target in Me</button>
     </section>
-    <div className={styles.metricGrid}><section className={`${styles.mobileCard} ${styles.limeCard}`}><Target aria-hidden="true" className={styles.limeIcon} /><strong className={styles.metric}>84%</strong><span>Latest score</span></section><section className={styles.mobileCard}><Clock3 aria-hidden="true" /><strong className={styles.metric}>12</strong><span>Saved sessions</span></section></div>
+    <div className={styles.metricGrid}><section className={`${styles.mobileCard} ${styles.limeCard}`}><Target aria-hidden="true" className={styles.limeIcon} /><strong className={styles.metric}>84%</strong><span>Latest score · sample</span></section><section className={styles.mobileCard}><Clock3 aria-hidden="true" /><strong className={styles.metric}>12</strong><span>Recent sessions · sample</span></section></div>
     <button className={styles.reviewLink} onClick={() => onScreen("review")} type="button"><span><strong>Continue your progress</strong><small>Make your results more specific and measurable.</small></span><ArrowRight aria-hidden="true" /></button>
   </div>;
 }
 
-function PracticeScreen({ mode, onMode, onScreen }: { mode: string; onMode: (mode: string) => void; onScreen: (screen: PreviewScreen) => void }) {
-  const modes: { Icon: LucideIcon; label: string; value: string }[] = [
-    { Icon: Headphones, label: "Coaching", value: "Coaching" },
-    { Icon: Zap, label: "Rapid Fire", value: "Rapid Fire" },
-    { Icon: Users, label: "Mock", value: "Mock Interview" },
+function PracticeScreen({ form, focus, mode, style, onFocus, onMode, onStyle, onScreen }: { form: SampleForm; focus: string; mode: string; style: string; onFocus: (focus: string) => void; onMode: (mode: string) => void; onStyle: (style: string) => void; onScreen: (screen: PreviewScreen) => void }) {
+  const needsFocus = mode === "Coaching" || mode === "Rapid Fire";
+  const modes = [
+    { name: "First Impression", description: "Sharpen your introduction." },
+    { name: "Coaching", description: "Practice, review feedback, then choose your next step." },
+    { name: "Rapid Fire", description: "Practice concise, focused answers." },
+    { name: "Mock Interview", description: "A realistic interview conversation." },
   ];
-  return <div className={`${styles.mobilePage} ${styles.voiceDeckPage}`}>
-    <header className={styles.voiceDeckHeader}>
-      <div className={styles.voiceDeckBrand}>
-        <Image alt="" aria-hidden="true" className={styles.voiceDeckLogo} height={48} src="/brand/quesiq-icon.png" width={48} />
-        <strong>Interview</strong>
-      </div>
-      <button aria-label="Open profile" className={styles.profileBadge} onClick={() => onScreen("me")} type="button"><span>RW</span><i /></button>
-    </header>
-
-    <button className={styles.voiceTarget} onClick={() => onScreen("me")} type="button">
-      <BriefcaseBusiness aria-hidden="true" />
-      <span><strong>First Officer</strong> · NetJets Aviation</span>
-      <ChevronRight aria-hidden="true" />
-    </button>
-
-    <div className={styles.voiceModes} aria-label="Interview mode">
-      {modes.map(({ Icon, label, value }) => <button aria-pressed={mode === value} className={mode === value ? styles.voiceModeActive : undefined} key={value} onClick={() => onMode(value)} type="button"><Icon aria-hidden="true" /><span>{label}</span></button>)}
-    </div>
-
-    <section className={styles.voicePrompt}>
-      <p>Recommended question</p>
-      <h2>How do you lead a team through unexpected change?</h2>
-      <div className={styles.voiceWaveform}>
-        <AudioWaveform aria-hidden="true" className={styles.voiceWaveLeft} />
-        <button aria-label="Start answering" className={styles.voiceMic} onClick={() => onScreen("session")} type="button"><Mic aria-hidden="true" /></button>
-        <AudioWaveform aria-hidden="true" className={styles.voiceWaveRight} />
-      </div>
-      <span>Hold or tap to answer</span>
-    </section>
-
-    <button className={styles.voiceStart} onClick={() => onScreen("session")} type="button"><Mic aria-hidden="true" />Start answer</button>
-
-    <div className={styles.voicePerformance}>
-      <span><TrendingUp aria-hidden="true" /></span>
-      <p>Recent performance<strong>Clarity <em>4.2</em> · Confidence <em>3.8</em></strong></p>
-    </div>
+  return <div className={styles.mobilePage}>
+    <p className={styles.sampleNotice}>Sample / simulation · no microphone or provider call</p>
+    <div className={styles.previewHeaderRow}><MobileHeader eyebrow="QuesIQ Interview" title="Practice" subtitle="Choose your focus. Practice one honest answer at a time." /><button aria-label="Open profile" className={styles.profileBadge} onClick={() => onScreen("me")} type="button">{(form.preferredName || "Me").slice(0, 2).toUpperCase()}</button></div>
+    <section className={styles.mobileCard}><strong>1. Target role</strong><button className={styles.setupOption} onClick={() => onScreen("me")} type="button"><span><b>{form.targetRole || "Add a target"}</b><small>{form.company}</small></span><ChevronRight aria-hidden="true" /></button></section>
+    <section className={styles.mobileCard}><strong>2. Practice mode</strong>{modes.map((item) => <button aria-pressed={mode === item.name} className={`${styles.setupOption} ${mode === item.name ? styles.setupOptionActive : ""}`} key={item.name} onClick={() => onMode(item.name)} type="button"><span><b>{item.name}</b><small>{item.description}</small></span></button>)}</section>
+    {needsFocus ? <section className={styles.mobileCard}><strong>3. Question focus</strong><div className={styles.setupChoices}>{["Behavioral", "Technical"].map((value) => <button aria-pressed={focus === value} className={focus === value ? styles.choiceActive : undefined} key={value} onClick={() => onFocus(value)} type="button">{value}</button>)}</div></section> : null}
+    <section className={styles.mobileCard}><strong>{needsFocus ? "4" : "3"}. Interviewer style</strong><div className={styles.setupChoices}>{["Warm", "Direct"].map((value) => <button aria-pressed={style === value} className={style === value ? styles.choiceActive : undefined} key={value} onClick={() => onStyle(value)} type="button">{value}</button>)}</div></section>
+    <section className={`${styles.mobileCard} ${styles.cyanCard}`}><p className={styles.mobileEyebrow}>SESSION SETUP · SAMPLE</p><strong>Ready when you are</strong><p className={styles.limeText}>{mode} · {form.targetRole} · {needsFocus ? `${focus} · ` : ""}{style}</p><p>Your first question is prepared after you start in the native app. This sample does not connect, record, or save a session.</p><MobileButton Icon={Mic} label="Start simulated answer" onClick={() => onScreen("session")} /></section>
   </div>;
 }
 
-function SessionScreen({ onScreen }: { onScreen: (screen: PreviewScreen) => void }) {
+function SessionScreen({ muted, onMuted, onScreen, onTranscript, showTranscript }: { muted: boolean; onMuted: (muted: boolean) => void; onScreen: (screen: PreviewScreen) => void; onTranscript: (show: boolean) => void; showTranscript: boolean }) {
   return <div className={`${styles.mobilePage} ${styles.sessionPage}`}>
-    <div className={styles.sessionTop}><span><i />Que is listening</span><strong>02:14</strong></div>
-    <div className={styles.sessionCenter}><div className={styles.voiceOrb}><Radio aria-hidden="true" /></div><strong>QUE</strong><p>Speak naturally. Que will respond when you finish your thought.</p></div>
-    <div className={styles.captionPanel}><span>LIVE CAPTIONS</span><p><strong>Que:</strong> Tell me about a time you made a difficult decision under pressure.</p><p><strong>You:</strong> During a high-tempo operational assignment…</p></div>
-    <div className={styles.sessionControls}><button aria-label="Mute microphone" type="button"><Mic aria-hidden="true" /></button><button aria-label="Hide captions" type="button"><Captions aria-hidden="true" /></button></div>
-    <button className={styles.endButton} onClick={() => onScreen("review")} type="button"><PhoneOff aria-hidden="true" />End session</button>
+    <header className={styles.sessionHeader}><p className={styles.sampleNotice}>Sample / simulation · no microphone or provider call</p><div className={styles.sessionTop}><span><i />{muted ? "Simulated microphone muted" : "Simulated live state"}</span><strong>02:14</strong></div></header>
+    <div className={styles.sessionBody}><div className={styles.sessionCenter}><div className={styles.voiceOrb}><Radio aria-hidden="true" /></div><strong>QUE</strong><p>Speak naturally. Que will respond when you finish your thought.</p></div>
+    {showTranscript ? <div className={styles.captionPanel}><span>SIMULATED CAPTIONS</span><p><strong>Que:</strong> Tell me about a time you made a difficult decision under pressure.</p><p><strong>You:</strong> During a high-tempo operational assignment…</p></div> : null}</div>
+    <footer className={styles.sessionFooter}><div className={styles.sessionControls}><button aria-label={`${muted ? "Unmute" : "Mute"} microphone (simulated)`} aria-pressed={muted} onClick={() => onMuted(!muted)} type="button"><Mic aria-hidden="true" /></button><button aria-label={`${showTranscript ? "Hide" : "Show"} captions (simulated)`} aria-expanded={showTranscript} onClick={() => onTranscript(!showTranscript)} type="button"><Captions aria-hidden="true" /></button></div>
+    <button className={styles.endButton} onClick={() => onScreen("review")} type="button"><PhoneOff aria-hidden="true" />End session</button></footer>
   </div>;
 }
 
 function ReviewScreen({ onScreen, onTranscript, showTranscript }: { onScreen: (screen: PreviewScreen) => void; onTranscript: (show: boolean) => void; showTranscript: boolean }) {
   const scores = [["Confidence", 4], ["Clarity", 4], ["Relevance", 5], ["Impact", 3], ["Authenticity", 5]] as const;
   return <div className={styles.mobilePage}>
-    <button aria-label="Back to history" className={styles.mobileBack} onClick={() => onScreen("home")} type="button"><ArrowLeft aria-hidden="true" /></button>
-    <MobileHeader eyebrow="Saved review" title="First Officer" />
-    <section className={`${styles.mobileCard} ${styles.limeCard}`}><div className={styles.scoreRow}><strong>84</strong><span><b>/ 100</b><small>Overall interview score</small></span></div></section>
+    <button aria-label="Back to Home" className={styles.mobileBack} onClick={() => onScreen("home")} type="button"><ArrowLeft aria-hidden="true" /></button>
+    <MobileHeader eyebrow="Saved review · sample" title="First Officer" />
     <section className={styles.mobileCard}><strong>Coach summary</strong><p>Your answers sound confident and grounded in real experience.</p><p className={styles.limeText}>Next, make the result of each example more specific and measurable.</p></section>
+    <section className={styles.mobileCard}><strong>Next practice step</strong><p>Make the outcome measurable in your next answer.</p><button className={styles.textAction} onClick={() => onTranscript(true)} type="button">“We delivered two days early.” · Open sample transcript evidence</button></section>
+    <section className={`${styles.mobileCard} ${styles.limeCard}`}><div className={styles.scoreRow}><strong>84</strong><span><b>/ 100</b><small>Overall interview score · sample</small></span></div></section>
     <section className={styles.mobileCard}><strong>Five dimensions</strong>{scores.map(([label, score]) => <div className={styles.scoreItem} key={label}><div><span>{label}</span><b>{score}/5</b></div><i><span style={{ width: `${score * 20}%` }} /></i></div>)}</section>
-    <section className={styles.mobileCard}><button className={styles.transcriptToggle} onClick={() => onTranscript(!showTranscript)} type="button"><strong>Transcript · 6 turns</strong><ChevronDown aria-hidden="true" className={showTranscript ? styles.chevronOpen : undefined} /></button>{showTranscript ? <div className={styles.transcript}><p><strong>Que</strong> Tell me about a difficult decision you made under pressure.</p><p><strong>You</strong> During a high-tempo operational assignment, I had to balance mission timing with a changing risk picture.</p></div> : null}</section>
+    <section className={styles.mobileCard}><button aria-expanded={showTranscript} className={styles.transcriptToggle} onClick={() => onTranscript(!showTranscript)} type="button"><strong>Transcript · 2 turns</strong><ChevronDown aria-hidden="true" className={showTranscript ? styles.chevronOpen : undefined} /></button>{showTranscript ? <div className={styles.transcript}><p><strong>Que</strong> Tell me about a difficult decision you made under pressure.</p><p><strong>You</strong> During a high-tempo operational assignment, We delivered two days early.</p></div> : null}</section>
   </div>;
 }
 
-function MeScreen() {
+function MeScreen({ form, onForm }: { form: SampleForm; onForm: (form: SampleForm) => void }) {
   return <div className={styles.mobilePage}>
-    <MobileHeader eyebrow="Your setup" subtitle="ronnie@example.com" title="Me" />
-    <section className={styles.mobileCard}><strong>Interview profile</strong><label>Preferred name<input defaultValue="Ronnie" /></label><label>Target role<input defaultValue="First Officer" /></label><label>Company<input defaultValue="NetJets Aviation" /></label><label>Job description<textarea defaultValue="Safety-focused flight operations, sound judgment, and exceptional passenger service." /></label><MobileButton Icon={Save} label="Save profile" /></section>
+    <MobileHeader eyebrow="Your setup · sample" subtitle="ronnie@example.com" title="Me" />
+    <p className={styles.sampleNotice}>Sample / simulation · changes stay in this preview</p>
+    <section className={styles.mobileCard}><strong>Interview profile</strong><label>Preferred name<input value={form.preferredName} onChange={(event) => onForm({ ...form, saved: false, preferredName: event.target.value })} /></label></section><section className={styles.mobileCard}><strong>Active job target</strong><label>Target role<input value={form.targetRole} onChange={(event) => onForm({ ...form, saved: false, targetRole: event.target.value })} /></label><label>Company<input value={form.company} onChange={(event) => onForm({ ...form, saved: false, company: event.target.value })} /></label><label>Job description<textarea value={form.jobDescription} onChange={(event) => onForm({ ...form, saved: false, jobDescription: event.target.value })} /></label><MobileButton Icon={Save} label="Save profile (preview only)" onClick={() => onForm({ ...form, saved: true })} />{form.saved ? <p role="status">Preview only — nothing was saved to your account.</p> : null}</section>
     <section className={styles.mobileCard}><strong>Resume</strong><p>Ready: Ronnie_Weeks_Resume.pdf</p></section>
   </div>;
 }

@@ -10,17 +10,21 @@ Work sequentially in QuesIQ-dev with lowest-suitable-model workers and manager
 acceptance. Prior test results below remain historical, not new-phase evidence.
 
 Phases0/1/3 and Phase2's no-audio implementation are locally accepted. Resume at
-Phase4.1 via the execution ledger; Phase2's paid-text/human quality gate remains
+P4.2 via the execution ledger; P4.1 screen alignment is locally accepted.
+Phase2's paid-text/human quality gate remains
 separately gated, as the user explicitly requested moving ahead to Phase3. Native sessions
 pin server configuration/prompt bodies; Coaching and the framed inspector share
 an application-owned controller. Catalog-driven native setup now respects
-disabled modes. Latest gate:39 native tests,11 shared contracts, ownership/API/
-History services, and22 browser tests passed. Typechecks and root lint pass;
-mobile lint exits0 with20 warnings. Candidate-specific contract/fixture and
+disabled modes. Latest gate:50 native tests,11 shared contracts, ownership/API/
+History services, and28 browser tests passed. Typechecks and root lint pass;
+mobile lint exits0 with26 warnings. Local Android debug compilation and Hermes
+export passed without installing/launching an emulator. Candidate-specific contract/fixture and
 mocked service checks pass; candidate prompts remain inspector-only, not active
 learner prompts. History now uses cursor pages/direct detail; safe explicit review
 retry and first/assisted comparison preserve saved provenance. These are not live
-model/audio quality proof. Phases4-7 are not
+model/audio quality proof. P4.1 shares native/preview tokens, improves insets,
+forms and live scroll/footer layout, and labels mirrored samples honestly.
+Remaining Phase4 work and Phases5-7 are not
 accepted. The candidate contract documents the proposed bounded screening;
 do not infer spending approval from the roadmap.
 

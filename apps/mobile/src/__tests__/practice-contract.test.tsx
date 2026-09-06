@@ -86,3 +86,14 @@ test("rejects an absent or disabled server configuration rather than activating 
   expect(mockSetActiveSession).not.toHaveBeenCalled();
   expect(screen.getByText("The selected practice mode is no longer available.")).toBeTruthy();
 });
+
+test("shows focus only when required and never starts a session on selection", async () => {
+  mockBootstrapState.data = bootstrap([{ key: "coaching", name: "Catalog Coaching", description: "C", questionTypeRequired: true, use: "practice" }, { key: "first_impression", name: "Introduction", description: "I", questionTypeRequired: false, use: "practice" }]);
+  const screen = await render(<PracticeScreen />);
+  expect(screen.getByText("Catalog technical")).toBeTruthy();
+  expect(screen.getByText("Ready when you are")).toBeTruthy();
+  await fireEvent.press(screen.getByText("Introduction"));
+  expect(screen.queryByText("Catalog technical")).toBeNull();
+  expect(mockRequest).not.toHaveBeenCalled();
+  expect(mockSetActiveSession).not.toHaveBeenCalled();
+});

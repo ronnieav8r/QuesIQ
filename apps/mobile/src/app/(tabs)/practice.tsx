@@ -13,7 +13,7 @@ import { bootstrapQueryKey, useBootstrap } from "@/lib/bootstrap";
 import { availablePracticeModes, canLaunchPractice, preferredTargetId, resolveCatalogChoice, resolvePracticeMode } from "@/lib/practice-catalog";
 import { useAuth } from "@/providers/auth-provider";
 import { useActiveSession } from "@/providers/session-provider";
-import { colors, radius, spacing } from "@/theme/tokens";
+import { colors, layout, radius, spacing } from "@/theme/tokens";
 import { useQueryClient } from "@tanstack/react-query";
 
 function Choice({ active, detail, label, onPress }: { active: boolean; detail?: string; label: string; onPress: () => void }) {
@@ -83,19 +83,22 @@ export default function PracticeScreen() {
     finally { setBusy(false); }
   };
 
-  return <Screen eyebrow="Practice setup" subtitle="Choose the target and pressure level. You can end safely at any time." title="Build your session">
+  return <Screen bottomInset={false} eyebrow="QuesIQ Interview" subtitle="Choose your focus. Practice one honest answer at a time." title="Practice" trailing={<Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={() => router.push("/(tabs)/me")} style={choiceStyles.profile}><Text style={choiceStyles.profileText}>{(data.profile?.preferredName || data.user.name || "Me").slice(0, 2).toUpperCase()}</Text></Pressable>}>
     <Card title="1. Target role">
       {data.jobTargets.length ? data.jobTargets.map((target) => <Choice active={chosenTarget?.id === target.id} detail={target.targetCompany} key={target.id} label={target.targetRole} onPress={() => setTargetId(target.id)} />) : <Text style={choiceStyles.detail}>Add a target in Me. You can still practice with your saved profile.</Text>}
     </Card>
     <Card title="2. Practice mode">{modes.length ? modes.map((item) => <Choice active={resolvedMode === item.key} detail={item.description} key={item.key} label={item.name} onPress={() => setMode(item.key)} />) : <Text style={choiceStyles.detail}>No practice modes are currently available.</Text>}</Card>
-    <Card title="3. Question focus"><View style={choiceStyles.chips}>{questionTypes.map((item) => <Pressable key={item.key} onPress={() => setQuestionType(item.key)} style={[choiceStyles.chip, resolvedQuestionType === item.key && choiceStyles.chipActive]}><Text style={[choiceStyles.chipText, resolvedQuestionType === item.key && choiceStyles.chipTextActive]}>{item.label}</Text></Pressable>)}</View></Card>
-    <Card title="4. Interviewer style"><View style={choiceStyles.chips}>{stylesList.map((item) => <Pressable key={item.key} onPress={() => setStyle(item.key)} style={[choiceStyles.chip, resolvedStyle === item.key && choiceStyles.chipActive]}><Text style={[choiceStyles.chipText, resolvedStyle === item.key && choiceStyles.chipTextActive]}>{item.label}</Text></Pressable>)}</View></Card>
-    {error ? <Text style={choiceStyles.error}>{error}</Text> : null}<Button label="Start live practice" disabled={!canLaunchPractice(selectedMode, resolvedStyle, resolvedQuestionType)} loading={busy} onPress={launch} />
+    {selectedMode?.questionTypeRequired ? <Card title="3. Question focus"><View style={choiceStyles.chips}>{questionTypes.map((item) => <Pressable accessibilityRole="radio" accessibilityState={{ checked: resolvedQuestionType === item.key }} key={item.key} onPress={() => setQuestionType(item.key)} style={[choiceStyles.chip, resolvedQuestionType === item.key && choiceStyles.chipActive]}><Text style={[choiceStyles.chipText, resolvedQuestionType === item.key && choiceStyles.chipTextActive]}>{item.label}</Text></Pressable>)}</View></Card> : null}
+    <Card title={`${selectedMode?.questionTypeRequired ? 4 : 3}. Interviewer style`}><View style={choiceStyles.chips}>{stylesList.map((item) => <Pressable accessibilityRole="radio" accessibilityState={{ checked: resolvedStyle === item.key }} key={item.key} onPress={() => setStyle(item.key)} style={[choiceStyles.chip, resolvedStyle === item.key && choiceStyles.chipActive]}><Text style={[choiceStyles.chipText, resolvedStyle === item.key && choiceStyles.chipTextActive]}>{item.label}</Text></Pressable>)}</View></Card>
+    <Card accent="cyan" title="Ready when you are"><Text style={choiceStyles.summary}>{selectedMode?.name || "Select an available mode"}{chosenTarget?.targetRole ? ` · ${chosenTarget.targetRole}` : ""}</Text><Text style={choiceStyles.detail}>Your first question is prepared after you start. Microphone access is requested in the live session; you can end and save at any time.</Text>
+      {error ? <Text accessibilityRole="alert" style={choiceStyles.error}>{error}</Text> : null}<Button label="Start live practice" disabled={!canLaunchPractice(selectedMode, resolvedStyle, resolvedQuestionType)} loading={busy} onPress={launch} />
+    </Card>
   </Screen>;
 }
 
 const choiceStyles = StyleSheet.create({
-  active: { backgroundColor: colors.cyan, borderColor: colors.cyan }, activeText: { color: colors.background }, chip: { borderColor: colors.borderStrong, borderRadius: radius.pill, borderWidth: 1, minHeight: 42, paddingHorizontal: spacing.md, justifyContent: "center" },
+  active: { backgroundColor: colors.cyan, borderColor: colors.cyan }, activeText: { color: colors.background }, chip: { borderColor: colors.borderStrong, borderRadius: radius.pill, borderWidth: 1, minHeight: layout.minTouchTarget, maxWidth: "100%", paddingHorizontal: spacing.md, paddingVertical: spacing.sm, justifyContent: "center" },
+  profile: { minWidth: layout.minTouchTarget, minHeight: layout.minTouchTarget, borderRadius: radius.pill, backgroundColor: colors.cyanDark, justifyContent: "center", alignItems: "center", padding: spacing.sm }, profileText: { color: colors.cyan, fontWeight: "800" }, summary: { color: colors.lime, fontSize: 16, fontWeight: "700" },
   chipActive: { backgroundColor: colors.cyanDark, borderColor: colors.cyan }, chipText: { color: colors.textSoft, fontSize: 14, fontWeight: "700" }, chipTextActive: { color: colors.cyan }, chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   copy: { flex: 1, gap: 2 }, detail: { color: colors.muted, fontSize: 13, lineHeight: 18 }, error: { color: colors.danger, fontSize: 14 }, label: { color: colors.text, fontSize: 16, fontWeight: "700" },
   wrap: { alignItems: "center", borderColor: colors.border, borderRadius: radius.md, borderWidth: 1, flexDirection: "row", gap: spacing.sm, minHeight: 62, padding: spacing.md },

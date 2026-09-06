@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { interviewExecutionConfigSchema } from "./execution";
 export * from "./execution";
+export * from "./design";
 
 export const practiceModeKeySchema = z.enum([
   "first_impression",

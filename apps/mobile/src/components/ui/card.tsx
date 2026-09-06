@@ -1,18 +1,18 @@
 import type { PropsWithChildren, ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 
 import { colors, radius, spacing } from "@/theme/tokens";
 
-type CardProps = PropsWithChildren<{ accent?: "cyan" | "lime"; onPress?: () => void; title?: string; trailing?: ReactNode }>;
+type CardProps = PropsWithChildren<{ accent?: "cyan" | "lime"; onPress?: () => void; title?: string; trailing?: ReactNode; style?: StyleProp<ViewStyle> }>;
 
-export function Card({ accent, children, onPress, title, trailing }: CardProps) {
+export function Card({ accent, children, onPress, title, trailing, style: customStyle }: CardProps) {
   const content = (
     <>
-      {(title || trailing) ? <View style={styles.header}><Text style={styles.title}>{title}</Text>{trailing}</View> : null}
+      {(title || trailing) ? <View style={styles.header}><Text accessibilityRole="header" style={styles.title}>{title}</Text>{trailing}</View> : null}
       {children}
     </>
   );
-  const style = [styles.card, accent === "cyan" && styles.cyan, accent === "lime" && styles.lime];
+  const style = [styles.card, accent === "cyan" && styles.cyan, accent === "lime" && styles.lime, customStyle];
   return onPress ? <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [...style, pressed && styles.pressed]}>{content}</Pressable> : <View style={style}>{content}</View>;
 }
 

@@ -2,6 +2,17 @@
 
 ## Decided
 
+### Share Native And Framed Interview Design Tokens (2026-09-06)
+
+P4.1 uses portable color/spacing/radius/type/touch constants in the existing
+Interview contracts workspace. Native components and the framed preview consume
+the same palette. This is one product with separate rendering surfaces, not a
+second learner implementation or proof that browser frames execute native audio.
+The native screens use live owned data; static design samples are explicitly
+marked simulated. Keep setup honest: the question is prepared after explicit
+session start, not fabricated in a setup preview. Preserve the silent framed
+test default and existing provider/control semantics until their later gates.
+
 ### Execute The Interview Mobile Roadmap With Cost-Conscious Workers (2026-09-06)
 
 The approved `INTERVIEW_IMPLEMENTATION_ROADMAP_2026-09-06.md` controls Interview

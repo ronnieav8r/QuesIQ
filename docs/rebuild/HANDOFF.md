@@ -11,6 +11,17 @@ for the current task/checkpoint before resuming. Preserve the local-only,
 no-direct-PC-control and silent framed-test defaults. Paid AI/audio/release
 gates remain separate. Older roadmap suggestions do not override this plan.
 
+Latest slice: P4.1 is locally accepted. Shared native/framed palette, truthful
+Home/Practice setup, accessible Me/Review controls, tab safe-area handling and
+scrollable live content with persistent End controls are implemented. Static
+samples now mirror choices/profile state and never imply learner persistence.
+Full gate28/28 browser;50 native tests/11 contracts/API/history services;
+typechecks/root lint pass, mobile lint0 errors/26 warnings. Android x86_64 debug
+compile and Hermes export pass; no emulator install or audio test. See
+`INTERVIEW_PHASE4_NATIVE_EXPERIENCE.md` for exact evidence, correction record,
+screenshots and the native manual checklist. Resume at P4.2 (Done answering);
+do not interpret this as completion of Phase4 or the entire roadmap.
+
 Phases0 and1 are accepted. Existing work checkpoint `0d5cd32`; direct owned
 review checkpoint `1de0e91`. Phase1 pins effective settings/prompt bodies, shares
 native/inspector control state, preserves exact retry questions, guards late
@@ -28,7 +39,7 @@ ran. Phase3 is now locally accepted: cursor History, safe evaluation recovery,
 evidence links and persisted assisted-attempt comparison. Final web gate22/22;
 mobile typecheck/11 contracts/API/history services/39 native tests pass; mobile
 lint has0 errors/20 warnings. See the execution ledger and Phase3 review contract
-for precise evidence and the Expo parity checklist. Resume Phase4.1; the user
+for precise evidence and the Expo parity checklist. This Phase3 checkpoint preceded P4.1; the user
 explicitly deferred Phase2's paid quality comparison. Phases4-7 and native release gates remain unmet; no Rapid Fire promotion
 or public deployment. Do not describe the complete roadmap as finished.
 

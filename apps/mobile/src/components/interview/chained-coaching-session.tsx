@@ -16,8 +16,8 @@ import { File, Paths } from "expo-file-system";
 import { useKeepAwake } from "expo-keep-awake";
 import { Captions, CaptionsOff, CircleStop, Mic, Radio, RotateCcw } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { AppState, Pressable, StyleSheet, Text, View } from "react-native";
+import { SessionFrame } from "@/components/ui/session-frame";
 import {
   mediaDevices,
   RTCPeerConnection,
@@ -525,9 +525,8 @@ export function ChainedCoachingSession({
             : phase === "error" ? "Coaching paused" : "Connecting transcription";
 
   return (
-    <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
-      <View style={styles.top}><View style={styles.status}><View style={[styles.dot, phase === "listening" && styles.dotLive]} /><Text style={styles.statusText}>{phaseText}</Text></View><Text style={styles.timer}>{mins}:{secs}</Text></View>
-      <ScrollView contentContainerStyle={styles.content}>
+    <SessionFrame active={phase === "listening"} status={phaseText} timer={`${mins}:${secs}`} footer={<Button icon={CircleStop} label="End & save" onPress={() => finish("user_ended")} variant="danger" />}>
+
         <View style={[styles.orb, speechDetected && phase === "listening" && styles.orbListening]}>
           {phase === "listening" ? <Mic color={speechDetected ? colors.lime : colors.cyan} size={44} /> : <Radio color={phase === "speaking" ? colors.cyan : colors.muted} size={44} />}
         </View>
@@ -544,7 +543,7 @@ export function ChainedCoachingSession({
 
         {error ? <View style={styles.errorCard}><Text style={styles.errorText}>{error}</Text><Button icon={RotateCcw} label={`Retry ${retryKind}`} onPress={retry} variant="secondary" /></View> : null}
 
-        <Pressable onPress={() => setCaptions((value) => !value)} style={styles.captionToggle}>
+        <Pressable accessibilityRole="button" accessibilityState={{ expanded: captions }} onPress={() => setCaptions((value) => !value)} style={styles.captionToggle}>
           {captions ? <Captions color={colors.cyan} size={18} /> : <CaptionsOff color={colors.muted} size={18} />}
           <Text style={styles.captionToggleText}>{captions ? "Hide captions" : "Show captions"}</Text>
         </Pressable>
@@ -554,25 +553,18 @@ export function ChainedCoachingSession({
         </View> : null}
 
         {__DEV__ && lastPipeline ? <View style={styles.devCard}><Text style={styles.devTitle}>CHAIN PROOF</Text><Text style={styles.devText}>{lastPipeline.textModel} → {lastPipeline.ttsModel} · {lastPipeline.responseAndSpeechMs} ms</Text><Text style={styles.devText}>Validation: {lastValidation?.corrected ? `corrected ${lastValidation.issues.join(", ")}` : "passed unchanged"}</Text></View> : null}
-      </ScrollView>
-      <View style={styles.bottom}><Button icon={CircleStop} label="End & save" onPress={() => finish("user_ended")} variant="danger" /></View>
-    </SafeAreaView>
+    </SessionFrame>
   );
 }
 
 const styles = StyleSheet.create({
-  bottom: { borderTopColor: colors.border, borderTopWidth: 1, padding: spacing.md },
-  captionToggle: { alignItems: "center", flexDirection: "row", gap: spacing.sm, justifyContent: "center", minHeight: 44 },
+  captionToggle: { alignItems: "center", flexDirection: "row", gap: spacing.sm, justifyContent: "center", minHeight: 48 },
   captionToggleText: { color: colors.muted, fontSize: 14, fontWeight: "700" },
   choices: { gap: spacing.sm, width: "100%" },
-  container: { backgroundColor: colors.background, flex: 1 },
-  content: { alignItems: "center", gap: spacing.md, padding: spacing.lg, paddingBottom: spacing.xl },
   devCard: { backgroundColor: colors.limeDark, borderColor: colors.lime, borderRadius: radius.md, borderWidth: 1, gap: spacing.xs, padding: spacing.md, width: "100%" },
   devText: { color: colors.textSoft, fontSize: 12, lineHeight: 17 },
   devTitle: { color: colors.lime, fontSize: 11, fontWeight: "900", letterSpacing: 1.3 },
   disclosure: { color: colors.muted, fontSize: 12, textAlign: "center" },
-  dot: { backgroundColor: colors.muted, borderRadius: 99, height: 8, width: 8 },
-  dotLive: { backgroundColor: colors.lime },
   errorCard: { backgroundColor: colors.panel, borderColor: colors.danger, borderRadius: radius.md, borderWidth: 1, gap: spacing.md, padding: spacing.md, width: "100%" },
   errorText: { color: colors.danger, fontSize: 14, lineHeight: 20 },
   orb: { alignItems: "center", backgroundColor: colors.panelStrong, borderColor: colors.borderStrong, borderRadius: 70, borderWidth: 2, height: 132, justifyContent: "center", marginTop: spacing.lg, width: 132 },
@@ -581,10 +573,6 @@ const styles = StyleSheet.create({
   prompt: { color: colors.text, fontSize: 20, fontWeight: "800", textAlign: "center" },
   que: { color: colors.cyan, fontSize: 13, fontWeight: "900", letterSpacing: 3 },
   speaker: { color: colors.cyan, fontWeight: "900" },
-  status: { alignItems: "center", flexDirection: "row", gap: spacing.sm },
-  statusText: { color: colors.textSoft, fontSize: 13, fontWeight: "700" },
-  timer: { color: colors.text, fontSize: 16, fontVariant: ["tabular-nums"], fontWeight: "900" },
-  top: { alignItems: "center", borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: "row", justifyContent: "space-between", paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   transcript: { backgroundColor: colors.panel, borderColor: colors.border, borderRadius: radius.md, borderWidth: 1, gap: spacing.sm, padding: spacing.md, width: "100%" },
   turn: { color: colors.textSoft, fontSize: 14, lineHeight: 21 },
 });

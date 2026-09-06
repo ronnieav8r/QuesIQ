@@ -17,7 +17,7 @@ import {
 } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SessionFrame } from "@/components/ui/session-frame";
 import {
   mediaDevices,
   RTCPeerConnection,
@@ -403,14 +403,47 @@ export function NativeVoiceSession({
           : "Connection issue";
 
   return (
-    <SafeAreaView edges={["top", "bottom"]} style={styles.container}>
-      <View style={styles.top}>
-        <View style={styles.brand}>
-          <View style={[styles.liveDot, phase === "live" && styles.liveDotActive]} />
-          <Text style={styles.phase}>{phaseLabel}</Text>
+    <SessionFrame active={phase === "live"} status={phaseLabel} timer={`${mins}:${secs}`} footer={<>{phase === "error" ? (
+        <View style={styles.errorActions}>
+          <Button icon={RotateCcw} label="Retry microphone and connection" onPress={() => void startConnection()} />
+          <Button icon={X} label="Cancel session" onPress={abandon} variant="secondary" />
         </View>
-        <Text style={styles.timer}>{mins}:{secs}</Text>
-      </View>
+      ) : (
+        <>
+          <View style={styles.controls}>
+            <Pressable
+              accessibilityLabel={muted ? "Unmute microphone" : "Mute microphone"}
+              onPress={() => {
+                const next = !muted;
+                setMuted(next);
+                if (micRef.current) micRef.current.enabled = !next;
+                addEvent(next ? "microphone.muted" : "microphone.unmuted");
+              }}
+              accessibilityRole="button"
+              accessibilityState={{ checked: !muted }}
+              style={styles.round}
+            >
+              {muted ? <MicOff color={colors.text} /> : <Mic color={colors.text} />}
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded: captions }}
+              accessibilityLabel={captions ? "Hide captions" : "Show captions"}
+              onPress={() => setCaptions((value) => !value)}
+              style={styles.round}
+            >
+              {captions ? <CaptionsOff color={colors.text} /> : <Captions color={colors.text} />}
+            </Pressable>
+          </View>
+          <Button
+            icon={PhoneOff}
+            label={phase === "ending" ? "Ending and saving…" : "End session"}
+            loading={phase === "ending"}
+            onPress={() => void finish("user_ended")}
+            variant="danger"
+          />
+        </>
+      )}</>}>
       <View style={styles.center}>
         <View style={[styles.orb, phase === "live" && styles.orbLive]}>
           <Radio color={phase === "live" ? colors.cyan : colors.muted} size={52} />
@@ -441,70 +474,27 @@ export function NativeVoiceSession({
           ))}
         </View>
       ) : null}
-      {phase === "error" ? (
-        <View style={styles.errorActions}>
-          <Button icon={RotateCcw} label="Retry microphone and connection" onPress={() => void startConnection()} />
-          <Button icon={X} label="Cancel session" onPress={abandon} variant="secondary" />
-        </View>
-      ) : (
-        <>
-          <View style={styles.controls}>
-            <Pressable
-              accessibilityLabel={muted ? "Unmute microphone" : "Mute microphone"}
-              onPress={() => {
-                const next = !muted;
-                setMuted(next);
-                if (micRef.current) micRef.current.enabled = !next;
-                addEvent(next ? "microphone.muted" : "microphone.unmuted");
-              }}
-              style={styles.round}
-            >
-              {muted ? <MicOff color={colors.text} /> : <Mic color={colors.text} />}
-            </Pressable>
-            <Pressable
-              accessibilityLabel={captions ? "Hide captions" : "Show captions"}
-              onPress={() => setCaptions((value) => !value)}
-              style={styles.round}
-            >
-              {captions ? <CaptionsOff color={colors.text} /> : <Captions color={colors.text} />}
-            </Pressable>
-          </View>
-          <Button
-            icon={PhoneOff}
-            label={phase === "ending" ? "Ending and saving…" : "End session"}
-            loading={phase === "ending"}
-            onPress={() => void finish("user_ended")}
-            variant="danger"
-          />
-        </>
-      )}
-    </SafeAreaView>
+
+    </SessionFrame>
   );
 }
 
 const styles = StyleSheet.create({
-  brand: { alignItems: "center", flexDirection: "row", gap: spacing.sm },
   captionLine: { color: colors.textSoft, fontSize: 14, lineHeight: 20 },
   captionSpeaker: { color: colors.cyan, fontWeight: "800" },
-  captions: { backgroundColor: colors.panel, borderColor: colors.border, borderRadius: radius.md, borderWidth: 1, gap: spacing.xs, maxHeight: 150, padding: spacing.md },
+  captions: { backgroundColor: colors.panel, borderColor: colors.border, borderRadius: radius.md, borderWidth: 1, gap: spacing.xs, padding: spacing.md },
   captionTitle: { color: colors.muted, fontSize: 10, fontWeight: "900", letterSpacing: 1.3 },
   center: { alignItems: "center", flex: 1, gap: spacing.md, justifyContent: "center" },
-  container: { backgroundColor: colors.background, flex: 1, gap: spacing.md, padding: spacing.lg, paddingBottom: spacing.xl },
   controls: { flexDirection: "row", gap: spacing.md, justifyContent: "center" },
   errorActions: { gap: spacing.sm },
-  liveDot: { backgroundColor: colors.muted, borderRadius: 99, height: 9, width: 9 },
-  liveDotActive: { backgroundColor: colors.lime },
   micStatus: { color: colors.muted, fontSize: 10, fontWeight: "900", letterSpacing: 1 },
   micStatusDetected: { color: colors.lime },
   orb: { alignItems: "center", backgroundColor: colors.panel, borderColor: colors.borderStrong, borderRadius: 80, borderWidth: 1, height: 146, justifyContent: "center", width: 146 },
   orbLive: { backgroundColor: colors.cyanDark, borderColor: colors.cyan },
-  phase: { color: colors.textSoft, fontSize: 13, fontWeight: "700" },
   prompt: { color: colors.muted, fontSize: 16, lineHeight: 24, maxWidth: 320, textAlign: "center" },
   proofLabel: { color: colors.muted, fontSize: 10, fontWeight: "900", letterSpacing: 1.2 },
   proofPhrase: { alignItems: "center", backgroundColor: colors.panelStrong, borderColor: colors.border, borderRadius: radius.md, borderWidth: 1, gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   proofText: { color: colors.lime, fontSize: 15, fontWeight: "800" },
   que: { color: colors.text, fontSize: 25, fontWeight: "900", letterSpacing: 5 },
   round: { alignItems: "center", backgroundColor: colors.panelStrong, borderColor: colors.borderStrong, borderRadius: 99, borderWidth: 1, height: 58, justifyContent: "center", width: 58 },
-  timer: { color: colors.text, fontSize: 18, fontVariant: ["tabular-nums"], fontWeight: "800" },
-  top: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
 });
