@@ -9,11 +9,16 @@ plan. `INTERVIEW_EXECUTION_STATUS.md` is the execution ledger and resume pointer
 Work sequentially in QuesIQ-dev with lowest-suitable-model workers and manager
 acceptance. Prior test results below remain historical, not new-phase evidence.
 
-Phases0/1 are accepted. Resume Phase2 via the execution ledger. Native sessions
+Phases0/1 and Phase2's no-audio implementation are accepted. Resume at Phase2's
+separately approved paid-text/human quality gate via the execution ledger. Native sessions
 pin server configuration/prompt bodies; Coaching and the framed inspector share
 an application-owned controller. Catalog-driven native setup now respects
 disabled modes. Latest gate:31 native tests,9 shared contracts, ownership/API
-checks, and14 browser tests passed. These are not live model/audio quality proof.
+checks, and16 browser tests passed. Candidate-specific contract/fixture and
+mocked service checks pass; candidate prompts remain inspector-only, not active
+learner prompts. These are not live model/audio quality proof. Phases3-7 are not
+accepted. The candidate contract documents the proposed bounded screening;
+do not infer spending approval from the roadmap.
 
 ## 2026-09-02 Interview Test Bed Default
 

@@ -12,6 +12,8 @@ Start here for broad resume work and manager handoffs:
   authoritative Interview mobile implementation sequence and agent workflow.
 - `docs/rebuild/INTERVIEW_EXECUTION_STATUS.md`: current accepted checkpoint,
   task evidence, and next Interview implementation task; read before resuming.
+- `docs/rebuild/INTERVIEW_PHASE2_COACHING_CANDIDATE.md`: local-only Coaching
+  candidate behavior/evidence contract and separately approved quality gates.
 
 - `docs/rebuild/HANDOFF.md`: current resume snapshot and product handoff.
 - `docs/rebuild/LOCAL_DEVELOPMENT.md`: local Windows/Docker/Postgres setup for

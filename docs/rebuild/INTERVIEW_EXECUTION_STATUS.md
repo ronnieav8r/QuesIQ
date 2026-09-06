@@ -5,12 +5,14 @@ Approved for sequential implementation: 2026-09-06.
 
 ## Current position
 
-- Phases 0 and 1 accepted. Next: Phase 2 Coaching prompt candidate and truthful
-  validation. No new engine rollout or paid model test has been approved.
+- Phases0/1 accepted; Phase2 deterministic/local candidate implementation
+  accepted. Phase2 paid-text/human quality gate awaits user input. No learner
+  prompt promotion, new engine rollout or paid model test has been approved.
 - Starting HEAD: `66eafc9` on `codex/interview-mobile`, QuesIQ-dev.
 - Existing Interview mobile/Coaching/model-lab changes predate this execution.
   A checkpoint preserves them; it is not a fresh correctness certification.
 - Preservation/plan activation checkpoint: `0d5cd32` (local only).
+- Phase1 accepted checkpoint: `c774ca7` (local only).
 - No schema change is part of P0.1. Database backup is mandatory before a later
   schema-changing task; it is not a prerequisite to this read-path change.
 - No paid API, direct PC/emulator control, audio testing, push, or deployment.
@@ -26,7 +28,7 @@ Approved for sequential implementation: 2026-09-06.
 | P1.2 effective configuration | Accepted | Luna / low pure builder; manager server integration | Server-owned session pins, actual prompt bodies/catalog components, native/transcription/Realtime/inspector parity; mocked API request settings passed. |
 | P1.3 deterministic controller | Accepted | Luna / low reducer; manager adapter/ledger integration | Exact retry question, primary counts, replay-before-validation, late-result publication guard; 15 unit tests and service checks passed. |
 | P1.4 native parity | Accepted | Luna / low then Terra / medium | Catalog choices, active target, server config/engine routing; corrected hook ordering with loading-transition tests; mobile gate31/31 native tests. |
-| P2.1-2.6 Coaching prompt candidate | Next | Manager contract then bounded worker | `INTERVIEW_PHASE2_COACHING_CANDIDATE.md`; candidate remains inspector-only until separate quality gate. |
+| P2.1-2.6 Coaching prompt candidate | No-audio implementation accepted; quality gate pending | Luna / medium contract and services; Luna / low fixtures; manager integration | `p2-interview-final.log`: full gate16/16 browser;11 candidate/fixture tests and services. `p2-mobile.log`: typecheck,9 contracts, API checks,31 native tests pass. |
 
 ## Resume rules
 
@@ -124,10 +126,53 @@ correction rounds instead.
   deployment, or production changes. Mocked API fixtures use process-local dummy
   credentials and intercept fetch; existing ignored credentials stay unchanged.
 
-## Next bounded task after Phase 1 acceptance: P2.1
+## Phase 2 implementation and review
 
-Write Coaching operation behavior and evidence contracts, then implement
-separate candidate question/feedback/clarification prompts with bounded context
-and truthful validation. Preserve current prompts for comparison. Candidate
-prompts remain local test candidates; paid-text quality and human calibration
-require separately bounded approval. The rest of the roadmap is not accepted.
+- Candidate v2 is an explicit inspector-only selection; current/simulation remain
+  defaults. Native and web learner prompts/engines are not changed or promoted.
+- One operation-specific prompt per candidate request, strict output schema,
+  bounded context, exact answer excerpts with server-derived UTF-16 offsets,
+  single priority, and rejection without generic repair. Matching evidence is
+  not semantic proof; human quality remains unreviewed.
+- Existing operation/AI-usage ledger and JSON/CSV exports include accepted and
+  rejected traces, prompt versions, raw/delivered output, available usage and
+  evidence. Failed/uncertain turns cannot regenerate on a repeated request.
+- Delegation: Luna/medium completed the contract and local service-test slices
+  with one correction pass each. Manager corrected a type annotation, blank
+  evidence handling, an overbroad score-word check, exact-input replay assertions,
+  request-contract assertions and exact answer preservation at the UI/API edge.
+- Luna/low fixture authoring required correction and manager takeover: generic
+  reused answers and long shared paragraphs did not constitute an independent
+  holdout. Final fixtures contain8 screening/16 held-out role/experience cases,
+  including distinct long narratives. Treat fixture realism as judgment work;
+  use a tighter brief or Luna/medium next time. Counts are not quality ratings.
+- Initial `p2-interview.log` failed because full lint ran while the worker was
+  replacing a fixture file. Freeze all writers before future combined gates.
+  `p2-interview-rerun.log` passed static/services but had one existing dev-auth
+  ECONNRESET and two new dropdown-selector test timeouts. Corrected selectors;
+  focused `p2-candidate-e2e.log` passed2/2. Node fixture tests were moved outside
+  the Playwright test directory to prevent accidental discovery.
+- Manager inspected the generated `candidate-framed-inspector.png`: both phones
+  retain contained controls/scrolling; evidence and developer tools remain
+  outside. This is browser evidence only, not native prompt or voice proof.
+- `p2-interview-final.log`: complete `npm run test:interview:all` passed:
+  readiness41/2manual warnings, root typecheck/lint, existing services,15 execution
+  unit tests,11 candidate/fixture tests, new mocked services and16/16 browser tests.
+  `p2-mobile.log`: mobile typecheck,9 contracts, API/auth/ownership/refresh checks,
+  and31 native component tests across9 suites passed. No assertions/retries were
+  relaxed to hide the earlier failures; preserve those logs. No flake-free claim.
+- Per-agent elapsed/token/credit attribution is unavailable; no savings claim.
+  No real provider requests, audio, PC control, migration or deployment.
+
+## Next acceptance gate
+
+Phase2 paid-text screening and human quality calibration need separately bounded
+user approval; the candidate must not be promoted on deterministic tests alone.
+The candidate contract documents an initial8-case current/candidate comparison
+and proposed $2 approval ceiling, plus a required dry-run manifest/spend stop
+before execution. No paid comparison or blind rating has been run.
+
+Phase3.1/3.2 History/detail/polling are the roadmap's permitted independent
+no-audio side lane after review-response contracts are frozen. Attempt comparison
+must preserve draft-versus-promoted feedback status. Phases3-7 are not accepted;
+do not skip gates or report the complete roadmap finished.

@@ -8,13 +8,15 @@ type Result = {
   done?: boolean; question?: string; feedback?: string; transcript?: string; state?: string;
   durationMs?: number; choice?: string;
   exerciseState?: unknown;
+  candidateFeedback?: unknown;
   usage?: { inputTokens?: number; outputTokens?: number; estimatedCostMicroUsd?: number };
-  validation?: { corrected: boolean; passed: boolean; issues: string[] };
+  validation?: { corrected: boolean; passed: boolean; issues: string[]; rawSchemaValid?: boolean; behaviorValid?: boolean; disposition?: string; semanticQuality?: string };
   inspection?: { model?: string; promptSnapshot?: string; promptConfigKeys?: unknown; request?: unknown; original?: unknown; normalized?: unknown; delivered?: unknown };
 };
 type TestRun = {
   id: string; execution: "simulation" | "live_text"; status: string; createdAt: string;
   snapshot: unknown; config: unknown;
+  rejectedTraces?: unknown[];
   turns: Array<{ id: string; turnIndex: number; status: string; result?: Result }>;
 };
 type Action = Record<string, unknown>;
@@ -27,6 +29,8 @@ export function CoachingTextInspector({ renderDevices }: {
   const [run, setRun] = useState<TestRun>();
   const [runs, setRuns] = useState<TestRun[]>([]);
   const [execution, setExecution] = useState<"simulation" | "live_text">("simulation");
+  const [promptProfile, setPromptProfile] = useState<"current" | "candidate_v2">("current");
+  const [questionType, setQuestionType] = useState("behavioral");
   const [personal, setPersonal] = useState(false);
   const [confirmLive, setConfirmLive] = useState(false);
   const [context, setContext] = useState({ preferredName: "Sample candidate", targetRole: "Operations manager", targetCompany: "Example company", jobDescription: "Coordinate a team and solve operational problems." });
@@ -70,7 +74,15 @@ export function CoachingTextInspector({ renderDevices }: {
       setRun(body); setSelected(body.turns.length ? body.turns.length - 1 : undefined);
       setPending(undefined); setAnswer(""); setAsking(false); setFailure(false);
       await refreshRuns();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Test failed."); }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Test failed.");
+      if (action.action === "turn" && typeof action.id === "string") {
+        // Read-only recovery exposes rejected provider traces without repeating generation.
+        try { const saved = await fetch(`${endpoint}?id=${action.id}`, { cache: "no-store" });
+          if (saved.ok) { const current = await saved.json(); setRun(current); setSelected(current.turns.length - 1); }
+        } catch { /* Retain the original request error and retry state. */ }
+      }
+    }
     finally { clearTimeout(timeout); busyRef.current = false; setBusy(false); }
   };
 
@@ -91,6 +103,7 @@ export function CoachingTextInspector({ renderDevices }: {
   const canRun = !!run && run.status === "active" && !last?.done && !busy && (run.execution !== "live_text" || confirmLive);
   const selectedTurn = run?.turns[selected ?? (run.turns.length - 1)];
   const result = selectedTurn?.result;
+  const activePromptProfile = (run?.snapshot as { coachingPromptCandidate?: unknown } | undefined)?.coachingPromptCandidate ? "Candidate v2 · local only" : "Current prompts";
   const submitTurn = (text?: string, choice?: string) => {
     if (!run) return;
     void send({ action: "turn", id: run.id, turnIndex: run.turns.length, answer: text, choice, confirmLive,
@@ -100,7 +113,7 @@ export function CoachingTextInspector({ renderDevices }: {
   const renderPhone = (name: string) => <section className={styles.phone} aria-label={`${name} Coaching test`}>
     <header className={styles.phoneHeader}>
       <div className={styles.brand}><span className={styles.queIcon}><MessageCircle aria-hidden="true" /></span><div><small>QUESIQ INTERVIEW</small><h4>Coaching</h4></div></div>
-      <button aria-label="New Coaching test" disabled={busy || (execution === "live_text" && !confirmLive)} onClick={() => void send({ action: "create", execution, usePersonalContext: personal, context, confirmLive })}><Plus aria-hidden="true" />New test</button>
+      <button aria-label="New Coaching test" disabled={busy || (execution === "live_text" && !confirmLive)} onClick={() => void send({ action: "create", execution, promptProfile, questionType, usePersonalContext: personal, context, confirmLive })}><Plus aria-hidden="true" />New test</button>
     </header>
     <div className={styles.phoneStatus}><span><i />{busy ? "Working…" : run?.status === "ended" || last?.done ? "Test complete" : run ? "Practice with Que" : "Ready to practice"}</span><small>{(run?.execution ?? execution) === "simulation" ? "SIMULATION" : "LIVE TEXT"}</small></div>
     <div className={styles.testNotice}><Keyboard aria-hidden="true" /><span>Typed preview · microphone and speaker off</span></div>
@@ -111,7 +124,7 @@ export function CoachingTextInspector({ renderDevices }: {
       {error && <div className={styles.error} role="alert">{error}{pending && <button disabled={busy} onClick={() => void send({ ...pending, confirmLive })}>Retry response</button>}</div>}
       {run && <>
         {atChoice && !asking && <div className={styles.actions} aria-label="Coaching choices">{choices.map(([key, label]) => <button key={key} disabled={!canRun || !!pending} onClick={() => key === "ask_que" ? setAsking(true) : submitTurn(label, key)}>{label}</button>)}</div>}
-        {run.turns.length > 0 && (!atChoice || asking) && run.status === "active" && !last?.done && <form onSubmit={(e) => { e.preventDefault(); if (canRun && !pending && answer.trim()) submitTurn(answer.trim(), asking ? "ask_que" : undefined); }}>
+        {run.turns.length > 0 && (!atChoice || asking) && run.status === "active" && !last?.done && <form onSubmit={(e) => { e.preventDefault(); if (canRun && !pending && answer.trim()) submitTurn(answer, asking ? "ask_que" : undefined); }}>
           <label htmlFor={`${name}-coaching-answer`}>{asking ? "Ask Que a clarification" : "Your answer"}</label><textarea id={`${name}-coaching-answer`} rows={2} maxLength={12000} value={answer} disabled={!canRun || !!pending} onChange={(e) => setAnswer(e.target.value)} placeholder="Type what you would say…" />
           <button className={styles.primary} disabled={!canRun || !answer.trim() || !!pending}><Send aria-hidden="true" />{busy ? "Working…" : "Submit text"}</button>
         </form>}
@@ -122,24 +135,29 @@ export function CoachingTextInspector({ renderDevices }: {
   </section>;
 
   return <section className={styles.lab} aria-label="Typed Coaching inspector">
-    <header><h3>Test Coaching · no audio</h3><p>Use either phone to run the same Coaching prompt and validation path as mobile. Select a conversation turn to inspect its backend details. Simulation tests the controls—not AI quality.</p></header>
+    <header><h3>Test Coaching · no audio</h3><p>Use either phone to test Coaching with the shared controller. Current prompts match mobile; candidate prompts are local experiments only. Simulation tests the controls—not AI quality.</p></header>
     <div className={styles.workbench}>
     {renderDevices(renderPhone)}
     <aside className={styles.inspection} aria-label="Selected turn inspection">
     <h4>Behind this conversation</h4><p>Developer controls · not part of the phone app</p>
     <details className={styles.testSettings} open={!run}><summary>Test setup &amp; context</summary><div className={styles.setup}>
       <label>Execution<select value={execution} disabled={busy} onChange={(e) => { setExecution(e.target.value as typeof execution); setConfirmLive(false); }}><option value="simulation">Simulation · no API cost</option><option value="live_text">Live text · paid model calls</option></select></label>
-      <label className={styles.check}><input type="checkbox" checked={personal} disabled={busy} onChange={(e) => setPersonal(e.target.checked)} />Use my current profile, stories and coaching memory</label>
+      <label>Prompts for new test<select value={promptProfile} disabled={busy} onChange={(e) => setPromptProfile(e.target.value as typeof promptProfile)}><option value="current">Current · matches mobile</option><option value="candidate_v2">Candidate v2 · local experiment</option></select></label>
+      <label>Question focus<select value={questionType} disabled={busy} onChange={(e) => setQuestionType(e.target.value)}><option value="behavioral">Behavioral</option><option value="motivational">Motivational</option><option value="hypothetical">Situational</option><option value="technical">Technical</option></select></label>
+      <label className={styles.check}><input type="checkbox" checked={personal} disabled={busy} onChange={(e) => setPersonal(e.target.checked)} />Use my current profile{promptProfile === "current" ? ", stories and coaching memory" : " · candidate uses bounded profile context only"}</label>
       {!personal && Object.entries(context).map(([key, value]) => <label key={key}>{({ preferredName: "Candidate name", targetRole: "Target role", targetCompany: "Company", jobDescription: "Job context" })[key]}<input value={value} disabled={busy} onChange={(e) => setContext({ ...context, [key]: e.target.value })} /></label>)}
     </div></details>
     {(execution === "live_text" || run?.execution === "live_text") && <label className={styles.check}><input type="checkbox" checked={confirmLive} onChange={(e) => setConfirmLive(e.target.checked)} />Allow paid text calls when I submit. No audio charges; text costs are not full voice-session costs.</label>}
     {run && <>
-      <div className={styles.toolbar}><strong>{run.execution === "simulation" ? "SIMULATED" : "LIVE TEXT"} · {run.status}</strong><span>Test only · excluded from learner progress</span><a href={`${endpoint}?id=${run.id}&export=csv`}>Export CSV</a><a href={`${endpoint}?id=${run.id}&export=json`}>Export JSON</a></div>
+      <div className={styles.toolbar}><strong>{run.execution === "simulation" ? "SIMULATED" : "LIVE TEXT"} · {run.status}</strong><span>{activePromptProfile}</span><span>Test only · excluded from learner progress</span><a href={`${endpoint}?id=${run.id}&export=csv`}>Export CSV</a><a href={`${endpoint}?id=${run.id}&export=json`}>Export JSON</a></div>
       {run.execution === "simulation" && <label className={styles.check}><input type="checkbox" checked={failure} disabled={busy} onChange={(e) => setFailure(e.target.checked)} />Simulate next request failing</label>}
         <div className={styles.turnInspection}><h4>Inspect turn {selectedTurn ? selectedTurn.turnIndex + 1 : "—"}</h4>
           <p>{result?.inspection?.model ?? "No model response yet"}{result?.durationMs !== undefined ? ` · ${result.durationMs} ms text processing` : ""}</p>
           {result?.usage && <p>{result.usage.inputTokens ?? "—"} input / {result.usage.outputTokens ?? "—"} output tokens · {result.usage.estimatedCostMicroUsd == null ? "Cost unavailable" : `$${(result.usage.estimatedCostMicroUsd / 1_000_000).toFixed(6)} estimated text cost`}</p>}
           <p>{result?.validation?.corrected ? "Delivered response was repaired. This is not an uncorrected model pass." : "No automatic correction recorded. Relevance and usefulness still need human review."}</p>
+          {result?.validation?.disposition && <p>Candidate validation: {result.validation.disposition}. Schema: {String(result.validation.rawSchemaValid)}; structural/evidence checks: {String(result.validation.behaviorValid)}. Semantic quality: {result.validation.semanticQuality}.</p>}
+          {Boolean(result?.candidateFeedback) && <details><summary>Evidence and priority improvement</summary><pre>{JSON.stringify(result?.candidateFeedback, null, 2)}</pre></details>}
+          {!!run.rejectedTraces?.length && <details open><summary>Rejected responses · not delivered</summary><pre>{JSON.stringify(run.rejectedTraces, null, 2)}</pre></details>}
           {[["Candidate snapshot", run.snapshot], ["Resolved configuration", run.config], ["Exercise state", result?.exerciseState], ["Prompt versions", result?.inspection?.promptConfigKeys], ["Composed prompt", result?.inspection?.promptSnapshot], ["Supplied context and history", result?.inspection?.request], ["Original response", result?.inspection?.original], ["Normalized response", result?.inspection?.normalized], ["Validation changes", result?.validation], ["Delivered response", result?.inspection?.delivered ?? result]].map(([label, value]) => <details key={String(label)}><summary>{String(label)}</summary><pre>{typeof value === "string" ? value : JSON.stringify(value ?? "Not available", null, 2)}</pre></details>)}
         </div>
     </>}

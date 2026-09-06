@@ -12,6 +12,7 @@ test("framed Coaching test bed is the safe default on load, reset and reload", a
   const lab = page.getByRole("region", { name: "Typed Coaching inspector" });
   await expect(testTab).toHaveAttribute("aria-selected", "true");
   await expect(lab.getByRole("combobox", { name: "Execution", exact: true })).toHaveValue("simulation");
+  await expect(lab.getByRole("combobox", { name: "Prompts for new test", exact: true })).toHaveValue("current");
   await expect(lab.getByRole("region", { name: "iPhone Coaching test", exact: true })).toBeVisible();
   await expect(lab.getByRole("region", { name: "Pixel Coaching test", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Actual size", exact: true }).click();
@@ -103,4 +104,48 @@ test("typed inspector refuses cross-origin writes and malformed input", async ({
   // Invalid payloads cannot create a record or trigger generation.
   const malformed = await page.request.post("/api/admin/interview/coaching-inspector", { data: { action: "turn", id: "invalid" } });
   expect(malformed.status()).toBe(400);
+});
+
+test("candidate prompts stay explicit, framed, evidence-visible and reopenable", async ({ page }, testInfo) => {
+  await signInAsE2EAdmin(page, "/interview/mobile-preview");
+  await page.goto("/interview/mobile-preview");
+  const lab = page.getByRole("region", { name: "Typed Coaching inspector" });
+  const phone = lab.getByRole("region", { name: "iPhone Coaching test", exact: true });
+  const pixel = lab.getByRole("region", { name: "Pixel Coaching test", exact: true });
+  await lab.getByRole("combobox", { name: "Prompts for new test", exact: true }).selectOption("candidate_v2");
+  await lab.getByRole("combobox", { name: "Question focus", exact: true }).selectOption("technical");
+  await phone.getByRole("button", { name: "New Coaching test" }).click();
+  await pixel.getByRole("button", { name: "Generate opening question" }).click();
+  await expect(phone.getByRole("button", { name: "Inspect turn 1", exact: true })).toBeVisible();
+  const answer = "  I reproduced the failure, checked the logs, and isolated a retry bug.  ";
+  await phone.getByLabel("Your answer", { exact: true }).fill(answer);
+  await pixel.getByRole("button", { name: "Submit text", exact: true }).click();
+  await expect(phone.getByRole("button", { name: "Inspect turn 2", exact: true })).toContainText("Simulation fixture only");
+  const inspection = lab.getByRole("complementary", { name: "Selected turn inspection" });
+  await expect(inspection).toContainText("Semantic quality: unreviewed");
+  await inspection.locator("summary", { hasText: "Evidence and priority improvement" }).click();
+  await expect(inspection).toContainText('"start": 0');
+  const id = await phone.getByLabel("Saved tests", { exact: true }).inputValue();
+  const exportUrl = await lab.getByRole("link", { name: "Export JSON" }).getAttribute("href");
+  const data = await (await page.request.get(exportUrl!)).json();
+  expect(data.snapshot.coachingPromptCandidate.version).toBe(2);
+  expect(data.snapshot.questionTypeKey).toBe("technical");
+  expect(data.turns[1].result.transcript).toBe(answer);
+  expect(data.turns[1].result.candidateFeedback.evidence[0].quote).toBe(answer);
+  expect(data.turns[1].result.validation.rawSchemaValid).toBe(true);
+  expect(data.turns[1].result.validation.corrected).toBe(false);
+  await phone.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(pixel.getByRole("button", { name: "Inspect turn 3", exact: true })).toContainText(data.turns[0].result.question);
+  await page.reload();
+  await expect(lab.getByRole("combobox", { name: "Prompts for new test", exact: true })).toHaveValue("current");
+  await expect(lab.getByRole("combobox", { name: "Execution", exact: true })).toHaveValue("simulation");
+  await phone.locator("summary", { hasText: "Saved tests" }).click();
+  await phone.getByLabel("Saved tests", { exact: true }).selectOption(id);
+  await phone.locator("summary", { hasText: "Saved tests" }).click();
+  await pixel.getByRole("button", { name: "Inspect turn 2", exact: true }).click();
+  await expect(inspection).toContainText("Semantic quality: unreviewed");
+  await lab.screenshot({ path: testInfo.outputPath("candidate-framed-inspector.png") });
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await phone.getByRole("button", { name: "End test", exact: true }).click();
+  await expect(phone.getByRole("button", { name: "End test", exact: true })).toBeDisabled();
 });

@@ -16,9 +16,16 @@ review checkpoint `1de0e91`. Phase1 pins effective settings/prompt bodies, share
 native/inspector control state, preserves exact retry questions, guards late
 results, and uses catalog-driven native setup. Final mobile gate:9 contracts,
 API ownership/auth,31 native tests; web gate14/14 plus static/services. See the
-execution ledger for failures/corrections and exact evidence. Next is Phase2
-candidate Coaching prompts; paid-text quality/audio/native release gates remain
-unmet. No Rapid Fire engine promotion or public deployment.
+execution ledger for failures/corrections and exact evidence. Phase1 checkpoint
+is `c774ca7`. Phase2's local candidate implementation is now accepted: separate
+operation prompts, exact evidence, truthful rejection, inspector selection and
+exports. Final gate16/16 browser,11 candidate/fixture checks plus services;
+mobile typecheck/9 contracts/API/31 native tests passed. Candidate remains
+inspector-only; paid-text quality and human ratings need separately bounded
+approval before promotion. See `INTERVIEW_PHASE2_COACHING_CANDIDATE.md` for the
+proposed8-case comparison/$2 approval ceiling. No paid calls or audio testing
+ran. Phases3-7 and native release gates remain unmet; no Rapid Fire promotion
+or public deployment. Do not describe the complete roadmap as finished.
 
 ## 2026-09-02 Interview Coaching Local Work
 

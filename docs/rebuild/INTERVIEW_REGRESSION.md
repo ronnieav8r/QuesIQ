@@ -326,6 +326,22 @@ npm run playwright:install
 
 ## Manual QA Boundary
 
+### Phase 2 local Coaching candidate
+
+The approved implementation plan and `INTERVIEW_EXECUTION_STATUS.md` govern
+promotion. In the existing framed silent inspector, open Test setup & context
+and explicitly choose Candidate v2 for a new test. Current + Simulation remains
+the fresh-load default. The candidate is not enabled in native learner sessions.
+
+Run `npm run test:interview:coaching:candidate` for no-paid-call contract, fixture
+and isolated service coverage. The canonical full gate includes this command.
+Separate raw schema validity, structural/evidence validity, rejection, and human
+quality; semantic quality remains unreviewed. Rejected responses appear in the
+same inspector and exports, with no automatic regeneration. See
+`INTERVIEW_PHASE2_COACHING_CANDIDATE.md` for the unapproved paid screening protocol.
+
+### Operator-only evidence
+
 Automation does not validate real microphone permission prompts, microphone
 selection, headset behavior, audio clipping, speaker quality, or genuine
 Realtime conversation quality. Verify those manually in the visible local app

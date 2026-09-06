@@ -9,13 +9,17 @@ import { generateControlledCoachingTurn } from "./controlled-coaching-turn";
 import { resolveInterviewExecutionSnapshot } from "./execution-config";
 import { CoachingOperationError, listCoachingOperations, runCoachingOperation } from "./coaching-operations";
 import type { InterviewRuntimeConfigRecord } from "./runtime-configs";
+import { candidatePrompts, candidatePromptVersion } from "./coaching-candidate-contract";
+import { buildInterviewExecutionConfig } from "./execution-config-builder";
 
 export const inspectorActionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("create"), execution: z.enum(["simulation", "live_text"]), usePersonalContext: z.boolean().default(false),
+    promptProfile: z.enum(["current", "candidate_v2"]).optional(),
+    questionType: z.enum(["behavioral", "technical", "hypothetical", "motivational"]).optional(),
     context: z.object({ preferredName: z.string().max(100), targetRole: z.string().max(200), targetCompany: z.string().max(200), jobDescription: z.string().max(12000) }),
     confirmLive: z.boolean().optional(),
   }).strict(),
-  z.object({ action: z.literal("turn"), id: z.string().uuid(), turnIndex: z.number().int().min(0).max(50), answer: z.string().trim().max(12000).optional(),
+  z.object({ action: z.literal("turn"), id: z.string().uuid(), turnIndex: z.number().int().min(0).max(50), answer: z.string().max(12000).optional(),
     choice: z.enum(["more_feedback", "try_again", "ask_que", "move_on"]).optional(), confirmLive: z.boolean().optional(),
     simulateFailure: z.boolean().optional(),
   }).strict(),
@@ -31,7 +35,12 @@ async function ownedInspection(id: string, userId: string) {
 export async function readCoachingInspection(userId: string, id: string) {
   const run = await ownedInspection(id, userId);
   const turns = await listCoachingOperations(id, userId);
-  return { ...run, turns };
+  const rejectedTraces = await getDb().select({ id: aiRuns.id, startedAt: aiRuns.startedAt, model: aiRuns.model, rawJson: aiRuns.rawJson, errorMessage: aiRuns.errorMessage,
+    promptSnapshot: aiRuns.promptSnapshot, promptConfigKey: aiRuns.promptConfigKey, promptConfigVersion: aiRuns.promptConfigVersion,
+    inputTokens: aiRuns.inputTokens, outputTokens: aiRuns.outputTokens, estimatedCostMicroUsd: aiRuns.estimatedCostMicroUsd,
+    costSource: aiRuns.costSource, durationMs: aiRuns.durationMs, providerRequestId: aiRuns.providerRequestId })
+    .from(aiRuns).where(and(eq(aiRuns.userId, userId), eq(aiRuns.status, "failed"), sql`${aiRuns.rawJson}->>'inspectionId' = ${id}`)).orderBy(desc(aiRuns.startedAt));
+  return { ...run, turns, rejectedTraces };
 }
 
 export async function listCoachingInspections(userId: string) {
@@ -44,12 +53,18 @@ export async function executeInspectorAction(userId: string, body: z.infer<typeo
     if (body.execution === "live_text" && (!body.confirmLive || process.env.E2E_TEST_MODE === "1")) throw new CoachingOperationError("live_confirmation", "Live text must be explicitly enabled outside automated tests.", 400);
     const profile = body.usePersonalContext ? await getProfile(userId) : undefined;
     if (body.usePersonalContext && !profile) throw new CoachingOperationError("profile_missing", "No current profile is available.", 400);
-    const snapshot = await resolveInterviewExecutionSnapshot({ modeKey: "coaching", questionTypeKey: "behavioral", styleKey: "friendly", interviewContext: profile ?? body.context }, "inspector");
+    const snapshot = await resolveInterviewExecutionSnapshot({ modeKey: "coaching", questionTypeKey: body.questionType ?? "behavioral", styleKey: "friendly", interviewContext: profile ?? body.context }, "inspector");
+    if (body.promptProfile === "candidate_v2") {
+      if (process.env.NODE_ENV === "production") throw new CoachingOperationError("candidate_local_only", "Candidate prompts are restricted to local tests.", 403);
+      Object.assign(snapshot, { coachingPromptCandidate: { version: candidatePromptVersion, prompts: { ...candidatePrompts } } });
+      snapshot.executionConfig = buildInterviewExecutionConfig({ surface: "inspector", configured: snapshot.executionConfig.configured, catalogEnabled: true,
+        promptVersions: Object.keys(candidatePrompts).map((operation) => ({ key: `coaching_candidate_${operation}`, version: candidatePromptVersion })) });
+    }
     const [run] = await getDb().insert(inspections).values({ userId, execution: body.execution, usePersonalContext: body.usePersonalContext,
       snapshot,
       config: { ...snapshot.executionConfig.effective, executionConfig: snapshot.executionConfig },
     }).returning();
-    return { ...run, turns: [] };
+    return { ...run, turns: [], rejectedTraces: [] };
   }
   let run = await ownedInspection(body.id, userId);
   if (body.action === "end") {
@@ -78,6 +93,7 @@ export async function executeInspectorAction(userId: string, body: z.infer<typeo
         inspectionId: run.id, simulation: run.execution === "simulation", usePersonalContext: run.usePersonalContext,
         answer: body.answer, choice: body.choice,
         priorTurns: operationHistory(rows.filter((row) => row.turnIndex < body.turnIndex)),
+        priorResults: rows.filter((row) => row.turnIndex < body.turnIndex).map((row) => row.result).filter((result) => result !== null),
         snapshot: run.snapshot, turnIndex: body.turnIndex, userId,
       });
       const [usage] = decision.inspection ? await getDb().select({ inputTokens: aiRuns.inputTokens, outputTokens: aiRuns.outputTokens, estimatedCostMicroUsd: aiRuns.estimatedCostMicroUsd }).from(aiRuns)
@@ -103,10 +119,11 @@ export function coachingInspectionCsv(run: Awaited<ReturnType<typeof readCoachin
     if (/^[\s]*[=+\-@]/.test(text)) text = `'${text}`;
     return `"${text.replaceAll('"', '""')}"`;
   };
-  return [["run_id", "execution", "turn", "status", "input", "choice", "question", "feedback", "validation", "original", "delivered", "model", "duration_ms", "usage", "exercise_state", "execution_config"],
+  return [["run_id", "execution", "turn", "status", "input", "choice", "question", "feedback", "validation", "original", "delivered", "model", "duration_ms", "usage", "exercise_state", "execution_config", "evidence_and_priority", "rejected_traces"],
     ...run.turns.map((turn) => {
       const r = turn.result ?? {}; const trace = r.inspection as Record<string, unknown> | undefined;
-      return [run.id, run.execution, turn.turnIndex, turn.status, r.transcript, r.choice, r.question, r.feedback, r.validation, trace?.original, trace?.delivered ?? r, trace?.model, r.durationMs, r.usage, r.exerciseState, run.snapshot.executionConfig];
+      const rejected = run.rejectedTraces.filter((item) => (item.rawJson as { turnIndex?: number } | null)?.turnIndex === turn.turnIndex);
+      return [run.id, run.execution, turn.turnIndex, turn.status, r.transcript, r.choice, r.question, r.feedback, r.validation, trace?.original, trace?.delivered ?? (turn.result ? r : null), trace?.model, r.durationMs, r.usage, r.exerciseState, run.snapshot.executionConfig, r.candidateFeedback, rejected];
     }),
   ].map((row) => row.map(cell).join(",")).join("\r\n");
 }

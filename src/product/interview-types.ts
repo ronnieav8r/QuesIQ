@@ -287,6 +287,11 @@ export type SelectedQuestionContext = {
 };
 
 export type SessionSetupSnapshot = {
+  /** Local inspector candidate only; discarded by public session parsing. */
+  coachingPromptCandidate?: {
+    version: 2;
+    prompts: Record<"question" | "evaluate" | "explain_feedback" | "clarify", string>;
+  };
   /** Server-owned metadata. The public request parser deliberately discards it. */
   executionConfig?: import("@quesiq/interview-contracts").InterviewExecutionConfig;
   executionPromptSnapshot?: {

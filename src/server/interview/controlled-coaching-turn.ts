@@ -4,12 +4,14 @@ import { controlledCoachingPresentation, type ControlledCoachingTurn } from "./c
 import { CoachingOperationError } from "./coaching-operations";
 import { generateTurnDecision } from "./turn-based";
 import type { InterviewRuntimeConfigRecord } from "./runtime-configs";
+import { generateCandidateCoachingTurn } from "./coaching-candidate-service";
 
 export async function generateControlledCoachingTurn(input: {
   control: ControlledCoachingTurn; snapshot: SessionSetupSnapshot; config: InterviewRuntimeConfigRecord;
   answer?: string; choice?: "try_again" | "more_feedback" | "ask_que" | "move_on";
   priorTurns: Array<{ role: string; text: string }>; turnIndex: number; userId: string;
   sessionId?: string; inspectionId?: string; simulation?: boolean; usePersonalContext?: boolean;
+  priorResults?: Record<string, unknown>[];
 }) {
   if (input.control.plan.operation === "none") return {
     ...controlledCoachingPresentation(input.control),
@@ -17,6 +19,10 @@ export async function generateControlledCoachingTurn(input: {
     targetSkill: "interview practice", validation: { passed: true, corrected: false, issues: [] as string[] },
     inspection: undefined,
   };
+  if (input.snapshot.coachingPromptCandidate) {
+    if (!input.inspectionId || input.sessionId) throw new CoachingOperationError("candidate_local_only", "Candidate prompts are restricted to local inspector tests.", 403);
+    return generateCandidateCoachingTurn({ ...input, inspectionId: input.inspectionId, priorResults: input.priorResults ?? [] });
+  }
   const apiKey = input.simulation ? "simulation-no-key" : getOpenAiApiKey("interview");
   if (!apiKey) throw new CoachingOperationError("key_missing", "The local Interview key is not configured.", 503);
   return generateTurnDecision({ apiKey, config: input.config, snapshot: input.snapshot, exerciseControl: input.control,
