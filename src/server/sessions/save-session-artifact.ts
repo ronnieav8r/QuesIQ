@@ -1,4 +1,5 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
+import { requestFingerprint } from "@/server/interview/coaching-operations";
 
 import type { VoiceSessionArtifactDraft } from "@/product/interview-types";
 import {
@@ -22,6 +23,8 @@ export async function saveSessionArtifact(
   const [existingSession] = await getDb()
     .select({
       contextSnapshot: sessions.contextSnapshot,
+      voiceArtifact: sessions.voiceArtifact,
+      status: sessions.status,
     })
     .from(sessions)
     .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)))
@@ -29,6 +32,13 @@ export async function saveSessionArtifact(
 
   if (!existingSession) {
     return undefined;
+  }
+
+  if (existingSession.voiceArtifact) {
+    if (requestFingerprint(existingSession.voiceArtifact) !== requestFingerprint(artifact)) {
+      throw new Error("This session already has a different finalized artifact.");
+    }
+    return { id: sessionId, status: existingSession.status };
   }
 
   const hasTranscript = artifact.transcript.length > 0;
@@ -51,12 +61,13 @@ export async function saveSessionArtifact(
       updatedAt: new Date(),
       voiceArtifact: artifact,
     })
-    .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)))
+    .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId), isNull(sessions.voiceArtifact)))
     .returning({
       id: sessions.id,
       status: sessions.status,
     });
 
+  if (!session) return saveSessionArtifact(sessionId, userId, artifact);
   if (session) {
     if (
       hasTranscript &&

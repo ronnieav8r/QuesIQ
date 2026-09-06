@@ -776,6 +776,7 @@ export type AiRunRecord = {
     | "pricing_review"
     | "quira_support"
     | "realtime"
+    | "realtime_model_test"
     | "resume_summary"
     | "study_evaluate"
     | "study_import"

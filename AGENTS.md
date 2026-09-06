@@ -1,5 +1,25 @@
 # Agent Notes
 
+## Active Interview Implementation Plan
+
+For Interview work, first read
+`docs/rebuild/INTERVIEW_IMPLEMENTATION_ROADMAP_2026-09-06.md` and
+`docs/rebuild/INTERVIEW_EXECUTION_STATUS.md`. The user approved sequential
+implementation on 2026-09-06. This roadmap overrides older Interview planning
+and voice-engine guidance; the execution status identifies the next unaccepted
+task and evidence. Do not restart completed tasks or skip acceptance gates.
+
+Use this `QuesIQ-dev` checkout on `codex/interview-mobile` for the local Interview
+lane; the legacy manager-workspace path below does not override this routing.
+Use one bounded worker by default, selecting the lowest suitable model and
+reasoning per task: Luna low for clear small tasks, Luna medium or Terra only
+when complexity warrants it. No recursive delegation. The manager reviews the
+diff and tests before integration/checkpointing; escalate after one unsuccessful
+correction round rather than repeating blindly. Record model/effort and outcomes.
+Keep shared-file/schema/auth changes serialized and preserve existing work.
+No direct PC control, paid model runs, audio/operator tests, or deployment is
+authorized by the roadmap alone. Keep the framed silent test bed as the default.
+
 Use `docs/README.md` for the document map.
 Read `docs/rebuild/HANDOFF.md`, `docs/rebuild/CURRENT_STATUS.md`, and
 `docs/rebuild/DECISIONS.md` before broad resume exploration.
@@ -39,6 +59,14 @@ They should not override the active docs listed above.
   route-shell changes, and release merges should be serialized.
 - Build thin runnable slices and keep the plan docs current when durable
   decisions change.
+- Mobile-facing Interview preview features belong inside the shared iPhone and
+  Pixel frames at `/interview/mobile-preview`, with one mirrored session state.
+  This is the default local Interview test bed: open directly to **Test Coaching
+  · no audio** in Fit view with Simulation selected. Reset returns to this framed
+  test view. Never start a test or paid model call automatically on page load.
+  Keep developer setup, prompts, traces, and exports outside the phone UI. Verify
+  frame-contained scrolling and small/large layouts with isolated headless tests;
+  do not control the user's desktop or browser when they have asked not to.
 - When adding a new AI feature or OpenAI call, include Admin AI Usage
   instrumentation in the same slice: Responses API calls should create
   `ai_runs` records, and app-owned Realtime voice sessions should save usage

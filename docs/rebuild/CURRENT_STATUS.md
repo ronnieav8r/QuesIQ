@@ -1,6 +1,28 @@
 # Current Status
 
-Last updated: 2026-08-26
+Last updated: 2026-09-06
+
+## Active Interview Implementation
+
+`INTERVIEW_IMPLEMENTATION_ROADMAP_2026-09-06.md` is the approved implementation
+plan. `INTERVIEW_EXECUTION_STATUS.md` is the execution ledger and resume pointer.
+Work sequentially in QuesIQ-dev with lowest-suitable-model workers and manager
+acceptance. Prior test results below remain historical, not new-phase evidence.
+
+## 2026-09-02 Interview Test Bed Default
+
+- Active local checkout: `QuesIQ-dev`, branch `codex/interview-mobile`.
+- Canonical local test bed: `http://127.0.0.1:3100/interview/mobile-preview`.
+  It opens directly to **Test Coaching · no audio**, with mirrored iPhone/Pixel
+  frames in Fit view. Fresh loads use Simulation without starting a test or
+  making provider calls. Reset preview returns to the framed test view and Fit.
+- Keep conversation, choices, retry, End, and saved-test controls inside the
+  frames; developer setup, prompts, validation, and exports remain outside.
+- This is the standard for mobile-facing preview work. Web fallback `/interview`
+  remains available; phone frames do not establish native or audio readiness.
+- Work stays Interview-only and local. No desktop/browser/emulator control
+  while the user's no-PC-control constraint is active; use isolated headless QA.
+- See `HANDOFF.md` and `INTERVIEW_REGRESSION.md` for recovery and test evidence.
 
 ## 2026-08-26 Interview-Only Local Snapshot
 

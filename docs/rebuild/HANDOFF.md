@@ -1,6 +1,49 @@
 # Handoff
 
-Last updated: 2026-08-26
+Last updated: 2026-09-06
+
+## 2026-09-06 Approved Interview Implementation
+
+The user approved sequential execution of
+`INTERVIEW_IMPLEMENTATION_ROADMAP_2026-09-06.md` using the lowest suitable
+subagent model/reasoning, with manager review. Read `INTERVIEW_EXECUTION_STATUS.md`
+for the current task/checkpoint before resuming. Preserve the local-only,
+no-direct-PC-control and silent framed-test defaults. Paid AI/audio/release
+gates remain separate. Older roadmap suggestions do not override this plan.
+
+## 2026-09-02 Interview Coaching Local Work
+
+- Active checkout remains `QuesIQ-dev`, branch `codex/interview-mobile`.
+- Preserve the existing uncommitted mobile/model-lab work. No push or deployment.
+- Native Coaching recovery and a silent typed inspector are implemented; the
+  canonical guide is `INTERVIEW_REGRESSION.md`, section Silent Coaching inspector.
+- Migration `0088_interview_coaching_inspector` was applied to local Postgres
+  at `127.0.0.1:5433`; no production database was contacted.
+- Default local test bed: `/interview/mobile-preview` opens directly to
+  **Test Coaching · no audio**, in the iPhone/Pixel frames with Fit sizing.
+  Fresh loads select Simulation and do not start a test or provider call.
+  Reset preview returns to the framed test view and Fit sizing. Static design
+  screens remain selectable. Live text is an explicit user action.
+- Default-view verification: 6/6 focused headless Coaching tests passed on
+  desktop and mobile, including load/reset/reload and no automatic test writes;
+  root typecheck and targeted lint passed. Icon-only screen controls retain
+  accessible names on narrow layouts.
+- The typed test now lives inside the shared iPhone/Pixel frames. Both mirror
+  one run, with conversation scrolling and actions inside the phones and backend
+  details outside. This is the standard for mobile-facing preview work (AGENTS.md).
+- User requested no direct PC control. Use terminal and isolated headless tests;
+  do not control their browser, mouse, keyboard, or emulator.
+- Native hardware/audio and paid live-model verification remain deferred.
+- Verified locally: Interview readiness 41 pass / 2 manual warnings / 0 fail;
+  root and mobile typechecks/lint; full Interview gate including 12 headless
+  browser tests; 21 native unit/component tests; 5 shared contract tests;
+  mobile authentication/ownership services; 7 Coaching and 8 model-lab unit tests.
+- The typed inspector's desktop/mobile screenshots were inspected, and the
+  sticky preview toolbar was disabled in the test view to avoid covering it.
+- Re-ran the full Interview gate after framing: 12/12 headless browser tests,
+  root typecheck/lint, and service checks passed. Frame tests cover mirrored input
+  and turn selection, retry, saved-test reopening/export, contained scrolling,
+  and 44px End controls at Actual size. iPhone/Pixel screenshots were inspected.
 
 ## 2026-08-26 Interview-Only Local Handoff
 

@@ -13,6 +13,12 @@ export const questionTypeKeySchema = z.enum([
   "motivational",
 ]);
 export const interviewStyleKeySchema = z.enum(["friendly", "neutral", "tough"]);
+export const coachingChoiceIntentSchema = z.enum([
+  "more_feedback",
+  "try_again",
+  "ask_que",
+  "move_on",
+]);
 
 export const interviewContextSchema = z.object({
   jobDescription: z.string(),
@@ -57,6 +63,40 @@ export const voiceSessionArtifactSchema = z.object({
   events: z.array(voiceSessionEventSchema),
   startedAt: z.string().optional(),
   transcript: z.array(voiceTranscriptTurnSchema),
+});
+
+export const chainedCoachingTurnSchema = z.object({
+  done: z.boolean(),
+  feedback: z.string().optional(),
+  feedbackAudioBase64: z.string().optional(),
+  feedbackAudioMimeType: z.string().optional(),
+  question: z.string().optional(),
+  questionAudioBase64: z.string().optional(),
+  questionAudioMimeType: z.string().optional(),
+  state: z.enum([
+    "opening_question",
+    "awaiting_answer",
+    "brief_feedback_choice",
+    "more_feedback",
+    "retry_answer",
+    "move_on",
+    "wrap_up",
+  ]).optional(),
+  transcript: z.string().optional(),
+  turnId: z.string().optional(),
+  validation: z.object({
+    corrected: z.boolean(),
+    issues: z.array(z.string()),
+    passed: z.boolean(),
+  }),
+  pipeline: z.object({
+    completedAt: z.string(),
+    responseAndSpeechMs: z.number().nonnegative(),
+    textModel: z.string(),
+    transcriptionModel: z.string(),
+    ttsModel: z.string(),
+    ttsVoice: z.string(),
+  }),
 });
 
 export const evaluationScoreSchema = z.object({
@@ -172,6 +212,8 @@ export const apiErrorSchema = z.object({
 });
 
 export type ApiError = z.infer<typeof apiErrorSchema>;
+export type ChainedCoachingTurn = z.infer<typeof chainedCoachingTurnSchema>;
+export type CoachingChoiceIntent = z.infer<typeof coachingChoiceIntentSchema>;
 export type InterviewContext = z.infer<typeof interviewContextSchema>;
 export type JobTarget = z.infer<typeof jobTargetSchema>;
 export type MobileBootstrap = z.infer<typeof mobileBootstrapSchema>;

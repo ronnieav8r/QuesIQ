@@ -2,6 +2,31 @@
 
 ## Decided
 
+### Execute The Interview Mobile Roadmap With Cost-Conscious Workers (2026-09-06)
+
+The approved `INTERVIEW_IMPLEMENTATION_ROADMAP_2026-09-06.md` controls Interview
+implementation order. Resume via `INTERVIEW_EXECUTION_STATUS.md`. Use the lowest
+suitable model/reasoning per bounded task, one worker by default, with manager
+diff review and test gates. The hybrid target is chained exercises and Realtime
+Mock Interview; engine changes are gated, not activated by this decision alone.
+Keep development local and preserve the web fallback; separate paid AI, native
+operator checks, and release authorization from deterministic implementation.
+
+### Default To The Framed Local Interview Test Bed (2026-09-02)
+
+`/interview/mobile-preview` is the canonical local mobile-facing test bed.
+Open directly to **Test Coaching · no audio**, using the shared iPhone and Pixel
+frames with one mirrored session state and Fit sizing. Fresh loads select the
+no-provider-call Simulation path; tests and paid live-text calls require explicit
+user actions. Reset preview returns to the framed test view and Fit sizing.
+Static design screens and other inspector tabs remain selectable.
+
+Keep user-facing controls and scrolling inside the phones; keep developer
+context, prompts, traces, validation, and exports outside. This is a web test bed,
+not a claim of native microphone, audio, keyboard, or store-release readiness.
+Preserve the web fallback and local-only development boundary. Respect the
+user's no-direct-PC-control constraint and verify with isolated headless tests.
+
 ### Replace Bubble For The Coded Rebuild
 
 The rebuild target is a custom app that owns the core QuesIQ Interview product

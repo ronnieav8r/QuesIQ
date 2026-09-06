@@ -162,7 +162,7 @@ function technicalSpecificityGuard(snapshot?: SessionSetupSnapshot) {
   ].join(" ");
 }
 
-function buildQueInstructions(
+export function buildQueInstructions(
   promptConfig: PromptConfigRecord,
   snapshot?: SessionSetupSnapshot,
   promptComponents?: SessionPromptComponents,

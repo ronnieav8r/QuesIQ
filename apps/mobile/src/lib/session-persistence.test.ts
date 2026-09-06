@@ -55,6 +55,12 @@ describe("persistSessionArtifact", () => {
       { error: evaluationError },
       { value: { session: { evaluationStatus: "failed" } } },
     ]);
-    await expect(persistSessionArtifact(request, "session-3", artifact)).rejects.toBe(evaluationError);
+    await expect(persistSessionArtifact(request, "session-3", artifact)).rejects.toThrow("transcript is saved on the server");
+  });
+
+  it("retries only evaluation after an acknowledged artifact", async () => {
+    const { request, calls } = requestSequence([{ value: {} }]);
+    await persistSessionArtifact(request, "session-3", artifact, true);
+    expect(calls.map(([path]) => path)).toEqual(["/api/mobile/v1/interview/sessions/session-3/evaluation"]);
   });
 });

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Activity,
   AudioWaveform,
@@ -37,10 +37,11 @@ import {
 } from "lucide-react";
 
 import styles from "./mobile-preview-lab.module.css";
+import { CoachingTextInspector } from "./coaching-text-inspector";
 
 type PreviewScreen = "home" | "practice" | "session" | "review" | "me";
 type DeviceKind = "iphone" | "pixel";
-type InspectorTab = "plan" | "prompts" | "runs";
+type InspectorTab = "plan" | "prompts" | "runs" | "test";
 
 type RuntimeConfig = {
   enabled: boolean;
@@ -131,7 +132,7 @@ export function MobilePreviewLab() {
   const [scale, setScale] = useState<"compact" | "full">("compact");
   const [showTranscript, setShowTranscript] = useState(false);
   const [mode, setMode] = useState("Coaching");
-  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("plan");
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("test");
   const [lastAction, setLastAction] = useState("Coaching selected in Practice");
 
   function changeScreen(nextScreen: PreviewScreen) {
@@ -156,7 +157,7 @@ export function MobilePreviewLab() {
 
   return (
     <main className={styles.lab}>
-      <header className={styles.toolbar}>
+      <header className={`${styles.toolbar} ${inspectorTab === "test" ? styles.toolbarStatic : ""}`}>
         <div className={styles.toolbarCopy}>
           <Link className={styles.backLink} href="/interview">
             <ArrowLeft aria-hidden="true" />
@@ -167,14 +168,14 @@ export function MobilePreviewLab() {
               <p className={styles.eyebrow}>LOCAL DESIGN WORKBENCH</p>
               <h1>QuesIQ mobile preview</h1>
             </div>
-            <span className={styles.previewBadge}><Eye aria-hidden="true" /> Visual preview only</span>
+            <span className={styles.previewBadge}><Eye aria-hidden="true" />{inspectorTab === "test" ? "Typed test · no audio" : "Visual preview only"}</span>
           </div>
           <p className={styles.intro}>Review the same app state on iPhone and Pixel proportions. Changes here are for layout and interaction review; native microphone proof still runs in the Expo development build.</p>
         </div>
         <div className={styles.controls} aria-label="Preview controls">
           <div className={styles.screenPicker} aria-label="Preview screen">
             {screens.map(({ Icon, key, label }) => (
-              <button aria-pressed={screen === key} className={screen === key ? styles.controlActive : undefined} key={key} onClick={() => changeScreen(key)} type="button">
+              <button aria-label={label} aria-pressed={screen === key && inspectorTab !== "test"} className={screen === key && inspectorTab !== "test" ? styles.controlActive : undefined} key={key} onClick={() => { changeScreen(key); if (inspectorTab === "test") setInspectorTab("plan"); }} type="button">
                 <Icon aria-hidden="true" />
                 <span>{label}</span>
               </button>
@@ -183,7 +184,7 @@ export function MobilePreviewLab() {
           <div className={styles.sizePicker} aria-label="Preview size">
             <button aria-pressed={scale === "compact"} className={scale === "compact" ? styles.controlActive : undefined} onClick={() => setScale("compact")} type="button">Fit</button>
             <button aria-pressed={scale === "full"} className={scale === "full" ? styles.controlActive : undefined} onClick={() => setScale("full")} type="button">Actual size</button>
-            <button aria-label="Reset preview" onClick={() => { setScreen("practice"); setMode("Coaching"); setShowTranscript(false); setInspectorTab("plan"); setLastAction("Coaching selected in Practice"); }} type="button"><RotateCcw aria-hidden="true" /></button>
+            <button aria-label="Reset preview" onClick={() => { setScreen("practice"); setMode("Coaching"); setScale("compact"); setShowTranscript(false); setInspectorTab("test"); setLastAction("Coaching selected in Practice"); }} type="button"><RotateCcw aria-hidden="true" /></button>
           </div>
         </div>
       </header>
@@ -197,10 +198,16 @@ export function MobilePreviewLab() {
         screen={screen}
       />
 
-      <section className={`${styles.deviceStage} ${scale === "full" ? styles.deviceStageFull : ""}`} aria-label="Mobile device previews">
+      {inspectorTab === "test" ? <CoachingTextInspector renderDevices={(renderPhone) => (
+        <section className={`${styles.deviceStage} ${styles.testDeviceStage} ${scale === "full" ? styles.deviceStageFull : ""}`} aria-label="Mobile device previews">
+          {(["iphone", "pixel"] as const).map((device) => <DevicePreview key={device} device={device} mode={mode} onMode={changeMode} onScreen={changeScreen} onTab={selectTab} screen="session" showTranscript={showTranscript} onTranscript={setShowTranscript}>
+            {renderPhone(device === "iphone" ? "iPhone" : "Pixel")}
+          </DevicePreview>)}
+        </section>
+      )} /> : <section className={`${styles.deviceStage} ${scale === "full" ? styles.deviceStageFull : ""}`} aria-label="Mobile device previews">
         <DevicePreview device="iphone" mode={mode} onMode={changeMode} onScreen={changeScreen} onTab={selectTab} screen={screen} showTranscript={showTranscript} onTranscript={setShowTranscript} />
         <DevicePreview device="pixel" mode={mode} onMode={changeMode} onScreen={changeScreen} onTab={selectTab} screen={screen} showTranscript={showTranscript} onTranscript={setShowTranscript} />
-      </section>
+      </section>}
     </main>
   );
 }
@@ -290,6 +297,7 @@ function BackendInspector({ activeTab, lastAction, mode, onMode, onTab, screen }
       ];
 
   return <section className={styles.inspector} aria-label="Backend Inspector">
+    {activeTab !== "test" && <>
     <div className={styles.inspectorHeader}>
       <div>
         <p className={styles.eyebrow}>CLICK-DRIVEN TRACE</p>
@@ -307,8 +315,10 @@ function BackendInspector({ activeTab, lastAction, mode, onMode, onTab, screen }
       {Object.keys(modeKeys).map((candidate) => <button aria-pressed={mode === candidate} className={mode === candidate ? styles.inspectorModeActive : undefined} key={candidate} onClick={() => onMode(candidate)} type="button">{candidate}</button>)}
       <span>{lastAction}</span>
     </div>
+    </>}
 
     <div className={styles.inspectorTabs} role="tablist" aria-label="Inspector views">
+      <button aria-selected={activeTab === "test"} className={activeTab === "test" ? styles.inspectorTabActive : undefined} onClick={() => onTab("test")} role="tab" type="button">Test Coaching · no audio</button>
       <button aria-selected={activeTab === "plan"} className={activeTab === "plan" ? styles.inspectorTabActive : undefined} onClick={() => onTab("plan")} role="tab" type="button"><Activity aria-hidden="true" />What will happen</button>
       <button aria-selected={activeTab === "prompts"} className={activeTab === "prompts" ? styles.inspectorTabActive : undefined} onClick={() => onTab("prompts")} role="tab" type="button"><FileJson aria-hidden="true" />Prompt stack</button>
       <button aria-selected={activeTab === "runs"} className={activeTab === "runs" ? styles.inspectorTabActive : undefined} onClick={() => onTab("runs")} role="tab" type="button"><Database aria-hidden="true" />Saved runs <span>{matchingRuns.length}</span></button>
@@ -400,7 +410,8 @@ function ActualTrace({ onClose, run }: { onClose: () => void; run: InspectionRun
   </aside>;
 }
 
-function DevicePreview({ device, mode, onMode, onScreen, onTab, onTranscript, screen, showTranscript }: {
+function DevicePreview({ children, device, mode, onMode, onScreen, onTab, onTranscript, screen, showTranscript }: {
+  children?: ReactNode;
   device: DeviceKind;
   mode: string;
   onMode: (mode: string) => void;
@@ -417,14 +428,16 @@ function DevicePreview({ device, mode, onMode, onScreen, onTab, onTranscript, sc
       <div className={`${styles.device} ${device === "iphone" ? styles.iphone : styles.pixel}`}>
         <div className={styles.deviceScreen}>
           <StatusBar device={device} />
-          <div className={styles.appViewport}>
+          <div className={`${styles.appViewport} ${children ? styles.interactiveViewport : ""}`}>
+            {children ?? <>
             {screen === "home" && <HomeScreen onScreen={onScreen} />}
             {screen === "practice" && <PracticeScreen mode={mode} onMode={onMode} onScreen={onScreen} />}
             {screen === "session" && <SessionScreen onScreen={onScreen} />}
             {screen === "review" && <ReviewScreen onScreen={onScreen} onTranscript={onTranscript} showTranscript={showTranscript} />}
             {screen === "me" && <MeScreen />}
+            </>}
           </div>
-          {screen !== "session" && screen !== "review" ? <MobileTabs active={screen} onTab={onTab} /> : null}
+          {!children && screen !== "session" && screen !== "review" ? <MobileTabs active={screen} onTab={onTab} /> : null}
           <div className={styles.homeIndicator} aria-hidden="true" />
         </div>
       </div>

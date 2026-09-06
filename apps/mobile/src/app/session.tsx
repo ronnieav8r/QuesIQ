@@ -6,13 +6,14 @@ import { StyleSheet, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { NativeVoiceSession } from "@/components/interview/native-voice-session";
+import { ChainedCoachingSession } from "@/components/interview/chained-coaching-session";
 import { Button } from "@/components/ui/button";
 import { bootstrapQueryKey } from "@/lib/bootstrap";
 import {
   deletePendingArtifact,
   savePendingArtifact,
 } from "@/lib/pending-artifact";
-import { persistSessionArtifact } from "@/lib/session-persistence";
+import { persistSessionArtifact, SavedArtifactEvaluationError } from "@/lib/session-persistence";
 import { useAuth } from "@/providers/auth-provider";
 import { useActiveSession } from "@/providers/session-provider";
 import { colors, spacing } from "@/theme/tokens";
@@ -25,11 +26,15 @@ export default function LiveSessionScreen() {
   const [pendingArtifact, setPendingArtifact] = useState<VoiceSessionArtifact>();
   const [savedOnDevice, setSavedOnDevice] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [serverSaved, setServerSaved] = useState(false);
   const stagedRef = useRef(false);
+  const savingRef = useRef(false);
+  const serverSavedRef = useRef(false);
   if (!activeSession) return <Redirect href="/(tabs)/practice" />;
 
   const persist = async (artifact: VoiceSessionArtifact) => {
-    if (saving) return;
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setSaveError("");
     setPendingArtifact(artifact);
@@ -49,14 +54,16 @@ export default function LiveSessionScreen() {
     }
 
     try {
-      await persistSessionArtifact(request, activeSession.id, artifact);
+      await persistSessionArtifact(request, activeSession.id, artifact, serverSavedRef.current);
       deletePendingArtifact(activeSession.id);
       await queryClient.invalidateQueries({ queryKey: bootstrapQueryKey });
       clearActiveSession();
       router.replace(`/review/${activeSession.id}`);
     } catch (cause) {
+      if (cause instanceof SavedArtifactEvaluationError) { serverSavedRef.current = true; setServerSaved(true); }
       setSaveError(cause instanceof Error ? cause.message : "The session could not be saved.");
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -80,13 +87,23 @@ export default function LiveSessionScreen() {
       </Text>
       {saveError ? (
         <Button
-          label="Retry save"
+          label={serverSaved ? "Retry review" : "Retry save"}
           loading={saving}
           onPress={() => void persist(pendingArtifact)}
         />
       ) : null}
     </SafeAreaView>
   );
+
+  if (activeSession.snapshot.modeKey === "coaching") {
+    return (
+      <ChainedCoachingSession
+        onArtifactFinalized={(artifact) => void persist(artifact)}
+        sessionId={activeSession.id}
+        snapshot={activeSession.snapshot}
+      />
+    );
+  }
 
   return (
     <NativeVoiceSession

@@ -120,6 +120,162 @@ It verifies:
 AI-adjacent browser behavior is mocked by default. The E2E gate does not spend
 API credits or claim to verify real microphone, speaker, or Realtime quality.
 
+## Realtime Model Lab
+
+The Realtime Model Lab compares the production-composed Interview prompt with
+scripted text input, without microphone capture or emulator control. Results are
+stored as `realtime_model_test` rows in `ai_runs` and written to ignored JSON and
+CSV reports under `artifacts/interview-realtime-model-lab/`.
+
+Run the deterministic parser and cost tests without making API calls:
+
+```powershell
+npm run test:interview:realtime-model-lab:unit
+```
+
+Run the default Mock Interview scenario against GPT-Realtime-2.1,
+GPT-Realtime-2.1 Mini, GPT-5.4, and GPT-5.4 Mini using text input and text
+output. The GPT-5.4 baselines use the Responses API with the same composed
+prompt and scripted turns:
+
+```powershell
+npm run smoke:interview-realtime-models
+```
+
+Capture the transcript of the response generated in audio mode while discarding
+the audio bytes:
+
+```powershell
+npm run smoke:interview-realtime-models -- --profile=spoken_transcript
+```
+
+The lighter-mode optimization suite compares the current production-composed
+prompt, a compact mode-only prompt, and the compact prompt with explicit
+current-turn control. It runs First Impression, Coaching, and Rapid Fire three
+times each against GPT-Realtime-2.1 Mini:
+
+```powershell
+npm run smoke:interview-realtime-mini-lighter
+```
+
+Run the strict controller candidate—which uses exact one-sentence templates for
+deterministic openings, retries, and pauses while leaving answer-specific
+coaching adaptive—with:
+
+```powershell
+npm run smoke:interview-realtime-mini-state-v2
+```
+
+Optional arguments include
+`--models=gpt-realtime-2.1,gpt-realtime-2.1-mini,gpt-5.4,gpt-5.4-mini`,
+`--scenarios=lighter|all|first_impression_v1,coaching_v1,rapid_fire_v1,mock_behavioral_v1`,
+`--variants=production_v1,mini_compact_v1,mini_compact_state_v1,mini_compact_state_v2`, and
+`--repetitions=1..10`. The JSON report includes aggregate run/turn pass rates,
+failure reasons, latency, and cost for each scenario/model/prompt-variant group.
+The CSV preserves each scripted input, current-turn objective, model response,
+and rubric result for human review. Text-only output is the primary inexpensive
+content benchmark. The spoken-transcript profile is the higher-fidelity wording
+check and incurs audio-output usage.
+
+## Native Chained Coaching Comparison
+
+### Silent Coaching inspector and recovery (2026-09-02)
+
+The default local Interview test bed is `/interview/mobile-preview`. It opens
+directly to **Test Coaching · no audio**, with mirrored iPhone/Pixel frames in
+Fit view. Fresh loads select Simulation; nothing starts automatically. Reset
+preview returns to this framed test view and Fit sizing. Static design screens
+and the other inspector tabs remain available by explicit selection.
+
+Start with Simulation, create a test, generate the opening, type an
+answer, and use Try again / More feedback / Ask Que / Move on. Saved tests reopen
+after reload; CSV exports turn comparisons and JSON exports the full supplied
+context, prompt versions, original/normalized/delivered responses, validation,
+and usage. Exports may contain candidate information: keep them local.
+
+Mobile-facing previews use the shared iPhone and Pixel frames as standard.
+The typed Coaching controls, conversation, choices, retry, End, and saved-test
+selector all run inside the phones. Both frames share one controller: typing or
+submitting on either updates the other without duplicate requests. Conversation
+scrolling stays inside each phone; selecting a turn updates the separate backend
+inspection panel. Developer context, failure injection, prompts, and exports stay
+outside the frames. Fit and Actual size apply to both phones; narrow browser
+windows can scroll the device strip horizontally. This is a typed web preview,
+not evidence of native keyboard, microphone, or speaker behavior.
+
+Simulation uses the actual prompt composition, normalization, and validation
+code with a deterministic response fixture. It makes no provider calls and is
+not evidence of model quality. Live text requires an explicit checkbox and
+submit action; it calls the same GPT-5.4 Mini decision function as native
+Coaching but never transcription or TTS. Reported latency/cost is text-only.
+No active prompt versions are changed by this inspector.
+
+The endpoint is local/non-production admin-only and owner-scoped. Test records
+live in `interview_coaching_inspections`, with `interview_coaching_operations`
+storing text-only turn results and immutable request fingerprints. They are
+not learner sessions and do not award XP, affect History, or update memory.
+Simulation AI-run records have zero provider tokens and a simulation marker.
+Migration: `0088_interview_coaching_inspector`.
+
+Recovery checks:
+
+```powershell
+npm run test:interview:chained-coaching:unit
+npm run test:interview:coaching:services
+npm run test:mobile
+npm run typecheck:mobile
+npm run lint --workspace @quesiq/interview-mobile
+npm run test:interview:all
+```
+
+The Coaching service test explicitly blocks network requests. It covers the
+choice loop, owner/auth/input boundaries, persistence/reopening, replay and
+conflict rejection, concurrent requests, failure/retry, CSV formula protection,
+and isolation from learner sessions. Native component tests mock all hardware
+and cover permission denial/retry, delayed permission, late responses after
+End, rerenders, duplicate transcripts, choices, backgrounding, and connection
+loss. Headless Playwright covers the typed inspector at desktop/mobile sizes.
+
+Completed mobile turn text is reused after response retries; generated speech
+is not retained in Postgres. A TTS failure can retry synthesis without another
+coaching-model call. Device playback failures retry the cached response without
+a server call. Uncertain generation failures are **not** automatically re-billed:
+end/save and start a new session. A processing turn older than two minutes is
+reported as uncertain; this is not a promise that provider billing was cancelled.
+
+Final artifacts are immutable: identical retries preserve evaluation state,
+different finalized artifacts are rejected. Review generation has a database
+processing guard. A server crash leaving a review processing requires local
+inspection before resetting it; the client must not silently launch a second
+evaluation. Actual native audio routing/quality and first-audio timing remain
+manual gates. No desktop/emulator automation is needed for these checks.
+
+The native mobile Coaching mode uses a transcription-only WebRTC session for
+live English transcript deltas, sends committed text to GPT-5.4 Mini, validates
+the structured coaching turn, and generates the approved speech with
+GPT-4o Mini TTS. Candidate audio is not retained. Generated Que speech is kept
+only in the mobile cache while it plays.
+
+Run its deterministic validation tests with:
+
+```powershell
+npm run test:interview:chained-coaching:unit
+```
+
+With the local server and database running, compare the exact chained server
+path against GPT-Realtime-2.1 Mini using the same Coaching scenario:
+
+```powershell
+npm run smoke:interview-chained-coaching
+```
+
+The ignored JSON and Markdown reports under
+`artifacts/interview-chained-coaching/` include behavioral rubric results,
+first-audio latency, validation corrections, cost projections, and generated
+chained TTS samples. Transcription quality, saved-transcript accuracy, and voice
+naturalness remain native operator checks; the text-controlled comparison does
+not claim those microphone-dependent results.
+
 ## Live AI Smoke
 
 Run only when an accepted local key is intentionally configured:

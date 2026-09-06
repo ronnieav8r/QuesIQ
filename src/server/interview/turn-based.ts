@@ -45,6 +45,8 @@ export type TurnBasedInput = {
   answerDurationSeconds?: number;
   answerMimeType?: string;
   answerTranscript?: string;
+  chainedCoachingProof?: boolean;
+  skipSpeech?: boolean;
   endAfterAnswer?: boolean;
   explicitChoiceIntent?: CoachingChoiceIntent;
   priorTurns: PriorTurn[];
@@ -54,6 +56,7 @@ export type TurnBasedInput = {
 };
 
 export type TurnBasedResult = {
+  inspection?: Record<string, unknown>;
   archetypeId?: string;
   detectedUserIntent?: CoachingTurnState;
   done: boolean;
@@ -74,9 +77,15 @@ export type TurnBasedResult = {
     "answerDurationSeconds" | "timingSource" | "wordCount" | "wordsPerMinute"
   >;
   turnId?: string;
+  validation?: {
+    corrected: boolean;
+    issues: string[];
+    passed: boolean;
+  };
 };
 
 type TurnDecision = {
+  inspection?: Record<string, unknown>;
   archetypeId?: string;
   detectedUserIntent?: CoachingTurnState;
   done?: boolean;
@@ -85,6 +94,7 @@ type TurnDecision = {
   routingReason: string;
   state: CoachingTurnState;
   targetSkill: string;
+  validation?: TurnBasedResult["validation"];
 };
 
 type TurnPrefetchKind = "move_on_question" | "opening_question";
@@ -543,6 +553,98 @@ function normalizeCoachingDecision(input: {
   return input.decision;
 }
 
+export function enforceChainedCoachingContract(
+  decision: TurnDecision,
+  input: { choiceIntent?: CoachingChoiceIntent; hasLatestAnswer: boolean },
+): TurnDecision {
+  const issues: string[] = [];
+  const safeConciseFeedback =
+    "Be specific: name the action you personally took and the result or impact it produced.";
+  let feedback = decision.feedback?.trim();
+  let question = decision.question?.trim();
+  const wordLimit = input.choiceIntent === "more_feedback" || input.choiceIntent === "ask_que" ? 100 : 28;
+
+  if (input.hasLatestAnswer && !input.choiceIntent && !feedback) {
+    issues.push("missing_specific_feedback");
+    feedback = "Make your action more specific, then close with the result your work produced.";
+  }
+
+  if (feedback) {
+    const hasRoleReversal =
+      /\b(?:as the candidate|i would answer|my experience was|i worked at)\b/i.test(feedback);
+    const words = feedback.split(/\s+/).filter(Boolean);
+    if (words.length > wordLimit) {
+      issues.push("feedback_over_28_words");
+      feedback = safeConciseFeedback;
+    }
+    if (hasRoleReversal) {
+      issues.push("role_reversal");
+      feedback = "Add one concrete action you personally took and the result it produced.";
+    }
+    if (
+      input.hasLatestAnswer &&
+      !input.choiceIntent &&
+      !/\b(?:specific|result|action|impact|clear|concise|focus|detail|concrete)\b/i.test(feedback)
+    ) {
+      issues.push("missing_actionable_language");
+      feedback = `Be specific: ${feedback.charAt(0).toLowerCase()}${feedback.slice(1)}`;
+    }
+    const finalWords = feedback.split(/\s+/).filter(Boolean);
+    if (finalWords.length > wordLimit) {
+      if (!issues.includes("feedback_over_28_words")) issues.push("feedback_over_28_words");
+      feedback = safeConciseFeedback;
+    }
+  }
+
+  if (!decision.done && input.hasLatestAnswer && !input.choiceIntent && question !== fullCoachingChoicePrompt) {
+    issues.push("choice_prompt_not_exact");
+    question = fullCoachingChoicePrompt;
+  }
+
+  if (question && (question.match(/\?/g)?.length ?? 0) > 1) {
+    issues.push("multiple_questions");
+    question = question.slice(0, question.indexOf("?") + 1);
+  }
+
+  return {
+    ...decision,
+    feedback,
+    question,
+    state: !decision.done && input.hasLatestAnswer && !input.choiceIntent ? "brief_feedback_choice" : decision.state,
+    validation: {
+      corrected: issues.length > 0,
+      issues,
+      passed: true,
+    },
+  };
+}
+
+/** Predictable fixtures exercise the real normalization/validation path, never model quality. */
+export function simulateCoachingDecision(input: {
+  choiceIntent?: CoachingChoiceIntent; hasLatestAnswer: boolean; priorTurns: PriorTurn[]; mustEnd?: boolean;
+}): TurnDecision {
+  const base = { routingReason: "Simulation fixture; not an AI quality result.", targetSkill: "specific impact", done: false };
+  const lastQuestion = [...input.priorTurns].reverse().find((turn) => turn.role === "assistant" && turn.text && !turn.text.startsWith("Select ") && /[?]|^Tell me/.test(turn.text))?.text
+    || "Tell me about a time you solved a difficult problem.";
+  if (input.mustEnd) return { ...base, state: "wrap_up", done: true, feedback: "Practice is complete.", question: "" };
+  if (!input.hasLatestAnswer) return { ...base, state: "opening_question", question: "Tell me about a time you solved a difficult problem." };
+  if (input.choiceIntent === "try_again") return { ...base, state: "retry_answer", question: lastQuestion };
+  if (input.choiceIntent === "move_on") return { ...base, state: "move_on", question: "Tell me about a time you adapted to a change." };
+  if (input.choiceIntent === "more_feedback") return { ...base, state: "more_feedback", feedback: "Name your personal action, explain why you chose it, and connect it to the outcome. Keep the situation brief so the interviewer can follow your contribution.", question: fullCoachingChoicePrompt };
+  if (input.choiceIntent === "ask_que") return { ...base, state: "brief_feedback_choice", feedback: "Focus on your own contribution. You can describe the outcome without inventing a number.", question: fullCoachingChoicePrompt };
+  return { ...base, state: "brief_feedback_choice", feedback: "Add the specific action you personally took and the result it produced.", question: fullCoachingChoicePrompt };
+}
+
+export async function renderChainedCoachingSpeech(input: {
+  result: TurnBasedResult; config: InterviewRuntimeConfigRecord; sessionId: string; userId: string;
+}) {
+  const text = [input.result.feedback, input.result.question].filter(Boolean).join(" ");
+  if (!text) return {};
+  const speech = await generateSpeech({ apiKey: getOpenAiApiKey("interview")!, model: input.config.ttsModel,
+    question: text, sessionId: input.sessionId, userId: input.userId, voice: input.config.ttsVoice });
+  return { questionAudioBase64: speech?.audioBase64, questionAudioMimeType: "audio/mpeg" };
+}
+
 async function transcribeAnswer(input: {
   apiKey: string;
   audioBase64: string;
@@ -638,6 +740,7 @@ async function generateSpeechBuffer(input: {
   try {
     const speechText = normalizeQueForSpeech(input.question);
     const response = await fetch("https://api.openai.com/v1/audio/speech", {
+      signal: AbortSignal.timeout(30_000),
       body: JSON.stringify({
         input: speechText.slice(0, 1000),
         model: input.model,
@@ -933,6 +1036,7 @@ function buildTurnOutputContract() {
 
 async function getTurnPromptRuntime(input: {
   configuredModel: string;
+  forceConfiguredModel?: boolean;
   snapshot: SessionSetupSnapshot;
 }) {
   if (!isStandardCoachingSnapshot(input.snapshot)) {
@@ -965,7 +1069,9 @@ async function getTurnPromptRuntime(input: {
   }
 
   return {
-    model: plannerPrompt.active
+    model: input.forceConfiguredModel
+      ? input.configuredModel
+      : plannerPrompt.active
       ? plannerPrompt.model
       : responderPrompt.active
         ? responderPrompt.model
@@ -1146,12 +1252,16 @@ async function resolveCoachingChoiceIntent(input: {
   });
 }
 
-async function generateTurnDecision(input: {
+export async function generateTurnDecision(input: {
   apiKey: string;
   coachingChoiceIntent?: CoachingChoiceIntent;
   config: InterviewRuntimeConfigRecord;
+  forceConfiguredModel?: boolean;
   latestTranscript?: string;
-  sessionId: string;
+  sessionId?: string;
+  inspectionId?: string;
+  simulation?: boolean;
+  usePersonalContext?: boolean;
   snapshot: SessionSetupSnapshot;
   turnIndex: number;
   userId: string;
@@ -1160,11 +1270,11 @@ async function generateTurnDecision(input: {
 }) {
   const promptComponents = await getSessionPromptComponents(input.snapshot);
   const [memory, storyLibrary, archetypePerformance] = await Promise.all([
-    getCoachingMemory(input.userId),
-    input.snapshot.modeKey === "coaching" && !input.snapshot.storyContext
+    input.usePersonalContext === false ? Promise.resolve(undefined) : getCoachingMemory(input.userId),
+    input.usePersonalContext !== false && input.snapshot.modeKey === "coaching" && !input.snapshot.storyContext
       ? listStoryLibraryContext(input.userId)
       : Promise.resolve([]),
-    listUserArchetypePerformance(input.userId),
+    input.usePersonalContext === false ? Promise.resolve([]) : listUserArchetypePerformance(input.userId),
   ]);
   const archetypes = await getDb()
     .select()
@@ -1192,6 +1302,7 @@ async function generateTurnDecision(input: {
       (input.turnIndex >= maxTurns && !retryAlreadyOffered));
   const promptRuntime = await getTurnPromptRuntime({
     configuredModel: input.config.textModel,
+    forceConfiguredModel: input.forceConfiguredModel,
     snapshot: input.snapshot,
   });
   const payload = {
@@ -1371,6 +1482,8 @@ async function generateTurnDecision(input: {
     rawJson: {
       coachingChoiceIntent: input.coachingChoiceIntent,
       modeKey: input.snapshot.modeKey,
+      inspectionId: input.inspectionId,
+      simulation: input.simulation === true,
       promptConfigKeys: promptRuntime.promptConfigKeys,
       request: {
         endpoint: "/v1/responses",
@@ -1387,13 +1500,18 @@ async function generateTurnDecision(input: {
   let runCompleted = false;
 
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const response = input.simulation ? new Response(JSON.stringify({
+      output: [{ content: [{ type: "output_text", text: JSON.stringify(simulateCoachingDecision({
+        choiceIntent: input.coachingChoiceIntent, hasLatestAnswer: Boolean(input.latestTranscript), priorTurns: input.priorTurns, mustEnd,
+      })) }] }], usage: { input_tokens: 0, output_tokens: 0, total_tokens: 0 },
+    }), { status: 200 }) : await fetch("https://api.openai.com/v1/responses", {
       body: JSON.stringify(requestBody),
       headers: {
         Authorization: `Bearer ${input.apiKey}`,
         "Content-Type": "application/json",
       },
       method: "POST",
+      signal: AbortSignal.timeout(60_000),
     });
 
     if (!response.ok) {
@@ -1421,6 +1539,7 @@ async function generateTurnDecision(input: {
       body.usage?.output_tokens,
     );
 
+    const originalDecision = JSON.parse(outputText) as Record<string, unknown>;
     const decision = normalizeCoachingDecision({
       choiceIntent: input.coachingChoiceIntent,
       decision: parseDecision(outputText, {
@@ -1431,11 +1550,11 @@ async function generateTurnDecision(input: {
       hasLatestAnswer: Boolean(input.latestTranscript),
       mustEnd,
       priorTurns: input.priorTurns,
-      retryAlreadyOffered,
+      retryAlreadyOffered: input.forceConfiguredModel ? false : retryAlreadyOffered,
       snapshot: input.snapshot,
     });
-    const finalDecision =
-      retryAlreadyOffered &&
+    const normalizedFinalDecision =
+      !input.forceConfiguredModel && retryAlreadyOffered &&
       decision.state !== "more_feedback" &&
       decision.question &&
       /\bretry\b|\btry again\b/i.test(decision.question)
@@ -1446,7 +1565,19 @@ async function generateTurnDecision(input: {
             routingReason: `${decision.routingReason} Replaced repeated retry with a new primary question.`,
           }
         : decision;
+    const finalDecision = input.forceConfiguredModel
+      ? enforceChainedCoachingContract(mustEnd ? { ...normalizedFinalDecision, done: true, state: "wrap_up", question: "" } : normalizedFinalDecision, {
+          choiceIntent: input.coachingChoiceIntent,
+          hasLatestAnswer: Boolean(input.latestTranscript),
+        })
+      : normalizedFinalDecision;
 
+    const inspection = {
+      aiRunId: run.id, model: promptRuntime.model, promptSnapshot: promptRuntime.systemPrompt,
+      promptConfigKeys: promptRuntime.promptConfigKeys, request: payload,
+      original: originalDecision, normalized: normalizedFinalDecision, delivered: finalDecision,
+      simulation: input.simulation === true,
+    };
     await completeAiRun(run.id, {
       costSource: estimatedCostMicroUsd === undefined ? "unavailable" : "estimated",
       estimatedCostMicroUsd,
@@ -1456,6 +1587,8 @@ async function generateTurnDecision(input: {
       providerRequestId: providerRequestId || body.id,
       rawJson: {
         response: {
+          originalDecision,
+          normalizedDecision: normalizedFinalDecision,
           decision: finalDecision,
           responseId: body.id,
         },
@@ -1465,7 +1598,7 @@ async function generateTurnDecision(input: {
     });
     runCompleted = true;
 
-    return finalDecision;
+    return { ...finalDecision, inspection };
   } catch (error) {
     if (!runCompleted) {
       await completeAiRun(run.id, {
@@ -1535,7 +1668,7 @@ async function createTurnPayload(input: {
     selectedQuestionQueue.length > 0 &&
     Boolean(input.latestTranscript) &&
     (!queuedNextQuestion || input.endAfterAnswer === true);
-  const generatedDecision =
+  const generatedDecision: TurnDecision =
     selectedQuestionQueue.length > 0 &&
     !input.latestTranscript &&
     input.turnIndex === 0
@@ -1560,7 +1693,7 @@ async function createTurnPayload(input: {
           turnIndex: input.turnIndex,
           userId: input.userId,
         });
-  const decision =
+  const decision: TurnDecision =
     selectedQuestionQueue.length > 0 &&
     input.latestTranscript &&
     queuedNextQuestion &&
@@ -1986,7 +2119,7 @@ export async function runTurnBasedInterviewTurn(input: {
 
   if (latestIsMetaOrTestInput) {
     const decision = coachingMetaInputResponse(input.turnInput.priorTurns);
-    const questionAudio = decision.question
+    const questionAudio = decision.question && !input.turnInput.skipSpeech
       ? await generateSpeech({
           apiKey,
           model: input.config.ttsModel,
@@ -2070,6 +2203,7 @@ export async function runTurnBasedInterviewTurn(input: {
     : selectedQuestionContext;
 
   if (
+    !input.turnInput.chainedCoachingProof &&
     selectedQuestionQueue.length === 0 &&
     input.turnInput.snapshot.modeKey === "coaching" &&
     (coachingChoiceIntent === "move_on" || (latestTranscript && isMoveOnIntent(latestTranscript)))
@@ -2092,7 +2226,7 @@ export async function runTurnBasedInterviewTurn(input: {
     selectedQuestionQueue.length > 0 &&
     Boolean(latestTranscript) &&
     (!queuedNextQuestion || input.turnInput.endAfterAnswer === true);
-  const generatedDecision =
+  const generatedDecision: TurnDecision =
     selectedQuestionQueue.length > 0 &&
     !latestTranscript &&
     input.turnInput.turnIndex === 0
@@ -2120,6 +2254,7 @@ export async function runTurnBasedInterviewTurn(input: {
           apiKey,
           coachingChoiceIntent,
           config: input.config,
+          forceConfiguredModel: input.turnInput.chainedCoachingProof,
           endAfterAnswer: input.turnInput.endAfterAnswer || queuedSessionMustEnd,
           latestTranscript,
           priorTurns: input.turnInput.priorTurns,
@@ -2128,7 +2263,7 @@ export async function runTurnBasedInterviewTurn(input: {
           turnIndex: input.turnInput.turnIndex,
           userId: input.userId,
         });
-  const decision =
+  const decision: TurnDecision =
     selectedQuestionQueue.length > 0 &&
     latestTranscript &&
     queuedNextQuestion &&
@@ -2152,7 +2287,7 @@ export async function runTurnBasedInterviewTurn(input: {
       ? queuedNextQuestion
       : undefined;
   const shouldSplitFeedbackAudio = Boolean(reusableQuestion) || !decision.question;
-  const feedbackAudio = decision.feedback && shouldSplitFeedbackAudio
+  const feedbackAudio = decision.feedback && shouldSplitFeedbackAudio && !input.turnInput.skipSpeech
     ? await generateSpeech({
         apiKey,
         model: input.config.ttsModel,
@@ -2162,7 +2297,7 @@ export async function runTurnBasedInterviewTurn(input: {
         voice: input.config.ttsVoice,
       })
     : undefined;
-  const questionAudio = reusableQuestion
+  const questionAudio = input.turnInput.skipSpeech ? undefined : reusableQuestion
     ? await getSelectedQuestionSpeech({
         apiKey,
         model: input.config.ttsModel,
@@ -2216,6 +2351,7 @@ export async function runTurnBasedInterviewTurn(input: {
 
   return {
     archetypeId: decision.archetypeId,
+    inspection: input.turnInput.chainedCoachingProof ? decision.inspection : undefined,
     detectedUserIntent: decision.detectedUserIntent,
     done: decision.done === true,
     feedback: decision.feedback,
@@ -2231,5 +2367,6 @@ export async function runTurnBasedInterviewTurn(input: {
     transcript: latestTranscript,
     transcriptMetrics,
     turnId: turn.id,
+    validation: decision.validation,
   };
 }

@@ -37,6 +37,8 @@
   z-index: 20;
 }
 
+.toolbar.toolbarStatic { position: static; }
+
 .toolbarCopy {
   display: grid;
   gap: 0.55rem;
@@ -762,6 +764,28 @@
   overflow-y: auto;
   scrollbar-color: var(--preview-border-strong) transparent;
   scrollbar-width: thin;
+}
+
+.interactiveViewport {
+  overflow: hidden;
+}
+
+/* Functional mobile previews share the design frames; desktop tools stay outside. */
+.testDeviceStage {
+  width: 100%;
+  min-width: 0;
+  gap: 28px;
+  justify-content: start;
+  padding: 12px 12px 24px;
+}
+
+.testDeviceStage .deviceColumn {
+  transform: none;
+  zoom: 0.82;
+}
+
+.testDeviceStage.deviceStageFull .deviceColumn {
+  zoom: 1;
 }
 
 .mobilePage {

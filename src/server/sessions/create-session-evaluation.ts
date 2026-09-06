@@ -668,6 +668,31 @@ export async function createSessionEvaluation(
   userId: string,
   options: { apiKeyOverride?: string } = {},
 ): Promise<SessionEvaluationRecord | undefined> {
+  // Claim before any model work, including per-answer evaluation. Artifact retries
+  // are immutable and cannot reset this processing guard.
+  const [claimed] = await getDb().update(sessions).set({ evaluationStatus: "processing", updatedAt: new Date() })
+    .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId),
+      inArray(sessions.evaluationStatus, ["pending", "failed", "not_started", "too_short", "completed"])))
+    .returning({ id: sessions.id });
+  if (!claimed) {
+    const [owned] = await getDb().select({ id: sessions.id }).from(sessions)
+      .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)));
+    if (!owned) return undefined;
+    throw new Error("Your review is already processing. Wait before retrying.");
+  }
+  try { return await createSessionEvaluationOnce(sessionId, userId, options); }
+  catch (error) {
+    await getDb().update(sessions).set({ evaluationStatus: "failed", updatedAt: new Date() })
+      .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId), eq(sessions.evaluationStatus, "processing")));
+    throw error;
+  }
+}
+
+async function createSessionEvaluationOnce(
+  sessionId: string,
+  userId: string,
+  options: { apiKeyOverride?: string } = {},
+): Promise<SessionEvaluationRecord | undefined> {
   const now = new Date();
   const [existing] = await getDb()
     .select({

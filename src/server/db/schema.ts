@@ -43,6 +43,28 @@ import type {
   QuestionTypeKey,
 } from "@/product/interview-types";
 
+export const interviewCoachingOperations = pgTable("interview_coaching_operations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  targetId: uuid("target_id").notNull(),
+  turnIndex: integer("turn_index").notNull(),
+  fingerprint: text("fingerprint").notNull(),
+  status: text("status").notNull().default("processing"),
+  result: jsonb("result").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [uniqueIndex("interview_coaching_operation_turn").on(table.targetId, table.turnIndex)]);
+
+export const interviewCoachingInspections = pgTable("interview_coaching_inspections", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  execution: text("execution").notNull(),
+  snapshot: jsonb("snapshot").$type<SessionSetupSnapshot>().notNull(),
+  config: jsonb("config").$type<Record<string, unknown>>().notNull(),
+  usePersonalContext: boolean("use_personal_context").notNull().default(false),
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const users = pgTable("user", {
   email: text("email").unique(),
   emailVerified: timestamp("emailVerified", { mode: "date" }),
@@ -831,6 +853,7 @@ export const aiRuns = pgTable(
         | "pricing_review"
         | "quira_support"
         | "realtime"
+        | "realtime_model_test"
         | "resume_summary"
         | "study_evaluate"
         | "study_import"

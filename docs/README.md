@@ -8,6 +8,11 @@ strategy, or reference notes.
 
 Start here for broad resume work and manager handoffs:
 
+- `docs/rebuild/INTERVIEW_IMPLEMENTATION_ROADMAP_2026-09-06.md`: approved,
+  authoritative Interview mobile implementation sequence and agent workflow.
+- `docs/rebuild/INTERVIEW_EXECUTION_STATUS.md`: current accepted checkpoint,
+  task evidence, and next Interview implementation task; read before resuming.
+
 - `docs/rebuild/HANDOFF.md`: current resume snapshot and product handoff.
 - `docs/rebuild/LOCAL_DEVELOPMENT.md`: local Windows/Docker/Postgres setup for
   running the app without Render.
