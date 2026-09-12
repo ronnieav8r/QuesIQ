@@ -228,7 +228,9 @@ test('text switch ignores an old transport and background saves once', async () 
 
 test('microphone mute disables capture immediately, survives the next clear acknowledgement, and can be unmuted', async () => {
   const view = await startListening();
+  expect(view.getByLabelText('Microphone on')).toBeTruthy();
   await fireEvent.press(view.getByText('Mute microphone'));
+  expect(view.getByLabelText('Capture paused. Done submits speech already captured.')).toBeTruthy();
   expect(mockTrack.enabled).toBe(false);
   expect(view.getAllByText('Microphone muted')).toHaveLength(2);
   await fireEvent.press(view.getByText('Done answering'));
@@ -238,6 +240,9 @@ test('microphone mute disables capture immediately, survives the next clear ackn
   expect(mockTrack.enabled).toBe(false);
   await fireEvent.press(view.getByText('Unmute microphone'));
   expect(mockTrack.enabled).toBe(true);
+  expect(view.getByLabelText('Microphone on')).toBeTruthy();
+  await fireEvent.press(view.getByText('Type instead'));
+  await waitFor(() => expect(view.getByLabelText('Microphone off')).toBeTruthy());
 });
 
 test('response errors do not offer a way to replace an uncertain request with typed input', async () => {

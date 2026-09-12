@@ -20,12 +20,14 @@ may proceed without a support response; live safeguards and paid-test gates rema
 | iPhone signing/installation | Unverified | Recheck Apple enrollment, provisioning and signed build/install; earlier enrollment-pending note is not current verification |
 | Native durability | Unrun physically | Process-kill/reopen, disk failure and interrupted saves; verify committed text, account isolation and no automatic microphone restart |
 | File preparation | Unrun physically | Picker permission/cancellation, temporary-copy cleanup and actual resume formats on Android/iPhone |
-| Accessibility/input | Local tests only | Screen reader, focus order, dynamic text, keyboard avoidance, touch targets and device navigation across all five tabs/four modes |
+| Accessibility/input | September12 local fixes/tests accepted; physical checks open | Screen reader, focus order, dynamic text, keyboard avoidance, touch targets and device navigation across all five tabs/four modes |
 | Latency/battery/thermal | Unmeasured | Identified device/OS/build/network and sample counts; first-audio P50/P95, failures/recovery, sustained usage and thermal behavior |
 | Hosted backend/auth | Not activated | Approve hosting, TLS/reachability, token refresh/revocation and production configuration; loopback is not phone reachability |
 | Privacy/retention/deletion | Release review pending | Review actual collection/retention, account deletion across product and usage records, backups, provider disclosure and user-facing policy URLs |
 | Store/distribution | Not prepared for submission | Signed artifacts, store assets/metadata, support URLs, sign-in requirements and platform declarations reviewed against current requirements |
 | Release operations | Not authorized | Reviewed commit/integration, staging migration and restore rehearsal, secrets/configuration ownership, monitoring, rollback and rollout decision |
+
+September12 local accessibility/input review: [scope and evidence](INTERVIEW_LOCAL_ACCESSIBILITY_REVIEW_2026-09-12.md). Sign-in, microphone state and save recovery defects are fixed with deterministic coverage; this does not close physical accessibility acceptance. Accepted baseline is committed locally as ec0118c; push/integration and operational release remain separate.
 
 ## Future matched evaluation protocol
 

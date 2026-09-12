@@ -4,6 +4,8 @@ This folder is split by how the documents should be used. When documents
 conflict, prefer the active source-of-truth docs below over older planning,
 strategy, or reference notes.
 
+September 12 local follow-up: [accessibility and checkpoint review](rebuild/INTERVIEW_LOCAL_ACCESSIBILITY_REVIEW_2026-09-12.md).
+
 ## Active Source Of Truth
 
 Start here for broad resume work and manager handoffs:

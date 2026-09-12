@@ -2,7 +2,7 @@ import { expect, jest, test, beforeEach } from "@jest/globals";
 import type { VoiceSessionArtifact } from "@quesiq/interview-contracts";
 import { savePendingArtifact, deletePendingArtifact } from "@/lib/pending-artifact";
 import { persistSessionArtifact, SavedArtifactEvaluationError } from "@/lib/session-persistence";
-import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor, within } from "@testing-library/react-native";
 
 const mockActive: { value: any } = { value: undefined };
 const mockClear = jest.fn();
@@ -12,7 +12,8 @@ const mockReplace = jest.fn();
 
 jest.mock("expo-router", () => { const { Text: MockText } = require("react-native"); return { Redirect: () => <MockText>Redirect</MockText>, router: { replace: (...args: unknown[]) => mockReplace(...args) } }; });
 jest.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: jest.fn() }) }));
-jest.mock("react-native-safe-area-context", () => { const { View: MockView } = require("react-native"); return { SafeAreaView: ({ children }: any) => <MockView>{children}</MockView> }; });
+jest.mock("react-native-safe-area-context", () => { const { View: MockView } = require("react-native"); return { SafeAreaView: (props: any) => <MockView {...props} /> }; });
+jest.mock("react-native/Libraries/Components/Keyboard/KeyboardAvoidingView", () => { const { View: MockView } = require("react-native"); return { __esModule: true, default: (props: object) => <MockView {...props} /> }; });
 jest.mock("@/providers/session-provider", () => ({ useActiveSession: () => ({ activeSession: mockActive.value, clearActiveSession: mockClear }) }));
 jest.mock("@/providers/auth-provider", () => ({ useAuth: () => ({ request: jest.fn(), user: mockUser }) }));
 jest.mock("@/components/interview/chained-coaching-session", () => { const { Text: MockText } = require("react-native"); return { ChainedCoachingSession: ({ onArtifactFinalized }: { onArtifactFinalized: typeof mockFinalize }) => { mockFinalize = onArtifactFinalized; return <MockText>Chained Coaching</MockText>; } }; });
@@ -45,7 +46,7 @@ test("blocks malformed or mismatched saved metadata without throwing and offers 
   mockActive.value = session("coaching", { malformed: true });
   const screen = await render(<LiveSessionScreen />);
   expect(screen.getByText("This saved session configuration is no longer valid.")).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Back to practice" })).toBeTruthy();
+  expect(within(screen.getByTestId("screen-scroll")).getByRole("button", { name: "Back to practice" })).toBeTruthy();
   mockActive.value = session("rapid_fire", config("coaching", "turn_based"));
   await screen.rerender(<LiveSessionScreen />);
   expect(screen.getByText("This saved session configuration is no longer valid.")).toBeTruthy();
@@ -62,9 +63,16 @@ test("duplicate finalization stages one owned copy and does not claim device saf
   await act(() => { mockFinalize(artifact); mockFinalize(artifact); });
   expect(savePendingArtifact).toHaveBeenCalledTimes(1);
   expect(savePendingArtifact).toHaveBeenCalledWith(expect.objectContaining({ ownerId: "owner-a", phase: "finalized" }));
-  await act(async () => reject(new Error("offline")));
+  const longError = "The connection is unavailable. ".repeat(30) + "Retry saving when connected.";
+  await act(async () => reject(new Error(longError)));
   expect(screen.getByText("Session save needs attention")).toBeTruthy();
+  expect(within(screen.getByTestId("screen-scroll")).getByRole("alert").props.children).toBe(longError);
   expect(deletePendingArtifact).not.toHaveBeenCalled();
+  const retry = within(screen.getByTestId("screen-scroll")).getByRole("button", { name: "Retry save" });
+  jest.mocked(persistSessionArtifact).mockResolvedValueOnce(undefined);
+  await fireEvent.press(retry);
+  expect(persistSessionArtifact).toHaveBeenCalledTimes(2);
+  expect(deletePendingArtifact).toHaveBeenCalledWith("s1", "owner-a");
 });
 test("failed review keeps an acknowledged recovery copy and offers the saved review", async () => {
   mockActive.value = session();

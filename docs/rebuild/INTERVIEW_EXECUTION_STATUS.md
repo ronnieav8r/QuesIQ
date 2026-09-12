@@ -5,6 +5,15 @@ Approved for sequential implementation: 2026-09-06.
 
 ## Current position
 
+- 2026-09-12 local checkpoint/accessibility follow-up: user authorized proceeding after commit discussion and requested work without an actual device. Commit ec0118c records the accepted Phase4-7/voice-safety baseline (226 explicitly enumerated files); common secret-pattern/path scan and staged whitespace checks passed. No push or integration. Final follow-up commit is identified by git log.
+- Sign-in now uses keyboard-aware scrolling, persistent email/password labels and error alerts; blocked/save recovery uses scroll containment and error alerts; microphone accessible state reports on/off/paused; Practice choices expose descriptions as hints. See [local review](INTERVIEW_LOCAL_ACCESSIBILITY_REVIEW_2026-09-12.md).
+- Fresh evidence: artifacts/local-readiness-2026-09-12/interview.log passes full Interview gate (readiness41/2manual warnings, root typecheck/lint, unit/services,46/46 browser cases with --workers=1). mobile.log passes15 contracts, mobile API/auth/history and171 native tests/25 suites. Mobile typecheck passes; mobile-lint.log exits0 with0 errors/57 warnings. Existing act() and synthetic failure output retained; no flake-free claim.
+- android-build.log: BUILD SUCCESSFUL,549 tasks (55 executed),4m55s. hermes.log: final Android export passes (5.9MB bundle). No APK installation. Headless Practice and typed-preview captures inspected; Fit typed capture retains the existing sticky-header overlay, not native geometry proof.
+- One bounded inherited Astra/medium worker reviewed and fixed eight native files, with manager diff/test review. Focused68 tests/4 suites pass; one initial test-only retry/deletion expectation corrected without weakening lifecycle checks. No measured per-worker usage/savings. No shared Screen, dependency, schema, credentials, provider setting or model changes.
+- Local accessibility-property and scroll-container defects are accepted; physical screen-reader/large-text/keyboard, audio/durability/picker, paid quality/cost, signing, hosting, privacy/deletion, store and release gates remain open. Provider support stays deferred; safeguards remain blocked; P6.6 excluded. Next independent candidate: local privacy/retention/deletion inventory, not deletion or external activation.
+
+### Earlier September 12 checkpoint
+
 - 2026-09-12 handoff checkpoint: Git verified on codex/interview-mobile at
   64344c1 with 222 modified/untracked entries. Saved voice-safety logs confirm
   September 10 acceptance: browser46/46, native169/24 suites, Android build and

@@ -34,16 +34,16 @@ export default function SignInScreen() {
   };
 
   return (
-    <Screen scroll={false}>
+    <Screen keyboardAvoiding>
       <View style={styles.hero}>
         <Image resizeMode="contain" source={require("../../assets/images/quesiq-interview-logo.png")} style={styles.logo} />
         <Text style={styles.title}>Practice that sounds like you.</Text>
         <Text style={styles.subtitle}>Build sharper answers with Que, your live interview coach.</Text>
       </View>
       <View style={styles.form}>
-        <TextInput autoCapitalize="none" autoComplete="email" keyboardType="email-address" onChangeText={setEmail} placeholder="Email" placeholderTextColor={colors.muted} style={styles.input} value={email} />
-        <TextInput autoComplete="password" onChangeText={setPassword} placeholder="Password" placeholderTextColor={colors.muted} secureTextEntry style={styles.input} value={password} />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        <TextInput accessibilityLabel="Email" autoCapitalize="none" autoComplete="email" keyboardType="email-address" onChangeText={setEmail} placeholder="Email" placeholderTextColor={colors.muted} style={styles.input} value={email} />
+        <TextInput accessibilityLabel="Password" autoComplete="password" onChangeText={setPassword} placeholder="Password" placeholderTextColor={colors.muted} secureTextEntry style={styles.input} value={password} />
+        {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
         <Button disabled={!email || !password} icon={LockKeyhole} label="Sign in" loading={busy} onPress={submit} />
         {__DEV__ ? <Button label="Continue locally" loading={busy} onPress={() => { setBusy(true); signInDev().catch((cause) => setError(cause instanceof Error ? cause.message : "Local sign-in failed.")).finally(() => setBusy(false)); }} variant="secondary" /> : null}
       </View>

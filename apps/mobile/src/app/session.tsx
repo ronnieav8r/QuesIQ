@@ -2,11 +2,12 @@ import { interviewExecutionConfigSchema, type VoiceSessionArtifact } from "@ques
 import { useQueryClient } from "@tanstack/react-query";
 import { Redirect, router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { NativeVoiceSession } from "@/components/interview/native-voice-session";
 import { ChainedCoachingSession } from "@/components/interview/chained-coaching-session";
+import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
 import { bootstrapQueryKey } from "@/lib/bootstrap";
 import { resolveSessionExperience } from "@/lib/session-engine";
@@ -99,15 +100,15 @@ export default function LiveSessionScreen() {
   };
 
   if (experience === "blocked_disabled" || experience === "blocked_invalid_configuration") return (
-    <SafeAreaView edges={["top", "bottom"]} style={styles.saving}>
+    <Screen><View style={styles.saving}>
       <Text style={styles.title}>This practice session is unavailable</Text>
       <Text style={styles.body}>{experience === "blocked_disabled" ? "This practice mode is currently unavailable." : "This saved session configuration is no longer valid."}</Text>
       <Button label="Back to practice" onPress={abandon} />
-    </SafeAreaView>
+    </View></Screen>
   );
 
   if (pendingArtifact) return (
-    <SafeAreaView edges={["top", "bottom"]} style={styles.saving}>
+    <Screen><View style={styles.saving}>
       <Text style={styles.title}>
         {saving
           ? "Saving your practice…"
@@ -117,7 +118,7 @@ export default function LiveSessionScreen() {
             ? "Your session is safe on this device"
             : "Session save needs attention"}
       </Text>
-      <Text style={styles.body}>
+      <Text accessibilityRole={saveError ? "alert" : undefined} accessibilityLiveRegion="polite" style={styles.body}>
         {saveError || (pendingArtifact.events.some((event) => event.type.includes("safety_pause"))
           ? "Your committed transcript is being stored. This screen will not claim it is saved until storage succeeds."
           : "QuesIQ is storing the transcript and preparing your review.")}
@@ -130,7 +131,7 @@ export default function LiveSessionScreen() {
           onPress={() => void persist(pendingArtifact)}
         />
       ) : null}
-    </SafeAreaView>
+    </View></Screen>
   );
 
   if (experience === "chained_coaching") {

@@ -4,13 +4,9 @@ Last updated: 2026-09-12
 
 ## Current restart direction
 
-The [dev restart pointer](../../PROJECT_STATE.md) and
-[execution ledger](INTERVIEW_EXECUTION_STATUS.md) are authoritative. Provider
-support clarification is deferred; do not resume follow-up or wait for a reply.
-Existing live safeguards remain. Select the next bounded local Interview package
-with the user; none is selected yet. September 12 handoff verification covered
-Git, documents and saved logs only, not new application/runtime testing.
-All older dated entries below are historical evidence.
+Use [PROJECT_STATE.md](../../PROJECT_STATE.md) and the [execution ledger](INTERVIEW_EXECUTION_STATUS.md). The accepted baseline is committed as ec0118c. The September 12 local accessibility/input follow-up adds keyboard-aware sign-in, accessible microphone state, scroll-contained save recovery and Practice hints. Fresh Interview46/46 browser and native171/25-suite gates pass; the ledger owns final build evidence and the follow-up checkpoint.
+
+Provider support remains deferred; live safeguards stay blocked. Physical-device, paid-provider, hosted-service and release gates remain open. See the [local review](INTERVIEW_LOCAL_ACCESSIBILITY_REVIEW_2026-09-12.md) and [remaining gates](INTERVIEW_V1_REMAINING_GATES.md). Older entries below are historical and do not override this checkpoint.
 
 ## 2026-09-10 Chained voice safety handoff
 

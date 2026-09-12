@@ -905,6 +905,8 @@ export function ChainedCoachingSession({
           : phase === "ending" ? "Saving your session"
             : phase === "typed" ? askingQue ? "Ask Que your question" : "Your answer" : phase === "error" ? "Coaching paused" : "Connecting";
 
+  const microphoneStatus = phase === "listening" ? microphoneMuted ? "Capture paused. Done submits speech already captured." : "Microphone on" : "Microphone off";
+
   return (
     <SessionFrame active={phase === "listening" && !microphoneMuted} keyboardAvoiding={typedMode} status={phaseText} timer={`${mins}:${secs}`} footer={<View style={styles.footer}>
       {(phase === "listening" || phase === "finalizing") ? <Button label="Done answering" loading={phase === "finalizing"} onPress={doneAnswering} /> : null}
@@ -918,7 +920,7 @@ export function ChainedCoachingSession({
         </View>
         <Text style={styles.que}>QUE</Text>
         <Text style={styles.prompt}>{phaseText}</Text>
-        <Text accessibilityLabel="Microphone status" accessibilityLiveRegion="polite" style={styles.disclosure}>{phase === "listening" ? microphoneMuted ? "Capture paused. Done submits speech already captured." : "Microphone on" : "Microphone off"}</Text>
+        <Text accessibilityLabel={microphoneStatus} accessibilityLiveRegion="polite" style={styles.disclosure}>{microphoneStatus}</Text>
         {recoveryWarning ? <Text accessibilityLiveRegion="polite" style={styles.disclosure}>Device backup is unavailable. Keep this session open until saving finishes.</Text> : null}
         <Text style={styles.disclosure}>Que uses an AI-generated voice. Candidate audio is not retained.</Text>
         {controlledRapidFire && exerciseState?.phase === "awaiting_answer" ? <Text style={styles.disclosure}>Rapid Fire · Question {exerciseState.primaryQuestionIndex} of {snapshot.rapidFireQuestionCount ?? snapshot.turnBasedQuestionCount ?? 1}</Text> : null}

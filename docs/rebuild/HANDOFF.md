@@ -4,19 +4,9 @@ Last updated: 2026-09-12
 
 ## Current restart checkpoint
 
-Use [PROJECT_STATE.md](../../PROJECT_STATE.md) for the restart prompt and
-[execution ledger](INTERVIEW_EXECUTION_STATUS.md) for acceptance. September 12
-checks confirm branch codex/interview-mobile, HEAD64344c1 and 222 uncommitted
-entries. Preserve all existing work. September 10 logs remain available; no
-application tests/builds or live services were rerun for this handoff.
+Use [PROJECT_STATE.md](../../PROJECT_STATE.md) and the [execution ledger](INTERVIEW_EXECUTION_STATUS.md). The accepted baseline is committed as ec0118c. The September 12 local accessibility/input follow-up adds keyboard-aware sign-in, accessible microphone state, scroll-contained save recovery and Practice hints. Fresh Interview46/46 browser and native171/25-suite gates pass; the ledger owns final build evidence and the follow-up checkpoint.
 
-Provider support clarification is deferred by the user. A request was already
-submitted; no further follow-up or waiting on support is required for independent
-local work. Runtime safeguards remain unchanged. No next implementation package
-has been selected: discuss a bounded Interview-only local slice using the
-[remaining gates](INTERVIEW_V1_REMAINING_GATES.md). Do not infer paid calls, model
-changes, physical-device work or deployment authorization. Earlier dated handoffs
-below are historical; they do not override this checkpoint.
+Provider support remains deferred; live safeguards stay blocked. Physical-device, paid-provider, hosted-service and release gates remain open. See the [local review](INTERVIEW_LOCAL_ACCESSIBILITY_REVIEW_2026-09-12.md) and [remaining gates](INTERVIEW_V1_REMAINING_GATES.md). Older entries below are historical and do not override this checkpoint.
 
 ## 2026-09-10 Chained voice safety handoff
 

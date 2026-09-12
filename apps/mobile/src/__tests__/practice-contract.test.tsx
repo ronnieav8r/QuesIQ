@@ -125,3 +125,8 @@ test("shows focus only when required and never starts a session on selection", a
   expect(mockRequest).not.toHaveBeenCalled();
   expect(mockSetActiveSession).not.toHaveBeenCalled();
 });
+
+test("exposes mode descriptions as selection hints", async () => {
+  const screen = await render(<PracticeScreen />);
+  expect(screen.getByRole("radio", { name: "Catalog Coaching" }).props.accessibilityHint).toBe("Catalog description");
+});
