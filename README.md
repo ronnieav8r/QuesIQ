@@ -1,5 +1,10 @@
 # QuesIQ Platform
 
+For current local Interview mobile work, start with
+[PROJECT_STATE.md](PROJECT_STATE.md) and [AGENTS.md](AGENTS.md).
+The approved Interview roadmap supersedes historical voice/deployment direction
+below; no Render deployment or paid test is authorized by this README.
+
 This repository is the one-service QuesIQ platform tree. QuesIQ Interview is
 the most complete coded product in the repo today, and the platform is being
 prepared to import QuesIQ Study, QuesIQ DPE, marketing, and
@@ -29,8 +34,12 @@ npm run dev
 npm run typecheck
 ```
 
-Localhost preview is currently deprecated in the Codex workflow until we
-intentionally fix it. Prefer deploy-based or user-confirmed QA for now.
+Local Interview development is the current workflow: use `npm run dev:local`
+at `http://127.0.0.1:3100`. The standard test bed is
+`/interview/mobile-preview`, with mirrored phone frames and Test Coaching/no
+audio, Fit, Simulation selected by default. Do not start a test automatically.
+See the regression guide before running checks; browser frames are not native
+microphone or device proof.
 
 ## Render
 
@@ -41,7 +50,11 @@ and voice API work can fit without changing deployment type.
 
 ## Plan
 
-Start with `docs/rebuild/REBUILD_PLAN.md`.
+For Interview, start with
+[the approved implementation roadmap](docs/rebuild/INTERVIEW_IMPLEMENTATION_ROADMAP_2026-09-06.md)
+and [execution ledger](docs/rebuild/INTERVIEW_EXECUTION_STATUS.md).
+`docs/rebuild/REBUILD_PLAN.md` is historical rebuild context, not the active
+Interview implementation order.
 
 See `docs/README.md` for the docs map. In short: `docs/rebuild/` is the current
 source of truth, `docs/strategy/` is future planning, and `docs/reference/` is

@@ -123,7 +123,7 @@ export async function generateSessionDebrief({
   });
 
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const response = await aiRun.fetch("https://api.openai.com/v1/responses", {
       body: JSON.stringify({
         input: [
           {

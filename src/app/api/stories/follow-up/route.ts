@@ -1,3 +1,4 @@
+import { InterviewLimitError } from "@/server/interview/beta-safety";
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
@@ -36,6 +37,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ question });
   } catch (error) {
+    if (error instanceof InterviewLimitError) return NextResponse.json({ error: { code: error.code, message: error.message, retryable: false, requestId: crypto.randomUUID(), limit: error.outcome } }, { status: error.status });
     console.error("Story follow-up failed.", error);
 
     return NextResponse.json(

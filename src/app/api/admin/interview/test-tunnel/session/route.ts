@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const session = await createSession(snapshot, appSession.user.id);
+    const session = await createSession(snapshot, appSession.user.id, "test_tunnel");
 
     return NextResponse.json({ session });
   } catch (error) {

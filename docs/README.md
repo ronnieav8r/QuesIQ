@@ -8,6 +8,9 @@ strategy, or reference notes.
 
 Start here for broad resume work and manager handoffs:
 
+- `PROJECT_STATE.md` at the repository root: concise Interview restart pointer
+  and verification dates; the execution ledger below remains authoritative.
+
 - `docs/rebuild/INTERVIEW_IMPLEMENTATION_ROADMAP_2026-09-06.md`: approved,
   authoritative Interview mobile implementation sequence and agent workflow.
 - `docs/rebuild/INTERVIEW_EXECUTION_STATUS.md`: current accepted checkpoint,
@@ -18,6 +21,17 @@ Start here for broad resume work and manager handoffs:
   review/retry safety, attempt provenance, framed review tab and Expo parity.
 - `docs/rebuild/INTERVIEW_PHASE4_NATIVE_EXPERIENCE.md`: native screen alignment,
   shared tokens, simulated-preview boundaries and the separate audio gates.
+- `docs/rebuild/INTERVIEW_P45_STREAMING_SPIKE.md`: disabled-by-default native
+  streaming comparison, full-file decision and later operator procedure.
+- `docs/rebuild/INTERVIEW_P46_RECOVERY_CONTRACT.md`: account-bound checkpoints,
+  restart recovery, pending-save behavior and physical durability limits.
+- `docs/rebuild/INTERVIEW_PHASE5_CONTRACT.md`: sequential four-mode contracts,
+  First Impression retry decisions, compatibility and acceptance boundaries.
+
+- `docs/rebuild/INTERVIEW_PHASE6_CONTRACT.md`: accepted preparation/progress scope.
+- `docs/rebuild/INTERVIEW_PHASE7_CONTRACT.md`: accounting, beta limits and economics CLI.
+- `docs/rebuild/INTERVIEW_CHAINED_VOICE_SAFETY.md`: local voice accounting, termination lifecycle and activation gaps.
+- `docs/rebuild/INTERVIEW_V1_REMAINING_GATES.md`: unaccepted paid/device/release gates.
 
 - `docs/rebuild/HANDOFF.md`: current resume snapshot and product handoff.
 - `docs/rebuild/LOCAL_DEVELOPMENT.md`: local Windows/Docker/Postgres setup for

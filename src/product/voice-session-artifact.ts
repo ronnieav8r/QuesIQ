@@ -1,3 +1,4 @@
+import { coachingTelemetrySchema } from "@quesiq/interview-contracts";
 import type {
   VoiceSessionArtifactDraft,
   VoiceSessionEvent,
@@ -66,6 +67,8 @@ export function parseVoiceSessionArtifact(
 
   const candidate = value as Partial<VoiceSessionArtifactDraft>;
   const durationSeconds = candidate.durationSeconds;
+  const telemetry = candidate.coachingTelemetry === undefined ? undefined : coachingTelemetrySchema.safeParse(candidate.coachingTelemetry);
+  if (telemetry && !telemetry.success) return undefined;
 
   if (
     !isString(candidate.endedAt) ||
@@ -84,6 +87,7 @@ export function parseVoiceSessionArtifact(
   }
 
   return {
+    coachingTelemetry: telemetry?.data,
     durationSeconds: candidate.durationSeconds,
     endedAt: candidate.endedAt,
     endReason: candidate.endReason,

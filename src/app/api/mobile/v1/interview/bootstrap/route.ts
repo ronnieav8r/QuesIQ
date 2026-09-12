@@ -7,6 +7,7 @@ import { mobileApiError } from "@/server/mobile-auth/responses";
 import { getProfile } from "@/server/profiles/get-profile";
 import { listOwnedSessions } from "@/server/sessions/list-owned-sessions";
 import { getInterviewRuntimeConfig } from "@/server/interview/runtime-configs";
+import { firstImpressionMode } from "@/server/interview/controlled-mode-policy";
 
 export const runtime = "nodejs";
 
@@ -25,7 +26,8 @@ export async function GET(request: Request) {
       listOwnedSessions(user.id, 50),
     ]);
 
-    const enabledModes = (await Promise.all(catalog.practiceModes
+    const nativeModes = process.env.NODE_ENV !== "production" ? [firstImpressionMode, ...catalog.practiceModes.filter((mode) => mode.key !== "first_impression")] : catalog.practiceModes;
+    const enabledModes = (await Promise.all(nativeModes
       .filter((mode) => ["first_impression", "coaching", "rapid_fire", "mock_interview"].includes(mode.key))
       .map(async (mode) => (await getInterviewRuntimeConfig(mode.key)).enabled ? mode : undefined)))
       .filter((mode) => mode !== undefined);

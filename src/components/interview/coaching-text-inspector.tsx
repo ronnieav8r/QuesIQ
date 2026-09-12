@@ -34,6 +34,8 @@ export function CoachingTextInspector({ renderDevices }: {
   const [execution, setExecution] = useState<"simulation" | "live_text">("simulation");
   const [promptProfile, setPromptProfile] = useState<"current" | "candidate_v2">("current");
   const [questionType, setQuestionType] = useState("behavioral");
+  const [modeKey, setModeKey] = useState<"coaching" | "first_impression" | "rapid_fire">("coaching");
+  const [questionCount, setQuestionCount] = useState(5);
   const [personal, setPersonal] = useState(false);
   const [confirmLive, setConfirmLive] = useState(false);
   const [context, setContext] = useState({ preferredName: "Sample candidate", targetRole: "Operations manager", targetCompany: "Example company", jobDescription: "Coordinate a team and solve operational problems." });
@@ -105,6 +107,11 @@ export function CoachingTextInspector({ renderDevices }: {
   };
 
   const last = run?.turns.at(-1)?.result;
+  const activeMode = (run?.snapshot as { modeKey?: string } | undefined)?.modeKey ?? modeKey;
+  const firstImpression = activeMode === "first_impression";
+  const modeLabel = firstImpression ? "First Impression" : activeMode === "rapid_fire" ? "Rapid Fire" : "Coaching";
+  const modeChoices = firstImpression ? ((last?.exerciseState as { attemptIndex?: number } | undefined)?.attemptIndex ?? 1) < 2
+    ? [["try_again", "Try again"], ["move_on", "Finish"]] : [["move_on", "Finish"]] : choices;
   const atChoice = ["brief_feedback_choice", "more_feedback"].includes(last?.state ?? "");
   const canRun = !!run && run.status === "active" && !last?.done && !busy && (run.execution !== "live_text" || confirmLive);
   const selectedTurn = run?.turns[selected ?? (run.turns.length - 1)];
@@ -116,10 +123,10 @@ export function CoachingTextInspector({ renderDevices }: {
       simulateFailure: run.execution === "simulation" && failure });
   };
 
-  const renderPhone = (name: string) => <section className={styles.phone} aria-label={`${name} Coaching test`}>
+  const renderPhone = (name: string) => <section className={styles.phone} aria-label={`${name} ${modeLabel} test`}>
     <header className={styles.phoneHeader}>
-      <div className={styles.brand}><span className={styles.queIcon}><MessageCircle aria-hidden="true" /></span><div><small>QUESIQ INTERVIEW</small><h4>Coaching</h4></div></div>
-      <button aria-label="New Coaching test" disabled={busy || (execution === "live_text" && !confirmLive)} onClick={() => void send({ action: "create", execution, promptProfile, questionType, usePersonalContext: personal, context, confirmLive })}><Plus aria-hidden="true" />New test</button>
+      <div className={styles.brand}><span className={styles.queIcon}><MessageCircle aria-hidden="true" /></span><div><small>QUESIQ INTERVIEW</small><h4>{modeLabel}</h4></div></div>
+      <button aria-label={`New ${modeKey === "first_impression" ? "First Impression" : modeKey === "rapid_fire" ? "Rapid Fire" : "Coaching"} test`} disabled={busy || (execution === "live_text" && !confirmLive)} onClick={() => void send({ action: "create", modeKey, questionCount, execution, promptProfile: modeKey === "coaching" ? promptProfile : "current", questionType, usePersonalContext: personal, context, confirmLive })}><Plus aria-hidden="true" />New test</button>
     </header>
     <div className={styles.phoneStatus}><span><i />{busy ? "Working…" : run?.status === "ended" || last?.done ? "Test complete" : run ? "Practice with Que" : "Ready to practice"}</span><small>{(run?.execution ?? execution) === "simulation" ? "SIMULATION" : "LIVE TEXT"}</small></div>
     <div className={styles.testNotice}><Keyboard aria-hidden="true" /><span>Typed preview · microphone and speaker off</span></div>
@@ -130,7 +137,7 @@ export function CoachingTextInspector({ renderDevices }: {
       {error && <div className={styles.error} role="alert">{error}{pending && <button disabled={busy} onClick={() => void send({ ...pending, confirmLive })}>Retry response</button>}</div>}
       {run && <>
         {!!run.attempts?.length && <button disabled={busy} onClick={() => setShowComparison((value) => !value)}>{showComparison ? "Back to conversation" : "Compare attempts"}</button>}
-        {atChoice && !asking && <div className={styles.actions} aria-label="Coaching choices">{choices.map(([key, label]) => <button key={key} disabled={!canRun || !!pending} onClick={() => key === "ask_que" ? setAsking(true) : submitTurn(label, key)}>{label}</button>)}</div>}
+        {atChoice && !asking && activeMode !== "rapid_fire" && <div className={styles.actions} aria-label={`${modeLabel} choices`}>{modeChoices.map(([key, label]) => <button key={key} disabled={!canRun || !!pending} onClick={() => key === "ask_que" ? setAsking(true) : submitTurn(label, key)}>{label}</button>)}</div>}
         {run.turns.length > 0 && (!atChoice || asking) && run.status === "active" && !last?.done && <form onSubmit={(e) => { e.preventDefault(); if (canRun && !pending && answer.trim()) submitTurn(answer, asking ? "ask_que" : undefined); }}>
           <label htmlFor={`${name}-coaching-answer`}>{asking ? "Ask Que a clarification" : "Your answer"}</label><textarea id={`${name}-coaching-answer`} rows={2} maxLength={12000} value={answer} disabled={!canRun || !!pending} onChange={(e) => setAnswer(e.target.value)} placeholder="Type what you would say…" />
           <button className={styles.primary} disabled={!canRun || !answer.trim() || !!pending}><Send aria-hidden="true" />{busy ? "Working…" : "Submit text"}</button>
@@ -141,13 +148,15 @@ export function CoachingTextInspector({ renderDevices }: {
     </footer>
   </section>;
 
-  return <section className={styles.lab} aria-label="Typed Coaching inspector">
-    <header><h3>Test Coaching · no audio</h3><p>Use either phone to test Coaching with the shared controller. Current prompts match mobile; candidate prompts are local experiments only. Simulation tests the controls—not AI quality.</p></header>
+  return <section className={styles.lab} aria-label={`Typed ${modeLabel} inspector`}>
+    <header><h3>Test {modeLabel} · no audio</h3><p>Use either phone to test {modeLabel} with the shared controller. Current prompts match mobile; candidate prompts are local experiments only. Simulation tests the controls—not AI quality.</p></header>
     <div className={styles.workbench}>
     {renderDevices(renderPhone)}
     <aside className={styles.inspection} aria-label="Selected turn inspection">
     <h4>Behind this conversation</h4><p>Developer controls · not part of the phone app</p>
     <details className={styles.testSettings} open={!run}><summary>Test setup &amp; context</summary><div className={styles.setup}>
+      <label>Mode for new test<select value={modeKey} disabled={busy} onChange={(e) => setModeKey(e.target.value as typeof modeKey)}><option value="coaching">Coaching</option><option value="first_impression">First Impression</option><option value="rapid_fire">Rapid Fire</option></select></label>
+      {modeKey === "rapid_fire" && <label>Question count<select aria-label="Question count" value={questionCount} disabled={busy} onChange={(e) => setQuestionCount(Number(e.target.value))}>{Array.from({ length: 10 }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}</select></label>}
       <label>Execution<select value={execution} disabled={busy} onChange={(e) => { setExecution(e.target.value as typeof execution); setConfirmLive(false); }}><option value="simulation">Simulation · no API cost</option><option value="live_text">Live text · paid model calls</option></select></label>
       <label>Prompts for new test<select value={promptProfile} disabled={busy} onChange={(e) => setPromptProfile(e.target.value as typeof promptProfile)}><option value="current">Current · matches mobile</option><option value="candidate_v2">Candidate v2 · local experiment</option></select></label>
       <label>Question focus<select value={questionType} disabled={busy} onChange={(e) => setQuestionType(e.target.value)}><option value="behavioral">Behavioral</option><option value="motivational">Motivational</option><option value="hypothetical">Situational</option><option value="technical">Technical</option></select></label>

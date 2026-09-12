@@ -1,4 +1,4 @@
-import { and, asc, eq, or } from "drizzle-orm";
+import { and, asc, eq, ne, or } from "drizzle-orm";
 
 import type {
   InterviewQuestionDifficulty,
@@ -533,6 +533,7 @@ export async function markQuestionAttemptsStarted(input: {
 }
 
 export async function markQuestionAttemptAnswered(input: {
+  questionId: string;
   retryCount?: number;
   sessionId: string;
   userId: string;
@@ -548,6 +549,8 @@ export async function markQuestionAttemptAnswered(input: {
       and(
         eq(interviewQuestionPracticeAttempts.sessionId, input.sessionId),
         eq(interviewQuestionPracticeAttempts.userId, input.userId),
+        eq(interviewQuestionPracticeAttempts.questionId, input.questionId),
+        ne(interviewQuestionPracticeAttempts.status, "reviewed"),
       ),
     );
 }
@@ -560,6 +563,7 @@ export async function markQuestionAttemptReviewed(sessionId: string, userId: str
       and(
         eq(interviewQuestionPracticeAttempts.sessionId, sessionId),
         eq(interviewQuestionPracticeAttempts.userId, userId),
+        eq(interviewQuestionPracticeAttempts.status, "answered"),
       ),
     );
 }

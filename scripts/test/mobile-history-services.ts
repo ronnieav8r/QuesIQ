@@ -1,3 +1,4 @@
+import "./interview-synthetic";
 import { randomUUID } from "node:crypto";
 import { eq, inArray, sql } from "drizzle-orm";
 

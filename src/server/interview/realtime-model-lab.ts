@@ -18,6 +18,7 @@ export const realtimeTransportModels = [
 export type RealtimeModelLabModel = (typeof realtimeModelLabModels)[number];
 export type RealtimeModelLabProfile = "spoken_transcript" | "text";
 export type RealtimeModelLabPromptVariant =
+  | "native_mock_v1"
   | "mini_compact_state_v2"
   | "mini_compact_state_v1"
   | "mini_compact_v1"

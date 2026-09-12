@@ -1,3 +1,4 @@
+import { InterviewLimitError } from "@/server/interview/beta-safety";
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
@@ -73,6 +74,7 @@ export async function GET() {
 
     return NextResponse.json({ introductions });
   } catch (error) {
+    if (error instanceof InterviewLimitError) return NextResponse.json({ error: { code: error.code, message: error.message, retryable: false, requestId: crypto.randomUUID(), limit: error.outcome } }, { status: error.status });
     console.error("Introduction list failed.", error);
 
     return NextResponse.json(
@@ -117,6 +119,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ introduction });
   } catch (error) {
+    if (error instanceof InterviewLimitError) return NextResponse.json({ error: { code: error.code, message: error.message, retryable: false, requestId: crypto.randomUUID(), limit: error.outcome } }, { status: error.status });
     console.error("Introduction creation failed.", error);
 
     return NextResponse.json(

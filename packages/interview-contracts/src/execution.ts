@@ -35,8 +35,8 @@ export const interviewExecutionConfigSchema = z.object({
   if (value.configured.modeKey !== value.effective.modeKey) {
     ctx.addIssue({ code: "custom", path: ["effective", "modeKey"], message: "Configured and effective modes must match." });
   }
-  if (value.surface === "inspector" && value.effective.modeKey !== "coaching") {
-    ctx.addIssue({ code: "custom", path: ["surface"], message: "Inspector supports Coaching only." });
+  if (value.surface === "inspector" && (value.effective.modeKey === "mock_interview" || value.effective.engine !== "turn_based")) {
+    ctx.addIssue({ code: "custom", path: ["surface"], message: "Use the Realtime inspector for Mock Interview." });
   }
   if (value.effective.engine === "realtime" && !value.effective.realtimeModel) {
     ctx.addIssue({ code: "custom", path: ["effective", "realtimeModel"], message: "Realtime execution requires a realtime model." });

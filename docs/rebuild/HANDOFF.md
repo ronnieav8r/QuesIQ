@@ -1,8 +1,122 @@
 # Handoff
 
-Last updated: 2026-09-06
+Last updated: 2026-09-12
 
-## 2026-09-06 Approved Interview Implementation
+## Current restart checkpoint
+
+Use [PROJECT_STATE.md](../../PROJECT_STATE.md) for the restart prompt and
+[execution ledger](INTERVIEW_EXECUTION_STATUS.md) for acceptance. September 12
+checks confirm branch codex/interview-mobile, HEAD64344c1 and 222 uncommitted
+entries. Preserve all existing work. September 10 logs remain available; no
+application tests/builds or live services were rerun for this handoff.
+
+Provider support clarification is deferred by the user. A request was already
+submitted; no further follow-up or waiting on support is required for independent
+local work. Runtime safeguards remain unchanged. No next implementation package
+has been selected: discuss a bounded Interview-only local slice using the
+[remaining gates](INTERVIEW_V1_REMAINING_GATES.md). Do not infer paid calls, model
+changes, physical-device work or deployment authorization. Earlier dated handoffs
+below are historical; they do not override this checkpoint.
+
+## 2026-09-10 Chained voice safety handoff
+
+The approved local follow-up is implemented and accepted within its blocked-path
+fallback. Owned transcription lifecycle/cleanup, explicit audio accounting,
+unknown reservation holds, native stop handling and economics exports are present.
+Final169 native tests, static/services,46 browser scenarios with one worker,
+Android debug compilation and Hermes export pass. Earlier default-worker browser
+transport failures are retained; assertions were not relaxed. See the execution
+ledger for exact logs and INTERVIEW_CHAINED_VOICE_SAFETY.md for interfaces/gaps.
+
+Providers remain disabled: speech bounds and live transcription termination under
+host failure are unverified. No model change, paid call, device testing, deployment
+or commit occurred. Preserve Phase4-7 work; stop at the local handoff. The remaining
+release/operator gates are unchanged except for this added local evidence.
+
+## Earlier 2026-09-10 Phase7 handoff
+
+P7.1-P7.4 are locally accepted. Accounting snapshots, reservations/leases, fail-closed
+limits, native recovery and the economics CLI are implemented. Full acceptance:
+46 browser scenarios,167 native tests/24 suites, contracts/services, typechecks,
+lint, Android debug compilation and final Hermes export. Read the execution ledger
+for exact logs; earlier failures are retained and corrected. Phase4-6 dirty work
+is preserved at HEAD64344c1. No commit/push, paid call, device test or deploy.
+
+Real activation remains disabled. Audio cost bounds and Realtime server termination
+must be verified before those paths activate. No actual economics/quality baseline
+exists. INTERVIEW_PHASE7_CONTRACT.md documents interfaces and CLI commands;
+INTERVIEW_V1_REMAINING_GATES.md names required evidence/status for each next gate.
+Stop here; P6.6, live budgets, providers, devices and release require separate scope.
+
+## Historical 2026-09-09 Phase6 implementation
+
+P6.1-P6.5 are implemented and locally accepted in QuesIQ-dev. The execution ledger records the
+final acceptance gate; older Phase5-complete/Phase6-not-started statements below
+are historical. Read INTERVIEW_PHASE6_CONTRACT.md for the field-specific profile,
+review/confirm resume, Story Lab, persistent questions, deterministic suggestions
+and evidence-progress interfaces and limitations. P6.6 remains excluded.
+
+Combined mobile160/24 suites,15 contracts and mobile API/history checks pass.
+Android debug compilation passes549 tasks, including expo-document-picker and
+expo-crypto; Hermes export produces a5.9MB bundle. The final full Interview gate
+passes44 browser cases; final spacing confirmation passes4 focused browser cases.
+No APK installation, physical picker/audio/accessibility test, paid provider call,
+key change, deploy, commit or push occurred. Existing Phase4/5 work is preserved.
+Use PROJECT_STATE.md and INTERVIEW_EXECUTION_STATUS.md for the exact final outcome.
+
+## Historical 2026-09-08 Phase5 execution update
+
+User authorized sequential P5.1-P5.4 local implementation; all four packages are
+locally accepted and this task is complete. Final36 browser/130 native checks,
+services/typechecks/lint, Android debug compilation and Hermes export pass.
+See PROJECT_STATE.md and INTERVIEW_EXECUTION_STATUS.md for evidence and corrected
+failed runs. Phase6 has not started. INTERVIEW_PHASE5_CONTRACT.md
+defines the four-mode behavior, local-only activation and manual exclusions.
+Preserve all uncommitted Phase4/5 work on codex/interview-mobile, HEAD64344c1.
+No new phase, paid comparison, device/operator test, commit, deployment or
+production activation follows automatically from this handoff.
+
+## Historical 2026-09-08 Interview handoff after P4.6
+
+Local Phase4 implementation is accepted. Stop here for handoff; the next approved
+implementation package is **Phase5 — First Impression**. Phase5 has not started.
+The execution ledger remains authoritative for acceptance and test evidence.
+
+- Checkout: E:/Codex/QuesIQ/QuesIQ App Worktrees/QuesIQ-dev,
+  branch codex/interview-mobile, HEAD64344c1. P4.2-P4.6 plus earlier documentation
+  edits remain uncommitted. Preserve them; no push, deploy or commit occurred.
+- Read root PROJECT_STATE.md, AGENTS.md, the implementation roadmap and
+  INTERVIEW_EXECUTION_STATUS.md, then the relevant phase contract. Current
+  recovery details: INTERVIEW_P46_RECOVERY_CONTRACT.md; streaming decision:
+  INTERVIEW_P45_STREAMING_SPIKE.md. INTERVIEW_REGRESSION.md owns commands.
+- Chained Coaching uses explicit Done, matched final transcript, typed fallback,
+  collapsed captions and full-file speech. P4.4 diagnostics/reporting are present;
+  P4.5 streaming is a disabled-by-default development experiment, not promoted.
+- P4.6 checkpoints committed text/diagnostics, preserves previous valid disk
+  generations, binds recovery to accounts, checks legacy ownership before upload,
+  reconciles lost acknowledgements and protects conflicting saved transcripts.
+  Restart salvages work without restarting capture. Review retries keep their
+  confirmation boundary. A real checkpoint-write failure is shown in-session.
+- Final local gates:117 native tests across17 suites,15 contracts, mobile
+  auth/history/ownership services, full Interview32 browser tests, root/mobile
+  typechecks and lint. Mobile lint has0 errors/25 warnings. Android debug build
+  and Hermes export pass. Evidence is in ignored artifacts/implementation-2026-09-08
+  p46 logs; corrected failed runs are retained and explained in the ledger.
+- Device signing/install, microphone/speaker, physical crash/reopen, audio
+  interruption and measured latency remain unverified. Checkpoints can lose
+  work since the last successful write. No physical crash-proof claim.
+- Apple enrollment/signing remains pending in the current records; no account
+  access was checked. Phase2 paid-text/human quality calibration stays deferred,
+  candidate prompts inspector-only. No paid API/audio/operator test is implied.
+
+Suggested next-task prompt: Read the dev instructions, state pointer, roadmap
+and execution ledger; preserve all local changes; begin Phase5 First Impression
+as one bounded local slice with tests and manager review. Keep Interview-only,
+no desktop/emulator control, no paid call/deploy, and the framed Test Coaching /
+no audio, Fit, Simulation default. Do not treat Phase4 local acceptance as
+physical-device certification or permission to promote streaming/prompts.
+
+## 2026-09-06 Historical approved-implementation checkpoint
 
 The user approved sequential execution of
 `INTERVIEW_IMPLEMENTATION_ROADMAP_2026-09-06.md` using the lowest suitable
@@ -11,7 +125,7 @@ for the current task/checkpoint before resuming. Preserve the local-only,
 no-direct-PC-control and silent framed-test defaults. Paid AI/audio/release
 gates remain separate. Older roadmap suggestions do not override this plan.
 
-Latest slice: P4.1 is locally accepted. Shared native/framed palette, truthful
+Historical slice: P4.1 was locally accepted. Shared native/framed palette, truthful
 Home/Practice setup, accessible Me/Review controls, tab safe-area handling and
 scrollable live content with persistent End controls are implemented. Static
 samples now mirror choices/profile state and never imply learner persistence.
@@ -19,7 +133,7 @@ Full gate28/28 browser;50 native tests/11 contracts/API/history services;
 typechecks/root lint pass, mobile lint0 errors/26 warnings. Android x86_64 debug
 compile and Hermes export pass; no emulator install or audio test. See
 `INTERVIEW_PHASE4_NATIVE_EXPERIENCE.md` for exact evidence, correction record,
-screenshots and the native manual checklist. Resume at P4.2 (Done answering);
+screenshots and the native manual checklist. The historical resume point was P4.2;
 do not interpret this as completion of Phase4 or the entire roadmap.
 
 Phases0 and1 are accepted. Existing work checkpoint `0d5cd32`; direct owned
@@ -52,7 +166,7 @@ or public deployment. Do not describe the complete roadmap as finished.
 - Migration `0088_interview_coaching_inspector` was applied to local Postgres
   at `127.0.0.1:5433`; no production database was contacted.
 - Default local test bed: `/interview/mobile-preview` opens directly to
-  **Test Coaching · no audio**, in the iPhone/Pixel frames with Fit sizing.
+  **Test Coaching Â· no audio**, in the iPhone/Pixel frames with Fit sizing.
   Fresh loads select Simulation and do not start a test or provider call.
   Reset preview returns to the framed test view and Fit sizing. Static design
   screens remain selectable. Live text is an explicit user action.

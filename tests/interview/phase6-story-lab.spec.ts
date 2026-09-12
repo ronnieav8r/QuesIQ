@@ -1,0 +1,26 @@
+import { expect, test } from "@playwright/test";
+import { signInAsE2EAdmin } from "../e2e/support/auth";
+test("Story Lab mirrors typed source material and reviewed saves within five-tab phones", async ({ page }, info) => {
+  await signInAsE2EAdmin(page, "/interview/mobile-preview"); await page.goto("/interview/mobile-preview");
+  const writes: string[] = []; page.on("request", r => { if (r.method() !== "GET") writes.push(r.url()); });
+  await page.getByRole("button", { name: "Story Lab", exact: true }).first().click();
+  const phones = page.getByRole("region", { name: "Mobile device previews" });
+  await expect(phones.getByRole("navigation").first().getByRole("button")).toHaveCount(5);
+  await phones.getByRole("button", { name: "Add story", exact: true }).first().click();
+  await phones.getByLabel("Material title").first().fill("Helping a colleague");
+  await phones.getByLabel("Material original notes").first().fill("I helped a colleague prepare for a difficult shift.");
+  await expect(phones.getByLabel("Material original notes").nth(1)).toHaveValue("I helped a colleague prepare for a difficult shift.");
+  await phones.getByLabel("Material category").first().selectOption("teamwork");
+  await phones.getByRole("button", { name: "Save reviewed material (preview)" }).first().click();
+  await expect(phones.getByText("Helping a colleague", { exact: true })).toHaveCount(2);
+  await phones.getByRole("button", { name: "Edit saved material" }).first().click();
+  await phones.getByLabel("Material original notes").first().fill("Unconfirmed edit");
+  await phones.getByRole("button", { name: "Discard preview edits" }).first().click();
+  await phones.getByRole("button", { name: "Edit saved material" }).first().click();
+  await expect(phones.getByLabel("Material original notes").nth(1)).toHaveValue("I helped a colleague prepare for a difficult shift.");
+  await page.setViewportSize({ width: 1440, height: 1400 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await phones.locator('[class*="appViewport"]').evaluateAll(nodes => nodes.forEach(node => { node.scrollTop = 0; }));
+  await phones.screenshot({ path: info.outputPath("p62-story-lab-frames.png") });
+  expect(writes).toEqual([]);
+});

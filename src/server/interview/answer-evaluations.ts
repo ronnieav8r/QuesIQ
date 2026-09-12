@@ -1,4 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
+import { z } from "zod";
 
 import type {
   InterviewAnswerEvaluation,
@@ -17,6 +18,7 @@ import { getOpenAiApiKey } from "@/server/openai/keys";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 
 const PROMPT_CONFIG_KEY = "interview_answer_evaluator_v1";
+const providerEvaluationSchema = z.object({ confidence: z.number().min(0).max(1), missingAnswerElements: z.array(z.string()), referenceAnswerElementsMatched: z.array(z.string()), result: z.string().trim().min(1), tightenUpAdvice: z.array(z.string().trim().min(1)).min(1), verdict: z.enum(["meets_standard", "partial", "below_standard"]) });
 let answerEvaluationStorageUnavailable = false;
 
 export type InterviewAnswerEvaluationSource = {
@@ -36,16 +38,6 @@ function isMissingAnswerEvaluationTableError(error: unknown) {
       message.includes("no such table") ||
       message.includes("Failed query"))
   );
-}
-
-function normalizeStringList(value: unknown) {
-  return Array.isArray(value)
-    ? value
-        .filter((item): item is string => typeof item === "string")
-        .map((item) => item.trim())
-        .filter(Boolean)
-        .slice(0, 6)
-    : [];
 }
 
 function fallbackEvaluation(source: InterviewAnswerEvaluationSource): InterviewAnswerEvaluation {
@@ -103,42 +95,6 @@ function fallbackEvaluation(source: InterviewAnswerEvaluationSource): InterviewA
         : "Make the result more concrete so the interviewer can hear the impact.",
     ],
     verdict: missing.length === 0 ? "meets_standard" : "partial",
-  };
-}
-
-function normalizeEvaluation(
-  value: unknown,
-  fallback: InterviewAnswerEvaluation,
-): InterviewAnswerEvaluation {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return fallback;
-  }
-
-  const candidate = value as Partial<Record<keyof InterviewAnswerEvaluation, unknown>>;
-  const missingAnswerElements = normalizeStringList(candidate.missingAnswerElements);
-  const tightenUpAdvice = normalizeStringList(candidate.tightenUpAdvice);
-  const verdict =
-    candidate.verdict === "meets_standard" ||
-    candidate.verdict === "partial" ||
-    candidate.verdict === "below_standard"
-      ? candidate.verdict
-      : fallback.verdict;
-  const confidence =
-    typeof candidate.confidence === "number" && Number.isFinite(candidate.confidence)
-      ? Math.max(0, Math.min(1, candidate.confidence))
-      : fallback.confidence;
-
-  return {
-    confidence,
-    missingAnswerElements:
-      missingAnswerElements.length > 0 ? missingAnswerElements : fallback.missingAnswerElements,
-    referenceAnswerElementsMatched: normalizeStringList(candidate.referenceAnswerElementsMatched),
-    result:
-      typeof candidate.result === "string" && candidate.result.trim()
-        ? candidate.result.trim()
-        : fallback.result,
-    tightenUpAdvice: tightenUpAdvice.length > 0 ? tightenUpAdvice : fallback.tightenUpAdvice,
-    verdict,
   };
 }
 
@@ -203,7 +159,7 @@ async function requestModelEvaluation(input: {
     userId: input.userId,
   });
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const response = await aiRun.fetch("https://api.openai.com/v1/chat/completions", {
     body: JSON.stringify({
       messages: [
         { content: promptConfig.instructions, role: "system" },
@@ -253,6 +209,7 @@ async function requestModelEvaluation(input: {
     return {
       aiRunId: aiRun.id,
       evaluation: fallback,
+      evaluationSource: "heuristic" as const,
       model: promptConfig.model,
       promptConfig,
     };
@@ -268,12 +225,11 @@ async function requestModelEvaluation(input: {
     };
   };
   let evaluation = fallback;
+  let evaluationSource: "provider" | "heuristic" = "heuristic";
 
   try {
-    evaluation = normalizeEvaluation(
-      JSON.parse(payload.choices?.[0]?.message?.content ?? "{}"),
-      fallback,
-    );
+    const parsed = providerEvaluationSchema.safeParse(JSON.parse(payload.choices?.[0]?.message?.content ?? "{}"));
+    if (parsed.success) { evaluation = parsed.data; evaluationSource = "provider"; }
   } catch {
     evaluation = fallback;
   }
@@ -297,6 +253,7 @@ async function requestModelEvaluation(input: {
   return {
     aiRunId: aiRun.id,
     evaluation,
+    evaluationSource,
     inputTokens: payload.usage?.prompt_tokens,
     model: promptConfig.model,
     outputTokens: payload.usage?.completion_tokens,
@@ -353,6 +310,7 @@ export async function saveInterviewAnswerEvaluation(input: {
     : {
         aiRunId: undefined,
         evaluation: fallbackEvaluation(input.source),
+        evaluationSource: "heuristic" as const,
         model: null,
         promptConfig,
       };
@@ -364,6 +322,7 @@ export async function saveInterviewAnswerEvaluation(input: {
         aiRunId: modelEvaluation.aiRunId,
         answerTranscript: input.source.answerTranscript,
         evaluationJson: modelEvaluation.evaluation,
+        evaluationSource: input.apiKeyOverride ? "synthetic" : modelEvaluation.evaluationSource,
         evaluatorModel: modelEvaluation.model,
         evaluatorPromptKey: modelEvaluation.promptConfig.key,
         evaluatorPromptVersion: modelEvaluation.promptConfig.version,
@@ -385,6 +344,7 @@ export async function saveInterviewAnswerEvaluation(input: {
           aiRunId: modelEvaluation.aiRunId,
           answerTranscript: input.source.answerTranscript,
           evaluationJson: modelEvaluation.evaluation,
+          evaluationSource: input.apiKeyOverride ? "synthetic" : modelEvaluation.evaluationSource,
           evaluatorModel: modelEvaluation.model,
           evaluatorPromptKey: modelEvaluation.promptConfig.key,
           evaluatorPromptVersion: modelEvaluation.promptConfig.version,
@@ -471,7 +431,7 @@ export async function ensureInterviewAnswerEvaluations(input: {
       snapshot: input.snapshot,
       source: {
         answerTranscript: turn.answerTranscript,
-        question: queuedQuestion?.questionText || previousTurn?.question || turn.question,
+        question: queuedQuestion?.questionText || (input.snapshot.controlledModeVersion === 1 ? turn.question : previousTurn?.question || turn.question),
         questionId: queuedQuestion?.id,
         targetSkill: queuedQuestion?.targetSkill || previousTurn?.targetSkill || turn.targetSkill,
         turnIndex: turn.turnIndex,

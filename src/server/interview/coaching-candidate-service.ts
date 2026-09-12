@@ -61,7 +61,7 @@ export async function generateCandidateCoachingTurn(input: {
   let providerStatusCode: number | undefined;
   try {
     const response = input.simulation ? Response.json({ output_text: JSON.stringify(simulationOutput(context)), usage: { input_tokens: 0, output_tokens: 0, total_tokens: 0 } })
-      : await fetch("https://api.openai.com/v1/responses", { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      : await run.fetch("https://api.openai.com/v1/responses", { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify(request), signal: AbortSignal.timeout(60_000) });
     providerStatusCode = response.status;
     if (!response.ok) throw new CoachingOperationError("candidate_provider_failed", "The candidate provider request failed; this operation will not be regenerated automatically.", 503);

@@ -31,6 +31,7 @@ export type InterviewInspectionAiRun = {
 };
 
 export type InterviewInspectionRun = {
+  coachingTelemetry?: VoiceSessionArtifactDraft["coachingTelemetry"];
   aiRuns: InterviewInspectionAiRun[];
   contextSnapshot: SessionSetupSnapshot;
   createdAt: string;
@@ -122,6 +123,7 @@ export async function listInterviewInspectionRuns(limit = 50) {
     const effective = session.contextSnapshot.executionConfig?.effective;
 
     return {
+      coachingTelemetry: artifact?.coachingTelemetry,
       aiRuns: (aiRunsBySession.get(session.id) ?? []).map((aiRun) => ({
         completedAt: optionalIso(aiRun.completedAt),
         durationMs: aiRun.durationMs ?? undefined,

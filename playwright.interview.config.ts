@@ -11,6 +11,8 @@ export default defineConfig({
     timeout: 10_000,
   },
   fullyParallel: false,
+  // Keep this local gate predictable on the shared development host.
+  workers: 2,
   globalSetup: "./tests/interview/global-setup.ts",
   outputDir: "artifacts/interview-regression/playwright-results",
   reporter: [

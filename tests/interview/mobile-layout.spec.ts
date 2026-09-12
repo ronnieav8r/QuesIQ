@@ -34,6 +34,13 @@ test("static mobile preview stays labelled, mirrored, and read-only", async ({ p
   const showCaptions = phones.getByRole("button", { name: "Show captions (simulated)" });
   await showCaptions.first().click();
   await expect(phones.getByText("SIMULATED CAPTIONS")).toHaveCount(2);
+  await expect(phones.getByRole("button", { name: "Done answering", exact: true })).toHaveCount(2);
+  await phones.getByRole("button", { name: "Done answering", exact: true }).first().click();
+  for (const button of await phones.getByRole("button", { name: "Finishing answer…", exact: true }).all()) await expect(button).toBeDisabled();
+  await expect(phones.getByText("Finishing your answer · simulated. Waiting for the final transcript.")).toHaveCount(2);
+  await phones.screenshot({ path: testInfo.outputPath("p42-finalizing-frames.png") });
+  await phones.getByRole("button", { name: "End session", exact: true }).nth(1).click();
+  await expect(phones.getByText("Overall interview score · sample")).toHaveCount(2);
   await page.getByRole("button", { name: "Me", exact: true }).first().click();
   await expect(page.getByText("Sample / simulation · changes stay in this preview").first()).toBeVisible();
   await phones.getByLabel("Preferred name", { exact: true }).first().fill("Sample Alex");
@@ -60,6 +67,47 @@ test("review puts evidence and next step before sample score", async ({ page }) 
   for (const toggle of await phones.getByRole("button", { name: "Transcript · 2 turns" }).all()) await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await expect(phones.getByText("During a high-tempo operational assignment, We delivered two days early.", { exact: false })).toHaveCount(2);
   await expect(phones.getByText("Overall interview score · sample").first()).toBeVisible();
+});
+
+test("Coaching state samples mirror microphone, typed fallback, and choices without writes", async ({ page }, testInfo) => {
+  await signInAsE2EAdmin(page, "/interview/mobile-preview");
+  await page.goto("/interview/mobile-preview");
+  const writes: string[] = [];
+  page.on("request", (request) => { if (request.method() !== "GET") writes.push(request.url()); });
+  await page.getByRole("button", { name: "Live Session", exact: true }).click();
+  const phones = page.getByRole("region", { name: "Mobile device previews" });
+  await phones.getByRole("button", { name: "Mute microphone (simulated)" }).first().click();
+  await expect(phones.getByText("Simulated microphone muted", { exact: true })).toHaveCount(2);
+  await expect(phones.getByText("SIMULATED CAPTIONS")).toHaveCount(0);
+  await phones.getByRole("button", { name: "Type instead", exact: true }).nth(1).click();
+  await expect(phones.getByText("Type your answer · microphone off", { exact: true })).toHaveCount(2);
+  for (const button of await phones.getByRole("button", { name: "Send answer", exact: true }).all()) await expect(button).toBeDisabled();
+  await phones.getByLabel("Your answer", { exact: true }).first().fill("My decision helped the team finish safely.");
+  for (const input of await phones.getByLabel("Your answer", { exact: true }).all()) await expect(input).toHaveValue("My decision helped the team finish safely.");
+  await phones.screenshot({ path: testInfo.outputPath("p43-typed-fit.png") });
+  await phones.getByRole("button", { name: "Send answer", exact: true }).nth(1).click();
+  await expect(phones.getByText("Processing your answer · microphone off", { exact: true })).toHaveCount(2);
+  await expect(phones.getByRole("button", { name: "Type instead", exact: true })).toHaveCount(0);
+  await page.setViewportSize({ width: 1440, height: 1800 });
+  await page.getByRole("button", { name: "Actual size", exact: true }).click();
+  for (const state of ["processing", "speaking", "choice", "typing"]) {
+    await page.getByLabel("Simulated session state").selectOption(state);
+    for (const phone of await phones.locator('[class*="mobilePage"]').all()) {
+      expect(await phone.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+      expect(await phone.locator("button").evaluateAll((buttons) => buttons.every((button) => button instanceof HTMLElement && button.offsetHeight >= 48))).toBe(true);
+    }
+    await phones.screenshot({ path: testInfo.outputPath(`p43-${state}-frames.png`) });
+    await expect(phones.getByRole("button", { name: "End session", exact: true }).nth(1)).toBeVisible();
+  }
+  await page.getByLabel("Simulated session state").selectOption("choice");
+  await phones.getByRole("button", { name: "Ask Que", exact: true }).first().click();
+  await expect(phones.getByLabel("Your question", { exact: true })).toHaveCount(2);
+  await phones.getByLabel("Your question", { exact: true }).nth(1).fill("Which part needs more detail?");
+  await phones.getByRole("button", { name: "Send question", exact: true }).first().click();
+  await expect(phones.getByText("Processing your answer · microphone off", { exact: true })).toHaveCount(2);
+  await phones.getByRole("button", { name: "End session", exact: true }).first().click();
+  await expect(phones.getByText("Overall interview score · sample")).toHaveCount(2);
+  expect(writes).toEqual([]);
 });
 
 test("sample screens fit both phone widths with reachable controls", async ({ page }, testInfo) => {

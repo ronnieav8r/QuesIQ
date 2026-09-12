@@ -40,7 +40,7 @@ function toRecord(row: {
   endedAt: Date | null;
   estimatedAudioInputTokens: number;
   estimatedAudioOutputTokens: number;
-  estimatedCostMicroUsd: number;
+  estimatedCostMicroUsd: number | null;
   estimationMethod: string;
   id: string;
   model: string;
@@ -129,7 +129,7 @@ export async function saveRealtimeSessionUsage(
   );
   const now = new Date();
   const estimatedCostMicroUsd =
-    estimateTokenCostMicroUsd(pricing, inputTokens, outputTokens) ?? 0;
+    estimateTokenCostMicroUsd(pricing, inputTokens, outputTokens) ?? null;
   const pricingVersion = pricing?.version ?? "missing-pricing";
 
   await getDb()

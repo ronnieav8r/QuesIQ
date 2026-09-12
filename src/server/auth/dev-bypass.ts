@@ -27,7 +27,7 @@ export const devAuthUsers: Record<Exclude<DevAuthRole, "e2e-admin">, Session["us
 const enabledValues = new Set(["1", "true", "yes", "on"]);
 
 export function isDevAuthBypassEnabled() {
-  return enabledValues.has((process.env.DEV_AUTH_BYPASS_ENABLED || "").trim().toLowerCase());
+  return process.env.NODE_ENV !== "production" && enabledValues.has((process.env.DEV_AUTH_BYPASS_ENABLED || "").trim().toLowerCase());
 }
 
 export function isLocalInterviewAutoEntryEnabled() {
@@ -59,6 +59,7 @@ export function isDevAuthAdminEmail(email?: string | null) {
 }
 
 export async function getDevAuthUser(role: DevAuthRole): Promise<Session["user"] | undefined> {
+  if (!isDevAuthBypassEnabled()) return undefined;
   if (role !== "e2e-admin") {
     return devAuthUsers[role];
   }

@@ -105,7 +105,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       headers: {
         Accept: "application/json",
         Authorization: `Bearer ${accessToken}`,
-        ...(init.body ? { "Content-Type": "application/json" } : {}),
+        ...(init.body && !(init.body instanceof FormData) ? { "Content-Type": "application/json" } : {}),
         ...init.headers,
       },
     });

@@ -9,6 +9,7 @@ import type {
 } from "@/product/interview-types";
 import { parseInterviewResumeSummary } from "@/product/resume-summary";
 import { parseStoryOutline } from "@/product/story-lab";
+import { preparationSelectionsSchema, questionSelectionSchema, recommendationSelectionSchema } from "@quesiq/interview-contracts";
 
 const modeKeys: PracticeModeKey[] = [
   "first_impression",
@@ -182,6 +183,12 @@ export function parseSessionSetupSnapshot(value: unknown): SessionSetupSnapshot 
 
   const candidate = value as Partial<SessionSetupSnapshot>;
   const context = candidate.interviewContext;
+  const selections = preparationSelectionsSchema.safeParse(candidate.preparationSelections);
+  if (candidate.preparationSelections && !selections.success) return undefined;
+  const questions = questionSelectionSchema.safeParse(candidate.questionSelection);
+  const recommendation = recommendationSelectionSchema.safeParse(candidate.recommendationSelection);
+  if (candidate.recommendationSelection && !recommendation.success) return undefined;
+  if (candidate.questionSelection && !questions.success) return undefined;
 
   if (
     !context ||
@@ -217,6 +224,9 @@ export function parseSessionSetupSnapshot(value: unknown): SessionSetupSnapshot 
       targetCompany: context.targetCompany,
       targetRole: context.targetRole,
     },
+    preparationSelections: selections.success ? selections.data : undefined,
+    questionSelection: questions.success ? questions.data : undefined,
+    recommendationSelection: recommendation.success ? recommendation.data : undefined,
     introductionContext: parseIntroductionContext(candidate.introductionContext),
     modeKey: candidate.modeKey,
     questionTypeKey: candidate.questionTypeKey,

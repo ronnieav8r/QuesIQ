@@ -1,12 +1,56 @@
 # Interview Local Regression System
 
-Last updated: 2026-08-26
+Last updated: 2026-09-10
 
 This is the canonical local test guide for QuesIQ Interview. The gate is
 Interview-only; Study, DPE, NCLEX, Quira, Render, and production traffic are
 outside its scope.
 
 ## Command Family
+
+### Phase6 preparation, priorities and evidence
+
+`npm run test:interview:preparation`, `npm run test:interview:questions` and
+`npm run test:interview:progress` are included in the full Interview gate.
+They use isolated loopback database owners and mocked provider boundaries.
+Progress services exercise explicit provenance, initial/guided/repeated work,
+attributable review evidence, matching rubric/model/target comparisons,
+latest20/90day recommendations, dismissal replay/expiry and stale launch checks.
+Loading evidence never invokes a provider. Legacy web queue/artifact replay and
+saved-preparation ownership are covered alongside the native contracts.
+
+Native `test:mobile` includes preparation/file-picker cancellation and account
+changes, Story Lab drafts/manual saves, saved-question route refocus and useful
+progress/recommendation lifecycle tests. Physical picker/keyboard/assistive input,
+spoken audio and paid AI quality remain separately unverified. Browser specs
+`phase6-preparation`, `phase6-story-lab`, `phase6-questions`, `phase6-progress`
+check read-only shared samples inside both phone frames. They do not certify
+native rendering or physical hardware. See INTERVIEW_PHASE6_CONTRACT.md.
+
+### Phase5 four-mode local acceptance
+
+`scripts/test/phase5-services.ts` runs inside the default execution-service gate
+with isolated owner records and intercepted provider boundaries. It covers FI
+one-retry/replay and owned saved review; Rapid Fire1-10 controller bounds,
+no mid-run feedback, exact question pairing/early-end eligibility and legacy
+Realtime preservation; Mock pinned model/policy, legacy behavior and review gates.
+`tests/interview/phase5-modes.spec.ts` exercises FI/Rapid Fire in both phone frames
+on desktop/mobile, with Coaching still the default on fresh load. Native Mock
+lifecycle tests cover late permissions/events, background, detached checkpoints,
+bounded finalization and delayed follow-ups. These are not physical-audio tests.
+
+Browser concurrency now defaults to two workers. The equivalent explicit command
+is `npm run test:interview:all -- -- --workers=2`; neither assertion timeouts nor
+assertions were weakened. Avoid overlapping this gate with a full native rebuild
+on a busy host; preserve failure traces and rerun after contention has ended.
+Final Phase5 gate additionally compiles Android debug and exports an Android
+Hermes bundle; neither installs or starts an emulator/device.
+
+The explicit Realtime Model Lab variant `native_mock_v1` resolves the same new
+local Mock policy for Mock scenarios only. `production_v1` still inspects the
+historical prompt. This is opt-in paid tooling, not part of the default gate;
+Phase5 only ran deterministic composition/variant tests. No provider comparison
+or Mini promotion is implied. See `INTERVIEW_PHASE5_CONTRACT.md` for activation.
 
 Run from:
 
@@ -353,9 +397,150 @@ worker limit without skipping any test.
 Screenshots cover Home, Practice, Live, Review and Me; the test changes only
 the isolated headless host viewport, never the user's desktop/browser. Native
 component tests and local Android compile/export are separate evidence. See
-`INTERVIEW_PHASE4_NATIVE_EXPERIENCE.md`; P4.2 onward and operator gates remain.
+`INTERVIEW_PHASE4_NATIVE_EXPERIENCE.md` and the execution ledger for acceptance.
+
+P4.2 native Coaching waits for a cleared audio buffer before listening. Speak,
+pause freely, and tap **Done answering** to commit this answer. The microphone
+stops while the client waits for a matching acknowledgement and final transcript.
+**End & save** still ends the session. A failed/empty/timed-out finalization
+offers **Retry transcription**, reconnecting at the same question; re-speak that
+answer. Partial text is never submitted as a successful answer. Keep the native
+client and local backend on this same slice because the transcription route now
+uses manual commits. Old clients that rely on automatic VAD submission are not
+compatible with that route change.
+
+Deterministic P4.2 cases live in
+`apps/mobile/src/components/interview/chained-coaching-session.test.tsx`;
+`npm run test:mobile` includes them. The existing execution-service suite checks
+manual transcription configuration. The mobile-layout browser suite checks
+mirrored Done/finalizing/End controls without microphone/provider activity.
+Physical-phone checks must still verify that final audio at the Done boundary
+is captured, natural pauses do not truncate speech, and interruptions stop
+recording. Mocked events cannot certify WebRTC audio/data-channel timing.
+
+P4.3 adds a native Coaching **Type instead** fallback during connection,
+microphone preparation/listening, or transcription failure. It closes the
+microphone transport and keeps this session in typed mode. Uncommitted speech
+is discarded, not submitted. Type the answer/question and explicitly send it;
+the current response remains readable with historical captions collapsed.
+**Mute microphone** pauses capture without committing buffered speech, and
+**Done answering** still controls voice submission. **Read response**
+after playback failure uses the already validated result. This client fallback
+does not remove server TTS generation or prove a runtime cost saving.
+
+The same native component suite covers typed/microphone boundary cases.
+`mobile-layout.spec.ts` covers mirrored typed input, mute/phase labels, choices,
+contained scrolling and End reachability. The design workbench's **Simulated
+session state** selector is outside the phone UI and changes only labelled
+samples; it is not a provider request or native event simulator. Keep initial
+Test Coaching/no audio, Fit and Simulation defaults. Native keyboard, real
+interruption and audio behavior still require the separate operator gate.
 
 Automation does not validate real microphone permission prompts, microphone
 selection, headset behavior, audio clipping, speaker quality, or genuine
 Realtime conversation quality. Verify those manually in the visible local app
 at `http://127.0.0.1:3100` after the automated gate is green.
+
+
+## P4.4 stage telemetry and latency reports
+
+The native Coaching artifact includes optional bounded `coachingTelemetry`.
+`npm run test:mobile` covers its contracts, percentile math, persistence and
+native event sequences. `test:interview:all` exercises mocked server stages,
+provider/application request IDs, failure/replay and guarded inspection export.
+These tests make no provider calls and do not measure real audio latency.
+
+An admin can export the recent100 inspection records through
+`/api/admin/interview/inspection-runs/export?format=json`. The default CSV is
+unchanged. A finalized artifact or pending `{ artifact: ... }` file also works.
+Exports may contain learner text; keep files in ignored local artifacts.
+The report itself contains diagnostic metadata only.
+
+Create a separate profile for each device, OS, app build and network condition:
+
+```json
+{"evidence":"mocked","device":"fixture","os":"fixture","build":"test","network":"mock"}
+```
+
+Then run from the repository root (REPORT must not already exist):
+
+```powershell
+npx tsx scripts/interview/report-coaching-latency.ts INPUT.json PROFILE.json REPORT.json
+```
+
+For separately authorized device work, use `device_observed` and record the
+actual profile. Collect comparable ordinary voice answers; preserve failed and
+recovered attempts. Do not mix profiles or label synthetic data as device data.
+Nearest-rank P50/P95 use fresh, unrecovered voice answers with complete ordered
+client stages and the same model/voice configuration. Counts include excluded
+outcomes and recovery attempts. Check sample count, missing telemetry and
+truncation before comparing reports; no fixed performance target is implied.
+
+Answer end means Done, and first audio means the first player status with
+`playing=true` and `currentTime>0`, not acoustic verification. Completed playback
+without that event is `audio_unobserved`; missing timing is never zero latency.
+Server stages use a separate clock and cannot be subtracted from client stages.
+Telemetry is capped at200 observations per artifact; dropped entries are counted.
+No baseline is available from empty/legacy/ineligible records. Crash-before-save
+persistence remains P4.6; real microphone/speaker checks remain operator work.
+
+P4.6 now adds committed Coaching checkpoints and restart recovery; see the
+recovery contract below. The earlier P4.4 evidence itself did not test durability.
+
+## P4.5 progressive audio spike
+
+See [the bounded spike contract](INTERVIEW_P45_STREAMING_SPIKE.md) for the
+development route, loopback fixture commands, cache policy and operator gates.
+Normal Coaching retains full-file playback. The spoken choice menu is shortened
+without changing visible choices or full feedback/questions.
+
+The execution-unit gate includes the real loopback fixture transport tests:
+progressive first chunk, identical full bytes, byte ranges, cancelled/truncated
+streams and intact fallback. The execution-services gate verifies the actual
+mocked TTS request uses the concise cue. The native suite checks validation
+before play, timeout/release, stale responses/downloads, explicit file fallback
+and stop during audio preparation. These tests never play sound.
+
+The development route is disabled without both __DEV__ and its explicit origin.
+No env setting is added automatically. Default WAV tone is transport test data;
+approved MP3, progressive audible playback and interruption behavior on target
+devices remain separately authorized operator checks. Spike firstAudioMs is not
+a Done-to-audio baseline and must not enter the P4.4 report.
+
+## P4.6 checkpoints and pending-save recovery
+
+See [the recovery contract](INTERVIEW_P46_RECOVERY_CONTRACT.md). The mobile gate
+tests new-generation file writes/read-back/move, old-copy retention on failure,
+corrupt-record fallback, account isolation/legacy ownership verification,
+lost server acknowledgement, conflicting saved transcripts, single-flight saves,
+empty-session handling and confirmed-review boundaries. Native component tests
+cover loss/interruption, detached committed checkpoints and no writes after End.
+
+No special provider environment or paid test is required. File operations are
+mocked in Jest; actual process-kill/disk-full/reopen and audio interruption on a
+physical phone remain manual gates. Preserve failed logs alongside passing reruns.
+No checkpoint contains partial speech/raw audio. Recovery notices are scoped to
+the signed-in account, skip active sessions and retain work on failure.
+
+## Phase7 local beta gates (2026-09-10)
+
+`npm run test:interview:beta` runs accounting/report tests and local DB safety
+services; it is included in `test:interview:all`. Synthetic mocks cannot call paid
+providers. Final accepted evidence is in artifacts/implementation-2026-09-10:
+p7-interview-accepted.log, p7-mobile-accepted.log, p7-mobile-typecheck-accepted.log,
+p7-mobile-lint-accepted.log, p7-android-compile.log and p7-hermes-accepted.log.
+Browser phase7-limits captures cover pending save and deferred review; they are
+simulations, not device proof. INTERVIEW_PHASE7_CONTRACT.md owns CLI examples and
+INTERVIEW_V1_REMAINING_GATES.md owns physical/paid/operational follow-up.
+
+## Chained voice safety follow-up
+
+`npm run test:interview:voice-safety` is included in the full Interview service gate.
+Use artifacts/voice-safety-2026-09-10 for final evidence: static-final.log,
+voice-services-final.log, mobile-final.log, mobile-typecheck-final.log,
+mobile-lint-final.log, android-compile.log and hermes-final.log. Full services also
+pass in interview-final.log. Browser acceptance is browser-serial.log,46/46 via
+`npm run test:interview:e2e -- --workers=1`; initial default-worker transport resets
+are retained and the standard harness/assertions remain unchanged. Do not run
+concurrent source edits/builds during browser acceptance. Phone captures prove only
+simulated limit/save states. See INTERVIEW_CHAINED_VOICE_SAFETY.md for live gaps.

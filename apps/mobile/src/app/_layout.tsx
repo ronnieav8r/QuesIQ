@@ -17,6 +17,8 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="session" options={{ animation: "fade", gestureEnabled: false }} />
             <Stack.Screen name="review/[sessionId]" />
+            <Stack.Screen name="questions" options={{ headerShown: true, title: "Saved questions", headerTintColor: colors.text, headerStyle: { backgroundColor: colors.background } }} />
+            <Stack.Screen name="progress" options={{ headerShown: true, title: "Progress", headerTintColor: colors.text, headerStyle: { backgroundColor: colors.background } }} />
           </Stack>
         </AppProvider>
       </SafeAreaProvider>

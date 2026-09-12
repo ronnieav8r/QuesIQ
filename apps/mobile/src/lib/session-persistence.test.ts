@@ -1,6 +1,8 @@
 import {
   type MobileRequest,
   persistSessionArtifact,
+  persistRecoveredArtifact,
+  withArtifactPersistenceLock,
 } from "@/lib/session-persistence";
 import { describe, expect, it } from "@jest/globals";
 
@@ -63,4 +65,44 @@ describe("persistSessionArtifact", () => {
     await persistSessionArtifact(request, "session-3", artifact, true);
     expect(calls.map(([path]) => path)).toEqual(["/api/mobile/v1/interview/sessions/session-3/evaluation"]);
   });
+});
+
+
+it("empty interrupted sessions save without an unnecessary evaluation call", async () => {
+  const { request, calls } = requestSequence([{ value: {} }]);
+  await persistSessionArtifact(request, "session-1", { ...artifact, transcript: [] });
+  expect(calls).toHaveLength(1);
+});
+it("recovery reconciles a lost acknowledgement with matching saved transcript", async () => {
+  const { request, calls } = requestSequence([{ value: { session: { status: "artifact_saved", transcript: artifact.transcript, evaluationStatus: "completed" } } }]);
+  await persistRecoveredArtifact(request, { ownerId: "a", sessionId: "s", artifact, createdAt: artifact.endedAt }, () => {});
+  expect(calls).toHaveLength(1);
+  expect(calls[0][0]).toMatch(/detail$/);
+});
+it("recovery retains a conflicting saved transcript without PUT or evaluation", async () => {
+  const { request, calls } = requestSequence([{ value: { session: { status: "artifact_saved", transcript: [], evaluationStatus: "pending" } } }]);
+  await expect(persistRecoveredArtifact(request, { sessionId: "s", artifact, createdAt: artifact.endedAt }, () => {})).rejects.toThrow("differs");
+  expect(calls).toHaveLength(1);
+});
+it("parallel live and recovery saves share one operation and release after failure", async () => {
+  let calls = 0; let release!: () => void;
+  const work = () => { calls++; return new Promise<void>((resolve) => { release = resolve; }); };
+  const first = withArtifactPersistenceLock("owner", "session", work);
+  const second = withArtifactPersistenceLock("owner", "session", work);
+  await Promise.resolve(); expect(calls).toBe(1); release(); await Promise.all([first, second]);
+  await expect(withArtifactPersistenceLock("owner", "session", async () => { throw new Error("offline"); })).rejects.toThrow();
+  await withArtifactPersistenceLock("owner", "session", async () => { calls++; }); expect(calls).toBe(2);
+});
+
+
+it("recovery never retries a failed evaluation without the review confirmation flow", async () => {
+  const { request, calls } = requestSequence([{ value: { session: { status: "artifact_saved", transcript: artifact.transcript, evaluationStatus: "failed" } } }]);
+  await persistRecoveredArtifact(request, { sessionId: "s", artifact, createdAt: artifact.endedAt }, () => {});
+  expect(calls).toHaveLength(1);
+});
+it("legacy recovery verifies ownership before staging or transmitting transcript", async () => {
+  const { request, calls } = requestSequence([{ error: new Error("not found") }]);
+  let verified = false;
+  await expect(persistRecoveredArtifact(request, { sessionId: "s", artifact, createdAt: artifact.endedAt }, () => {}, () => { verified = true; })).rejects.toThrow();
+  expect(verified).toBe(false); expect(calls).toHaveLength(1); expect(calls[0][1]?.body).toBeUndefined();
 });

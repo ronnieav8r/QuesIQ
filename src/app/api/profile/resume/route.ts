@@ -1,3 +1,4 @@
+import { InterviewLimitError } from "@/server/interview/beta-safety";
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
@@ -5,7 +6,6 @@ import {
   extractResumeText,
   MAX_RESUME_BYTES,
 } from "@/server/profiles/resume-parser";
-import { getOrCreateInterviewResumeSummary } from "@/server/profiles/resume-summary";
 import { saveResume } from "@/server/profiles/save-resume";
 
 export const runtime = "nodejs";
@@ -45,9 +45,10 @@ export async function POST(request: Request) {
   let resumeText: string | undefined;
 
   try {
-    resumeText = extractResumeText(file.name, file.type, buffer);
+    resumeText = await extractResumeText(file.name, file.type, buffer);
   } catch (error) {
-    console.error("Resume text extraction failed.", error);
+    if (error instanceof InterviewLimitError) return NextResponse.json({ error: { code: error.code, message: error.message, retryable: false, requestId: crypto.randomUUID(), limit: error.outcome } }, { status: error.status });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Resume could not be read. Your previous resume is unchanged." }, { status: 400 });
   }
 
   try {
@@ -58,24 +59,16 @@ export async function POST(request: Request) {
       text: resumeText,
     });
 
-    const resumeSummaryResult = resume.resumeText
-      ? await getOrCreateInterviewResumeSummary({
-          resumeName: resume.resumeName,
-          resumeParsedAt: resume.resumeParsedAt,
-          resumeText: resume.resumeText,
-          userId: appSession.user.id,
-        })
-      : { unavailableReason: "missing_resume_text" };
-
     return NextResponse.json({
       resume,
-      resumeSummaryGenerated: Boolean(resumeSummaryResult.summary),
-      resumeSummaryUnavailable: resumeSummaryResult.unavailableReason,
+      resumeSummaryGenerated: false,
+      resumeSummaryUnavailable: "explicit_review_required",
       warning: resumeText
         ? undefined
         : "Resume was saved by filename, but text could not be extracted from this file.",
     });
   } catch (error) {
+    if (error instanceof InterviewLimitError) return NextResponse.json({ error: { code: error.code, message: error.message, retryable: false, requestId: crypto.randomUUID(), limit: error.outcome } }, { status: error.status });
     console.error("Resume save failed.", error);
 
     return NextResponse.json(

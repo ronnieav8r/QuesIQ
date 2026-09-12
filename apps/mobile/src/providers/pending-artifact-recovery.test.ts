@@ -48,3 +48,16 @@ describe("pending artifact recovery", () => {
     expect(result).toEqual({ recovered: 0, retained: 1 });
   });
 });
+
+
+it("does not persist or remove a current live or foreign account record", async () => {
+  const persist = jest.fn<() => Promise<void>>().mockResolvedValue();
+  const remove = jest.fn();
+  const result = await recoverPendingArtifacts({ list: async () => [record("live"), record("foreign")], canRecover: () => false, persist, remove });
+  expect(result).toEqual({ recovered: 0, retained: 0 }); expect(persist).not.toHaveBeenCalled(); expect(remove).not.toHaveBeenCalled();
+});
+it("account change during recovery prevents deleting the pending copy", async () => {
+  let current = true; const remove = jest.fn();
+  await recoverPendingArtifacts({ list: async () => [record("a")], canRecover: () => current, persist: async () => { current = false; }, remove });
+  expect(remove).not.toHaveBeenCalled();
+});

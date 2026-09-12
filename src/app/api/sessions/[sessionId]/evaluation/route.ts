@@ -1,3 +1,4 @@
+import { InterviewLimitError } from "@/server/interview/beta-safety";
 import { NextResponse } from "next/server";
 
 import {
@@ -63,6 +64,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     return NextResponse.json({ evaluation });
   } catch (error) {
+    if (error instanceof InterviewLimitError) return NextResponse.json({ error: { code: error.code, message: error.message, retryable: false, requestId: crypto.randomUUID(), limit: error.outcome } }, { status: error.status });
     console.error("Practice evaluation failed.", error);
 
     return NextResponse.json(

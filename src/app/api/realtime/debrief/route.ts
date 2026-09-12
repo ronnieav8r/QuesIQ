@@ -1,3 +1,4 @@
+import { assertRealtimeBetaAllowed, InterviewLimitError } from "@/server/interview/beta-safety";
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
@@ -215,6 +216,10 @@ export async function POST(request: Request) {
     getActivePromptConfig("session_debrief"),
     getCoachingMemory(appSession.user.id),
   ]);
+  try { await assertRealtimeBetaAllowed(); } catch (error) {
+    if (error instanceof InterviewLimitError) return NextResponse.json({ error: { code: error.code, message: error.message, retryable: false, requestId: crypto.randomUUID(), limit: error.outcome } }, { status: error.status });
+    throw error;
+  }
   const aiRun = await startAiRun({
     model: promptConfig.model,
     promptConfigId: promptConfig.id,

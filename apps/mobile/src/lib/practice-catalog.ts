@@ -20,7 +20,7 @@ export function resolveCatalogChoice<T extends string>(current: T | undefined, c
 
 export function preferredTargetId(bootstrap: MobileBootstrap): string | undefined {
   const profileTargetId = bootstrap.profile?.jobTargetId;
-  return bootstrap.jobTargets.some((target) => target.id === profileTargetId) ? profileTargetId : bootstrap.jobTargets[0]?.id;
+  return bootstrap.jobTargets.some((target) => target.id === profileTargetId) ? profileTargetId : undefined;
 }
 
 export function canLaunchPractice(mode: AvailablePracticeMode | undefined, style: InterviewStyleKey | undefined, questionType: QuestionTypeKey | undefined): boolean {

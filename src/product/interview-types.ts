@@ -151,6 +151,10 @@ export type DiagnosticEventRecord = {
 };
 
 export type InterviewContext = {
+  resumeMimeType?: string;
+  resumeSize?: number;
+  preparationRevision?: number;
+  resumeConfirmedAt?: string;
   jobDescription: string;
   jobTargetId?: string;
   preferredName: string;
@@ -287,6 +291,13 @@ export type SelectedQuestionContext = {
 };
 
 export type SessionSetupSnapshot = {
+  recommendationSelection?: { id: string; targetId: string | null };
+  questionSelection?: { ids: string[]; mode: "coaching" | "rapid_fire" };
+  preparationSelections?: { storyId?: string; introductionId?: string; useSavedStories: boolean };
+  frozenStoryLibrary?: Array<{ id: string; categories: string[]; coachNotes: string[]; practicePrompt: string; practiceCount: number; result: string; summary: string; title: string }>;
+  reviewedMaterialVersions?: Array<{ id: string; kind: "story" | "introduction"; revision: number; title: string }>;
+  /** Server-owned Phase5 policy pin; never accepted from public request bodies. */
+  controlledModeVersion?: 1;
   /** Local inspector candidate only; discarded by public session parsing. */
   coachingPromptCandidate?: {
     version: 2;
@@ -651,6 +662,7 @@ export type VoiceSessionEvent = {
 };
 
 export type VoiceSessionArtifactDraft = {
+  coachingTelemetry?: import("@quesiq/interview-contracts").CoachingTelemetry;
   durationSeconds?: number;
   endedAt?: string;
   endReason?: "connection_lost" | "start_failed" | "user_ended";
@@ -814,7 +826,7 @@ export type RealtimeSessionUsageRecord = {
   endedAt?: string;
   estimatedAudioInputTokens: number;
   estimatedAudioOutputTokens: number;
-  estimatedCostMicroUsd: number;
+  estimatedCostMicroUsd: number | null;
   estimationMethod: string;
   id: string;
   model: string;
@@ -832,6 +844,7 @@ export type RealtimeSessionUsageRecord = {
 };
 
 export type AiPricingRecord = {
+  audioBilling?: Array<{ unit: "audio_seconds" | "text_input_tokens" | "text_output_tokens" | "audio_input_tokens" | "audio_output_tokens" | "characters"; rateMicroUsd: number; rateUnits: number }>;
   active: boolean;
   cachedInputMicroUsdPerMillion?: number;
   createdAt: string;

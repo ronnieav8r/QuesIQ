@@ -212,7 +212,8 @@ export async function generateIntroductionDraft(
     .join("\n\n");
 
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const response = await aiRun.fetch("https://api.openai.com/v1/responses", {
+      signal: AbortSignal.timeout(45000),
       body: JSON.stringify({
         input: [
           {

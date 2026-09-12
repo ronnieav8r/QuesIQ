@@ -1,3 +1,4 @@
+import "./interview-synthetic";
 import {
   cleanupInterviewRegressionData,
   ensureRegressionArtifactsDir,

@@ -817,6 +817,7 @@
 .setupOptionActive { background: var(--preview-cyan); border-color: var(--preview-cyan); color: var(--preview-bg); }
 .setupOptionActive small { color: var(--preview-bg); }
 .textAction { background: transparent; border: 0; color: var(--preview-cyan); min-height: 48px; padding: 8px 0; text-align: left; }
+.textAction + .textAction { margin-inline-start: 12px; }
 .mobilePage button:focus-visible, .mobilePage input:focus-visible, .mobilePage textarea:focus-visible {
   outline: 2px solid var(--preview-cyan);
   outline-offset: 3px;
@@ -1556,6 +1557,13 @@
   box-shadow: none;
 }
 
+.sessionControls button:has(span) { width: auto; min-width: 52px; min-height: 52px; height: auto; padding: 8px 16px; gap: 8px; }
+.sessionBody > .mobileCard { flex-shrink: 0; }
+.sessionBody .mobileCard textarea { width: 100%; box-sizing: border-box; }
+.sessionBody.sessionCompact .sessionCenter { flex: none; min-height: 0; gap: 8px; padding: 8px 0; }
+.sessionCompact .voiceOrb { width: 64px; height: 64px; }
+.sessionCompact .voiceOrb svg { width: 28px; height: 28px; }
+
 .sessionControls svg,
 .mobileBack svg {
   height: 1.2rem;
@@ -1702,7 +1710,7 @@
   background: var(--preview-raised);
   border-top: 1px solid var(--preview-border);
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   min-height: 4.2rem;
   padding: 0.35rem 0.45rem 0.2rem;
 }
@@ -1830,3 +1838,6 @@
     transform: scale(0.76);
   }
 }
+.progressFilterRow { display: flex; flex-wrap: wrap; gap: 8px; }
+.progressFilter { border: 1px solid #36515b; border-radius: 12px; padding: 8px 12px; min-height: 48px; color: #dce8ec; background: #111c24; font-size: 13px; }
+.progressFilter[aria-pressed="true"] { border-color: #52dcff; background: #183440; color: #65e1ff; }

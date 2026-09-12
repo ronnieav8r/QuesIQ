@@ -2,7 +2,14 @@
 
 ## Active Interview Implementation Plan
 
-For Interview work, first read
+Interview mobile v1 is the user's exclusive current QuesIQ priority until the
+user explicitly changes it. Keep work within the Interview lane and exclude
+Study, DPE, NCLEX, Quira, content production, broad platform expansion, and
+production integration unless shared infrastructure is strictly necessary to
+verify Interview behavior.
+
+For Interview work, first read `PROJECT_STATE.md` as the concise restart
+pointer, then
 `docs/rebuild/INTERVIEW_IMPLEMENTATION_ROADMAP_2026-09-06.md` and
 `docs/rebuild/INTERVIEW_EXECUTION_STATUS.md`. The user approved sequential
 implementation on 2026-09-06. This roadmap overrides older Interview planning
@@ -19,10 +26,17 @@ correction round rather than repeating blindly. Record model/effort and outcomes
 Keep shared-file/schema/auth changes serialized and preserve existing work.
 No direct PC control, paid model runs, audio/operator tests, or deployment is
 authorized by the roadmap alone. Keep the framed silent test bed as the default.
+Apple Developer Program enrollment is an external device-signing gate, not a
+reason to skip the approved local task order or claim iPhone readiness.
 
 Use `docs/README.md` for the document map.
-Read `docs/rebuild/HANDOFF.md`, `docs/rebuild/CURRENT_STATUS.md`, and
-`docs/rebuild/DECISIONS.md` before broad resume exploration.
+For broad platform exploration, consult relevant sections of
+`docs/rebuild/HANDOFF.md`, `docs/rebuild/CURRENT_STATUS.md`, and
+`docs/rebuild/DECISIONS.md`. For a focused Interview resume, the state pointer,
+execution ledger and active roadmap are the entry point; read historical
+sections only when needed to resolve a specific question.
+At meaningful milestones, update the ledger and refresh `PROJECT_STATE.md`
+together. The pointer must not become a competing acceptance ledger.
 Read `docs/rebuild/INTERVIEW_REGRESSION.md` before changing or relying on
 the Interview local regression gate.
 Read `docs/platform/ONE_SERVICE_PLATFORM.md` and
@@ -31,10 +45,11 @@ changing route structure, or editing shared platform/auth/schema files.
 Read `docs/rebuild/BRANCHING_AND_RELEASES.md` before changing production branch
 or deploy flow.
 
-The active manager workspace is
-`C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-manager`. The older
-`C:\Users\weeks\Documents\github\QuesIQ` checkout is reference/archive unless a
-manager explicitly says otherwise.
+Historical workspace references:
+`C:\Users\weeks\Documents\github\QuesIQ-workspace\QuesIQ-manager` and
+`C:\Users\weeks\Documents\github\QuesIQ` are not the active Interview
+checkout. Their existence does not authorize migration or retirement. Use this
+E: checkout for local Interview work and the umbrella routing for other lanes.
 
 Older planning docs such as `docs/rebuild/REBUILD_PLAN.md`,
 `docs/rebuild/NEXT_STEPS.md`, and `docs/strategy/*` are historical guidance.
@@ -48,8 +63,9 @@ They should not override the active docs listed above.
   product lanes.
 - Bubble and older handoffs are reference material, not implementation
   constraints.
-- Use direct OpenAI Realtime first for the coded browser voice beta; keep VAPI as
-  fallback unless the current decisions docs change.
+- Older Realtime-first/VAPI guidance describes the historical browser beta.
+  The approved Interview roadmap controls current voice-engine work; it does
+  not itself authorize provider changes or paid tests.
 - Keep shared auth/account/platform code generic. Keep product-specific session,
   evaluation, progression, content, prompt, and product data in product-owned
   lanes keyed by the shared Auth.js user id.

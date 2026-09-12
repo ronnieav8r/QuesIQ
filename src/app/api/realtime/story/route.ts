@@ -1,3 +1,4 @@
+import { assertRealtimeBetaAllowed, InterviewLimitError } from "@/server/interview/beta-safety";
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
@@ -55,6 +56,10 @@ export async function POST(request: Request) {
   }
 
   const promptConfig = await getActivePromptConfig("story_conversation_realtime");
+  try { await assertRealtimeBetaAllowed(); } catch (error) {
+    if (error instanceof InterviewLimitError) return NextResponse.json({ error: { code: error.code, message: error.message, retryable: false, requestId: crypto.randomUUID(), limit: error.outcome } }, { status: error.status });
+    throw error;
+  }
   const aiRun = await startAiRun({
     model: promptConfig.model,
     promptConfigId: promptConfig.id,

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import type { InterviewContext } from "@/product/interview-types";
 import { getDb } from "@/server/db/client";
@@ -27,6 +27,7 @@ export async function saveResume(
     resumeSummarySourceHash: null,
     resumeSummaryVersion: null,
     resumeText: resume.text ?? null,
+    resumeConfirmedAt: null,
     updatedAt: now,
     userId,
   };
@@ -35,7 +36,7 @@ export async function saveResume(
     .insert(profiles)
     .values(values)
     .onConflictDoUpdate({
-      set: values,
+      set: { ...values, preparationRevision: sql`${profiles.preparationRevision} + 1` },
       target: profiles.userId,
     })
     .returning({
@@ -66,6 +67,8 @@ export async function clearResume(userId: string) {
       resumeSummarySourceHash: null,
       resumeSummaryVersion: null,
       resumeText: null,
+      resumeConfirmedAt: null,
+      preparationRevision: sql`${profiles.preparationRevision} + 1`,
       updatedAt: new Date(),
     })
     .where(eq(profiles.userId, userId))

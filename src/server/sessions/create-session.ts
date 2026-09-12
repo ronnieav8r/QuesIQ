@@ -4,7 +4,7 @@ import type { SessionSetupSnapshot } from "@/product/interview-types";
 import { markJobTargetUsed } from "@/server/job-targets/job-targets";
 import { markQuestionAttemptsStarted } from "@/server/interview/question-bank";
 
-export async function createSession(snapshot: SessionSetupSnapshot, userId: string) {
+export async function createSession(snapshot: SessionSetupSnapshot, userId: string, provenance: "learner" | "test_tunnel" | "synthetic" | "legacy_unknown" = "legacy_unknown") {
   const selectedQuestionQueue = snapshot.selectedQuestionQueueContext?.length
     ? snapshot.selectedQuestionQueueContext
     : snapshot.selectedQuestionContext
@@ -14,6 +14,8 @@ export async function createSession(snapshot: SessionSetupSnapshot, userId: stri
     .insert(sessions)
     .values({
       contextSnapshot: snapshot,
+      practiceProvenance: provenance,
+      provenanceVersion: provenance === "legacy_unknown" ? null : 1,
       modeKey: snapshot.modeKey,
       questionTypeKey: snapshot.questionTypeKey,
       selectedQuestionId: selectedQuestionQueue[0]?.id,

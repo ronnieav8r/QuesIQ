@@ -8,7 +8,7 @@ import {
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request?: Request) {
   const appSession = await requireAdminSession();
 
   if (!appSession) {
@@ -16,8 +16,15 @@ export async function GET() {
   }
 
   try {
-    const csv = interviewInspectionRunsToCsv(await listInterviewInspectionRuns(100));
+    const runs = await listInterviewInspectionRuns(100);
     const date = new Date().toISOString().slice(0, 10);
+    if (request && new URL(request.url).searchParams.get("format") === "json") {
+      return NextResponse.json({ runs }, { headers: {
+        "Cache-Control": "no-store",
+        "Content-Disposition": `attachment; filename="quesiq-interview-inspection-${date}.json"`,
+      } });
+    }
+    const csv = interviewInspectionRunsToCsv(runs);
 
     return new NextResponse(`\uFEFF${csv}`, {
       headers: {

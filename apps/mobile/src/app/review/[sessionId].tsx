@@ -12,16 +12,21 @@ import { reviewError, useRequestReview, useReview } from "@/lib/review-history";
 import { colors, radius, spacing } from "@/theme/tokens";
 
 export default function ReviewScreen() {
-  const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
+  const { sessionId, attemptId, turnIndex } = useLocalSearchParams<{ sessionId: string; attemptId?: string; turnIndex?: string }>();
   const reviewQuery = useReview(sessionId); const requestReview = useRequestReview(sessionId); const [showTranscript, setShowTranscript] = useState(false); const [confirmation, setConfirmation] = useState(false); const [linkedTurn, setLinkedTurn] = useState<string>();
   if (reviewQuery.isLoading) return <LoadingState label="Opening review…" />;
   if (reviewQuery.isError || !reviewQuery.data) return <ErrorState message={reviewError(reviewQuery.error)} onRetry={() => reviewQuery.refetch()} />;
   const session = reviewQuery.data; const review = session.evaluation; const overall = review?.scores.length ? Math.round(review.scores.reduce((sum, score) => sum + score.score, 0) / review.scores.length * 20) : undefined;
+  const linkedEvidence = session.progressEvidence?.find(row => attemptId ? row.id === attemptId : turnIndex !== undefined && row.turnIndex === Number(turnIndex));
   return <Screen eyebrow="Saved review" title={session.targetRole || "Interview practice"} trailing={<Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()} style={styles.back}><ArrowLeft color={colors.text} size={22} /></Pressable>} refreshControl={<RefreshControl colors={[colors.cyan]} onRefresh={() => reviewQuery.refetch()} refreshing={reviewQuery.isRefetching} tintColor={colors.cyan} />}>
     <Card title="Review status"><Text style={styles.body}>{requestReview.errorMessage ?? session.reviewAccess.message}</Text>{session.reviewAccess.canRequest ? <Button disabled={requestReview.isPending} label={requestReview.isPending ? "Requesting review…" : confirmation ? "Confirm evaluation request" : "Request review"} onPress={() => { if (!confirmation) setConfirmation(true); else { setConfirmation(false); requestReview.mutate(); } }} /> : null}</Card>
     {confirmation ? <Text style={styles.muted}>This explicitly requests an AI evaluation and may incur AI usage.</Text> : null}
+    {linkedEvidence ? <Card accent="cyan" title="Linked supporting answer"><Text style={styles.dimensionLabel}>{linkedEvidence.question}</Text><Text style={styles.muted}>{linkedEvidence.classification === "guided_retry" ? "Guided retry" : linkedEvidence.classification === "repeated" ? "Repeated practice" : "Initial answer"}</Text><Text style={styles.body}>{linkedEvidence.answer}</Text>{linkedEvidence.finding ? <Text style={styles.body}>{linkedEvidence.finding}</Text> : null}{linkedEvidence.improvement ? <Text style={styles.insight}>{linkedEvidence.improvement}</Text> : null}</Card> : attemptId || turnIndex !== undefined ? <Text style={styles.muted}>This exact evidence link is unavailable. The historical transcript remains below.</Text> : null}
+    {session.provenance !== "learner" ? <Text style={styles.muted}>Historical provenance is {session.provenance ?? "unknown"}. This record does not establish verified progress.</Text> : null}
+    {session.preparationHistory?.length ? <Card title="Preparation copied for this session">{session.preparationHistory.map((item, index) => <Text key={`${item.title}-${index}`} style={styles.muted}>{item.title} · revision {item.revision ?? "unknown"} · {item.status === "deleted" ? "Deleted from your library. This historical copy remains; it is not used in future practice." : item.status === "changed" ? "Changed since this session; the original copy is preserved." : "Saved historical copy"}</Text>)}</Card> : null}
     {review ? <ReviewContent onOpenTranscript={(id) => { setLinkedTurn(id); setShowTranscript(true); }} overall={overall} session={session} /> : null}
     <AttemptComparison attempts={session.attempts} />
+    <Button label="Save questions from this session" variant="secondary" onPress={() => router.push({ pathname: "/questions", params: { sessionId } })} />
     <Transcript linkedTurn={linkedTurn} open={showTranscript} onToggle={() => setShowTranscript((value) => !value)} session={session} />
   </Screen>;
 }

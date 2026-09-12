@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 import type {
   CoachingMemoryRecord,
@@ -224,6 +224,8 @@ export async function updateStory(
   const [story] = await getDb()
     .update(stories)
     .set({
+      revision: sql`${stories.revision} + 1`,
+      reviewedAt: null,
       actions: outline.actions,
       alternateSpins: outline.alternateSpins,
       categories: outline.categories,

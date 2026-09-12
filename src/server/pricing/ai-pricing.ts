@@ -24,6 +24,7 @@ type PricingInput = {
 
 function toPricingRecord(row: typeof aiPricing.$inferSelect): AiPricingRecord {
   return {
+    audioBilling: row.audioBilling ?? undefined,
     active: row.active,
     cachedInputMicroUsdPerMillion: row.cachedInputMicroUsdPerMillion ?? undefined,
     createdAt: row.createdAt.toISOString(),

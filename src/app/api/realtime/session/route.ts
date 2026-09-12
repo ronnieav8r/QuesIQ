@@ -1,4 +1,6 @@
+import { assertRealtimeBetaAllowed, InterviewLimitError } from "@/server/interview/beta-safety";
 import { NextResponse } from "next/server";
+import { mockInterviewSpokenContract, usesMockInterviewPolicy } from "@/product/mock-interview-policy";
 
 import type {
   CoachingMemoryRecord,
@@ -17,7 +19,6 @@ import {
   getOpenAiRealtimeApiKey,
 } from "@/server/openai/keys";
 import {
-  getOrCreateInterviewResumeSummary,
   type ResumeSummaryResult,
 } from "@/server/profiles/resume-summary";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
@@ -88,7 +89,7 @@ function jobDescriptionExcerpt(snapshot?: SessionSetupSnapshot) {
   return snapshot?.interviewContext.jobDescription?.trim().slice(0, 1500);
 }
 
-function formatResumeSummary(summary?: InterviewResumeSummary) {
+function formatResumeSummary(summary?: InterviewResumeSummary, mockInterview = false) {
   if (!summary) {
     return undefined;
   }
@@ -122,7 +123,9 @@ function formatResumeSummary(summary?: InterviewResumeSummary) {
         .join(" | ") || "Not provided"
     }.`,
     `Gaps or areas to probe: ${summary.gapsOrAreasToProbe.join(" | ") || "Not provided"}.`,
-    "Use this quietly to ask role-relevant questions and give better coaching. Do not read this summary aloud unless the candidate asks about a specific detail.",
+    mockInterview
+      ? "Use this quietly for role-relevant interview questions, not answer hints or spoken achievements. Do not read this summary aloud."
+      : "Use this quietly to ask role-relevant questions and give better coaching. Do not read this summary aloud unless the candidate asks about a specific detail.",
   ].join(" ");
 }
 
@@ -131,7 +134,7 @@ function formatResumeContext(
   summary?: InterviewResumeSummary,
   unavailableReason?: string,
 ) {
-  const summaryContext = formatResumeSummary(summary ?? snapshot?.interviewContext.resumeSummary);
+  const summaryContext = formatResumeSummary(summary ?? snapshot?.interviewContext.resumeSummary, usesMockInterviewPolicy(snapshot));
 
   if (summaryContext) {
     return summaryContext;
@@ -174,6 +177,7 @@ export function buildQueInstructions(
   resumeSummary?: InterviewResumeSummary,
   resumeSummaryUnavailableReason?: string,
 ) {
+  const mockInterview = usesMockInterviewPolicy(snapshot);
   const role = snapshot?.interviewContext.targetRole || "the user's target role";
   const company = snapshot?.interviewContext.targetCompany || "an unspecified company";
   const jobDescriptionContext = jobDescriptionExcerpt(snapshot);
@@ -236,7 +240,7 @@ export function buildQueInstructions(
   return [
     promptConfig.instructions,
     `Practice mode: ${modeLabel}.`,
-    promptComponents?.mode?.promptInstructions
+    !mockInterview && promptComponents?.mode?.promptInstructions
       ? `Mode instructions: ${promptComponents.mode.promptInstructions}`
       : undefined,
     `Interviewer style: ${styleLabel}.`,
@@ -247,20 +251,20 @@ export function buildQueInstructions(
     promptComponents?.questionType?.promptInstructions
       ? `Question-focus instructions: ${promptComponents.questionType.promptInstructions}`
       : undefined,
-    storyContext,
-    introductionContext,
-    storyLibraryContext,
+    mockInterview ? undefined : storyContext,
+    mockInterview ? undefined : introductionContext,
+    mockInterview ? undefined : storyLibraryContext,
     `Target role: ${role}.`,
     `Target company: ${company}.`,
     jobDescriptionContext
       ? `Job target context: Target role: ${role}. Target company: ${company}. Job description focus: ${jobDescriptionContext}.`
       : `Job target context: Target role: ${role}. Target company: ${company}. No job description was provided.`,
-    memory
+    memory && !mockInterview
       ? `Coaching memory: ${memory.summary} Latest focus: ${memory.latestRecommendation}. Recurring patterns: ${memory.recurringPatterns.join(" | ") || "None yet"}. Use this quietly to tailor coaching and question choice. Do not mention stored memory unless the candidate asks.`
       : "No prior coaching memory was provided.",
     formatResumeContext(snapshot, resumeSummary, resumeSummaryUnavailableReason),
     technicalSpecificityGuard(snapshot),
-    strictSpokenTurnContract(snapshot?.modeKey),
+    mockInterview ? mockInterviewSpokenContract : strictSpokenTurnContract(snapshot?.modeKey),
     "Language requirement: speak and respond only in clear American English for the entire session. Never switch to French or another language, even if other session context contains non-English text.",
   ]
     .filter(Boolean)
@@ -361,14 +365,9 @@ export async function POST(request: Request) {
       ? getSessionPromptComponents(effectiveSnapshot)
       : Promise.resolve({} as SessionPromptComponents),
     getCoachingMemory(appUser.id),
-    listStoryLibraryContext(appUser.id),
+    effectiveSnapshot?.frozenStoryLibrary !== undefined ? Promise.resolve(effectiveSnapshot.frozenStoryLibrary) : listStoryLibraryContext(appUser.id),
     effectiveSnapshot
-      ? getOrCreateInterviewResumeSummary({
-        resumeName: effectiveSnapshot.interviewContext.resumeName,
-        resumeParsedAt: effectiveSnapshot.interviewContext.resumeParsedAt,
-        resumeText: effectiveSnapshot.interviewContext.resumeText,
-        userId: appUser.id,
-      })
+      ? Promise.resolve<ResumeSummaryResult>({ summary: effectiveSnapshot.interviewContext.resumeSummary })
       : Promise.resolve<ResumeSummaryResult>({
           unavailableReason: "missing_session_snapshot",
         }),
@@ -425,6 +424,10 @@ export async function POST(request: Request) {
       },
     },
   };
+  try { await assertRealtimeBetaAllowed(); } catch (error) {
+    if (error instanceof InterviewLimitError) return NextResponse.json({ error: { code: error.code, message: error.message, retryable: false, requestId: crypto.randomUUID(), limit: error.outcome } }, { status: error.status });
+    throw error;
+  }
   const aiRun = await startAiRun({
     model: activeRealtimeConfig.model,
     promptConfigId: activeRealtimeConfig.id,

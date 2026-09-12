@@ -9,9 +9,13 @@ export async function getProfile(userId: string): Promise<InterviewContext | und
   const [profile] = await getDb()
     .select({
       jobTargetId: profiles.activeJobTargetId,
+      preparationRevision: profiles.preparationRevision,
+      resumeConfirmedAt: profiles.resumeConfirmedAt,
       jobDescription: profiles.jobDescription,
       preferredName: profiles.preferredName,
       resumeName: profiles.resumeName,
+      resumeMimeType: profiles.resumeMimeType,
+      resumeSize: profiles.resumeSize,
       resumeParsedAt: profiles.resumeParsedAt,
       resumeSummary: profiles.resumeSummary,
       resumeText: profiles.resumeText,
@@ -27,10 +31,14 @@ export async function getProfile(userId: string): Promise<InterviewContext | und
   }
 
   return {
+    preparationRevision: profile.preparationRevision,
+    resumeConfirmedAt: profile.resumeConfirmedAt?.toISOString(),
     jobDescription: profile.jobDescription,
     jobTargetId: profile.jobTargetId ?? undefined,
     preferredName: profile.preferredName,
     resumeName: profile.resumeName ?? undefined,
+    resumeMimeType: profile.resumeMimeType ?? undefined,
+    resumeSize: profile.resumeSize ?? undefined,
     resumeParsedAt: profile.resumeParsedAt?.toISOString(),
     resumeSummary: parseInterviewResumeSummary(profile.resumeSummary),
     resumeText: profile.resumeText ?? undefined,

@@ -1,7 +1,17 @@
+import { interviewLimitOutcomeSchema } from "./limits";
 import { z } from "zod";
-import { interviewExecutionConfigSchema } from "./execution";
+import { interviewExecutionConfigSchema, coachingExerciseStateSchema } from "./execution";
+import { coachingServerTimingSchema, coachingTelemetrySchema } from "./telemetry";
+import { preparationSelectionsSchema } from "./story-lab";
+import { questionSelectionSchema } from "./questions";
+import { recommendationSelectionSchema } from "./progress";
+export * from "./progress";
+export * from "./telemetry";
 export * from "./execution";
 export * from "./design";
+export * from "./preparation";
+export * from "./story-lab";
+export * from "./questions";
 
 export const practiceModeKeySchema = z.enum([
   "first_impression",
@@ -24,6 +34,11 @@ export const coachingChoiceIntentSchema = z.enum([
 ]);
 
 export const interviewContextSchema = z.object({
+  resumeMimeType: z.string().optional(),
+  resumeSize: z.number().nonnegative().optional(),
+  preparationRevision: z.number().int().nonnegative().optional(),
+  resumeConfirmedAt: z.string().optional(),
+  resumeText: z.string().optional(),
   jobDescription: z.string(),
   jobTargetId: z.string().optional(),
   preferredName: z.string(),
@@ -34,6 +49,11 @@ export const interviewContextSchema = z.object({
 });
 
 export const sessionSetupSnapshotSchema = z.object({
+  questionSelection: questionSelectionSchema.optional(),
+  recommendationSelection: recommendationSelectionSchema.optional(),
+  preparationSelections: preparationSelectionsSchema.optional(),
+  reviewedMaterialVersions: z.array(z.object({ id: z.string(), kind: z.enum(["story", "introduction"]), revision: z.number().int(), title: z.string() })).optional(),
+  controlledModeVersion: z.literal(1).optional(),
   interviewContext: interviewContextSchema,
   modeKey: practiceModeKeySchema,
   questionTypeKey: questionTypeKeySchema.optional(),
@@ -61,6 +81,7 @@ export const voiceSessionEventSchema = z.object({
 });
 
 export const voiceSessionArtifactSchema = z.object({
+  coachingTelemetry: coachingTelemetrySchema.optional(),
   durationSeconds: z.number().nonnegative().optional(),
   endedAt: z.string(),
   endReason: z.enum(["connection_lost", "start_failed", "user_ended"]).optional(),
@@ -70,6 +91,8 @@ export const voiceSessionArtifactSchema = z.object({
 });
 
 export const chainedCoachingTurnSchema = z.object({
+  limit: interviewLimitOutcomeSchema.optional(),
+  exerciseState: coachingExerciseStateSchema.optional(),
   done: z.boolean(),
   feedback: z.string().optional(),
   feedbackAudioBase64: z.string().optional(),
@@ -94,6 +117,7 @@ export const chainedCoachingTurnSchema = z.object({
     passed: z.boolean(),
   }),
   pipeline: z.object({
+    telemetry: coachingServerTimingSchema.optional(),
     completedAt: z.string(),
     responseAndSpeechMs: z.number().nonnegative(),
     textModel: z.string(),
@@ -174,6 +198,9 @@ export const coachingAttemptSchema = z.object({
   semanticQuality: z.literal("unreviewed"),
 });
 export const sessionDetailSchema = sessionHistoryItemSchema.extend({
+  provenance: z.string().optional(),
+  preparationHistory: z.array(z.object({ title: z.string(), status: z.enum(["available", "deleted", "changed"]), revision: z.number().optional() })).optional(),
+  progressEvidence: z.array(z.object({ id: z.string(), turnIndex: z.number(), question: z.string(), answer: z.string(), classification: z.enum(["initial", "repeated", "guided_retry"]), finding: z.string().optional(), improvement: z.string().optional() })).optional(),
   reviewAccess: reviewAccessSchema, attempts: z.array(coachingAttemptSchema),
 });
 export type SessionHistorySummary = z.infer<typeof sessionHistorySummarySchema>;
@@ -240,6 +267,7 @@ export const apiErrorSchema = z.object({
   error: z.object({
     code: z.string(),
     message: z.string(),
+    limit: interviewLimitOutcomeSchema.optional(),
     requestId: z.string(),
     retryable: z.boolean(),
   }),
@@ -260,3 +288,4 @@ export type SessionReview = z.infer<typeof sessionReviewSchema>;
 export type SessionSetupSnapshot = z.infer<typeof sessionSetupSnapshotSchema>;
 export type VoiceSessionArtifact = z.infer<typeof voiceSessionArtifactSchema>;
 export type VoiceTranscriptTurn = z.infer<typeof voiceTranscriptTurnSchema>;
+export * from "./limits";

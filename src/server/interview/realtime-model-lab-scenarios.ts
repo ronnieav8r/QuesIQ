@@ -22,6 +22,7 @@ export type RealtimeModelLabScenario = {
 };
 
 export const realtimeModelLabPromptVariants = [
+  "native_mock_v1",
   "production_v1",
   "mini_compact_v1",
   "mini_compact_state_v1",

@@ -23,6 +23,11 @@ export type InterviewRuntimeConfigRecord = {
 
 export const defaultInterviewRuntimeConfigs: InterviewRuntimeConfigRecord[] = [
   {
+    enabled: true, engine: "turn_based", feedbackDepth: "brief", maxAnswerSeconds: 120,
+    maxDurationSeconds: 900, maxTurns: 1, modeKey: "first_impression",
+    textModel: "gpt-5.4-mini", transcriptionModel: "gpt-live-transcribe", ttsModel: "gpt-4o-mini-tts", ttsVoice: "marin",
+  },
+  {
     enabled: true,
     engine: "turn_based",
     feedbackDepth: "brief",
@@ -98,7 +103,7 @@ function toRecord(
 export function fallbackInterviewRuntimeConfig(modeKey: string) {
   return (
     defaultInterviewRuntimeConfigs.find((config) => config.modeKey === modeKey) ?? {
-      ...defaultInterviewRuntimeConfigs[1],
+      ...defaultInterviewRuntimeConfigs.find((config) => config.modeKey === "coaching")!,
       modeKey,
     }
   );

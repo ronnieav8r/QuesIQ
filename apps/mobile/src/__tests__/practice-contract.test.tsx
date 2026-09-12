@@ -10,7 +10,7 @@ const mockSetActiveSession = jest.fn<any>();
 jest.mock("lucide-react-native", () => ({ Check: () => null, ChevronRight: () => null }));
 jest.mock("@react-native-community/netinfo", () => ({ fetch: jest.fn(async () => ({ isConnected: true })) }));
 jest.mock("expo-router", () => ({ router: { push: jest.fn() }, useLocalSearchParams: () => ({}) }));
-jest.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: jest.fn() }) }));
+jest.mock("@tanstack/react-query", () => ({ useQuery: () => ({ data: { materials: [] }, isFetching: false, isError: false }), useQueryClient: () => ({ invalidateQueries: jest.fn() }) }));
 jest.mock("@/lib/bootstrap", () => ({ bootstrapQueryKey: ["bootstrap"], useBootstrap: () => ({ ...mockBootstrapState, refetch: mockRefetch }) }));
 jest.mock("@/providers/auth-provider", () => ({ useAuth: () => ({ request: mockRequest }) }));
 jest.mock("@/providers/session-provider", () => ({ useActiveSession: () => ({ setActiveSession: mockSetActiveSession }) }));
@@ -77,6 +77,34 @@ test("uses the active profile target and stores only a validated server config",
   expect(screen.getAllByRole("radio")[1].props.accessibilityState.checked).toBe(true);
   await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Start live practice" })); });
   expect(mockSetActiveSession).toHaveBeenCalledWith(expect.objectContaining({ id: "session-1", snapshot: expect.objectContaining({ executionConfig: executionConfig(), modeKey: "coaching", questionTypeKey: "technical", styleKey: "friendly" }) }));
+});
+
+test("persists the server-proven controlled First Impression version", async () => {
+  mockBootstrapState.data = bootstrap([{ key: "first_impression", name: "First Impression", description: "I", questionTypeRequired: false, use: "practice" }]);
+  mockRequest.mockResolvedValue({ session: { id: "session-fi" }, executionConfig: { ...executionConfig("first_impression", true, "turn_based"), promptVersions: [{ key: "first_impression_controlled", version: 1 }] } });
+  const screen = await render(<PracticeScreen />);
+  await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Start live practice" })); });
+  expect(mockSetActiveSession).toHaveBeenCalledWith(expect.objectContaining({ id: "session-fi", snapshot: expect.objectContaining({ modeKey: "first_impression", controlledModeVersion: 1 }) }));
+});
+
+test("does not invent a First Impression controlled version for an unsupported turn-based config", async () => {
+  mockBootstrapState.data = bootstrap([{ key: "first_impression", name: "First Impression", description: "I", questionTypeRequired: false, use: "practice" }]);
+  mockRequest.mockResolvedValue({ session: { id: "session-fi" }, executionConfig: executionConfig("first_impression", true, "turn_based") });
+  const screen = await render(<PracticeScreen />);
+  await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Start live practice" })); });
+  expect(mockSetActiveSession).toHaveBeenCalledWith(expect.objectContaining({ snapshot: expect.not.objectContaining({ controlledModeVersion: expect.anything() }) }));
+});
+
+test("Rapid Fire defaults to five, accepts a 1-10 selection, and keeps the server max-turn clamp", async () => {
+  mockBootstrapState.data = bootstrap([{ key: "rapid_fire", name: "Rapid Fire", description: "R", questionTypeRequired: false, use: "practice" }]);
+  const rapidConfig = { ...executionConfig("rapid_fire", true, "turn_based"), effective: { ...executionConfig("rapid_fire", true, "turn_based").effective, maxTurns: 3 }, promptVersions: [{ key: "rapid_fire_controlled", version: 1 }] };
+  mockRequest.mockResolvedValue({ session: { id: "session-rf" }, executionConfig: rapidConfig });
+  const screen = await render(<PracticeScreen />);
+  expect(screen.getByRole("radio", { name: "5 questions" }).props.accessibilityState.checked).toBe(true);
+  await act(async () => { fireEvent.press(screen.getByRole("radio", { name: "8 questions" })); });
+  await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Start live practice" })); });
+  expect(mockRequest).toHaveBeenLastCalledWith("/api/mobile/v1/interview/sessions", expect.objectContaining({ body: expect.stringContaining('"rapidFireQuestionCount":8') }));
+  expect(mockSetActiveSession).toHaveBeenCalledWith(expect.objectContaining({ id: "session-rf", snapshot: expect.objectContaining({ modeKey: "rapid_fire", controlledModeVersion: 1, rapidFireQuestionCount: 3, turnBasedQuestionCount: 3 }) }));
 });
 
 test("rejects an absent or disabled server configuration rather than activating a new session", async () => {

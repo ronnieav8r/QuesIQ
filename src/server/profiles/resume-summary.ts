@@ -41,6 +41,7 @@ export type ResumeSummaryResult = {
 };
 
 type ResumeSummaryInput = {
+  persist?: boolean;
   resumeName?: string;
   resumeParsedAt?: string;
   resumeText?: string;
@@ -209,7 +210,7 @@ export async function getOrCreateInterviewResumeSummary(
   });
 
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const response = await aiRun.fetch("https://api.openai.com/v1/responses", {
       body: JSON.stringify({
         input: [
           {
@@ -238,6 +239,7 @@ export async function getOrCreateInterviewResumeSummary(
         "Content-Type": "application/json",
       },
       method: "POST",
+      signal: AbortSignal.timeout(45000),
     });
     const body = (await response.json()) as ResponsesApiBody;
 
@@ -262,7 +264,7 @@ export async function getOrCreateInterviewResumeSummary(
       targetRole: summary.targetRole,
     };
 
-    await getDb()
+    if (input.persist !== false) await getDb()
       .update(profiles)
       .set({
         resumeSummary: stampedSummary,

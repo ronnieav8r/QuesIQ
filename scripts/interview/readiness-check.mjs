@@ -329,10 +329,10 @@ function run() {
     "resume_summary",
     "resumeSummarySourceHash",
   ]);
-  requireMarkers("Resume upload summary generation", "src/app/api/profile/resume/route.ts", [
+  requireMarkers("Explicit reviewed resume summary generation", "src/app/api/mobile/v1/interview/preparation/resume/summary/route.ts", [
     "getOrCreateInterviewResumeSummary",
-    "resumeSummaryGenerated",
-    "resumeSummaryUnavailable",
+    "createPreparationDraft",
+    "persist: false",
   ]);
   requireMarkers("Realtime resume summary context", "src/app/api/realtime/session/route.ts", [
     "Resume summary context:",

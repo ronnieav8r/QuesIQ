@@ -1,19 +1,22 @@
 import type { PropsWithChildren, ReactNode } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, layout, spacing } from "@/theme/tokens";
 
 /** Presentation only: connection, recording, turn and save lifecycles stay with callers. */
-export function SessionFrame({ active, children, footer, status, timer }: PropsWithChildren<{
-  active: boolean; footer: ReactNode; status: string; timer: string;
+export function SessionFrame({ active, children, footer, keyboardAvoiding = false, status, timer }: PropsWithChildren<{
+  active: boolean; footer: ReactNode; keyboardAvoiding?: boolean; status: string; timer: string;
 }>) {
-  return <SafeAreaView edges={["top", "right", "bottom", "left"]} style={styles.safe}>
+  const body = <>
     <View style={styles.header}>
       <View style={styles.status}><View style={[styles.dot, active && styles.active]} /><Text accessibilityLiveRegion="polite" style={styles.label}>{status}</Text></View>
       <Text accessibilityLabel={`Session time ${timer}`} style={styles.timer}>{timer}</Text>
     </View>
     <ScrollView testID="session-content" style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">{children}</ScrollView>
     <View testID="session-footer" style={styles.footer}>{footer}</View>
+  </>;
+  return <SafeAreaView edges={["top", "right", "bottom", "left"]} style={styles.safe}>
+    {keyboardAvoiding ? <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.safe}>{body}</KeyboardAvoidingView> : body}
   </SafeAreaView>;
 }
 const styles = StyleSheet.create({

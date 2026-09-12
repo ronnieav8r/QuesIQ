@@ -617,6 +617,69 @@
       "when": 1788364800000,
       "tag": "0088_interview_coaching_inspector",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1788948000000,
+      "tag": "0089_interview_preparation",
+      "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1788948000001,
+      "tag": "0090_interview_preparation_drafts",
+      "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1788948000002,
+      "tag": "0091_interview_reviewed_material",
+      "breakpoints": true
+    },
+    {
+      "idx": 91,
+      "version": "7",
+      "when": 1788948000003,
+      "tag": "0092_interview_question_preferences",
+      "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1788948000004,
+      "tag": "0093_interview_evidence",
+      "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1789034400000,
+      "tag": "0094_interview_beta_safety",
+      "breakpoints": true
+    },
+    {
+      "idx": 94,
+      "version": "7",
+      "when": 1789034400001,
+      "tag": "0095_interview_unknown_realtime_cost",
+      "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1789034400002,
+      "tag": "0096_interview_transcription_lifecycle",
+      "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1789034400003,
+      "tag": "0097_interview_audio_billing",
+      "breakpoints": true
     }
   ]
 }

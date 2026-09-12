@@ -10,9 +10,15 @@ import {
 } from "./realtime-model-lab";
 import {
   buildMiniCompactInstructions,
+  isRealtimeModelLabPromptVariant,
   instructionsForLabTurn,
   realtimeModelLabScenarios,
 } from "./realtime-model-lab-scenarios";
+
+test("native Mock inspection keeps the actual policy without per-turn coaching controls", () => {
+  assert.equal(isRealtimeModelLabPromptVariant("native_mock_v1"), true);
+  assert.equal(instructionsForLabTurn("pinned native mock policy", "native_mock_v1", realtimeModelLabScenarios.mock_behavioral_v1.turns[1]), "pinned native mock policy");
+});
 
 test("Realtime model lab accepts only the bounded comparison models", () => {
   assert.equal(isRealtimeModelLabModel("gpt-realtime-2.1"), true);

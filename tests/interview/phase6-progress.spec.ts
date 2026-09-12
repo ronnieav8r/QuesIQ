@@ -1,0 +1,21 @@
+import { expect, test } from "@playwright/test";
+import { signInAsE2EAdmin } from "../e2e/support/auth";
+test("explained suggestions and evidence progress remain mirrored and read-only", async ({ page }, info) => {
+  await signInAsE2EAdmin(page, "/interview/mobile-preview"); await page.goto("/interview/mobile-preview");
+  const writes: string[] = []; page.on("request", request => { if (request.method() !== "GET") writes.push(request.url()); });
+  await page.getByRole("button", { name: "Home", exact: true }).first().click();
+  const phones = page.getByRole("region", { name: "Mobile device previews" });
+  await phones.getByRole("button", { name: "Show another", exact: true }).first().click();
+  await expect(phones.getByText("Your saved review suggested: Make the result clearer.", { exact: true })).toHaveCount(2);
+  await phones.getByRole("button", { name: "View progress", exact: true }).first().click();
+  await phones.getByRole("button", { name: "90 days", exact: true }).first().click();
+  await phones.getByRole("button", { name: "All targets", exact: true }).first().click();
+  await expect(phones.getByText("All targets · 90 days", { exact: true })).toHaveCount(2);
+  await phones.getByRole("button", { name: "Open exact supporting answer", exact: true }).first().click();
+  await expect(phones.getByText("I asked my colleague to explain the issue and documented our agreed next steps.", { exact: true })).toHaveCount(2);
+  await page.setViewportSize({ width: 1440, height: 1400 }); await page.evaluate(() => window.scrollTo(0, 0));
+  await phones.locator('[class*="appViewport"]').evaluateAll(nodes => nodes.forEach(node => { node.scrollTop = 0; }));
+  for (const viewport of await phones.locator('[class*="appViewport"]').all()) expect(await viewport.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+  await phones.screenshot({ path: info.outputPath("p65-progress-frames.png") });
+  expect(writes).toEqual([]);
+});

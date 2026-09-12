@@ -1,3 +1,4 @@
+import { useAuth } from "@/providers/auth-provider";
 import type { SessionSetupSnapshot } from "@quesiq/interview-contracts";
 import { createContext, type PropsWithChildren, useContext, useMemo, useState } from "react";
 
@@ -11,12 +12,16 @@ type SessionContextValue = {
 const SessionContext = createContext<SessionContextValue | undefined>(undefined);
 
 export function SessionProvider({ children }: PropsWithChildren) {
-  const [activeSession, setActiveSessionState] = useState<ActiveSession>();
+  const { user } = useAuth();
+  const [storedSession, setActiveSessionState] = useState<(ActiveSession & { ownerId: string })>();
+  const [accountId, setAccountId] = useState(user?.id);
+  if (accountId !== user?.id) { setAccountId(user?.id); setActiveSessionState(undefined); }
+  const activeSession = storedSession?.ownerId === user?.id ? storedSession : undefined;
   const value = useMemo(() => ({
     activeSession,
     clearActiveSession: () => setActiveSessionState(undefined),
-    setActiveSession: setActiveSessionState,
-  }), [activeSession]);
+    setActiveSession: (session: ActiveSession) => { if (user) setActiveSessionState({ ...session, ownerId: user.id }); },
+  }), [activeSession, user]);
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 

@@ -1,4 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
+import { mockInterviewEvaluationInstructions, usesMockInterviewPolicy } from "@/product/mock-interview-policy";
 
 import { parseSessionEvaluation } from "@/product/session-evaluation";
 import {
@@ -276,6 +277,10 @@ function countAnsweredUserTurns(artifact: VoiceSessionArtifactDraft) {
 }
 
 function getModeSpecificEvaluationInstructions(snapshot: SessionSetupSnapshot) {
+  if (usesMockInterviewPolicy(snapshot)) return mockInterviewEvaluationInstructions;
+  if (snapshot.controlledModeVersion === 1 && snapshot.modeKey === "first_impression") {
+    return "First Impression is a one-question opening introduction exercise. Evaluate the first independent answer for the scorecard; discuss the optional assisted retry separately without replacing the baseline score or claiming an independent score gain. Give role-appropriate feedback on clarity, relevance and concrete support in the actual answer. Do not require STAR or a saved introduction. Never invent achievements or infer personality from the answer.";
+  }
   if (snapshot.modeKey === "rapid_fire") {
     return [
       "This is Rapid Fire turn-based interview practice, not Coaching mode.",
@@ -338,9 +343,11 @@ function buildEvaluationInput(
   memory?: CoachingMemoryRecord,
 ) {
   const speechSummary = getSpeechSummary(artifact);
+  const evidenceOnly = snapshot.frozenStoryLibrary !== undefined;
 
   return {
-    coachingMemory: memory
+    evidenceBoundary: "Assess only the learner's actual saved answers. Preparation, story tags and prior reviews cannot supply missing answer evidence or raise scores.",
+    coachingMemory: !evidenceOnly && memory
       ? {
           evidenceCount: memory.evidenceCount,
           growthAreas: memory.growthAreas,
@@ -421,10 +428,10 @@ function buildEvaluationInput(
     candidateContext: {
       jobDescription: snapshot.interviewContext.jobDescription || "Not provided",
       resumeExcerpt:
-        snapshot.interviewContext.resumeText?.trim().slice(0, 5000) || "Not provided",
+        (!evidenceOnly && snapshot.interviewContext.resumeText?.trim().slice(0, 5000)) || "Not provided",
       resumeName: snapshot.interviewContext.resumeName || "Not provided",
     },
-    storyContext: snapshot.storyContext
+    storyContext: !evidenceOnly && snapshot.storyContext
       ? {
           actions: snapshot.storyContext.actions,
           alternateSpins: snapshot.storyContext.alternateSpins,
@@ -437,7 +444,7 @@ function buildEvaluationInput(
           title: snapshot.storyContext.title,
         }
       : "Not a Story Lab practice session",
-    introductionContext: snapshot.introductionContext
+    introductionContext: !evidenceOnly && snapshot.introductionContext
       ? {
           audience: snapshot.introductionContext.audience,
           background: snapshot.introductionContext.background,
@@ -451,7 +458,7 @@ function buildEvaluationInput(
         }
       : "Not an Introduction Builder practice session",
     savedStoryLibrary:
-      storyLibrary.length > 0
+      !evidenceOnly && storyLibrary.length > 0
         ? storyLibrary.map((story) => ({
             categories: story.categories,
             coachNotes: story.coachNotes,
@@ -485,12 +492,13 @@ async function requestEvaluation(
   answerEvaluations: InterviewAnswerEvaluationRecord[],
   memory?: CoachingMemoryRecord,
   apiKeyOverride?: string,
+  providerFetch: typeof fetch = fetch,
 ) {
   const storyEvaluationConfig = snapshot.storyContext
     ? await getActivePromptConfig("story_practice_evaluation")
     : undefined;
   const modeSpecificInstructions = getModeSpecificEvaluationInstructions(snapshot);
-  const response = await fetch("https://api.openai.com/v1/responses", {
+  const response = await providerFetch("https://api.openai.com/v1/responses", {
     body: JSON.stringify({
       input: [
         {
@@ -836,8 +844,8 @@ async function createSessionEvaluationOnce(
     getSessionPromptComponents(session.contextSnapshot),
   ]);
   const [memory, storyLibrary] = await Promise.all([
-    getCoachingMemory(userId),
-    listStoryLibraryContext(userId),
+    session.contextSnapshot.frozenStoryLibrary !== undefined ? Promise.resolve(undefined) : getCoachingMemory(userId),
+    session.contextSnapshot.frozenStoryLibrary !== undefined ? Promise.resolve([]) : listStoryLibraryContext(userId),
   ]);
   const turnArchetypes = await listTurnArchetypeContext(sessionId);
   const answerEvaluations = await ensureInterviewAnswerEvaluations({
@@ -873,6 +881,9 @@ async function createSessionEvaluationOnce(
     runType: "evaluation",
     sessionId,
     userId,
+  }).catch(async (error) => {
+    await getDb().update(sessions).set({ evaluationStatus: "failed", evaluationError: "Review is deferred. Your completed answers remain saved.", updatedAt: new Date() }).where(and(eq(sessions.id, sessionId),eq(sessions.userId,userId)));
+    throw error;
   });
 
   try {
@@ -887,6 +898,7 @@ async function createSessionEvaluationOnce(
       answerEvaluations,
       memory,
       options.apiKeyOverride,
+      aiRun.fetch,
     );
     result = evaluationResponse.evaluation;
     if (result.coachingMemory) {
@@ -952,6 +964,7 @@ async function createSessionEvaluationOnce(
   const [evaluation] = await getDb()
     .insert(evaluations)
     .values({
+      evaluationSource: options.apiKeyOverride ? "synthetic" : "provider",
       model,
       promptConfigKey: promptConfig.key,
       promptConfigVersion: promptConfig.version,
@@ -962,6 +975,7 @@ async function createSessionEvaluationOnce(
     })
     .onConflictDoUpdate({
       set: {
+        evaluationSource: options.apiKeyOverride ? "synthetic" : "provider",
         model,
         promptConfigKey: promptConfig.key,
         promptConfigVersion: promptConfig.version,

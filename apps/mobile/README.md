@@ -2,6 +2,25 @@
 
 Expo SDK 57 development-build client for the focused iOS and Android Interview experience. It shares the existing Next.js/Postgres backend and stores no OpenAI credential or raw session audio on the device.
 
+Current implementation and handoff: repository `PROJECT_STATE.md` and
+`docs/rebuild/INTERVIEW_EXECUTION_STATUS.md`. Chained Coaching checkpoints
+committed text/diagnostics to account-bound document files and recovers interrupted
+work after restart without resuming recording. Failed saves remain retryable;
+evaluation retry confirmation stays in the saved-review flow. See
+`docs/rebuild/INTERVIEW_P46_RECOVERY_CONTRACT.md` for guarantees and device limits.
+
+Learner Coaching retains full-file speech playback. The P4.5 streaming comparison
+route requires an explicit development setting and never starts audio on mount;
+see `docs/rebuild/INTERVIEW_P45_STREAMING_SPIKE.md`. Local tests/builds do not
+certify physical microphone/speaker, crash durability or iOS installation.
+
+Phase7 safety outcomes stop capture and preserve committed answers, with pending
+save and deferred-review states. See `docs/rebuild/INTERVIEW_PHASE7_CONTRACT.md`.
+Managed transcription cleanup now queues an owned server stop, including late SDP
+responses after unmount; see `docs/rebuild/INTERVIEW_CHAINED_VOICE_SAFETY.md`.
+Real audio/Realtime activation remains blocked pending cost-bound/termination proof;
+local169-test acceptance and Android compile/export do not establish device readiness.
+
 ## Local prerequisites
 
 - Node 24 and npm 11
@@ -49,9 +68,18 @@ microphone -> gpt-live-transcribe WebRTC deltas -> GPT-5.4 Mini
 
 The four choices are Try again, More feedback, Ask Que, and Move on. The
 microphone is disabled while Que is thinking or speaking, captions are hidden
-by default, and background/network loss finalizes a partial transcript for the
-existing on-device artifact recovery flow. Other mobile modes continue using
-the full Realtime voice screen.
+by default, and background/network loss saves only committed transcript turns
+through the existing on-device artifact recovery flow.
+
+Phase5 local backends also use this controlled adapter for First Impression
+(one opening, critique, optional single retry, Finish) and Rapid Fire (selected
+1-10 questions, Done answering, no mid-run feedback). Mock Interview retains
+Realtime, a pinned configurable model, natural follow-ups and review afterward.
+Its committed checkpoints reuse account-safe recovery; late permissions/events
+cannot restart capture after end/background/unmount. Partial deltas are excluded.
+Existing Realtime sessions keep their saved routing. New mode activation is
+local-only; see `docs/rebuild/INTERVIEW_PHASE5_CONTRACT.md` for production and
+human-quality gates. Native Mock has no new typed-answer transport in this slice.
 
 Because `expo-audio` is native, rebuild the Android development client after
 pulling this slice with `npm run dev:mobile:android` before using normal
@@ -93,7 +121,7 @@ npm run mobile:android:proof-log
 npm run test:mobile:proof -- --profile smoke --metrics <adb-logcat-path> --que-audio-heard --history-reopened
 ```
 
-Use `--profile smoke` for the short First Impression run. It accepts a terminal `too_short` review. Use `--profile certification` for the Mock Interview run of at least 120 seconds; that profile requires a completed evaluation. `--session` and `--phrase` remain available as overrides, but normally both values come from the native proof log.
+The historical `--profile smoke` is a short Realtime transport probe that accepts a terminal `too_short` review; it does not certify the new controlled First Impression flow. Use `--profile certification` for an explicitly authorized Mock Interview run of at least 120 seconds; that profile requires a completed evaluation. `--session` and `--phrase` remain available as overrides, but normally both values come from the native proof log. Neither physical profile was run for Phase5 local acceptance.
 
 Both profiles check microphone permission, WebRTC peer/data-channel state, the remote audio track, inbound and outbound audio bytes, audible Que output, both transcript speakers, local Postgres persistence, the displayed phrase, and operator confirmation that the saved review reopened from History after an app restart. Reports and native logs are ignored under `artifacts/mobile-native-proof/`.
 

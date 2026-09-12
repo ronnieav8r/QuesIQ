@@ -1,38 +1,49 @@
 # Current Status
 
-Last updated: 2026-09-06
+Last updated: 2026-09-12
 
-## Active Interview Implementation
+## Current restart direction
 
-`INTERVIEW_IMPLEMENTATION_ROADMAP_2026-09-06.md` is the approved implementation
-plan. `INTERVIEW_EXECUTION_STATUS.md` is the execution ledger and resume pointer.
-Work sequentially in QuesIQ-dev with lowest-suitable-model workers and manager
-acceptance. Prior test results below remain historical, not new-phase evidence.
+The [dev restart pointer](../../PROJECT_STATE.md) and
+[execution ledger](INTERVIEW_EXECUTION_STATUS.md) are authoritative. Provider
+support clarification is deferred; do not resume follow-up or wait for a reply.
+Existing live safeguards remain. Select the next bounded local Interview package
+with the user; none is selected yet. September 12 handoff verification covered
+Git, documents and saved logs only, not new application/runtime testing.
+All older dated entries below are historical evidence.
 
-Phases0/1/3 and Phase2's no-audio implementation are locally accepted. Resume at
-P4.2 via the execution ledger; P4.1 screen alignment is locally accepted.
-Phase2's paid-text/human quality gate remains
-separately gated, as the user explicitly requested moving ahead to Phase3. Native sessions
-pin server configuration/prompt bodies; Coaching and the framed inspector share
-an application-owned controller. Catalog-driven native setup now respects
-disabled modes. Latest gate:50 native tests,11 shared contracts, ownership/API/
-History services, and28 browser tests passed. Typechecks and root lint pass;
-mobile lint exits0 with26 warnings. Local Android debug compilation and Hermes
-export passed without installing/launching an emulator. Candidate-specific contract/fixture and
-mocked service checks pass; candidate prompts remain inspector-only, not active
-learner prompts. History now uses cursor pages/direct detail; safe explicit review
-retry and first/assisted comparison preserve saved provenance. These are not live
-model/audio quality proof. P4.1 shares native/preview tokens, improves insets,
-forms and live scroll/footer layout, and labels mirrored samples honestly.
-Remaining Phase4 work and Phases5-7 are not
-accepted. The candidate contract documents the proposed bounded screening;
-do not infer spending approval from the roadmap.
+## 2026-09-10 Chained voice safety handoff
+
+The approved local follow-up is implemented and accepted within its blocked-path
+fallback. Owned transcription lifecycle/cleanup, explicit audio accounting,
+unknown reservation holds, native stop handling and economics exports are present.
+Final169 native tests, static/services,46 browser scenarios with one worker,
+Android debug compilation and Hermes export pass. Earlier default-worker browser
+transport failures are retained; assertions were not relaxed. See the execution
+ledger for exact logs and INTERVIEW_CHAINED_VOICE_SAFETY.md for interfaces/gaps.
+
+Providers remain disabled: speech bounds and live transcription termination under
+host failure are unverified. No model change, paid call, device testing, deployment
+or commit occurred. Preserve Phase4-7 work; stop at the local handoff. The remaining
+release/operator gates are unchanged except for this added local evidence.
+
+## Earlier Phase7 checkpoint
+
+P7.1-P7.4 are implemented and locally accepted, following accepted Phase4-6.
+The local beta-candidate handoff is the stopping point. Read PROJECT_STATE.md,
+INTERVIEW_EXECUTION_STATUS.md and INTERVIEW_PHASE7_CONTRACT.md for current evidence.
+Final checks pass46 browser cases,167 native tests, contracts/services, typechecks,
+lint, Android debug compilation and Hermes export. Live-provider activation remains
+blocked; no paid call, physical test, commit or deployment occurred. P6.6 is excluded.
+INTERVIEW_V1_REMAINING_GATES.md owns the separate quality/economics, audio bounds,
+Realtime termination, physical-device, signing, hosting, privacy and release gates.
+The dated sections below are historical context, not current resume instructions.
 
 ## 2026-09-02 Interview Test Bed Default
 
 - Active local checkout: `QuesIQ-dev`, branch `codex/interview-mobile`.
 - Canonical local test bed: `http://127.0.0.1:3100/interview/mobile-preview`.
-  It opens directly to **Test Coaching · no audio**, with mirrored iPhone/Pixel
+  It opens directly to **Test Coaching Â· no audio**, with mirrored iPhone/Pixel
   frames in Fit view. Fresh loads use Simulation without starting a test or
   making provider calls. Reset preview returns to the framed test view and Fit.
 - Keep conversation, choices, retry, End, and saved-test controls inside the

@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 import type {
   IntroductionPracticeCoachingEntry,
@@ -81,6 +81,8 @@ export async function updateIntroduction(
   const [introduction] = await getDb()
     .update(introductions)
     .set({
+      revision: sql`${introductions.revision} + 1`,
+      reviewedAt: null,
       ...input,
       updatedAt: now,
     })

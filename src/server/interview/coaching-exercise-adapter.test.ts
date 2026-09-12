@@ -2,6 +2,21 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { planLegacyCoachingTurn, controlledCoachingPresentation } from "./coaching-exercise-adapter";
 
+test("Rapid Fire at one and ten questions advances exactly once per answer and never evaluates between turns", () => {
+  for (const limit of [1, 10]) {
+    const rows: Array<{ turnIndex: number; status: string; result: Record<string, unknown> }> = [];
+    for (let index = 0; index <= limit; index++) {
+      const control = planLegacyCoachingTurn({ rows, turnIndex: index, limit, mode: "rapid_fire", ...(index ? { answer: "My committed answer" } : {}) });
+      assert.equal(control.plan.operation, index === limit ? "none" : "question");
+      const result = controlledCoachingPresentation(control, { question: `Question ${index + 1}?`, feedback: "Model feedback must be suppressed." });
+      assert.equal(result.feedback, undefined);
+      assert.equal(result.done, index === limit);
+      assert.equal(result.exerciseState.primaryQuestionIndex, Math.min(index + 1, limit));
+      rows.push({ turnIndex: index, status: "completed", result });
+    }
+  }
+});
+
 test("legacy explicit commands preserve exact questions, count primary questions, and complete at the limit", () => {
   const rows: Array<{ turnIndex: number; status: string; result: Record<string, unknown> }> = [];
   const run = (answer?: string, choice?: "try_again" | "more_feedback" | "ask_que" | "move_on") => {

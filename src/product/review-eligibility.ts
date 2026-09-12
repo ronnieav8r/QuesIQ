@@ -1,4 +1,5 @@
 import type { SessionSetupSnapshot, VoiceSessionArtifactDraft } from "@/product/interview-types";
+import { usesMockInterviewPolicy } from "./mock-interview-policy";
 
 const minimumStandardReviewDurationSeconds = 120;
 const minimumIntroReviewDurationSeconds = 30;
@@ -11,6 +12,7 @@ function countUserTranscriptTurns(artifact: Pick<VoiceSessionArtifactDraft, "tra
 }
 
 export function getMinimumReviewDurationSeconds(snapshot: SessionSetupSnapshot) {
+  if (usesMockInterviewPolicy(snapshot)) return minimumStandardReviewDurationSeconds;
   if (isAnswerBasedReview(snapshot)) {
     return 0;
   }
@@ -21,6 +23,7 @@ export function getMinimumReviewDurationSeconds(snapshot: SessionSetupSnapshot) 
 }
 
 function isAnswerBasedReview(snapshot: SessionSetupSnapshot) {
+  if (usesMockInterviewPolicy(snapshot)) return false;
   return (
     snapshot.modeKey === "rapid_fire" ||
     snapshot.modeKey === "hands_free_coaching" ||
@@ -34,6 +37,9 @@ export function isArtifactTooShortToReview(
   snapshot: SessionSetupSnapshot,
   artifact: Pick<VoiceSessionArtifactDraft, "durationSeconds" | "transcript">,
 ) {
+  if (usesMockInterviewPolicy(snapshot)) {
+    return !Number.isFinite(artifact.durationSeconds) || (artifact.durationSeconds ?? 0) < minimumStandardReviewDurationSeconds || countUserTranscriptTurns(artifact) === 0;
+  }
   if (isAnswerBasedReview(snapshot)) {
     return countUserTranscriptTurns(artifact) < minimumTurnBasedAnsweredTurns;
   }

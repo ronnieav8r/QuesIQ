@@ -2,7 +2,9 @@ import { and, desc, eq, inArray, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { deriveCoachingAttempts, sessionHistoryPageSchema, type ReviewAccess, type SessionHistoryPage } from "@quesiq/interview-contracts";
 import { getDb } from "@/server/db/client";
-import { aiRuns, evaluations, interviewAnswerEvaluations, sessions } from "@/server/db/schema";
+import { aiRuns, evaluations, interviewAnswerEvaluations, sessions, stories, introductions } from "@/server/db/schema";
+import { readOwnedEvidence } from "@/server/interview/useful-progress";
+import { projectEvidence } from "@/server/interview/evidence-projection";
 import { getOwnedSessionHistoryItem } from "./list-owned-sessions";
 import { listCoachingOperations } from "@/server/interview/coaching-operations";
 import { hasUsableInterviewAnswerContent } from "@/product/interview-meta-input";
@@ -32,7 +34,7 @@ export async function listMobileHistory(userId: string, page: ReturnType<typeof 
     targetRole: sql<string>`${sessions.contextSnapshot}->'interviewContext'->>'targetRole'`,
     targetCompany: sql<string>`${sessions.contextSnapshot}->'interviewContext'->>'targetCompany'`,
     durationSeconds: sql<number | null>`(${sessions.voiceArtifact}->>'durationSeconds')::double precision`,
-  }).from(sessions).where(and(eq(sessions.userId, userId), inArray(sessions.modeKey, ["coaching", "rapid_fire", "mock_interview", "first_impression"]),
+  }).from(sessions).where(and(eq(sessions.userId, userId), inArray(sessions.practiceProvenance, ["learner", "legacy_unknown"]), inArray(sessions.modeKey, ["coaching", "rapid_fire", "mock_interview", "first_impression"]),
     page.cursor ? or(sql`${sessions.createdAt} < ${page.cursor.at}::timestamptz`,
       and(sql`${sessions.createdAt} = ${page.cursor.at}::timestamptz`, lt(sessions.id, page.cursor.id))) : undefined))
     .orderBy(desc(sessions.createdAt), desc(sessions.id)).limit(page.limit + 1);
@@ -74,5 +76,14 @@ export async function getMobileSessionDetail(sessionId: string, userId: string) 
   const attempts = deriveCoachingAttempts({ targetId: sessionId, rows: await listCoachingOperations(sessionId, userId),
     promptProfile: snapshot?.executionConfig ? "current" : "legacy", model: snapshot?.executionConfig?.effective.textModel,
     promptVersions: snapshot?.executionConfig?.promptVersions });
-  return { ...session, reviewAccess: (await getMobileReviewAccess(sessionId, userId))!, attempts };
+  const evidence = await readOwnedEvidence(userId);
+  const source = evidence.sessions.find(row => row.id === sessionId);
+  const projection = projectEvidence(evidence, { targetId: null, allTargets: true, range: "all" });
+  const preparationHistory = await Promise.all((snapshot?.reviewedMaterialVersions ?? []).map(async item => {
+    const table = item.kind === "story" ? stories : introductions;
+    const [current] = await getDb().select({ revision: table.revision }).from(table).where(and(eq(table.id, item.id), eq(table.userId, userId)));
+    return { title: item.title, revision: item.revision, status: !current ? "deleted" as const : current.revision === item.revision ? "available" as const : "changed" as const };
+  }));
+  return { ...session, reviewAccess: (await getMobileReviewAccess(sessionId, userId))!, attempts, provenance: source?.practiceProvenance ?? "legacy_unknown", preparationHistory,
+    progressEvidence: projection.attempts.filter(row => row.sessionId === sessionId).map(row => ({ id: row.id, turnIndex: row.turnIndex, question: row.question, answer: row.answer, classification: row.classification, finding: row.review?.finding, improvement: row.review?.improvement })) };
 }

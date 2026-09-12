@@ -36,6 +36,21 @@ test.afterEach(async ({ page }, testInfo) => {
   await expectNoBrowserErrors(page, testInfo);
 });
 
+test("inspection JSON diagnostics export retains the admin boundary and CSV compatibility", async ({ page, playwright, baseURL }) => {
+  const json = await page.request.get("/api/admin/interview/inspection-runs/export?format=json");
+  expect(json.status()).toBe(200);
+  expect(json.headers()["cache-control"]).toBe("no-store");
+  expect(json.headers()["content-disposition"]).toContain(".json");
+  expect(Array.isArray((await json.json()).runs)).toBe(true);
+  const csv = await page.request.get("/api/admin/interview/inspection-runs/export");
+  expect(csv.status()).toBe(200);
+  expect(csv.headers()["content-type"]).toContain("text/csv");
+  const anonymous = await playwright.request.newContext({ baseURL });
+  try {
+    expect((await anonymous.get("/api/admin/interview/inspection-runs/export?format=json")).status()).toBe(403);
+  } finally { await anonymous.dispose(); }
+});
+
 test("Local root opens Interview and establishes dev access without login", async ({
   context,
   page,

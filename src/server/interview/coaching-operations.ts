@@ -1,3 +1,4 @@
+import { withInterviewOperation } from "@/server/interview/operation-context";
 import { and, asc, eq } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import { getDb } from "@/server/db/client";
@@ -50,7 +51,7 @@ export async function runCoachingOperation<T extends Record<string, unknown>>(in
       : "This turn did not complete safely. End and save this session, then start a new one.");
   }
   try {
-    const result = await input.generate();
+    const result = await withInterviewOperation(`coaching:${claimed.id}`, input.generate);
     await db.transaction(async (tx) => {
       // Serialize final publication against End/save. A late response never revives an ended run.
       if (input.parent === "session") {

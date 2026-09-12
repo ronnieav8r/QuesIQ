@@ -3,6 +3,7 @@ import type {
   VoiceSessionArtifact,
   VoiceTranscriptTurn,
 } from "@quesiq/interview-contracts";
+import { interviewExecutionConfigSchema } from "@quesiq/interview-contracts";
 import NetInfo from "@react-native-community/netinfo";
 import { useKeepAwake } from "expo-keep-awake";
 import {
@@ -27,6 +28,7 @@ import {
 } from "react-native-webrtc";
 
 import { Button } from "@/components/ui/button";
+import { limitPauseMessage, responseLimitError } from "@/lib/session-limits";
 import {
   claimFinalization,
   createVerificationPhrase,
@@ -69,17 +71,31 @@ function event(type: string) {
 
 export function NativeVoiceSession({
   onAbandon,
+  onArtifactCheckpoint,
   onArtifactFinalized,
+  recoveryWarning = false,
   sessionId,
   snapshot,
 }: {
   onAbandon: () => void;
+  onArtifactCheckpoint?: (artifact: VoiceSessionArtifact) => void;
   onArtifactFinalized: (artifact: VoiceSessionArtifact, metrics: ProofMetrics) => void;
+  recoveryWarning?: boolean;
   sessionId: string;
   snapshot: SessionSetupSnapshot;
 }) {
   useKeepAwake("quesiq-live-interview");
   const { fetchWithAuth } = useAuth();
+  const fetchWithAuthRef = useRef(fetchWithAuth);
+  const finalizedCallbackRef = useRef(onArtifactFinalized);
+  const checkpointCallbackRef = useRef(onArtifactCheckpoint);
+  const abandonCallbackRef = useRef(onAbandon);
+  const snapshotRef = useRef(snapshot);
+  useEffect(() => { fetchWithAuthRef.current = fetchWithAuth; }, [fetchWithAuth]);
+  useEffect(() => { finalizedCallbackRef.current = onArtifactFinalized; }, [onArtifactFinalized]);
+  useEffect(() => { checkpointCallbackRef.current = onArtifactCheckpoint; }, [onArtifactCheckpoint]);
+  useEffect(() => { abandonCallbackRef.current = onAbandon; }, [onAbandon]);
+  useEffect(() => { snapshotRef.current = snapshot; }, [snapshot]);
   const [phase, setPhase] = useState<Phase>("requesting_microphone");
   const [elapsed, setElapsed] = useState(0);
   const [muted, setMuted] = useState(false);
@@ -91,6 +107,9 @@ export function NativeVoiceSession({
   const [startedMs] = useState(() => Date.now());
   const [initialEvent] = useState(() => event("client.session.started"));
   const [verificationPhrase] = useState(() => createVerificationPhrase(sessionId));
+  const execution = interviewExecutionConfigSchema.safeParse(snapshot.executionConfig);
+  const maxAnswerSeconds = execution.success ? execution.data.effective.maxAnswerSeconds : undefined;
+  const maxDurationSeconds = execution.success ? execution.data.effective.maxDurationSeconds : undefined;
 
   const pcRef = useRef<RTCPeerConnection | undefined>(undefined);
   const streamRef = useRef<MediaStream | undefined>(undefined);
@@ -106,7 +125,13 @@ export function NativeVoiceSession({
   const connectionAttemptRef = useRef(false);
   const pendingUserRef = useRef("");
   const responseActiveRef = useRef(false);
+  const pendingFollowUpRef = useRef(false);
   const captureActiveRef = useRef(false);
+  const mountedRef = useRef(true);
+  const attemptEpochRef = useRef(0);
+  const drainTimerRef = useRef<{ resolve: () => void; timer: ReturnType<typeof setTimeout> } | undefined>(undefined);
+  const responseTimersRef = useRef(new Set<ReturnType<typeof setTimeout>>());
+  const answerTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const metricsRef = useRef<ProofMetrics>({
     assistantTranscriptTurns: 0,
     bytesReceived: 0,
@@ -132,9 +157,9 @@ export function NativeVoiceSession({
     sourceId?: string,
   ) => {
     const text = raw?.trim();
-    if (!text) return;
+    if (!text || finalizedRef.current) return false;
     const dedupeKey = `${role}:${sourceId || text.toLowerCase().replace(/\s+/g, " ")}`;
-    if (seenTurnsRef.current.has(dedupeKey)) return;
+    if (seenTurnsRef.current.has(dedupeKey)) return false;
     seenTurnsRef.current.add(dedupeKey);
     const turn: VoiceTranscriptTurn = {
       createdAt: new Date().toISOString(),
@@ -147,6 +172,7 @@ export function NativeVoiceSession({
     setTurns(turnsRef.current);
     if (role === "user") metricsRef.current.userTranscriptTurns += 1;
     else metricsRef.current.assistantTranscriptTurns += 1;
+    return true;
   }, []);
 
   const stopLocalCapture = useCallback(() => {
@@ -169,8 +195,34 @@ export function NativeVoiceSession({
     pcRef.current = undefined;
   }, [stopLocalCapture]);
 
+  const cancelTimers = useCallback(() => {
+    if (drainTimerRef.current) {
+      clearTimeout(drainTimerRef.current.timer);
+      drainTimerRef.current.resolve();
+    }
+    drainTimerRef.current = undefined;
+    for (const timer of responseTimersRef.current) clearTimeout(timer);
+    responseTimersRef.current.clear();
+    if (answerTimerRef.current) clearTimeout(answerTimerRef.current);
+    answerTimerRef.current = undefined;
+  }, []);
+
+  const snapshotArtifact = useCallback((reason: VoiceSessionArtifact["endReason"]) => ({
+    durationSeconds: Math.max(0, Math.round((Date.now() - startedMsRef.current) / 1000)),
+    endedAt: new Date().toISOString(),
+    endReason: reason,
+    events: eventsRef.current.map((entry) => ({ ...entry })),
+    startedAt: startedAtRef.current,
+    transcript: turnsRef.current.map((turn) => ({ ...turn })),
+  } satisfies VoiceSessionArtifact), []);
+
   const readStats = useCallback(async () => {
-    const report = await pcRef.current?.getStats().catch(() => undefined);
+    const peer = pcRef.current;
+    if (!peer) return;
+    const report = await Promise.race([
+      peer.getStats().catch(() => undefined),
+      new Promise<undefined>((resolve) => setTimeout(resolve, 250)),
+    ]);
     if (!report) return;
     const collect = (stat: Record<string, unknown>) => {
       if (stat.type !== "inbound-rtp" && stat.type !== "outbound-rtp") return;
@@ -187,35 +239,44 @@ export function NativeVoiceSession({
 
   const finish = useCallback(async (reason: VoiceSessionArtifact["endReason"]) => {
     if (!claimFinalization(endingRef) || finalizedRef.current) return;
+    const epoch = ++attemptEpochRef.current;
     setPhase("ending");
     addEvent(`client.session.${reason}`);
     // Stop capture before waiting for final transcript events so backgrounding or
     // an interruption can never leave the microphone recording invisibly.
     stopLocalCapture();
     if (responseActiveRef.current && channelRef.current?.readyState === "open") {
-      channelRef.current.send(JSON.stringify({ type: "response.cancel" }));
+      try { channelRef.current.send(JSON.stringify({ type: "response.cancel" })); } catch { /* Transport already ended. */ }
     }
-    await new Promise((resolve) => setTimeout(resolve, 900));
+    // A completed transcript arriving during this short drain is authoritative;
+    // partial deltas are captions only and never become a committed answer.
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, 900);
+      drainTimerRef.current = { resolve, timer };
+    });
+    if (!mountedRef.current || finalizedRef.current || attemptEpochRef.current !== epoch) return;
     await readStats();
-    const pending = pendingUserRef.current.trim();
-    if (pending) addTurn("You", "user", pending);
+    if (!mountedRef.current || finalizedRef.current || attemptEpochRef.current !== epoch) return;
     pendingUserRef.current = "";
+    cancelTimers();
     cleanupTransport();
     finalizedRef.current = true;
-    const artifact: VoiceSessionArtifact = {
-      durationSeconds: Math.max(0, Math.round((Date.now() - startedMsRef.current) / 1000)),
-      endedAt: new Date().toISOString(),
-      endReason: reason,
-      events: eventsRef.current,
-      startedAt: startedAtRef.current,
-      transcript: turnsRef.current,
-    };
+    const artifact = snapshotArtifact(reason);
     if (__DEV__) console.info(`QUESIQ_NATIVE_VOICE_PROOF ${JSON.stringify(metricsRef.current)}`);
-    onArtifactFinalized(artifact, { ...metricsRef.current });
-  }, [addEvent, addTurn, cleanupTransport, onArtifactFinalized, readStats, stopLocalCapture]);
+    finalizedCallbackRef.current(artifact, { ...metricsRef.current });
+  }, [addEvent, cancelTimers, cleanupTransport, readStats, snapshotArtifact, stopLocalCapture]);
+
+  const pauseForSafety = useCallback((message: string, reason = "limit") => {
+    if (endingRef.current || finalizedRef.current) return;
+    addEvent(`client.session.safety_pause.${reason}`);
+    setError(message);
+    void finish("connection_lost");
+  }, [addEvent, finish]);
 
   const startConnection = useCallback(async () => {
     if (connectionAttemptRef.current || endingRef.current || finalizedRef.current) return;
+    const epoch = ++attemptEpochRef.current;
+    const current = () => mountedRef.current && !endingRef.current && !finalizedRef.current && attemptEpochRef.current === epoch;
     connectionAttemptRef.current = true;
     cleanupTransport();
     metricsRef.current.dataChannelOpen = false;
@@ -228,17 +289,18 @@ export function NativeVoiceSession({
     try {
       setPhase("requesting_microphone");
       const stream = await mediaDevices.getUserMedia({ audio: true, video: false });
+      if (!current()) { stream.getTracks().forEach((track) => track.stop()); return; }
       streamRef.current = stream;
       micRef.current = stream.getAudioTracks()[0];
       if (!micRef.current) throw new Error("The microphone did not provide an audio track.");
       micRef.current.onended = () => {
-        if (captureActiveRef.current && !endingRef.current && !finalizedRef.current) {
+        if (current() && captureActiveRef.current) {
           addEvent("microphone.interrupted");
           void finish("connection_lost");
         }
       };
       micRef.current.onmute = () => {
-        if (captureActiveRef.current && !endingRef.current && !finalizedRef.current) {
+        if (current() && captureActiveRef.current) {
           addEvent("microphone.interrupted");
           void finish("connection_lost");
         }
@@ -252,11 +314,24 @@ export function NativeVoiceSession({
       stream.getTracks().forEach((track) => peer.addTrack(track, stream));
       const channel = peer.createDataChannel("oai-events");
       channelRef.current = channel;
+      const scheduleFollowUp = (delay = 0) => {
+        const timer = setTimeout(() => {
+          responseTimersRef.current.delete(timer);
+          if (!current() || !pendingFollowUpRef.current || responseActiveRef.current || channel.readyState !== "open") return;
+          pendingFollowUpRef.current = false;
+          responseActiveRef.current = true;
+          try {
+            channel.send(JSON.stringify({ type: "response.create", response: { instructions: followUpResponseInstructions } }));
+          } catch { responseActiveRef.current = false; }
+        }, delay);
+        responseTimersRef.current.add(timer);
+      };
       const markLiveIfReady = () => {
-        if (metricsRef.current.peerConnected && metricsRef.current.dataChannelOpen) setPhase("live");
+        if (current() && metricsRef.current.peerConnected && metricsRef.current.dataChannelOpen) setPhase("live");
       };
 
       peer.ontrack = (trackEvent: unknown) => {
+        if (!current() || pcRef.current !== peer) return;
         const track = (trackEvent as { track?: MediaStreamTrack }).track;
         if (track?.kind === "audio") {
           metricsRef.current.remoteAudioTrackReceived = true;
@@ -264,6 +339,7 @@ export function NativeVoiceSession({
         }
       };
       peer.onconnectionstatechange = () => {
+        if (!current() || pcRef.current !== peer) return;
         addEvent(`realtime.peer.${peer.connectionState}`);
         if (peer.connectionState === "connected") {
           metricsRef.current.peerConnected = true;
@@ -275,9 +351,11 @@ export function NativeVoiceSession({
         }
       };
       channel.onopen = () => {
+        if (!current() || channelRef.current !== channel || channel.readyState !== "open") return;
         metricsRef.current.dataChannelOpen = true;
         addEvent("data_channel.open");
         markLiveIfReady();
+        responseActiveRef.current = true;
         channel.send(JSON.stringify({
           type: "response.create",
           response: {
@@ -286,6 +364,7 @@ export function NativeVoiceSession({
         }));
       };
       channel.onclose = () => {
+        if (!current() || channelRef.current !== channel) return;
         addEvent("data_channel.close");
         if (captureActiveRef.current && !endingRef.current && !finalizedRef.current) {
           setError("The live voice data channel ended.");
@@ -293,6 +372,7 @@ export function NativeVoiceSession({
         }
       };
       channel.onmessage = (messageEvent: unknown) => {
+        if ((!current() && !endingRef.current) || finalizedRef.current || channelRef.current !== channel) return;
         let message: RealtimeMessage;
         try {
           message = JSON.parse(String((messageEvent as { data: unknown }).data)) as RealtimeMessage;
@@ -302,25 +382,27 @@ export function NativeVoiceSession({
         }
         if (!message.type) return;
         addEvent(message.type);
-        if (isUserSpeechEvent(message.type)) {
+        if (isUserSpeechEvent(message.type) && !endingRef.current) {
           metricsRef.current.speechDetected = true;
           setSpeechDetected(true);
+          if (maxAnswerSeconds && !answerTimerRef.current) {
+            answerTimerRef.current = setTimeout(() => pauseForSafety("This answer reached its configured time limit and has been paused safely.", "answer"), maxAnswerSeconds * 1000);
+          }
         }
         if (message.type === "response.created") responseActiveRef.current = true;
-        if (["response.done", "response.cancelled", "response.output_audio.done"].includes(message.type)) responseActiveRef.current = false;
+        if (["response.done", "response.cancelled"].includes(message.type)) {
+          responseActiveRef.current = false;
+          if (pendingFollowUpRef.current && current()) scheduleFollowUp();
+        }
         if (message.type === "conversation.item.input_audio_transcription.delta") pendingUserRef.current += message.delta || "";
         if (message.type === "conversation.item.input_audio_transcription.completed") {
-          addTurn("You", "user", message.transcript || pendingUserRef.current, message.item_id);
+          if (answerTimerRef.current) clearTimeout(answerTimerRef.current);
+          answerTimerRef.current = undefined;
+          const committed = addTurn("You", "user", message.transcript, message.item_id);
           pendingUserRef.current = "";
-          if (channel.readyState === "open" && !endingRef.current) {
-            setTimeout(() => {
-              if (channel.readyState === "open" && !endingRef.current) {
-                channel.send(JSON.stringify({
-                  type: "response.create",
-                  response: { instructions: followUpResponseInstructions },
-                }));
-              }
-            }, 500);
+          if (committed && channel.readyState === "open" && current()) {
+            pendingFollowUpRef.current = true;
+            scheduleFollowUp(500);
           }
         }
         if (message.type === "response.output_audio_transcript.done") {
@@ -330,24 +412,33 @@ export function NativeVoiceSession({
 
       setPhase("connecting");
       const offer = await peer.createOffer();
+      if (!current() || pcRef.current !== peer) return;
       await peer.setLocalDescription(offer);
-      const response = await fetchWithAuth("/api/mobile/v1/interview/realtime", {
-        body: JSON.stringify({ sdp: offer.sdp, sessionId, snapshot }),
+      if (!current() || pcRef.current !== peer) return;
+      const response = await fetchWithAuthRef.current("/api/mobile/v1/interview/realtime", {
+        body: JSON.stringify({ sdp: offer.sdp, sessionId, snapshot: snapshotRef.current }),
         headers: { Accept: "application/sdp", "Content-Type": "application/json" },
         method: "POST",
       });
       if (!response.ok) {
-        const body = await response.text();
-        throw new Error(body || "Realtime session exchange failed.");
+        const limitError = await responseLimitError(response);
+        if (limitError) {
+          pauseForSafety(limitPauseMessage(limitError.limit), limitError.limit?.reason || "limit");
+          return;
+        }
+        throw new Error("Realtime session exchange failed.");
       }
+      if (!current() || pcRef.current !== peer) return;
+      const answerSdp = await response.text();
+      if (!current() || pcRef.current !== peer) return;
       await peer.setRemoteDescription(new RTCSessionDescription({
-        sdp: await response.text(),
+        sdp: answerSdp,
         type: "answer",
       }));
-      addEvent("client.remote_description_set");
+      if (current() && pcRef.current === peer) addEvent("client.remote_description_set");
     } catch (cause) {
-      cleanupTransport();
-      if (!endingRef.current && !finalizedRef.current) {
+      if (current()) {
+        cleanupTransport();
         setError(cause instanceof Error ? cause.message : "The live session could not start.");
         setPhase("error");
         addEvent("client.session.start_error");
@@ -355,14 +446,17 @@ export function NativeVoiceSession({
     } finally {
       connectionAttemptRef.current = false;
     }
-  }, [addEvent, addTurn, cleanupTransport, fetchWithAuth, finish, sessionId, snapshot]);
+  }, [addEvent, addTurn, cleanupTransport, finish, maxAnswerSeconds, pauseForSafety, sessionId]);
 
   const abandon = useCallback(() => {
     if (endingRef.current || finalizedRef.current) return;
+    endingRef.current = true;
+    attemptEpochRef.current += 1;
     finalizedRef.current = true;
+    cancelTimers();
     cleanupTransport();
-    onAbandon();
-  }, [cleanupTransport, onAbandon]);
+    abandonCallbackRef.current();
+  }, [cancelTimers, cleanupTransport]);
 
   useEffect(() => {
     const timer = setInterval(() => setElapsed(Math.max(0, Math.floor((Date.now() - startedMsRef.current) / 1000))), 1000);
@@ -370,11 +464,31 @@ export function NativeVoiceSession({
   }, []);
 
   useEffect(() => {
+    if (!maxDurationSeconds) return;
+    const remaining = Math.max(0, maxDurationSeconds * 1000 - (Date.now() - startedMsRef.current));
+    const timer = setTimeout(() => pauseForSafety("This practice session reached its configured duration and has been paused safely.", "duration"), remaining);
+    return () => clearTimeout(timer);
+  }, [maxDurationSeconds, pauseForSafety]);
+
+  useEffect(() => {
+    if (!checkpointCallbackRef.current || finalizedRef.current) return;
+    checkpointCallbackRef.current(snapshotArtifact("connection_lost"));
+    const timer = setInterval(() => {
+      if (!finalizedRef.current) checkpointCallbackRef.current?.(snapshotArtifact("connection_lost"));
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [snapshotArtifact]);
+
+  useEffect(() => {
+    if (!finalizedRef.current) checkpointCallbackRef.current?.(snapshotArtifact("connection_lost"));
+  }, [phase, snapshotArtifact, turns]);
+
+  useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state !== "active" && captureActiveRef.current && !finalizedRef.current) void finish("connection_lost");
+      if (state !== "active" && !finalizedRef.current) void finish("connection_lost");
     });
     const unsubscribeNetInfo = NetInfo.addEventListener((state) => {
-      if (state.isConnected === false && captureActiveRef.current && !finalizedRef.current) void finish("connection_lost");
+      if (state.isConnected === false && !finalizedRef.current) void finish("connection_lost");
     });
     return () => {
       subscription.remove();
@@ -383,12 +497,16 @@ export function NativeVoiceSession({
   }, [finish]);
 
   useEffect(() => {
+    mountedRef.current = true;
     const startTimer = setTimeout(() => void startConnection(), 0);
     return () => {
       clearTimeout(startTimer);
+      mountedRef.current = false;
+      attemptEpochRef.current += 1;
+      cancelTimers();
       if (!finalizedRef.current) cleanupTransport();
     };
-  }, [cleanupTransport, startConnection]);
+  }, [cancelTimers, cleanupTransport, startConnection]);
 
   const mins = String(Math.floor(elapsed / 60)).padStart(2, "0");
   const secs = String(elapsed % 60).padStart(2, "0");
@@ -463,6 +581,7 @@ export function NativeVoiceSession({
             </Text>
           </View>
         ) : null}
+        {recoveryWarning ? <Text accessibilityLiveRegion="polite" style={styles.micStatus}>Device backup is unavailable. Keep this session open until saving finishes.</Text> : null}
       </View>
       {captions ? (
         <View style={styles.captions}>

@@ -1,3 +1,4 @@
+import "./interview-synthetic";
 import { randomUUID } from "node:crypto";
 import { deepStrictEqual } from "node:assert";
 import { existsSync } from "node:fs";
@@ -71,7 +72,10 @@ async function main() {
     const oldDetail = await getMobileSessionDetail(new Request("http://local.test/api/mobile/v1/interview/sessions/old/detail", { headers: { Authorization: `Bearer ${original.accessToken}` } }), detailContext);
     assert(oldDetail.status === 200, `Old owned session detail returned ${oldDetail.status} instead of 200.`);
     const oldBody = await oldDetail.json() as { session?: Record<string, unknown> };
-    const { reviewAccess: additiveReviewAccess, attempts: additiveAttempts, ...oldBodyBase } = oldBody.session ?? {};
+    const { reviewAccess: additiveReviewAccess, attempts: additiveAttempts, provenance, preparationHistory, progressEvidence, ...oldBodyBase } = oldBody.session ?? {};
+    assert(provenance === "legacy_unknown", "Legacy provenance must remain explicitly unknown.");
+    deepStrictEqual(preparationHistory, [], "Unprepared legacy sessions have no copied materials.");
+    deepStrictEqual(progressEvidence, [], "Legacy answers cannot silently acquire verified lineage.");
     deepStrictEqual(oldBodyBase, JSON.parse(JSON.stringify(allOwned[150])), "Detail must preserve every pre-existing list field, including evaluation, transcript, and answer evaluations.");
     assert(additiveReviewAccess && typeof additiveReviewAccess === "object" && "kind" in additiveReviewAccess, "Detail must include additive reviewAccess metadata.");
     assert(Array.isArray(additiveAttempts), "Detail must include additive attempts metadata.");

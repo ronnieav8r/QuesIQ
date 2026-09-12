@@ -774,7 +774,7 @@ function getRealtimeSortValue(usage: RealtimeSessionUsageRecord, key: RealtimeSo
     case "audioTokens":
       return usage.estimatedAudioInputTokens + usage.estimatedAudioOutputTokens;
     case "cost":
-      return usage.estimatedCostMicroUsd;
+      return usage.estimatedCostMicroUsd ?? -1;
     case "duration":
       return usage.durationSeconds;
     case "method":
@@ -5626,7 +5626,7 @@ export function AdminView({ eyebrow = "Admin", title = "Admin" }: AdminViewProps
                         {usage.estimatedAudioInputTokens} /{" "}
                         {usage.estimatedAudioOutputTokens}
                       </td>
-                      <td>{formatUsd(usage.estimatedCostMicroUsd)}</td>
+                      <td>{formatUsd(usage.estimatedCostMicroUsd ?? undefined)}</td>
                       <td>
                         {usage.transcriptTurns} turns / {usage.userTranscriptCharacters} user
                         / {usage.assistantTranscriptCharacters} Que

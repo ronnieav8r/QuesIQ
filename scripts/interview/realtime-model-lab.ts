@@ -2,6 +2,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { buildQueInstructions } from "@/app/api/realtime/session/route";
+import { resolveInterviewExecutionSnapshot } from "@/server/interview/execution-config";
+import { usesMockInterviewPolicy } from "@/product/mock-interview-policy";
 import { getSessionPromptComponents } from "@/server/catalog/get-session-prompt-components";
 import {
   assessRealtimeModelLabTurn,
@@ -298,9 +300,15 @@ async function main() {
   for (const scenario of scenarios) {
     const promptComponents = await getSessionPromptComponents(scenario.snapshot);
     for (const variant of variants) {
+      if (variant === "native_mock_v1" && scenario.snapshot.modeKey !== "mock_interview") throw new Error("native_mock_v1 is only available for Mock Interview scenarios.");
+      // Inspect the exact native policy without creating a learner session or
+      // changing the historical production_v1 comparison. Still explicitly paid.
+      const runSnapshot = variant === "native_mock_v1" ? await resolveInterviewExecutionSnapshot(scenario.snapshot, "native") : scenario.snapshot;
+      if (variant === "native_mock_v1" && !usesMockInterviewPolicy(runSnapshot)) throw new Error("The local native Mock policy is unavailable in this environment.");
+      const runPrompt = runSnapshot.executionPromptSnapshot?.configs.find((config) => config.key === "realtime_interviewer") ?? promptConfig;
       const instructions =
-        variant === "production_v1"
-          ? buildQueInstructions(promptConfig, scenario.snapshot, promptComponents)
+        variant === "production_v1" || variant === "native_mock_v1"
+          ? buildQueInstructions(runPrompt, runSnapshot, runSnapshot.executionPromptSnapshot?.components ?? promptComponents)
           : buildMiniCompactInstructions(scenario);
       const scriptedTurns = scenario.turns.map((turn) => ({
         ...turn,
@@ -317,12 +325,12 @@ async function main() {
               instructions,
               model,
               profile,
-              promptConfig,
+              promptConfig: runPrompt,
               promptVariant: variant,
               scenarioKey: scenario.key,
               scenarioVersion: scenario.version,
               scriptedTurns,
-              snapshot: scenario.snapshot,
+              snapshot: runSnapshot,
             });
             const assessments = run.turns.map((turn) =>
               assessRealtimeModelLabTurn(turn.assistantText, turn.expectation),
@@ -344,8 +352,8 @@ async function main() {
               estimatedCostMicroUsd: 0,
               model,
               profile,
-              promptConfigKey: promptConfig.key,
-              promptConfigVersion: promptConfig.version,
+              promptConfigKey: runPrompt.key,
+              promptConfigVersion: runPrompt.version,
               promptVariant: variant,
               repetition,
               scenarioKey: scenario.key,

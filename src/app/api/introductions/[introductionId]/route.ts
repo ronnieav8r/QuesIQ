@@ -1,3 +1,4 @@
+import { InterviewLimitError } from "@/server/interview/beta-safety";
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
@@ -88,6 +89,7 @@ export async function PUT(request: Request, context: RouteContext) {
 
     return NextResponse.json({ introduction });
   } catch (error) {
+    if (error instanceof InterviewLimitError) return NextResponse.json({ error: { code: error.code, message: error.message, retryable: false, requestId: crypto.randomUUID(), limit: error.outcome } }, { status: error.status });
     console.error("Introduction update failed.", error);
 
     return NextResponse.json(
@@ -119,6 +121,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
+    if (error instanceof InterviewLimitError) return NextResponse.json({ error: { code: error.code, message: error.message, retryable: false, requestId: crypto.randomUUID(), limit: error.outcome } }, { status: error.status });
     console.error("Introduction delete failed.", error);
 
     return NextResponse.json(

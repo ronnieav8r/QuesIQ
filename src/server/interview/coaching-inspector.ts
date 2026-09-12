@@ -12,9 +12,12 @@ import type { InterviewRuntimeConfigRecord } from "./runtime-configs";
 import { candidatePrompts, candidatePromptVersion } from "./coaching-candidate-contract";
 import { buildInterviewExecutionConfig } from "./execution-config-builder";
 import { deriveCoachingAttempts } from "@quesiq/interview-contracts";
+import { controlledPracticeMode } from "./controlled-mode-policy";
 
 export const inspectorActionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("create"), execution: z.enum(["simulation", "live_text"]), usePersonalContext: z.boolean().default(false),
+    modeKey: z.enum(["coaching", "first_impression", "rapid_fire"]).optional(),
+    questionCount: z.number().int().min(1).max(10).optional(),
     promptProfile: z.enum(["current", "candidate_v2"]).optional(),
     questionType: z.enum(["behavioral", "technical", "hypothetical", "motivational"]).optional(),
     context: z.object({ preferredName: z.string().max(100), targetRole: z.string().max(200), targetCompany: z.string().max(200), jobDescription: z.string().max(12000) }),
@@ -57,7 +60,8 @@ export async function executeInspectorAction(userId: string, body: z.infer<typeo
     if (body.execution === "live_text" && (!body.confirmLive || process.env.E2E_TEST_MODE === "1")) throw new CoachingOperationError("live_confirmation", "Live text must be explicitly enabled outside automated tests.", 400);
     const profile = body.usePersonalContext ? await getProfile(userId) : undefined;
     if (body.usePersonalContext && !profile) throw new CoachingOperationError("profile_missing", "No current profile is available.", 400);
-    const snapshot = await resolveInterviewExecutionSnapshot({ modeKey: "coaching", questionTypeKey: body.questionType ?? "behavioral", styleKey: "friendly", interviewContext: profile ?? body.context }, "inspector");
+    if (body.promptProfile === "candidate_v2" && body.modeKey && body.modeKey !== "coaching") throw new CoachingOperationError("candidate_mode", "Candidate v2 is Coaching-only.", 400);
+    const snapshot = await resolveInterviewExecutionSnapshot({ modeKey: body.modeKey ?? "coaching", turnBasedQuestionCount: body.modeKey === "rapid_fire" ? body.questionCount ?? 5 : undefined, questionTypeKey: body.questionType ?? "behavioral", styleKey: "friendly", interviewContext: profile ?? body.context }, "inspector");
     if (body.promptProfile === "candidate_v2") {
       if (process.env.NODE_ENV === "production") throw new CoachingOperationError("candidate_local_only", "Candidate prompts are restricted to local tests.", 403);
       Object.assign(snapshot, { coachingPromptCandidate: { version: candidatePromptVersion, prompts: { ...candidatePrompts } } });
@@ -88,6 +92,7 @@ export async function executeInspectorAction(userId: string, body: z.infer<typeo
   const rows = await listCoachingOperations(run.id, userId);
   const config = run.snapshot.executionConfig?.effective ?? run.config as InterviewRuntimeConfigRecord;
   const plan = () => planLegacyCoachingTurn({ rows, turnIndex: body.turnIndex, answer: body.answer, choice: body.choice,
+    mode: controlledPracticeMode(run.snapshot),
     limit: Math.min(run.snapshot.turnBasedQuestionCount ?? config.maxTurns, config.maxTurns) });
   await runCoachingOperation({ targetId: run.id, userId, turnIndex: body.turnIndex, parent: "inspection", payload: { answer: body.answer, choice: body.choice },
     validate: () => { plan(); },

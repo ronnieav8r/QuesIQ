@@ -1,3 +1,4 @@
+import "./interview-synthetic";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";

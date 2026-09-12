@@ -32,6 +32,9 @@ import { listStoryLibraryContext } from "@/server/stories/stories";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 import { getExecutionPrompt } from "./execution-config";
 import { controlledCoachingPresentation, type ControlledCoachingTurn } from "./coaching-exercise-adapter";
+import { readTimedSpeech, type CoachingServerClock } from "./coaching-timing";
+import { coachingSpeechText } from "./coaching-speech";
+import { controlledModePrompt, validateControlledModeOutput } from "./controlled-mode-policy";
 
 type PriorTurn = {
   feedback?: string;
@@ -639,11 +642,12 @@ export function simulateCoachingDecision(input: {
 
 export async function renderChainedCoachingSpeech(input: {
   result: TurnBasedResult; config: InterviewRuntimeConfigRecord; sessionId: string; userId: string;
+  timing?: CoachingServerClock;
 }) {
-  const text = [input.result.feedback, input.result.question].filter(Boolean).join(" ");
+  const text = coachingSpeechText(input.result);
   if (!text) return {};
   const speech = await generateSpeech({ apiKey: getOpenAiApiKey("interview")!, model: input.config.ttsModel,
-    question: text, sessionId: input.sessionId, userId: input.userId, voice: input.config.ttsVoice });
+    question: text, sessionId: input.sessionId, userId: input.userId, voice: input.config.ttsVoice, timing: input.timing });
   return { questionAudioBase64: speech?.audioBase64, questionAudioMimeType: "audio/mpeg" };
 }
 
@@ -673,7 +677,7 @@ async function transcribeAnswer(input: {
       `interview-answer.${input.mimeType?.includes("mp4") ? "m4a" : "webm"}`,
     );
 
-    const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    const response = await run.fetch("https://api.openai.com/v1/audio/transcriptions", {
       body: formData,
       headers: {
         Authorization: `Bearer ${input.apiKey}`,
@@ -692,12 +696,15 @@ async function transcribeAnswer(input: {
     }
 
     const providerRequestId = response.headers.get("x-request-id") ?? undefined;
-    const body = (await response.json()) as { text?: string };
+    const body = (await response.json()) as { text?: string; usage?: unknown };
     await completeAiRun(run.id, {
       providerRequestId,
       rawJson: { textLength: body.text?.length ?? 0 },
       status: "succeeded",
     });
+    const { transcriptionUsage } = await import("./audio-safety");
+    const { recordAudioUsage } = await import("./audio-accounting");
+    await recordAudioUsage(run.id,transcriptionUsage(input.model,body.usage));
     return body.text?.trim() ?? "";
   } catch (error) {
     await completeAiRun(run.id, {
@@ -724,6 +731,7 @@ async function fetchCachedAudio(url: string) {
 }
 
 async function generateSpeechBuffer(input: {
+  timing?: CoachingServerClock;
   apiKey: string;
   model: string;
   question: string;
@@ -741,7 +749,8 @@ async function generateSpeechBuffer(input: {
 
   try {
     const speechText = normalizeQueForSpeech(input.question);
-    const response = await fetch("https://api.openai.com/v1/audio/speech", {
+    input.timing?.mark("ttsStartMs");
+    const response = await run.fetch("https://api.openai.com/v1/audio/speech", {
       signal: AbortSignal.timeout(30_000),
       body: JSON.stringify({
         input: speechText.slice(0, 1000),
@@ -756,6 +765,7 @@ async function generateSpeechBuffer(input: {
       method: "POST",
     });
 
+    input.timing?.provider("tts", response.headers.get("x-request-id"));
     if (!response.ok) {
       const detail = await response.text();
       await completeAiRun(run.id, {
@@ -767,7 +777,8 @@ async function generateSpeechBuffer(input: {
     }
 
     const providerRequestId = response.headers.get("x-request-id") ?? undefined;
-    const audioBuffer = Buffer.from(await response.arrayBuffer());
+    const audioBuffer = input.timing ? await readTimedSpeech(response, input.timing) : Buffer.from(await response.arrayBuffer());
+    input.timing?.mark("ttsEndMs");
     await completeAiRun(run.id, {
       providerRequestId,
       rawJson: { bytes: audioBuffer.byteLength },
@@ -868,6 +879,7 @@ async function getSelectedQuestionSpeech(input: {
 }
 
 async function generateSpeech(input: {
+  timing?: CoachingServerClock;
   apiKey: string;
   model: string;
   question: string;
@@ -1041,6 +1053,8 @@ async function getTurnPromptRuntime(input: {
   forceConfiguredModel?: boolean;
   snapshot: SessionSetupSnapshot;
 }) {
+  const modePrompt = controlledModePrompt(input.snapshot);
+  if (modePrompt) return { model: input.configuredModel, promptConfigKeys: input.snapshot.executionConfig?.promptVersions ?? [], systemPrompt: modePrompt };
   if (!isStandardCoachingSnapshot(input.snapshot)) {
     return {
       model: input.configuredModel,
@@ -1135,7 +1149,7 @@ async function routeCoachingChoiceWithAi(input: {
   });
 
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const response = await run.fetch("https://api.openai.com/v1/responses", {
       body: JSON.stringify({
         input: [
           {
@@ -1255,6 +1269,7 @@ async function resolveCoachingChoiceIntent(input: {
 }
 
 export async function generateTurnDecision(input: {
+  timing?: CoachingServerClock;
   exerciseControl?: ControlledCoachingTurn;
   apiKey: string;
   coachingChoiceIntent?: CoachingChoiceIntent;
@@ -1272,11 +1287,12 @@ export async function generateTurnDecision(input: {
   priorTurns: PriorTurn[];
 }) {
   const promptComponents = await getSessionPromptComponents(input.snapshot);
+  const evaluatingAnswer = input.exerciseControl?.plan.operation === "evaluate" || input.exerciseControl?.plan.operation === "explain_feedback";
   const [memory, storyLibrary, archetypePerformance] = await Promise.all([
     input.usePersonalContext === false ? Promise.resolve(undefined) : getCoachingMemory(input.userId),
-    input.usePersonalContext !== false && input.snapshot.modeKey === "coaching" && !input.snapshot.storyContext
-      ? listStoryLibraryContext(input.userId)
-      : Promise.resolve([]),
+    input.usePersonalContext === false ? Promise.resolve([]) : input.snapshot.frozenStoryLibrary !== undefined
+      ? Promise.resolve(input.snapshot.frozenStoryLibrary)
+      : input.snapshot.modeKey === "coaching" && !input.snapshot.storyContext ? listStoryLibraryContext(input.userId) : Promise.resolve([]),
     input.usePersonalContext === false ? Promise.resolve([]) : listUserArchetypePerformance(input.userId),
   ]);
   const archetypes = await getDb()
@@ -1315,7 +1331,7 @@ export async function generateTurnDecision(input: {
       state: input.exerciseControl.before,
       instruction: "The application owns transitions. Perform only this operation for the current question. Do not independently advance questions, request a retry, or end the session.",
     } : undefined,
-    task: buildTurnTaskInstruction(
+    task: input.exerciseControl?.mode ? `Perform only ${input.exerciseControl.plan.operation} for ${input.exerciseControl.mode}. The application owns the next action. Ground feedback in the current answer.` : buildTurnTaskInstruction(
       input.snapshot,
       mustEnd,
       Boolean(input.latestTranscript),
@@ -1342,12 +1358,12 @@ export async function generateTurnDecision(input: {
     candidateContext: {
       jobDescription: input.snapshot.interviewContext.jobDescription || "Not provided",
       resumeExcerpt:
-        input.snapshot.interviewContext.resumeText?.trim().slice(0, 3500) ||
+        (!evaluatingAnswer && input.snapshot.interviewContext.resumeText?.trim().slice(0, 3500)) ||
         "Not provided",
       targetCompany: input.snapshot.interviewContext.targetCompany || "Optional",
       targetRole: input.snapshot.interviewContext.targetRole || "General practice",
     },
-    introductionPractice: input.snapshot.introductionContext
+    introductionPractice: !evaluatingAnswer && input.snapshot.introductionContext
       ? {
           audience: input.snapshot.introductionContext.audience,
           intendedLength: input.snapshot.introductionContext.length,
@@ -1359,7 +1375,7 @@ export async function generateTurnDecision(input: {
           transition: input.snapshot.introductionContext.transition,
         }
       : undefined,
-    storyPractice: input.snapshot.storyContext
+    storyPractice: !evaluatingAnswer && input.snapshot.storyContext
       ? {
           actions: input.snapshot.storyContext.actions,
           categories: input.snapshot.storyContext.categories,
@@ -1373,7 +1389,7 @@ export async function generateTurnDecision(input: {
         }
       : undefined,
     savedStoryLibrary:
-      storyLibrary.length > 0
+      !evaluatingAnswer && storyLibrary.length > 0
         ? storyLibrary.map((story) => ({
             categories: story.categories,
             coachNotes: story.coachNotes,
@@ -1509,11 +1525,20 @@ export async function generateTurnDecision(input: {
   let runCompleted = false;
 
   try {
+    input.timing?.mark("modelStartMs");
     const response = input.simulation ? new Response(JSON.stringify({
-      output: [{ content: [{ type: "output_text", text: JSON.stringify(simulateCoachingDecision({
+      output: [{ content: [{ type: "output_text", text: JSON.stringify(input.exerciseControl?.mode === "first_impression" ? {
+        state: input.exerciseControl.plan.operation === "question" ? "opening_question" : "brief_feedback_choice", done: false,
+        question: input.exerciseControl.plan.operation === "question" ? "Tell me about yourself." : "Try again or Finish.",
+        feedback: input.exerciseControl.plan.operation === "question" ? "" : "Simulation feedback: connect your experience to this role with one concrete example.",
+        routingReason: "Deterministic First Impression fixture, not a quality assessment.", targetSkill: "introduction clarity", archetypeId: "", detectedUserIntent: "awaiting_answer",
+      } : input.exerciseControl?.mode === "rapid_fire" ? {
+        state: "move_on", done: false, question: `What would you do in workplace scenario ${input.exerciseControl.plan.pendingQuestionIndex}?`, feedback: "",
+        routingReason: "Deterministic Rapid Fire fixture; not AI quality.", targetSkill: "concise answers", archetypeId: "", detectedUserIntent: "move_on",
+      } : simulateCoachingDecision({
         choiceIntent: input.coachingChoiceIntent, hasLatestAnswer: Boolean(input.latestTranscript), priorTurns: input.priorTurns, mustEnd,
       })) }] }], usage: { input_tokens: 0, output_tokens: 0, total_tokens: 0 },
-    }), { status: 200 }) : await fetch("https://api.openai.com/v1/responses", {
+    }), { status: 200 }) : await run.fetch("https://api.openai.com/v1/responses", {
       body: JSON.stringify(requestBody),
       headers: {
         Authorization: `Bearer ${input.apiKey}`,
@@ -1523,8 +1548,10 @@ export async function generateTurnDecision(input: {
       signal: AbortSignal.timeout(60_000),
     });
 
+    input.timing?.provider("model", response.headers.get("x-request-id"));
     if (!response.ok) {
       const detail = await response.text();
+      input.timing?.mark("modelEndMs");
       await completeAiRun(run.id, {
         errorMessage: `Interview turn failed: ${detail.slice(0, 300)}`,
         mergeRawJson: true,
@@ -1537,6 +1564,7 @@ export async function generateTurnDecision(input: {
 
     const providerRequestId = response.headers.get("x-request-id") ?? undefined;
     const body = (await response.json()) as ResponsesApiBody;
+    input.timing?.mark("modelEndMs");
     const outputText = extractResponseText(body);
     if (!outputText) {
       throw new Error("Interview turn generation returned no text.");
@@ -1574,7 +1602,9 @@ export async function generateTurnDecision(input: {
             routingReason: `${decision.routingReason} Replaced repeated retry with a new primary question.`,
           }
         : decision;
-    const validatedDecision = input.forceConfiguredModel
+    const validatedDecision = input.exerciseControl?.mode
+      ? { ...normalizedFinalDecision, validation: validateControlledModeOutput(originalDecision, input.exerciseControl) }
+      : input.forceConfiguredModel
       ? enforceChainedCoachingContract(mustEnd ? { ...normalizedFinalDecision, done: true, state: "wrap_up", question: "" } : normalizedFinalDecision, {
           choiceIntent: input.coachingChoiceIntent,
           hasLatestAnswer: Boolean(input.latestTranscript),
@@ -1585,6 +1615,7 @@ export async function generateTurnDecision(input: {
       ...validatedDecision,
       ...controlledCoachingPresentation(input.exerciseControl, validatedDecision),
     } : validatedDecision;
+    input.timing?.mark("validationEndMs");
 
     const inspection = {
       aiRunId: run.id, model: promptRuntime.model, promptSnapshot: promptRuntime.systemPrompt,

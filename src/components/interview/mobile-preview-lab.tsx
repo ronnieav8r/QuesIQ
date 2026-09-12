@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import {
   Activity,
+  BookOpen,
   ArrowLeft,
   ArrowRight,
   BriefcaseBusiness,
@@ -34,11 +35,16 @@ import styles from "./mobile-preview-lab.module.css";
 import { CoachingTextInspector } from "./coaching-text-inspector";
 import { MobileReviewTestbed } from "./mobile-review-testbed";
 import { interviewPreviewCssVariables } from "@quesiq/interview-contracts";
+import { MobileStoryLabPreview, type PreviewLabState } from "./mobile-story-lab-preview";
+import { MobileQuestionsPreview, type PreviewQuestionState } from "./mobile-questions-preview";
+import { MobileProgressPreview, type PreviewProgressState } from "./mobile-progress-preview";
 
-type PreviewScreen = "home" | "practice" | "session" | "review" | "me";
+type PreviewScreen = "home" | "practice" | "session" | "review" | "me" | "story-lab" | "questions" | "progress";
 type DeviceKind = "iphone" | "pixel";
 type InspectorTab = "plan" | "prompts" | "runs" | "test" | "history";
-type SampleForm = { saved?: boolean; preferredName: string; targetRole: string; company: string; jobDescription: string };
+type SampleForm = { saved?: boolean; preferredName: string; targetRole: string; company: string; jobDescription: string; resumeDraft?: string; resumeConfirmed?: string; lab?: PreviewLabState; questions?: PreviewQuestionState; progress?: PreviewProgressState };
+type SamplePhase = "listening" | "processing" | "speaking" | "choice" | "typing" | "limit" | "limit_saved";
+type SampleLive = { phase: SamplePhase; draft: string; asking: boolean; onPhase: (phase: SamplePhase) => void; onDraft: (draft: string) => void; onAsking: (asking: boolean) => void };
 
 type RuntimeConfig = {
   enabled: boolean;
@@ -112,6 +118,8 @@ const modeKeys: Record<string, "coaching" | "mock_interview" | "rapid_fire"> = {
 const screens: { Icon: LucideIcon; key: PreviewScreen; label: string }[] = [
   { Icon: Home, key: "home", label: "Home" },
   { Icon: Mic2, key: "practice", label: "Practice" },
+  { Icon: BookOpen, key: "story-lab", label: "Story Lab" },
+  { Icon: Target, key: "questions", label: "Saved questions" },
   { Icon: Radio, key: "session", label: "Live Session" },
   { Icon: Target, key: "review", label: "Review" },
   { Icon: UserRound, key: "me", label: "Me" },
@@ -120,6 +128,7 @@ const screens: { Icon: LucideIcon; key: PreviewScreen; label: string }[] = [
 const tabItems: { Icon: LucideIcon; key: Exclude<PreviewScreen, "session" | "review"> | "history"; label: string }[] = [
   { Icon: Home, key: "home", label: "Home" },
   { Icon: Mic2, key: "practice", label: "Practice" },
+  { Icon: BookOpen, key: "story-lab", label: "Story Lab" },
   { Icon: History, key: "history", label: "History" },
   { Icon: UserRound, key: "me", label: "Me" },
 ];
@@ -129,6 +138,11 @@ export function MobilePreviewLab() {
   const [scale, setScale] = useState<"compact" | "full">("compact");
   const [showTranscript, setShowTranscript] = useState(false);
   const [sampleMuted, setSampleMuted] = useState(false);
+  const [sampleAnswerDone, setSampleAnswerDone] = useState(false);
+  const [samplePhase, setSamplePhase] = useState<SamplePhase>("listening");
+  const [sampleDraft, setSampleDraft] = useState("");
+  const [sampleAsking, setSampleAsking] = useState(false);
+  const sampleLive: SampleLive = { phase: samplePhase, draft: sampleDraft, asking: sampleAsking, onPhase: setSamplePhase, onDraft: setSampleDraft, onAsking: setSampleAsking };
   const [mode, setMode] = useState("Coaching");
   const [focus, setFocus] = useState("Behavioral");
   const [style, setStyle] = useState("Warm");
@@ -138,7 +152,7 @@ export function MobilePreviewLab() {
 
   function changeScreen(nextScreen: PreviewScreen) {
     setScreen(nextScreen);
-    if (nextScreen === "session") { setShowTranscript(false); setSampleMuted(false); }
+    if (nextScreen === "session") { setShowTranscript(false); setSampleMuted(false); setSampleAnswerDone(false); setSamplePhase("listening"); setSampleDraft(""); setSampleAsking(false); }
     setLastAction(
       nextScreen === "session"
         ? `Start answer clicked · ${mode} launch path selected`
@@ -188,6 +202,9 @@ export function MobilePreviewLab() {
             <button aria-pressed={scale === "full"} className={scale === "full" ? styles.controlActive : undefined} onClick={() => setScale("full")} type="button">Actual size</button>
             <button aria-label="Reset preview" onClick={() => { setScreen("practice"); setMode("Coaching"); setScale("compact"); setShowTranscript(false); setInspectorTab("test"); setLastAction("Coaching selected in Practice"); }} type="button"><RotateCcw aria-hidden="true" /></button>
           </div>
+          {screen === "session" && inspectorTab !== "test" && inspectorTab !== "history" ? <label>Simulated session state <select aria-label="Simulated session state" value={samplePhase} onChange={(event) => { setSampleAnswerDone(false); setSamplePhase(event.target.value as SamplePhase); }}>
+            <option value="listening">Listening</option><option value="processing">Processing</option><option value="speaking">Speaking</option><option value="choice">Choice</option><option value="typing">Text fallback</option><option value="limit">Safety pause</option><option value="limit_saved">Saved / review deferred</option>
+          </select></label> : null}
         </div>
       </header>
 
@@ -211,8 +228,8 @@ export function MobilePreviewLab() {
           </DevicePreview>)}
         </section>
       )} /> : <section className={`${styles.deviceStage} ${scale === "full" ? styles.deviceStageFull : ""}`} aria-label="Mobile device previews">
-        <DevicePreview device="iphone" mode={mode} focus={focus} style={style} form={form} muted={sampleMuted} onMuted={setSampleMuted} onMode={changeMode} onFocus={setFocus} onStyle={setStyle} onForm={setForm} onScreen={changeScreen} onTab={selectTab} screen={screen} showTranscript={showTranscript} onTranscript={setShowTranscript} />
-        <DevicePreview device="pixel" mode={mode} focus={focus} style={style} form={form} muted={sampleMuted} onMuted={setSampleMuted} onMode={changeMode} onFocus={setFocus} onStyle={setStyle} onForm={setForm} onScreen={changeScreen} onTab={selectTab} screen={screen} showTranscript={showTranscript} onTranscript={setShowTranscript} />
+        <DevicePreview device="iphone" live={sampleLive} answerDone={sampleAnswerDone} onAnswerDone={() => setSampleAnswerDone(true)} mode={mode} focus={focus} style={style} form={form} muted={sampleMuted} onMuted={setSampleMuted} onMode={changeMode} onFocus={setFocus} onStyle={setStyle} onForm={setForm} onScreen={changeScreen} onTab={selectTab} screen={screen} showTranscript={showTranscript} onTranscript={setShowTranscript} />
+        <DevicePreview device="pixel" live={sampleLive} answerDone={sampleAnswerDone} onAnswerDone={() => setSampleAnswerDone(true)} mode={mode} focus={focus} style={style} form={form} muted={sampleMuted} onMuted={setSampleMuted} onMode={changeMode} onFocus={setFocus} onStyle={setStyle} onForm={setForm} onScreen={changeScreen} onTab={selectTab} screen={screen} showTranscript={showTranscript} onTranscript={setShowTranscript} />
       </section>}
     </main>
   );
@@ -417,7 +434,10 @@ function ActualTrace({ onClose, run }: { onClose: () => void; run: InspectionRun
   </aside>;
 }
 
-function DevicePreview({ children, device, mode, focus, style, form, muted, onMuted, onMode, onFocus, onStyle, onForm, onScreen, onTab, onTranscript, screen, showTranscript }: {
+function DevicePreview({ children, device, mode, focus, style, form, muted, onMuted, onMode, onFocus, onStyle, onForm, onScreen, onTab, onTranscript, screen, showTranscript, answerDone = false, onAnswerDone, live }: {
+  live?: SampleLive;
+  answerDone?: boolean;
+  onAnswerDone?: () => void;
   children?: ReactNode;
   device: DeviceKind;
   muted: boolean;
@@ -445,11 +465,14 @@ function DevicePreview({ children, device, mode, focus, style, form, muted, onMu
           <StatusBar device={device} />
           <div className={`${styles.appViewport} ${children ? styles.interactiveViewport : ""}`}>
             {children ?? <>
-            {screen === "home" && <HomeScreen form={form} onMode={onMode} onScreen={onScreen} />}
+            {screen === "home" && <HomeScreen form={form} onForm={onForm} onMode={onMode} onScreen={onScreen} />}
             {screen === "practice" && <PracticeScreen form={form} focus={focus} mode={mode} style={style} onFocus={onFocus} onMode={onMode} onStyle={onStyle} onScreen={onScreen} />}
-            {screen === "session" && <SessionScreen muted={muted} onMuted={onMuted} onScreen={onScreen} onTranscript={onTranscript} showTranscript={showTranscript} />}
+            {screen === "session" && <SessionScreen live={live} answerDone={answerDone} onAnswerDone={onAnswerDone} muted={muted} onMuted={onMuted} onScreen={onScreen} onTranscript={onTranscript} showTranscript={showTranscript} />}
             {screen === "review" && <ReviewScreen onScreen={onScreen} onTranscript={onTranscript} showTranscript={showTranscript} />}
             {screen === "me" && <MeScreen form={form} onForm={onForm} />}
+            {screen === "story-lab" && <MobileStoryLabPreview state={form.lab ?? {}} onChange={lab => onForm({ ...form, lab })} />}
+            {screen === "questions" && <MobileQuestionsPreview state={form.questions ?? { saved: [], queue: [] }} onChange={questions => onForm({ ...form, questions })} onLaunch={mode => { onMode(mode); onScreen("practice"); }} />}
+            {screen === "progress" && <MobileProgressPreview state={form.progress ?? {}} onChange={progress => onForm({ ...form, progress })} />}
             </>}
           </div>
           {!children && screen !== "session" && screen !== "review" ? <MobileTabs active={screen} onTab={onTab} /> : null}
@@ -468,19 +491,21 @@ function MobileHeader({ eyebrow, subtitle, title }: { eyebrow: string; subtitle?
   return <header className={styles.mobileHeader}><p className={styles.mobileEyebrow}>{eyebrow}</p><h2>{title}</h2>{subtitle ? <p>{subtitle}</p> : null}</header>;
 }
 
-function HomeScreen({ form, onMode, onScreen }: { form: SampleForm; onMode: (mode: string) => void; onScreen: (screen: PreviewScreen) => void }) {
+function HomeScreen({ form, onForm, onMode, onScreen }: { form: SampleForm; onForm: (form: SampleForm) => void; onMode: (mode: string) => void; onScreen: (screen: PreviewScreen) => void }) {
   return <div className={styles.mobilePage}>
     <p className={styles.sampleNotice}>Sample / simulation · no learner data</p>
     <MobileHeader eyebrow="QuesIQ Interview" subtitle="One focused conversation at a time." title={`Ready, ${form.preferredName || "there"}?`} />
+    <section className={`${styles.mobileCard} ${styles.cyanCard}`}><h3>Practice next · Coaching</h3><p>{form.progress?.another ? "Your saved review suggested: Make the result clearer." : "You marked this for practice."}</p><p>{form.targetRole || "General practice"} · Tell me about working with a colleague.</p><button className={styles.mobilePrimary} type="button" onClick={() => { onMode("Coaching"); onScreen("practice"); }}>Practice suggestion</button><button className={styles.textAction} type="button" onClick={() => onForm({ ...form, progress: { ...form.progress, another: true } })}>Show another</button><button className={styles.textAction} type="button" onClick={() => onScreen("practice")}>Choose myself</button><p>Show another hides a suggestion for 24 hours; your bookmark and priority stay saved. Preview behavior only.</p></section>
     <section className={`${styles.mobileCard} ${styles.cyanCard}`}>
-      <div className={styles.cardLead}><span className={styles.iconTile}><Sparkles aria-hidden="true" /></span><div><p className={styles.mobileEyebrow}>QUICK PRACTICE</p><h3>Make your first 90 seconds count.</h3><p>Que will help you sharpen your introduction for this role.</p></div></div>
+      <div className={styles.cardLead}><span className={styles.iconTile}><Sparkles aria-hidden="true" /></span><div><p className={styles.mobileEyebrow}>ANOTHER OPTION</p><h3>Practice your introduction.</h3><p>First Impression helps you sharpen your opening for this role.</p></div></div>
       <MobileButton Icon={ArrowRight} label="Start First Impression" onClick={() => { onMode("First Impression"); onScreen("practice"); }} />
     </section>
     <section className={styles.mobileCard}>
       <div className={styles.cardTitle}><strong>Active target</strong><BriefcaseBusiness aria-hidden="true" className={styles.limeIcon} /></div>
       <h3>{form.targetRole || "Add a target"}</h3><p>{form.company}</p><button className={styles.textAction} onClick={() => onScreen("me")} type="button">Edit target in Me</button>
     </section>
-    <div className={styles.metricGrid}><section className={`${styles.mobileCard} ${styles.limeCard}`}><Target aria-hidden="true" className={styles.limeIcon} /><strong className={styles.metric}>84%</strong><span>Latest score · sample</span></section><section className={styles.mobileCard}><Clock3 aria-hidden="true" /><strong className={styles.metric}>12</strong><span>Recent sessions · sample</span></section></div>
+    <div className={styles.metricGrid}><section className={`${styles.mobileCard} ${styles.limeCard}`}><Target aria-hidden="true" className={styles.limeIcon} /><strong className={styles.metric}>3</strong><span>Verified practice sessions · sample</span></section><section className={styles.mobileCard}><Clock3 aria-hidden="true" /><strong className={styles.metric}>1</strong><span>Guided retry · sample</span></section></div>
+    <button className={styles.mobilePrimary} type="button" onClick={() => onScreen("progress")}>View progress</button>
     <button className={styles.reviewLink} onClick={() => onScreen("review")} type="button"><span><strong>Continue your progress</strong><small>Make your results more specific and measurable.</small></span><ArrowRight aria-hidden="true" /></button>
   </div>;
 }
@@ -504,12 +529,28 @@ function PracticeScreen({ form, focus, mode, style, onFocus, onMode, onStyle, on
   </div>;
 }
 
-function SessionScreen({ muted, onMuted, onScreen, onTranscript, showTranscript }: { muted: boolean; onMuted: (muted: boolean) => void; onScreen: (screen: PreviewScreen) => void; onTranscript: (show: boolean) => void; showTranscript: boolean }) {
+function SessionScreen({ muted, onMuted, onScreen, onTranscript, showTranscript, answerDone, onAnswerDone, live }: { live?: SampleLive; answerDone: boolean; onAnswerDone?: () => void; muted: boolean; onMuted: (muted: boolean) => void; onScreen: (screen: PreviewScreen) => void; onTranscript: (show: boolean) => void; showTranscript: boolean }) {
+  const phase = live?.phase ?? "listening";
+  if (phase === "limit" || phase === "limit_saved") return <div className={styles.mobilePage}>
+    <p className={styles.sampleNotice}>Sample / simulation · no recording or account write</p>
+    <MobileHeader eyebrow="Practice paused" title="Session safety limit" />
+    <section className={styles.mobileCard} role="status"><strong>{phase === "limit" ? "Completed answers are ready to save" : "Saved session · sample"}</strong>
+      <p>{phase === "limit" ? "The microphone is stopped. Your completed answers are still available; saving has not been confirmed." : "Your completed answers were saved in this sample. The AI review is deferred until practice allowance is available."}</p></section>
+    <section className={styles.mobileCard}><strong>Last completed answer · sample</strong><p>I clarified the priorities with my team and delivered the agreed work.</p></section>
+    {phase === "limit" ? <MobileButton label="Save completed answers (preview only)" onClick={() => live?.onPhase("limit_saved")} /> : <MobileButton label="Back to practice (preview only)" onClick={() => onScreen("practice")} />}
+  </div>;
+  const listening = phase === "listening" && !answerDone;
+  const status = answerDone ? "Simulated finalizing · microphone off" : phase === "listening" ? muted ? "Simulated microphone muted" : "Listening · microphone on (simulated)" : phase === "processing" ? "Processing your answer · microphone off" : phase === "speaking" ? "Que is speaking · microphone off" : phase === "choice" ? "Choose what happens next · microphone off" : "Type your answer · microphone off";
   return <div className={`${styles.mobilePage} ${styles.sessionPage}`}>
-    <header className={styles.sessionHeader}><p className={styles.sampleNotice}>Sample / simulation · no microphone or provider call</p><div className={styles.sessionTop}><span><i />{muted ? "Simulated microphone muted" : "Simulated live state"}</span><strong>02:14</strong></div></header>
-    <div className={styles.sessionBody}><div className={styles.sessionCenter}><div className={styles.voiceOrb}><Radio aria-hidden="true" /></div><strong>QUE</strong><p>Speak naturally. Que will respond when you finish your thought.</p></div>
+    <header className={styles.sessionHeader}><p className={styles.sampleNotice}>Sample / simulation · no microphone or provider call</p><div className={styles.sessionTop}><span role="status"><i style={{ background: listening && !muted ? "var(--preview-lime, #b7ed58)" : "#8b949e" }} />{status}</span><strong>02:14</strong></div></header>
+    <div className={`${styles.sessionBody} ${phase === "typing" || phase === "choice" ? styles.sessionCompact : ""}`}><div className={styles.sessionCenter}><div className={styles.voiceOrb}><Radio aria-hidden="true" /></div><strong>QUE</strong><p>{answerDone ? "Finishing your answer · simulated. Waiting for the final transcript." : listening ? muted ? "Microphone muted. Done answering submits only speech already captured." : "Speak naturally. Pause whenever you need. Tap Done answering when you are finished." : phase === "processing" ? "Preparing your feedback. Your microphone is off." : phase === "speaking" ? "Listen to Que. Your microphone is off." : phase === "choice" ? "Choose your next step when you are ready." : "Continue this session by typing. Unsubmitted speech is discarded."}</p></div>
+    {phase === "typing" ? <section className={styles.mobileCard}><strong>Que · sample question</strong><p>{live?.asking ? "What would you like to ask about this question?" : "Tell me about a time you made a difficult decision under pressure."}</p><label>{live?.asking ? "Your question" : "Your answer"}<textarea aria-label={live?.asking ? "Your question" : "Your answer"} value={live?.draft ?? ""} onChange={(event) => live?.onDraft(event.target.value)} /></label></section> : null}
+    {phase === "choice" ? <section className={styles.mobileCard}><strong>Sample feedback</strong><p>Make your own decision and its outcome clearer.</p>{["Try again", "More feedback", "Ask Que", "Move on"].map((label) => <button className={styles.textAction} key={label} type="button" onClick={() => { live?.onAsking(label === "Ask Que"); live?.onDraft(""); live?.onPhase(label === "More feedback" || label === "Move on" ? "processing" : "typing"); }}>{label}</button>)}</section> : null}
     {showTranscript ? <div className={styles.captionPanel}><span>SIMULATED CAPTIONS</span><p><strong>Que:</strong> Tell me about a time you made a difficult decision under pressure.</p><p><strong>You:</strong> During a high-tempo operational assignment…</p></div> : null}</div>
-    <footer className={styles.sessionFooter}><div className={styles.sessionControls}><button aria-label={`${muted ? "Unmute" : "Mute"} microphone (simulated)`} aria-pressed={muted} onClick={() => onMuted(!muted)} type="button"><Mic aria-hidden="true" /></button><button aria-label={`${showTranscript ? "Hide" : "Show"} captions (simulated)`} aria-expanded={showTranscript} onClick={() => onTranscript(!showTranscript)} type="button"><Captions aria-hidden="true" /></button></div>
+    <footer className={styles.sessionFooter}><div className={styles.sessionControls}>{listening ? <button aria-label={`${muted ? "Unmute" : "Mute"} microphone (simulated)`} aria-pressed={muted} onClick={() => onMuted(!muted)} type="button"><Mic aria-hidden="true" /><span>{muted ? "Unmute mic" : "Mute mic"}</span></button> : null}<button aria-label={`${showTranscript ? "Hide" : "Show"} captions (simulated)`} aria-expanded={showTranscript} onClick={() => onTranscript(!showTranscript)} type="button"><Captions aria-hidden="true" /></button></div>
+    {listening ? <button className={styles.textAction} onClick={() => live?.onPhase("typing")} type="button">Type instead</button> : null}
+    {listening || answerDone ? <button className={styles.mobilePrimary} disabled={answerDone} onClick={onAnswerDone} type="button">{answerDone ? "Finishing answer…" : "Done answering"}</button> : null}
+    {phase === "typing" ? <button className={styles.mobilePrimary} disabled={!live?.draft.trim()} onClick={() => { live?.onDraft(""); live?.onPhase("processing"); }} type="button">{live?.asking ? "Send question" : "Send answer"}</button> : null}
     <button className={styles.endButton} onClick={() => onScreen("review")} type="button"><PhoneOff aria-hidden="true" />End session</button></footer>
   </div>;
 }
@@ -532,7 +573,10 @@ function MeScreen({ form, onForm }: { form: SampleForm; onForm: (form: SampleFor
     <MobileHeader eyebrow="Your setup · sample" subtitle="ronnie@example.com" title="Me" />
     <p className={styles.sampleNotice}>Sample / simulation · changes stay in this preview</p>
     <section className={styles.mobileCard}><strong>Interview profile</strong><label>Preferred name<input value={form.preferredName} onChange={(event) => onForm({ ...form, saved: false, preferredName: event.target.value })} /></label></section><section className={styles.mobileCard}><strong>Active job target</strong><label>Target role<input value={form.targetRole} onChange={(event) => onForm({ ...form, saved: false, targetRole: event.target.value })} /></label><label>Company<input value={form.company} onChange={(event) => onForm({ ...form, saved: false, company: event.target.value })} /></label><label>Job description<textarea value={form.jobDescription} onChange={(event) => onForm({ ...form, saved: false, jobDescription: event.target.value })} /></label><MobileButton Icon={Save} label="Save profile (preview only)" onClick={() => onForm({ ...form, saved: true })} />{form.saved ? <p role="status">Preview only — nothing was saved to your account.</p> : null}</section>
-    <section className={styles.mobileCard}><strong>Resume</strong><p>Ready: Ronnie_Weeks_Resume.pdf</p></section>
+    <section className={styles.mobileCard}><strong>Resume</strong><p>{form.resumeConfirmed ? "Confirmed text · preview sample" : "No confirmed resume. Upload or paste text in the native app."}</p><p>Review extracted text before it becomes practice context. A failed replacement preserves your confirmed resume.</p>
+      {form.resumeDraft !== undefined ? <><label>Review resume text<textarea aria-label="Review resume text" value={form.resumeDraft} onChange={(event) => onForm({ ...form, resumeDraft: event.target.value })} /></label><p>{form.resumeDraft.length} / 12,000 characters</p><button className={styles.mobilePrimary} disabled={!form.resumeDraft.trim() || form.resumeDraft.length > 12000} onClick={() => onForm({ ...form, resumeConfirmed: form.resumeDraft, resumeDraft: undefined })} type="button">Confirm text (preview only)</button><button className={styles.textAction} onClick={() => onForm({ ...form, resumeDraft: undefined })} type="button">Cancel resume edit</button></> : <><MobileButton label="Review / paste resume (preview only)" onClick={() => onForm({ ...form, resumeDraft: form.resumeConfirmed ?? "" })} />{form.resumeConfirmed ? <button className={styles.textAction} onClick={() => onForm({ ...form, resumeConfirmed: undefined })} type="button">Remove resume (preview only)</button> : null}</>}
+      <p>Removing preparation stops future use; saved sessions retain their historical copies.</p>
+    </section>
   </div>;
 }
 

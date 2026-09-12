@@ -1,3 +1,4 @@
+import { InterviewLimitError } from "@/server/interview/beta-safety";
 import { NextResponse } from "next/server";
 
 import { parseVoiceSessionArtifact } from "@/product/voice-session-artifact";
@@ -49,6 +50,7 @@ export async function PUT(request: Request, context: RouteContext) {
 
     return NextResponse.json({ session });
   } catch (error) {
+    if (error instanceof InterviewLimitError) return NextResponse.json({ error: { code: error.code, message: error.message, retryable: false, requestId: crypto.randomUUID(), limit: error.outcome } }, { status: error.status });
     console.error("Voice session artifact save failed.", error);
 
     return NextResponse.json(

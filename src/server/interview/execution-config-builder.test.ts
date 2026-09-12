@@ -7,6 +7,14 @@ const settings = (modeKey: InterviewRuntimeSettings["modeKey"]): InterviewRuntim
 const input = (modeKey: InterviewRuntimeSettings["modeKey"], extra = {}) => ({ surface: "native" as const, configured: settings(modeKey), catalogEnabled: true, promptVersions: [{ key: "coaching", version: 2 }, { key: "base", version: 1 }], ...extra });
 
 test("builds Coaching native-chain config", () => { const result = buildInterviewExecutionConfig(input("coaching")); assert.equal(result.effective.engine, "turn_based"); assert.equal(result.effective.ttsVoice, "marin"); assert.equal(result.effective.textModel, "gpt-5.4-mini"); });
+
+test("local controlled mode exposure never overrides a runtime disable", () => {
+  for (const mode of ["first_impression", "rapid_fire"] as const) {
+    const result = buildInterviewExecutionConfig({ ...input(mode), configured: { ...settings(mode), enabled: false }, controlledModeVersion: 1 });
+    assert.equal(result.effective.enabled, false);
+    assert.equal(result.effective.engine, "turn_based");
+  }
+});
 test("retains fallback version zero without pretending it is a database version", () => {
   const result = buildInterviewExecutionConfig(input("coaching", { promptVersions: [{ key: "turn_question_planner", version: 0 }] }));
   assert.equal(result.promptVersions[0].version, 0);

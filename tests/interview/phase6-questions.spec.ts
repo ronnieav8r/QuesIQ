@@ -1,0 +1,20 @@
+import { expect, test } from "@playwright/test";
+import { signInAsE2EAdmin } from "../e2e/support/auth";
+test("saved questions mirror queue order without removing bookmarks", async ({ page }, info) => {
+  await signInAsE2EAdmin(page, "/interview/mobile-preview"); await page.goto("/interview/mobile-preview");
+  const writes: string[] = []; page.on("request", r => { if (r.method() !== "GET") writes.push(r.url()); });
+  await page.getByRole("button", { name: "Saved questions", exact: true }).first().click();
+  const phones = page.getByRole("region", { name: "Mobile device previews" });
+  await phones.getByRole("button", { name: "Save question 1", exact: true }).first().click();
+  await phones.getByRole("button", { name: "Practice next question 1", exact: true }).first().click();
+  await phones.getByRole("button", { name: "Practice next question 2", exact: true }).first().click();
+  await phones.getByRole("button", { name: "Move question 2 up", exact: true }).first().click();
+  await expect(phones.getByText("1. How do you communicate a delay?", { exact: true })).toHaveCount(2);
+  await page.setViewportSize({ width: 1440, height: 1400 }); await page.evaluate(() => window.scrollTo(0, 0));
+  await phones.locator('[class*="appViewport"]').evaluateAll(nodes => nodes.forEach(node => { node.scrollTop = 0; }));
+  await phones.screenshot({ path: info.outputPath("p63-question-frames.png") });
+  await phones.getByRole("button", { name: "Clear Practice next (preview)", exact: true }).first().click();
+  await expect(phones.getByRole("button", { name: "Bookmarked 1", exact: true })).toHaveCount(2);
+  await expect(phones.getByText("0/10 questions", { exact: true })).toHaveCount(2);
+  expect(writes).toEqual([]);
+});

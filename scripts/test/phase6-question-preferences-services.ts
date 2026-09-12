@@ -1,0 +1,45 @@
+import "./interview-synthetic";
+import { strict as assert } from "node:assert";
+import { randomUUID } from "node:crypto";
+import { eq, inArray } from "drizzle-orm";
+import { GET as questionsGet, PUT as questionsPut } from "@/app/api/mobile/v1/interview/questions/route";
+import { getDb } from "@/server/db/client";
+import { interviewCoachingOperations, interviewQuestionBookmarks, interviewQuestionQueues, interviewQuestions, jobTargets, users } from "@/server/db/schema";
+import { issueMobileTokenPair } from "@/server/mobile-auth/mobile-auth";
+import { assertOwnedTarget, clearAnsweredPriorities, mutateQuestionPreferences, readQuestionPreferences, savedSessionQuestions } from "@/server/interview/question-preferences";
+import { createSession } from "@/server/sessions/create-session";
+
+const snap = (question: { id: string; questionText: string }) => ({ interviewContext: { preferredName: "", targetRole: "", targetCompany: "", jobDescription: "" }, modeKey: "coaching" as const, styleKey: "friendly" as const, selectedQuestionContext: { id: question.id, questionText: question.questionText, difficulty: "standard" as const, questionTypeKey: "behavioral" as const, roleFamily: "pilot", source: "official" as const, sourceLabel: "Synthetic", suggestedUse: "", targetSkill: "" } });
+function req(method: string, token?: string, body?: unknown) { return new Request("http://local.test/api/mobile/v1/interview/questions", { method, headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body === undefined ? {} : { "Content-Type": "application/json" }) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }); }
+async function main() {
+  const url = new URL(process.env.DATABASE_URL ?? ""); assert.ok(["localhost", "127.0.0.1"].includes(url.hostname) && url.port === "5433", "Tests require loopback Postgres port 5433.");
+  const owner = randomUUID(), stranger = randomUUID(), target = randomUUID(), foreignTarget = randomUUID(); const db = getDb(); const originalFetch = globalThis.fetch; globalThis.fetch = async () => { throw new Error("Provider calls are forbidden in question preference tests."); };
+  try {
+    await db.insert(users).values([{ id: owner, email: `${owner}@example.test` }, { id: stranger, email: `${stranger}@example.test` }]);
+    await db.insert(jobTargets).values([{ id: target, userId: owner, label: "Owner target", targetRole: "Pilot", targetCompany: "A", jobDescription: "" }, { id: foreignTarget, userId: stranger, label: "Foreign target", targetRole: "Pilot", targetCompany: "B", jobDescription: "" }]);
+    const official = await db.insert(interviewQuestions).values({ questionText: "Tell me about a difficult decision.", source: "official", sourceLabel: "Synthetic", enabled: true, compatibleModes: ["coaching", "rapid_fire"], tags: ["decision"], displayOrder: 1 }).returning();
+    const official2 = await db.insert(interviewQuestions).values({ questionText: "Describe a safety improvement.", source: "official", sourceLabel: "Synthetic", enabled: true, compatibleModes: ["coaching", "rapid_fire"], tags: ["safety"], displayOrder: 2 }).returning();
+    const disabled = await db.insert(interviewQuestions).values({ questionText: "Disabled historical question", source: "official", sourceLabel: "Synthetic", enabled: false, compatibleModes: ["coaching"], displayOrder: 3 }).returning();
+    const ownerToken = await issueMobileTokenPair({ id: owner, email: `${owner}@example.test` }); const strangerToken = await issueMobileTokenPair({ id: stranger, email: `${stranger}@example.test` });
+    for (const method of ["GET", "PUT"]) assert.equal((await (method === "GET" ? questionsGet : questionsPut)(req(method, "invalid-token", method === "PUT" ? {} : undefined))).status, 401);
+    const custom1 = await mutateQuestionPreferences(owner, { action: "custom", text: "What did you learn from a challenging flight?" }); const custom = custom1.saved.find(q => q.source === "custom"); assert.ok(custom);
+    const custom2 = await mutateQuestionPreferences(owner, { action: "custom", text: custom.text }); assert.equal(custom2.saved.filter(q => q.text === custom.text).length, 1, "Identical custom question duplicated.");
+    await mutateQuestionPreferences(owner, { action: "save", questionId: official[0].id }); await mutateQuestionPreferences(owner, { action: "save", questionId: official[0].id }); assert.equal((await readQuestionPreferences(owner)).saved.filter(q => q.id === official[0].id).length, 1);
+    const strangerPreferencesResponse = await questionsGet(req("GET", strangerToken.accessToken)); assert.equal(strangerPreferencesResponse.status, 200); const strangerPreferences = await strangerPreferencesResponse.json() as { saved: Array<{ id: string }> }; assert.equal(strangerPreferences.saved.some(q => q.id === official[0].id), false);
+    assert.equal((await questionsPut(req("PUT", strangerToken.accessToken, { action: "save", questionId: custom.id }))).status, 404); assert.equal((await questionsPut(req("PUT", strangerToken.accessToken, { action: "queue", targetId: target, revision: 0, ids: [official[0].id] }))).status, 404);
+    for (const action of [{ action: "queue", targetId: target, revision: 0, ids: [official[0].id, official[0].id] }, { action: "queue", targetId: target, revision: 0, ids: Array.from({ length: 11 }, () => official[0].id) }]) assert.equal((await questionsPut(req("PUT", ownerToken.accessToken, action))).status, 400);
+    assert.equal((await questionsPut(req("PUT", ownerToken.accessToken, { action: "queue", targetId: foreignTarget, revision: 0, ids: [official[0].id] }))).status, 404);
+    await mutateQuestionPreferences(owner, { action: "queue", targetId: target, revision: 0, ids: [official[0].id, official2[0].id] }); await mutateQuestionPreferences(owner, { action: "queue", targetId: null, revision: 0, ids: [official2[0].id] });
+    assert.equal((await mutateQuestionPreferences(owner, { action: "queue", targetId: target, revision: 0, ids: [official[0].id] }).catch(e => e)).code, "stale_queue");
+    await mutateQuestionPreferences(owner, { action: "queue", targetId: target, revision: 1, ids: [official2[0].id] }); const independent = await readQuestionPreferences(owner); assert.deepEqual(independent.queues.find(q => q.targetId === target)?.ids, [official2[0].id]); assert.deepEqual(independent.queues.find(q => q.targetId === null)?.ids, [official2[0].id]);
+    await mutateQuestionPreferences(owner, { action: "queue", targetId: target, revision: 2, ids: [] }); assert.equal((await readQuestionPreferences(owner)).queues.find(q => q.targetId === target)?.ids.length, 0);
+    assert.equal((await questionsPut(req("PUT", ownerToken.accessToken, { action: "queue", targetId: target, revision: 0, ids: [disabled[0].id] }))).status, 404);
+    await mutateQuestionPreferences(owner, { action: "save", questionId: custom.id }); await db.update(interviewQuestions).set({ enabled: false }).where(eq(interviewQuestions.id, custom.id)); const historical = (await readQuestionPreferences(owner)).saved.find(q => q.id === custom.id); assert.equal(historical?.text, custom.text); assert.equal(historical?.available, false);
+    const session = await createSession(snap(official[0]), owner); await db.insert(interviewCoachingOperations).values({ userId: owner, targetId: session.id, turnIndex: 1, fingerprint: "synthetic", status: "completed", result: { state: "opening_question", exerciseState: { phase: "awaiting_answer", question: { text: "Authoritative structured text" } } } });
+    assert.deepEqual(await savedSessionQuestions(owner, session.id), ["Authoritative structured text"]); assert.equal((await questionsGet(new Request(`http://local.test/api/mobile/v1/interview/questions?sessionId=${session.id}`, { headers: { Authorization: `Bearer ${strangerToken.accessToken}` } }))).status, 404);
+    const txdb = getDb(); await txdb.transaction(async tx => { await clearAnsweredPriorities(owner, target, [official[0].id], tx); }); const afterClear = await readQuestionPreferences(owner); assert.equal(afterClear.saved.some(q => q.id === official[0].id), true); assert.equal(afterClear.queues.some(q => q.ids.includes(official[0].id)), false);
+    await db.delete(jobTargets).where(eq(jobTargets.id, target)); await assert.rejects(assertOwnedTarget(owner, target), /no longer available/);
+    console.log("P6.3 question preference services passed: ownership, private/idempotent saves, queue limits/revisions/scopes, disabled-history retention, authoritative session questions and transactional clearing.");
+  } finally { globalThis.fetch = originalFetch; await db.delete(interviewQuestionQueues).where(eq(interviewQuestionQueues.userId, owner)); await db.delete(interviewQuestionBookmarks).where(eq(interviewQuestionBookmarks.userId, owner)); await db.delete(interviewQuestions).where(inArray(interviewQuestions.ownerUserId, [owner])); await db.delete(users).where(inArray(users.id, [owner, stranger])); await (globalThis as typeof globalThis & { quesiqPool?: { end(): Promise<void> } }).quesiqPool?.end(); }
+}
+void main().catch(error => { console.error(error); process.exitCode = 1; });
