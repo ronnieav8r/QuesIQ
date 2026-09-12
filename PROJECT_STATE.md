@@ -3,6 +3,10 @@
 Last verified: 2026-09-12. Timezone: America/New_York.
 Scope: local Git checkpoint, deterministic application/native checks and build preparation. No device, paid-provider or deployment verification.
 
+## Hosted database setup in progress (2026-09-12)
+
+User authorized setup of the new QuesIQ Supabase database and backend connection. Project analiejpwazwbeabpayp in A2RKS is Healthy in North Virginia; Data API is verified disabled. All97 canonical migrations replayed successfully in a new local database, second pass is a no-op, and local backup/restore and production build pass. No local test/user data was copied to Supabase. Authenticated hosted connection/application is pending the user's password in ignored .env.supabase.local; no hosted SQL has run. Reusing suspended Render Dev.QuesIQ is pending a hosting/cost choice. No resume, environment update, push or deployment occurred. See [setup record](docs/rebuild/QUESIQ_SUPABASE_SETUP_2026-09-12.md) before continuing. This scoped authorization supersedes older local-only language for the new database setup, not paid AI, other products or device work.
+
 ## Current phase
 
 Interview mobile v1 remains the exclusive active lane. Phase4-6, P7.1-P7.4 and the chained voice safety follow-up are accepted locally. P6.6 remains excluded. The user authorized a local checkpoint and work that does not require a physical device; the bounded accessibility/input follow-up is implemented and its tests pass.
