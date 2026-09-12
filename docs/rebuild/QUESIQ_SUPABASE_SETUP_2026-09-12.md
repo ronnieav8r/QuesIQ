@@ -18,7 +18,7 @@ Date: 2026-09-12. User authorized preparing/applying the new hosted database sch
 - Canonical journal contains97 migrations through0097, with intentional numbering gap0004. All97 applied successfully to a new disposable local database; second pass reports already current.
 - Local custom-format backup restored into another new disposable database; restored journal97, users0, sessions0. This is local rehearsal evidence, not a hosted backup/restore guarantee. Existing quesiq_local data was unchanged.
 - Full production build passes (123 static pages, TypeScript passes). Build DATABASE_URL resolves to loopback5433. Next's generated route-type import restored to its original value after the build.
-- scripts/interview/supabase-bootstrap.mjs defaults to read-only inspection. --apply requires the exact reviewed project/endpoint, verified TLS, an empty public schema and empty migration journal. It invokes the canonical runner, checks all migration hashes/timestamps, verifies users/sessions/AI runs remain empty, and removes anon/authenticated public table/sequence grants and future defaults. Syntax and focused ESLint pass. Hosted application remains pending credentials; no hosted SQL executed yet.
+- scripts/interview/supabase-bootstrap.mjs defaults to read-only inspection. --apply requires the exact reviewed project/endpoint, verified TLS, an empty public schema and empty migration journal. It invokes the canonical runner, checks all migration hashes/timestamps, verifies users/sessions/AI runs remain empty, and removes anon/authenticated public table/sequence grants and future defaults. Syntax and focused ESLint pass. Hosted schema application and independent read-only verification now pass: 97 migrations, 132 public tables, zero users, sessions and AI runs, and zero anon/authenticated table grants.
 
 ## Seed and scope boundary
 
@@ -26,16 +26,22 @@ The canonical one-platform journal creates shared auth plus all existing product
 
 Historical pricing seed dates to May2026 and is not current tariff verification. Keep provider dispatch blocked, all paid beta budgets unset and P6.6 excluded. Never run local service/browser seed suites against this hosted database.
 
-## Pending input and next operations
+## Hosted database completed
 
-1. User must save the QuesIQ database password in ignored .env.supabase.local (SUPABASE_DB_PASSWORD), not chat. File contains no DATABASE_URL, so ordinary local commands keep using .env.local. The bootstrap constructs an encoded URL only in memory.
-2. Run node scripts/interview/supabase-bootstrap.mjs --check; verify authenticated project identity and empty public schema. Then --apply, inspect redacted logs, independently verify table counts/journal/API privileges. If any nonempty target or mismatch is found, stop instead of replaying or deleting data.
-3. Hosting choice pending: Render already has suspended Dev.QuesIQ (srv-d8l8t8l7vvec73f24510), Virginia, Starter, main branch, auto-deploy off. Reuse would resume compute billing (published Starter about$7/month). User approval requested. No service resumed, environment changed, push or deployment performed.
-4. Before connecting a backend: pin reviewed source, establish server-only runtime credentials, keep development/test bypasses off and paid/provider guards blocked, confirm auth/email setup and production routes, then verify HTTPS/database/sign-in. Do not attach current test credentials or deploy all platform lanes merely because the build passes. Existing quesiq-web/live service and other projects remain untouched.
+- User saved the password in ignored .env.supabase.local. No DATABASE_URL was added; local testing remains on its separate database.
+- Empty hosted schema and identity verified before applying all 97 canonical migrations. All journal hashes/timestamps matched; a separate read-only connection confirmed 132 public tables, zero users/sessions/AI runs and zero anon/authenticated public table grants.
+- TLS verifies the hostname and certificate chain using the official Supabase Root 2021 CA downloaded from Database Settings into ignored artifacts/supabase-setup-2026-09-12/supabase-ca.crt. Initial system trust failure was resolved by supplying the CA, without disabling verification. Bootstrap requires this certificate file.
+- Public CA download: https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt
+- Bootstrap is one-time only and refuses to apply to this now-populated schema. Future migrations need a reviewed incremental path.
+
+## Pending hosting choice and next operations
+
+1. Hosting choice pending: Render already has suspended Dev.QuesIQ (srv-d8l8t8l7vvec73f24510), Virginia, Starter, main branch, auto-deploy off. Reuse would resume compute billing (published Starter about$7/month). User approval requested. No service resumed, environment changed, push or deployment performed.
+2. Before connecting a backend: pin reviewed source, establish server-only runtime credentials, keep development/test bypasses off and paid/provider guards blocked, confirm auth/email setup and production routes, then verify HTTPS/database/sign-in. Do not attach current test credentials or deploy all platform lanes merely because the build passes. Existing quesiq-web/live service and other projects remain untouched.
 
 ## Evidence and sources
 
-Ignored logs: artifacts/supabase-setup-2026-09-12 (migration first/second pass, row inventory, custom backup/restore and production build). Hosted logs will appear only after authenticated connection.
+Ignored logs: artifacts/supabase-setup-2026-09-12 (migration first/second pass, row inventory, custom backup/restore and production build). Hosted preflight, redacted migration log, exact journal verification and independent read-only check are also saved there.
 
 - https://supabase.com/docs/guides/database/drizzle
 - https://supabase.com/docs/guides/database/connecting-to-postgres

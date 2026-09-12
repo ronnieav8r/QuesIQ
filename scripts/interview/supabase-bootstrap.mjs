@@ -36,6 +36,9 @@ async function main() {
   url.username = process.env.SUPABASE_DB_USER;
   url.password = process.env.SUPABASE_DB_PASSWORD;
   url.searchParams.set("sslmode", "verify-full");
+  const certificatePath = path.join(output, "supabase-ca.crt");
+  if (!fs.existsSync(certificatePath)) throw new Error("Download the Supabase database CA certificate from the project's Database Settings before connecting.");
+  url.searchParams.set("sslrootcert", certificatePath);
   const pool = new Pool({ connectionString: url.toString(), max: 1, connectionTimeoutMillis: 15000, statement_timeout: 30000 });
   let client;
   fs.mkdirSync(output, { recursive: true });
