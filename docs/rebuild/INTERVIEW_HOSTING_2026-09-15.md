@@ -20,4 +20,8 @@ This is initial API infrastructure, not a released mobile app or live AI activat
 
 ## Validation and service identity
 
-Pending deployment result. Route-boundary unit test passes; production build and hosted checks are in progress. Main agent owns integration; one bounded inherited Astra worker performed a read-only auth/environment audit. Per-agent usage unavailable.
+Deployment is live: service srv-dakhv5tg1s2s73cd1ne0, deploy dep-dakhv6dg1s2s73cd1ou0, source ec33081d4a5002afab7ff5572b20239029f2bda3. URL: https://quesiq-interview-api.onrender.com (API only; root intentionally returns 404). Dashboard: https://dashboard.render.com/web/srv-dakhv5tg1s2s73cd1ne0.
+
+Route-boundary unit test, focused lint, local production build and Render production build pass. Local HTTP check passes six routes. Hosted HTTPS check passes ten routes: health 200; root, Study, DPE, admin and development API paths 404; unauthenticated bootstrap 401; unknown-account password login 401 with invalid_credentials. That validly formatted login reaches the database query and confirms deployed database connectivity without creating an account. Separate TLS connection confirms runtime role and zero users. No authenticated token issuance or learner workflow has been tested.
+
+Evidence: ignored artifacts/supabase-setup-2026-09-12/render-build.log and hosted-http-check.json. Render reports live. Automatic deployments remain off, so documentation-only follow-up commits do not change the deployed source. Main agent owns integration; one bounded inherited Astra worker performed a read-only auth/environment audit. Per-agent usage unavailable.
