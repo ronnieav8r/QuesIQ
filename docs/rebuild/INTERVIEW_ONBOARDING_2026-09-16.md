@@ -27,4 +27,4 @@ Provider AI activation, signed device builds and store release are not included.
 
 ## Hosted status
 
-Deployment pending; keep email delivery disabled until configured and validated.
+Render deployment dep-dalhjjrm8hqs739k74vg is live at source 94346d6520727def922cd038472118eaa7965d7d. Eight hosted HTTP checks pass: health 200, missing verification/reset tokens 400, all three email request endpoints 503 while disabled, Study and development sign-in 404. Initial probes during the rollout hit the previous version; repeated only after Render reported live. No hosted account was created or email sent. Evidence: onboarding-hosted-check.json in the ignored evidence directory. Automatic deployments remain off; documentation-only follow-up commits do not alter the deployed source.
