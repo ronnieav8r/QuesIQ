@@ -7,6 +7,10 @@ Scope: local Git checkpoint, deterministic application/native checks and build p
 
 User authorized setup of the new QuesIQ Supabase database and backend connection. Project analiejpwazwbeabpayp in A2RKS is Healthy in North Virginia; Data API is verified disabled. All97 canonical migrations replayed successfully in a new local database, second pass is a no-op, and local backup/restore and production build pass. No local test/user data was copied to Supabase. Hosted setup now passes: 97 migrations, 132 public tables, zero users/sessions/AI runs, and zero anon/authenticated table grants, independently verified over certificate-validated TLS. The password stays in ignored .env.supabase.local. User authorized a new dedicated Render service on September 15. quesiq-interview-api (srv-dakhv5tg1s2s73cd1ne0) is live at ec33081 from codex/interview-mobile; ten HTTPS checks pass including database-backed login rejection and route isolation; automatic deployment is off and the old services remain suspended. A dedicated database runtime role and fresh service secrets are configured. See docs/rebuild/INTERVIEW_HOSTING_2026-09-15.md for current hosted verification and remaining onboarding gates. See [setup record](docs/rebuild/QUESIQ_SUPABASE_SETUP_2026-09-12.md) before continuing. This scoped authorization supersedes older local-only language for the new database setup, not paid AI, other products or device work.
 
+## Account onboarding (2026-09-16)
+
+Native signup/recovery and Interview-only verification/reset pages are implemented and locally verified. New routes stay disabled without configured email delivery. User input is pending on email service and verified sender; no real email was sent. See docs/rebuild/INTERVIEW_ONBOARDING_2026-09-16.md for tests and activation boundaries.
+
 ## Current phase
 
 Interview mobile v1 remains the exclusive active lane. Phase4-6, P7.1-P7.4 and the chained voice safety follow-up are accepted locally. P6.6 remains excluded. The user authorized a local checkpoint and work that does not require a physical device; the bounded accessibility/input follow-up is implemented and its tests pass.

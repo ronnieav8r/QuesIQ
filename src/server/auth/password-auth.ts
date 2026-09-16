@@ -14,6 +14,7 @@ import {
   accountPasswordCredentials,
   accountPasswordResetTokens,
   platformUserProfiles,
+  mobileRefreshTokens,
   users,
 } from "@/server/db/schema";
 
@@ -44,6 +45,7 @@ export type PasswordSignInInput = {
 export type PasswordResetRequestInput = {
   email?: unknown;
   origin: string;
+  resetPath?: string;
 };
 
 export type PasswordResetConfirmInput = {
@@ -354,7 +356,7 @@ export async function requestPasswordReset(input: PasswordResetRequestInput) {
     userId: credential.userId,
   });
 
-  const resetUrl = new URL("/reset-password", input.origin);
+  const resetUrl = new URL(input.resetPath || "/reset-password", input.origin);
   resetUrl.searchParams.set("email", email);
   resetUrl.searchParams.set("token", token);
 
@@ -411,6 +413,18 @@ export async function resetPasswordWithToken(input: PasswordResetConfirmInput) {
   const passwordHash = await hashPassword(password);
 
   await getDb().transaction(async (tx) => {
+    // Serialize different recovery links for the same account as well.
+    await tx.select({ userId: accountPasswordCredentials.userId })
+      .from(accountPasswordCredentials)
+      .where(eq(accountPasswordCredentials.userId, resetToken.userId)).for("update");
+    // Claim once inside the same transaction as the password change. Two
+    // simultaneous submissions must not both accept the same recovery link.
+    const [claimed] = await tx.update(accountPasswordResetTokens)
+      .set({ usedAt: now })
+      .where(and(eq(accountPasswordResetTokens.id, resetToken.id),
+        isNull(accountPasswordResetTokens.usedAt), gt(accountPasswordResetTokens.expiresAt, new Date())))
+      .returning({ id: accountPasswordResetTokens.id });
+    if (!claimed) throw new Error("Password reset link is invalid or expired.");
     await tx
       .update(accountPasswordCredentials)
       .set({
@@ -423,6 +437,11 @@ export async function resetPasswordWithToken(input: PasswordResetConfirmInput) {
     await tx
       .update(accountPasswordResetTokens)
       .set({ usedAt: now })
-      .where(eq(accountPasswordResetTokens.id, resetToken.id));
+      .where(eq(accountPasswordResetTokens.userId, resetToken.userId));
+
+    // Possession of the recovery link proves ownership of this email address.
+    await tx.update(users).set({ emailVerified: now }).where(eq(users.id, resetToken.userId));
+    await tx.update(mobileRefreshTokens).set({ revokedAt: now, updatedAt: now })
+      .where(eq(mobileRefreshTokens.userId, resetToken.userId));
   });
 }
