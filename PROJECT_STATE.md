@@ -18,7 +18,7 @@ Interview mobile v1 only. Native signup, verification and password recovery are 
 
 ## Current working state
 
-Git root is this QuesIQ-dev folder; branch codex/interview-mobile in existing ronnieav8r/QuesIQ repository. Handoff documentation changes are being checkpointed; inspect git status/log for the final commit. Documentation pushes do not change the running service while auto-deploy is off. Umbrella workspace is not a working Git repository.
+Git root is this QuesIQ-dev folder; branch codex/interview-mobile in existing ronnieav8r/QuesIQ repository. Handoff documentation is committed and pushed; inspect git status/log for the latest documentation checkpoint. Documentation pushes do not change the running service while auto-deploy is off. Umbrella workspace is not a working Git repository.
 
 ## Immediate priorities
 
@@ -28,6 +28,10 @@ Git root is this QuesIQ-dev folder; branch codex/interview-mobile in existing ro
 4. After account readiness, use [remaining gates](docs/rebuild/INTERVIEW_V1_REMAINING_GATES.md) for the next package: hosted native-build origin, signing/devices, privacy/deletion and release operations.
 
 ## Blockers and open decisions
+
+Brevo API IP authorization and the approved test recipient are the immediate blockers. Sender/domain verification is user-reported until API access succeeds.
+
+## Working boundaries
 
 Paid AI/provider activation, physical devices, signed iPhone/Android distribution and store release remain unverified. Apple enrollment was pending at the prior checkpoint; recheck rather than assume it changed. Provider support remains deferred, safety guards stay closed and P6.6 excluded. Stay Interview-only in this repo, with Test Coaching / no audio as the local preview default. Do not touch QuesIQ-live or other product lanes. Secrets remain in ignored environment files; never print or commit them.
 
