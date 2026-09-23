@@ -1,46 +1,28 @@
 # QuesIQ-dev restart pointer
 
-Last verified: 2026-09-23T06:12:00-04:00
-Timezone: America/New_York.
-Scope: Git/status documentation, Render metadata/HTTP checks and read-only Brevo API access. Application tests were not rerun today; dated evidence below remains the baseline.
+Last verified: 2026-09-23. Scope: Resend deployment, hosted route checks and provider delivery events; local mocked onboarding tests/lint/build passed before deployment.
 
 ## Current phase
 
-Interview mobile v1 only. Native signup, verification and password recovery are implemented; complete email configuration and a bounded end-to-end account test next. Email activation is blocked by Brevo IP authorization and a missing approved test recipient. No new feature slice is pending in this handoff.
-
-## Verified state
-
-- Native/server onboarding implementation:94346d6; prior documentation checkpoint:edd13f9. September16 evidence:176 native tests/26 suites, mobile typecheck, zero lint errors, production build, mocked-email/local-DB service tests and phone-width browser form checks pass. See [onboarding record](docs/rebuild/INTERVIEW_ONBOARDING_2026-09-16.md).
-- Render quesiq-interview-api, srv-dakhv5tg1s2s73cd1ne0, Virginia Starter. Live source94346d6 confirmed September23; latest deploy dep-dap313e7bikc73ep7fu0 was initiated by Render September22. Automatic deployment remains off. API: https://quesiq-interview-api.onrender.com. Fresh health200 and Study404; September16 eight-check onboarding/route evidence remains documented.
-- Supabase analiejpwazwbeabpayp: September12 verification applied97 migrations/132 public tables with no imported learner data. Runtime role has public data access but no schema administration; TLS verification uses config/supabase-ca.crt. [Database record](docs/rebuild/QUESIQ_SUPABASE_SETUP_2026-09-12.md), [hosting record](docs/rebuild/INTERVIEW_HOSTING_2026-09-15.md).
-- User confirmed login@quesiq.com and quira@quesiq.com verified, quesiq.com authenticated. Chosen sender:login@quesiq.com, name QuesIQ Interview. Key saved in ignored .env.brevo.local. Brevo API verification returned401 with an explicit unrecognised-IP error; key usability and sender status have not yet been API-verified. Safe diagnostic in ignored .codex-local/brevo-access-check.json.
-- No Brevo key uploaded to Render, no onboarding activation, no emails sent and no real account lifecycle test. Local test database remains separate.
+Interview mobile v1 only. Resend is live; Gmail reset and Hotmail verification both have provider delivery confirmation. Inbox receipt and link completion await user confirmation. The detailed acceptance record is docs/rebuild/INTERVIEW_EXECUTION_STATUS.md; email work is in docs/rebuild/INTERVIEW_ONBOARDING_2026-09-16.md.
 
 ## Current working state
 
-Git root is this QuesIQ-dev folder; branch codex/interview-mobile in existing ronnieav8r/QuesIQ repository. Handoff documentation is committed and pushed; inspect git status/log for the latest documentation checkpoint. Documentation pushes do not change the running service while auto-deploy is off. Umbrella workspace is not a working Git repository.
+QuesIQ-dev is on codex/interview-mobile at9efc8cc; implementation is committed/pushed. Onboarding/handoff documentation is being checkpointed separately.
 
-## Immediate priorities
+- Resend replaces Brevo in the shared account-email adapter and Interview configuration gate. Local tests, lint and production build pass. No schema/dependency changes.
+- Hosted quesiq-interview-api uses Resend at9efc8cc with onboarding enabled. Confirmed live deploy: dep-dapuj2rncjis73fp7rog. Health200 and blocked Study/dev-session404 pass. Auto-deploy remains off; environment updates can trigger deployment.
+- Brevo local access, active sender and domain authentication were verified. User authorized Render ranges74.220.49.0/24 and74.220.57.0/24. Gmail receipt/verification and hosted login passed; Gmail reset completion is unconfirmed. Three Hotmail attempts still lacked delivery/bounce evidence at the last check.
+- User approved bounded Gmail and Hotmail account tests. Exact recipients and evidence are in the onboarding record. Test credentials/tokens remain only in ignored .codex-local files. Never print them.
+- Resend key is saved in ignored .env.resend.local and merged into Render. quesiq.com is API-confirmed verified. One Hotmail verification and one Gmail reset sent through hosted app; Resend reports both delivered. Brevo key is unused but not revoked.
 
-1. Resolve Brevo authorized-IP restrictions for the intended validation computer and Render outbound addresses; use the onboarding record. Do not disable IP protection globally. Preserve the saved key; do not infer it needs replacement from this error.
-2. Verify the selected sender through the API, then merge only Brevo/sender/origin settings into Render. Preserve DATABASE_URL, AUTH_SECRET and MOBILE_AUTH_SECRET. Keep delivery disabled until ready for the test.
-3. Obtain one user-approved recipient and perform a bounded real verification/login/reset test. Record actual inbox delivery and account behavior, not merely provider acceptance. Never run local seeded suites against hosted Supabase.
-4. After account readiness, use [remaining gates](docs/rebuild/INTERVIEW_V1_REMAINING_GATES.md) for the next package: hosted native-build origin, signing/devices, privacy/deletion and release operations.
+## Next steps
 
-## Blockers and open decisions
+1. Obtain user confirmation of the newest Hotmail verification email and Gmail reset email, then complete the links. Never request the new password in chat.
+2. Verify Hotmail login and Gmail old-password/refresh rejection after reset. New-password login requires user-side entry; do not claim it from a successful reset alone.
+3. Preserve provider delivery evidence separately from inbox/user-operation confirmation. No automatic resends.
+4. Use docs/rebuild/INTERVIEW_V1_REMAINING_GATES.md after onboarding; provider AI, devices, signing, privacy/deletion and release gates remain open.
 
-Brevo API IP authorization and the approved test recipient are the immediate blockers. Sender/domain verification is user-reported until API access succeeds.
+## Boundaries
 
-## Working boundaries
-
-Paid AI/provider activation, physical devices, signed iPhone/Android distribution and store release remain unverified. Apple enrollment was pending at the prior checkpoint; recheck rather than assume it changed. Provider support remains deferred, safety guards stay closed and P6.6 excluded. Stay Interview-only in this repo, with Test Coaching / no audio as the local preview default. Do not touch QuesIQ-live or other product lanes. Secrets remain in ignored environment files; never print or commit them.
-
-Reset tokens are atomic/single-use; reset revokes refresh tokens but existing access tokens can survive their remaining15-minute lifetime. Per-address cooldown persists; IP/global throttles are process-local and need launch review.
-
-## Next verification
-
-Read-only Brevo account/sender requests with the saved key after IP authorization; report sanitized status only. Later use the exact bounded live test above. Local regression for code changes: npm run test:mobile:onboarding (loopback/mock email only), npm run test:mobile and npm run build as appropriate. Prior September12 Android compilation/Hermes evidence does not certify later native changes or physical operation.
-
-## Restart prompt
-
-Open E:\Codex\QuesIQ, read its AGENTS.md/PROJECT_STATE.md, then this worktree's AGENTS.md, this file, docs/rebuild/INTERVIEW_EXECUTION_STATUS.md and docs/rebuild/INTERVIEW_ONBOARDING_2026-09-16.md. Verify Git, Render deployment and the current Brevo IP error. Resume email setup from the saved ignored key; request the missing test recipient before sending anything. Do not rebuild completed features or activate AI.
+No QuesIQ-live/other-lane changes, mailbox routing changes, paid AI activation, physical devices or store release. Keep Test Coaching / no audio as the local preview default. Existing access tokens may survive a password reset for their remaining15-minute lifetime; refresh tokens are revoked. Loopback test suites must never target hosted Supabase.
