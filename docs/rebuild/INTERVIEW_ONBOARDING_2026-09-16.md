@@ -21,10 +21,15 @@ Date: 2026-09-16. Scope: native account creation/recovery and Interview-only ema
 
 ## External input and activation
 
-No Brevo API key exists in the current local/new-service environment. User was asked which email service and verified sending address to use; do not ask for secrets in chat. After confirmation, configure the key through ignored local credentials or the provider dashboard, set AUTH_EMAIL_FROM and INTERVIEW_AUTH_ORIGIN=https://quesiq-interview-api.onrender.com, then enable onboarding. A real delivery/verification/recovery test to a user-approved recipient remains required; none was sent in this work.
+September 23 handoff: user reports login@quesiq.com and quira@quesiq.com verified and quesiq.com authenticated. Selected login@quesiq.com / QuesIQ Interview for account mail. User saved a key in ignored .env.brevo.local; expected API-key format and no surrounding whitespace verified, but Brevo GET /v3/senders and GET /v3/account returned HTTP401. The account response specifically reports an unrecognised source IP and points to https://app.brevo.com/security/authorised_ips. This is an IP-authorization blocker, not evidence of an invalid key. Full safe diagnostic/source IP is in ignored .codex-local/brevo-access-check.json; do not publish personal network addresses or keys.
+
+No Brevo key was uploaded to Render and no email was sent. Next: authorize the intended local validation IP in Brevo (recheck it if the network changed), verify account/sender access, obtain the Render service's current outbound IP ranges and authorize those as needed, then merge the saved Brevo key and sender/origin settings into the existing service environment without replacing its database/auth secrets. Leave INTERVIEW_ONBOARDING_ENABLED=0 until ready for a bounded live test. Ask the user which recipient may receive verification/reset tests; the prior "done" confirmed saving the key, not a test recipient. Do not change Workspace mailbox routing, broaden IP access globally or expose keys in chat. Record API acceptance separately from actual inbox delivery and successful verification/recovery.
 
 Provider AI activation, signed device builds and store release are not included. The current native build still needs its hosted API base URL when distributing a signed build.
 
 ## Hosted status
 
 Render deployment dep-dalhjjrm8hqs739k74vg is live at source 94346d6520727def922cd038472118eaa7965d7d. Eight hosted HTTP checks pass: health 200, missing verification/reset tokens 400, all three email request endpoints 503 while disabled, Study and development sign-in 404. Initial probes during the rollout hit the previous version; repeated only after Render reported live. No hosted account was created or email sent. Evidence: onboarding-hosted-check.json in the ignored evidence directory. Automatic deployments remain off; documentation-only follow-up commits do not alter the deployed source.
+
+
+September 23 read-only hosting refresh: Render reports live source94346d6 via deploy dep-dap313e7bikc73ep7fu0 (September22, trigger deployed_by_render). Auto-deploy remains off; /health returns200 and /study404. No deployment or environment mutation performed in the handoff turn.

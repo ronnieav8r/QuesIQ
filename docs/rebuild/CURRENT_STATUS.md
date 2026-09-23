@@ -1,12 +1,10 @@
 # Current Status
 
-Last updated: 2026-09-12
+Last updated: 2026-09-23
 
 ## Current restart direction
 
-Use [PROJECT_STATE.md](../../PROJECT_STATE.md) and the [execution ledger](INTERVIEW_EXECUTION_STATUS.md). The accepted baseline is committed as ec0118c. The September 12 local accessibility/input follow-up adds keyboard-aware sign-in, accessible microphone state, scroll-contained save recovery and Practice hints. Fresh Interview46/46 browser and native171/25-suite gates pass; the ledger owns final build evidence and the follow-up checkpoint.
-
-Provider support remains deferred; live safeguards stay blocked. Physical-device, paid-provider, hosted-service and release gates remain open. See the [local review](INTERVIEW_LOCAL_ACCESSIBILITY_REVIEW_2026-09-12.md) and [remaining gates](INTERVIEW_V1_REMAINING_GATES.md). Older entries below are historical and do not override this checkpoint.
+Use [PROJECT_STATE.md](../../PROJECT_STATE.md) and the [onboarding record](INTERVIEW_ONBOARDING_2026-09-16.md). Native accounts and hosted backend are implemented. The saved Brevo key is blocked by an explicit unrecognised-IP response; resolve authorized IPs, verify login@quesiq.com, configure the existing Render service and obtain a user-approved test recipient before sending email. No key was uploaded or email activated during this handoff. Render source94346d6 is live; automatic deployments are off. The current pointer owns deployment identity, evidence dates, credential locations and next steps. Paid AI, physical devices and release gates remain open. Older sections below are historical.
 
 ## 2026-09-10 Chained voice safety handoff
 
