@@ -21,7 +21,7 @@ export function onboardingOrigin() {
   return origin.origin;
 }
 export function requireEmailDelivery() {
-  if (process.env.INTERVIEW_ONBOARDING_ENABLED !== "1" || !process.env.BREVO_API_KEY || !process.env.AUTH_EMAIL_FROM) {
+  if (process.env.INTERVIEW_ONBOARDING_ENABLED !== "1" || !process.env.RESEND_API_KEY || !process.env.AUTH_EMAIL_FROM) {
     throw new OnboardingError("Account email is not available yet. Please try again later.", 503);
   }
   onboardingOrigin();

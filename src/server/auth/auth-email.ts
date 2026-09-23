@@ -5,8 +5,7 @@ type TransactionalEmailInput = {
   to: string;
 };
 
-type BrevoEmailResponse = {
-  code?: string;
+type ResendEmailResponse = {
   message?: string;
 };
 
@@ -19,35 +18,32 @@ function senderEmail() {
 }
 
 export async function sendTransactionalAuthEmail(input: TransactionalEmailInput) {
-  const apiKey = process.env.BREVO_API_KEY;
+  const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {
-    throw new Error("BREVO_API_KEY is not configured.");
+    throw new Error("RESEND_API_KEY is not configured.");
   }
 
-  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+  const response = await fetch("https://api.resend.com/emails", {
     body: JSON.stringify({
-      htmlContent: input.html,
-      sender: {
-        email: senderEmail(),
-        name: senderName(),
-      },
+      html: input.html,
+      from: `${senderName()} <${senderEmail()}>`,
       subject: input.subject,
-      textContent: input.text,
-      to: [{ email: input.to }],
+      text: input.text,
+      to: [input.to],
     }),
     headers: {
       "Content-Type": "application/json",
-      "api-key": apiKey,
+      Authorization: `Bearer ${apiKey}`,
     },
     method: "POST",
   });
 
   if (!response.ok) {
     const body = (await response.json().catch(() => undefined)) as
-      | BrevoEmailResponse
+      | ResendEmailResponse
       | undefined;
 
-    throw new Error(body?.message || "Brevo could not send the email.");
+    throw new Error(body?.message || "Resend could not send the email.");
   }
 }

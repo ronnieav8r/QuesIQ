@@ -8,32 +8,47 @@ import { requestOnboarding, verifyEmail, requireEmailDelivery } from "@/server/m
 import { accountLinkPage, accountLinkSubmit, onboardingRequest } from "@/server/mobile-auth/onboarding-http";
 import { verifyPasswordCredentials, resetPasswordWithToken } from "@/server/auth/password-auth";
 import { issueMobileTokenPair, rotateMobileRefreshToken } from "@/server/mobile-auth/mobile-auth";
+import { sendTransactionalAuthEmail } from "@/server/auth/auth-email";
 
 async function main() {
   const email = `onboarding-${randomUUID()}@example.test`;
   const password = "OriginalSecure123!";
   const nextPassword = "ReplacementSecure456!";
-  const emails: { textContent: string; to: {email:string}[] }[] = [];
+  const emails: { text: string; to: string[] }[] = [];
   process.env.INTERVIEW_ONBOARDING_ENABLED = "1";
   process.env.INTERVIEW_AUTH_ORIGIN = "http://127.0.0.1:3100";
-  process.env.BREVO_API_KEY = "local-mocked-email-key";
+  process.env.RESEND_API_KEY = "local-mocked-email-key";
   process.env.AUTH_EMAIL_FROM = "local@example.test";
+  process.env.AUTH_EMAIL_FROM_NAME = "QuesIQ Interview";
   process.env.MOBILE_AUTH_SECRET = "local-onboarding-test-secret-with-sufficient-length";
   globalThis.fetch = async (url, init) => {
-    assert.equal(String(url), "https://api.brevo.com/v3/smtp/email");
-    emails.push(JSON.parse(String(init?.body)));
-    return Response.json({messageId:"local-only"});
+    assert.equal(String(url), "https://api.resend.com/emails");
+    assert.equal(new Headers(init?.headers).get("Authorization"), "Bearer local-mocked-email-key");
+    assert.equal(init?.method, "POST");
+    const payload = JSON.parse(String(init?.body));
+    assert.equal(payload.from, "QuesIQ Interview <local@example.test>");
+    assert.deepEqual(payload.to, [email]);
+    assert.equal(typeof payload.html, "string");
+    assert.equal(typeof payload.text, "string");
+    emails.push(payload);
+    return Response.json({id:"local-only"});
   };
   const body = {email,password,confirmPassword:password,firstName:"Local"};
   const cooldown = `interview-email-cooldown:${createHash("sha256").update(email).digest("hex")}`;
   const clearCooldown = () => getDb().delete(verificationTokens).where(eq(verificationTokens.identifier,cooldown));
-  const linkFrom = (index:number) => new URL(emails[index].textContent.match(/http[^\s]+/)![0]);
+  const linkFrom = (index:number) => new URL(emails[index].text.match(/http[^\s]+/)![0]);
   try {
     process.env.INTERVIEW_ONBOARDING_ENABLED="0";
     assert.throws(requireEmailDelivery);
     await assert.rejects(requestOnboarding("register",body));
     assert.equal((await getDb().select().from(users).where(eq(users.email,email))).length,0);
     process.env.INTERVIEW_ONBOARDING_ENABLED="1";
+    delete process.env.RESEND_API_KEY;
+    process.env.BREVO_API_KEY = "legacy-key-must-not-enable-delivery";
+    await assert.rejects(requestOnboarding("register",body));
+    assert.equal(emails.length,0);
+    assert.equal((await getDb().select().from(users).where(eq(users.email,email))).length,0);
+    process.env.RESEND_API_KEY = "local-mocked-email-key";
     await Promise.all([requestOnboarding("register",body),requestOnboarding("register",body)]);
     assert.equal(emails.length,1);
     assert.equal(await verifyPasswordCredentials(body),null);
@@ -81,7 +96,11 @@ async function main() {
       assert.equal(await requestOnboarding("reset", {email:unknown}), await requestOnboarding("resend", {email}));
       assert.equal(emails.length,before);
     } finally { await getDb().delete(verificationTokens).where(eq(verificationTokens.identifier,"interview-email-cooldown:"+unknownHash)); }
-    console.log("PASS: disabled delivery, duplicate/concurrent signup, email verification single-use, scanner-safe GET, password reset validation/expiry/concurrency, credential preservation, refresh revocation and HTTP input bounds. All emails mocked; loopback database only.");
+    globalThis.fetch = async () => Response.json({message:"Provider rejected sender"}, {status:403});
+    await assert.rejects(sendTransactionalAuthEmail({to:email,subject:"test",text:"test",html:"test"}), /Provider rejected sender/);
+    globalThis.fetch = async () => new Response("upstream unavailable", {status:502});
+    await assert.rejects(sendTransactionalAuthEmail({to:email,subject:"test",text:"test",html:"test"}), /Resend could not send/);
+    console.log("PASS: Resend payload/auth, missing-key fail-closed behavior, provider failures, disabled delivery, duplicate/concurrent signup, email verification single-use, scanner-safe GET, password reset validation/expiry/concurrency, credential preservation, refresh revocation and HTTP input bounds. All emails mocked; loopback database only.");
   } finally {
     await getDb().delete(verificationTokens).where(eq(verificationTokens.identifier,"interview-verify:"+email));
     await clearCooldown();
