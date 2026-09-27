@@ -8,7 +8,7 @@ import { getOpenAiRealtimeApiKey } from "@/server/openai/keys";
 import { ensureNativeExecutionSnapshot } from "@/server/interview/execution-config";
 import { CoachingOperationError } from "@/server/interview/coaching-operations";
 import { beginTranscription, attachTranscriptionCall, requestTranscriptionStop, providerCallId, hangupTranscription } from "@/server/interview/transcription-lifecycle";
-import { isInterviewSyntheticTest } from "@/server/interview/operation-context";
+import { isInterviewSyntheticTest, withInterviewOperation } from "@/server/interview/operation-context";
 
 export const runtime = "nodejs";
 
@@ -52,11 +52,12 @@ export async function POST(request: Request) {
     },
     type: "transcription",
   };
-  try { await assertRealtimeBetaAllowed(); } catch (error) {
+  try { await assertRealtimeBetaAllowed({ userId: user.id, sessionId }); } catch (error) {
     if (error instanceof InterviewLimitError) return NextResponse.json({ error: { code: error.code, message: error.message, retryable: false, requestId: crypto.randomUUID(), limit: error.outcome } }, { status: error.status });
     throw error;
   }
-  const run = await startAiRun({
+  let run;
+  try { run = await withInterviewOperation(`transcription:${sessionId}:${crypto.randomUUID()}`, () => startAiRun({
     model,
     rawJson: {
       endpoint: "/v1/realtime/calls",
@@ -66,7 +67,10 @@ export async function POST(request: Request) {
     runType: "interview_transcription",
     sessionId,
     userId: user.id,
-  });
+  })); } catch (error) {
+    if (error instanceof InterviewLimitError) return NextResponse.json({ error: { code: error.code, message: error.message, retryable: false, requestId: crypto.randomUUID(), limit: error.outcome } }, { status: error.status });
+    return mobileApiError("transcription_setup_failed", "Transcription setup could not be completed.", 503, true);
+  }
   const formData = new FormData();
   formData.set("sdp", body.sdp);
   formData.set("session", JSON.stringify(sessionConfig));
@@ -78,10 +82,11 @@ export async function POST(request: Request) {
 
   try {
     if (managed) connection = await beginTranscription({ userId:user.id, sessionId, runId:run.id });
-    const response = await fetch("https://api.openai.com/v1/realtime/calls", {
+    const response = await run.fetch("https://api.openai.com/v1/realtime/calls", {
       body: formData,
       headers: { Authorization: `Bearer ${apiKey}` },
       method: "POST",
+      signal: AbortSignal.timeout(15_000),
     });
     acceptedCallId = providerCallId(response.headers.get("location"));
     if (!response.ok) {

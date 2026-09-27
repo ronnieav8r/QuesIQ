@@ -5,6 +5,7 @@ export function isInterviewRun(kind: string, metadata?: Record<string, unknown> 
   return interviewRunTypes.has(kind) && (!metadata?.product || metadata.product === "interview") && !promptKey?.startsWith("dpe_");
 }
 export type UsageAccounting = {
+  coachingPilotUserId?: string;
   audioUsage?: import("./audio-safety").AudioUsage[];
   version: 1; operationId: string; attemptId: string; mode: string | null;
   provenance: "synthetic" | "provider" | "legacy_unknown";

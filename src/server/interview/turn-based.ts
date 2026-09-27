@@ -32,7 +32,7 @@ import { listStoryLibraryContext } from "@/server/stories/stories";
 import { getActivePromptConfig } from "@/server/prompts/prompt-configs";
 import { getExecutionPrompt } from "./execution-config";
 import { controlledCoachingPresentation, type ControlledCoachingTurn } from "./coaching-exercise-adapter";
-import { readTimedSpeech, type CoachingServerClock } from "./coaching-timing";
+import { readTimedSpeech, CoachingServerClock } from "./coaching-timing";
 import { coachingSpeechText } from "./coaching-speech";
 import { controlledModePrompt, validateControlledModeOutput } from "./controlled-mode-policy";
 
@@ -777,7 +777,7 @@ async function generateSpeechBuffer(input: {
     }
 
     const providerRequestId = response.headers.get("x-request-id") ?? undefined;
-    const audioBuffer = input.timing ? await readTimedSpeech(response, input.timing) : Buffer.from(await response.arrayBuffer());
+    const audioBuffer = await readTimedSpeech(response, input.timing ?? new CoachingServerClock(), 4_000_000);
     input.timing?.mark("ttsEndMs");
     await completeAiRun(run.id, {
       providerRequestId,

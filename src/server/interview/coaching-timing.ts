@@ -25,14 +25,17 @@ export class CoachingServerClock {
 }
 
 /** Observe the first nonempty chunk but keep the existing full-file TTS response. */
-export async function readTimedSpeech(response: Response, clock: CoachingServerClock) {
+export async function readTimedSpeech(response: Response, clock: CoachingServerClock, maxBytes = Infinity) {
   const reader = response.body?.getReader();
   if (!reader) return Buffer.from(await response.arrayBuffer()); // First byte unavailable.
   const chunks: Uint8Array[] = [];
+  let bytes = 0;
   try {
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
+      bytes += value.byteLength;
+      if (bytes > maxBytes) { await reader.cancel(); throw new Error("Speech response exceeded the download limit."); }
       if (value.byteLength) { clock.mark("ttsFirstByteMs"); chunks.push(value); }
     }
   } finally { reader.releaseLock(); }

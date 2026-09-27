@@ -10,6 +10,7 @@ import { buildInterviewExecutionConfig } from "./execution-config-builder";
 import { getInterviewRuntimeConfig } from "./runtime-configs";
 import { firstImpressionMode } from "./controlled-mode-policy";
 import { mockInterviewBehaviorVersion } from "@/product/mock-interview-policy";
+import { coachingPilot } from "./coaching-pilot";
 
 /** Resolve only trusted, parsed setup. The caller never supplies execution metadata. */
 export async function resolveInterviewExecutionSnapshot(snapshot: SessionSetupSnapshot, surface: "native" | "inspector", legacy = false) {
@@ -19,6 +20,8 @@ export async function resolveInterviewExecutionSnapshot(snapshot: SessionSetupSn
   const { updatedAt: _updatedAt, ...runtime } = await getInterviewRuntimeConfig(snapshot.modeKey);
   void _updatedAt;
   const configured = interviewRuntimeSettingsSchema.parse(runtime);
+  const pilot = coachingPilot();
+  if (pilot && snapshot.modeKey === "coaching") configured.maxDurationSeconds = Math.min(configured.maxDurationSeconds, pilot.maxDurationSeconds);
   const firstImpression = !legacy && snapshot.modeKey === "first_impression";
   const rapidFire = !legacy && snapshot.modeKey === "rapid_fire" && configured.engine === "turn_based" && process.env.NODE_ENV !== "production";
   const controlled = firstImpression || rapidFire;

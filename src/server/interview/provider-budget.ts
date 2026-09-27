@@ -1,6 +1,27 @@
 import type { UsageAccounting } from "./usage-accounting";
 import { InterviewLimitError, readBetaPolicy, recordUndispatchedLimit } from "./beta-safety";
 import { audioCapability } from "./audio-safety";
+import { coachingPilot } from "./coaching-pilot";
+
+/** Explicit supervised-pilot exception; does not mark audio capabilities as production verified. */
+export function boundCoachingPilotAudio(url: string, init: RequestInit, accounting: UsageAccounting, kind: string) {
+  const pilot = coachingPilot();
+  readBetaPolicy();
+  if (!pilot || accounting.coachingPilotUserId !== pilot.userId || accounting.mode !== "coaching" || init.method !== "POST") throw new InterviewLimitError("beta_disabled");
+  if (kind === "interview_tts" && url === "https://api.openai.com/v1/audio/speech" && typeof init.body === "string") {
+    const body = JSON.parse(init.body);
+    if (body.model !== "gpt-4o-mini-tts" || accounting.pricing?.model !== body.model || body.voice !== "marin"
+      || body.response_format !== "mp3" || typeof body.input !== "string" || !body.input.length || body.input.length > 1000
+      || Object.keys(body).some(key => !["model", "voice", "response_format", "input"].includes(key))) throw new InterviewLimitError("budget_configuration");
+  } else if (kind === "interview_transcription" && url === "https://api.openai.com/v1/realtime/calls" && init.body instanceof FormData) {
+    const session = JSON.parse(String(init.body.get("session")));
+    const sdp = init.body.get("sdp");
+    if (accounting.pricing?.model !== "gpt-live-transcribe" || session.type !== "transcription"
+      || session.audio?.input?.transcription?.model !== "gpt-live-transcribe"
+      || typeof sdp !== "string" || !sdp.length || sdp.length > 64_000) throw new InterviewLimitError("budget_configuration");
+  } else { throw new InterviewLimitError("pricing_unavailable"); }
+  return { ...init, signal: init.signal ? AbortSignal.any([init.signal, AbortSignal.timeout(30_000)]) : AbortSignal.timeout(30_000) };
+}
 
 /** Conservative text-only admission. Audio/tool/server-held context needs a separately verified bound. */
 export function boundInterviewTextRequest(url: string, init: RequestInit, accounting: UsageAccounting, kind: string) {
@@ -38,10 +59,11 @@ export function interviewProviderFetch(accounting: UsageAccounting | undefined, 
     try {
       if (accounting && accounting.provenance !== "synthetic") {
         if (url.includes("/audio/") || kind === "interview_transcription" || kind === "interview_tts") {
-          // No configured monetary ceiling can manufacture a model's missing hard bound.
-          if (audioCapability(accounting.pricing?.model ?? "unknown").activation === "blocked") throw new InterviewLimitError("pricing_unavailable");
+          if (accounting.coachingPilotUserId) bounded = boundCoachingPilotAudio(url, init ?? {}, accounting, kind);
+          else if (audioCapability(accounting.pricing?.model ?? "unknown").activation === "blocked") throw new InterviewLimitError("pricing_unavailable");
+        } else {
+          bounded = boundInterviewTextRequest(url, init ?? {}, accounting, kind);
         }
-        bounded = boundInterviewTextRequest(url, init ?? {}, accounting, kind);
       }
     }
     catch (error) {

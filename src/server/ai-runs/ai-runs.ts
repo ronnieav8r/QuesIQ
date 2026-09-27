@@ -4,6 +4,7 @@ import { randomUUID, createHash } from "node:crypto";
 import { isInterviewRun, finishUsageAccounting, type UsageAccounting } from "@/server/interview/usage-accounting";
 import { nextInterviewAttempt, isInterviewSyntheticTest } from "@/server/interview/operation-context";
 import { getActiveAiPricing } from "@/server/pricing/ai-pricing";
+import { coachingPilot, coachingPilotPricing } from "@/server/interview/coaching-pilot";
 import { sessions } from "@/server/db/schema";
 import { desc, eq, and } from "drizzle-orm";
 
@@ -114,10 +115,13 @@ export async function startAiRun(input: StartAiRunInput) {
     const [session] = input.sessionId ? await getDb().select({ mode: sessions.modeKey }).from(sessions)
       .where(and(eq(sessions.id, input.sessionId), eq(sessions.userId, input.userId ?? ""))) : [];
     const simulation = process.env.NODE_ENV !== "production" && input.rawJson?.simulation === true;
+    const pilot = !isInterviewSyntheticTest() && !simulation && coachingPilot();
+    const pilotOwner = pilot && input.userId === pilot.userId && session?.mode === "coaching";
     accounting = { version: 1, operationId: nextInterviewAttempt() ?? createHash("sha256").update(JSON.stringify({ userId: input.userId, sessionId: input.sessionId, kind: input.runType, model: input.model, prompt: input.promptSnapshot, metadata: input.rawJson })).digest("hex"), attemptId: id,
       mode: session?.mode ?? null, provenance: isInterviewSyntheticTest() || simulation ? "synthetic" : "provider",
       usageSource: "unavailable", costMicroUsd: null, coverage: "unavailable",
-      pricing: await getActiveAiPricing(input.model, ["realtime", "interview_transcription", "interview_tts"].includes(input.runType) ? "audio" : "text") ?? null };
+      ...(pilotOwner ? { coachingPilotUserId: input.userId } : {}),
+      pricing: pilot ? coachingPilotPricing(input.model) : await getActiveAiPricing(input.model, ["realtime", "interview_transcription", "interview_tts"].includes(input.runType) ? "audio" : "text") ?? null };
   }
   if (accounting && ["interview_transcription", "interview_tts"].includes(input.runType)) {
     const { snapshotAudioUsage } = await import("@/server/interview/audio-safety");

@@ -4,6 +4,7 @@ import { interviewBudgetReservations as reservations, interviewLiveLeases as lea
 import type { InterviewLimitOutcome, InterviewLimitReason } from "@quesiq/interview-contracts";
 import type { UsageAccounting } from "./usage-accounting";
 import { isInterviewSyntheticTest } from "./operation-context";
+import { coachingPilot, coachingPilotBudget, pilotKinds } from "./coaching-pilot";
 
 export class InterviewLimitError extends Error {
   readonly status = 429;
@@ -19,6 +20,7 @@ export class InterviewLimitError extends Error {
 export type BetaPolicy = { session: number; account: number; global: number; maxInputBytes: number; maxOutputTokens: number; ceilings: Record<string, number> };
 export function readBetaPolicy(env: NodeJS.ProcessEnv = process.env): BetaPolicy {
   if (env.INTERVIEW_BETA_ENABLED !== "1") throw new InterviewLimitError("beta_disabled");
+  if (coachingPilot(env)) return coachingPilotBudget;
   const positive = (value: unknown) => typeof value === "number" && Number.isSafeInteger(value) && value > 0;
   const session = Number(env.INTERVIEW_BETA_SESSION_MICRO_USD);
   const account = Number(env.INTERVIEW_BETA_ACCOUNT_24H_MICRO_USD);
@@ -34,6 +36,13 @@ export function readBetaPolicy(env: NodeJS.ProcessEnv = process.env): BetaPolicy
 type Tx = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
 async function lock(tx: Tx) { await tx.execute(sql`select pg_advisory_xact_lock(717007)`); }
 async function checkBudget(tx: Tx, input: { userId: string; sessionId?: string; amount: number; synthetic: boolean }, policy: BetaPolicy) {
+  const pilot = !input.synthetic && coachingPilot();
+  if (pilot) {
+    // Lifetime allowance: neither midnight nor restarting the service replenishes it.
+    const lifetime = await tx.execute(sql`select coalesce(sum(coalesce(settled_micro_usd,reserved_micro_usd)),0) as total
+      from interview_budget_reservations where synthetic=false and status<>'released'`);
+    if (Number(lifetime.rows[0].total) + input.amount > pilot.totalMicroUsd) throw new InterviewLimitError("global_budget");
+  }
   // Unknown reservations never age out. Settled charges count in a rolling 24-hour window.
   const result = await tx.execute(sql`select
     coalesce(sum(case when user_id=${input.userId} then coalesce(settled_micro_usd,reserved_micro_usd) else 0 end),0) as account,
@@ -49,8 +58,16 @@ async function checkBudget(tx: Tx, input: { userId: string; sessionId?: string; 
   }
 }
 
-export async function assertRealtimeBetaAllowed() {
-  if (!isInterviewSyntheticTest()) throw new InterviewLimitError("realtime_unverified");
+export async function assertRealtimeBetaAllowed(coaching?: { userId: string; sessionId: string }) {
+  if (isInterviewSyntheticTest()) return;
+  const pilot = coachingPilot();
+  if (!pilot || !coaching || coaching.userId !== pilot.userId) throw new InterviewLimitError("realtime_unverified");
+  readBetaPolicy();
+  const [session] = await getDb().select({ mode: sessions.modeKey }).from(sessions)
+    .where(and(eq(sessions.id, coaching.sessionId), eq(sessions.userId, coaching.userId)));
+  if (session?.mode !== "coaching") throw new InterviewLimitError("realtime_unverified");
+  const { ensureTranscriptionSupervisor } = await import("./transcription-supervisor");
+  await ensureTranscriptionSupervisor();
 }
 
 export async function reserveInterviewOperation(input: { runId: string; userId?: string; sessionId?: string; kind: string; accounting: UsageAccounting }) {
@@ -61,6 +78,9 @@ export async function reserveInterviewOperation(input: { runId: string; userId?:
   const userId = input.userId;
   try {
     const policy = readBetaPolicy();
+    const pilot = !synthetic && coachingPilot();
+    if (pilot && (userId !== pilot.userId || !input.sessionId || !pilotKinds.has(input.kind)
+      || input.accounting.mode !== "coaching" || input.accounting.coachingPilotUserId !== pilot.userId)) throw new InterviewLimitError("beta_disabled");
     const amount = policy.ceilings[input.kind];
     if (!amount) throw new InterviewLimitError("budget_configuration");
     if (!input.accounting.pricing) throw new InterviewLimitError("pricing_unavailable");
@@ -79,7 +99,8 @@ export async function reserveInterviewOperation(input: { runId: string; userId?:
           const [old] = await tx.select().from(reservations).where(eq(reservations.operationId, `review:${input.sessionId}`));
           if (old && (!lease || lease.sessionId !== input.sessionId || lease.expiresAt.getTime() <= Date.now())) throw new InterviewLimitError("session_expired");
           if (!old) {
-            const duration = session.contextSnapshot.executionConfig?.effective.maxDurationSeconds;
+            const configuredDuration = session.contextSnapshot.executionConfig?.effective.maxDurationSeconds;
+            const duration = pilot && configuredDuration ? Math.min(configuredDuration, pilot.maxDurationSeconds) : configuredDuration;
             if (!duration || !Number.isSafeInteger(duration)) throw new InterviewLimitError("budget_configuration");
             await checkBudget(tx, { userId, sessionId: input.sessionId, amount: policy.ceilings.evaluation + amount, synthetic }, policy);
             await tx.insert(reservations).values({ userId, sessionId: input.sessionId, operationId: `review:${input.sessionId}`, kind: "evaluation_allowance", reservedMicroUsd: policy.ceilings.evaluation, synthetic });

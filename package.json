@@ -70,7 +70,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:interview:beta": "tsx --test src/server/interview/usage-accounting.test.ts src/server/interview/economics-report.test.ts && node --env-file=.env.local ./node_modules/tsx/dist/cli.mjs scripts/test/phase7-safety-services.ts",
+    "test:interview:beta": "tsx --test src/server/interview/usage-accounting.test.ts src/server/interview/economics-report.test.ts && node --env-file=.env.local ./node_modules/tsx/dist/cli.mjs scripts/test/phase7-safety-services.ts && node --env-file=.env.local ./node_modules/tsx/dist/cli.mjs scripts/test/coaching-pilot-services.ts",
     "interview:economics": "node --env-file=.env.local ./node_modules/tsx/dist/cli.mjs scripts/interview/report-economics.ts",
     "interview:economics:reconcile": "node --env-file=.env.local ./node_modules/tsx/dist/cli.mjs scripts/interview/reconcile-economics.ts",
     "interview:transcription:cleanup": "node --env-file=.env.local ./node_modules/tsx/dist/cli.mjs scripts/interview/transcription-cleanup.ts",
