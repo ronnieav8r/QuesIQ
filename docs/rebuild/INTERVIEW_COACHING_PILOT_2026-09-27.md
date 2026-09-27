@@ -45,8 +45,23 @@ Local beta/voice-safety and pilot service tests pass; pilot checks cover foreign
 account/session/mode denial, unsupported kinds, exact audio request bounds, replay
 dispatch prevention, concurrent lifetime allowance, retained old settled charges,
 unique transcription attempts, five-minute deadline and owned termination.
-Production build and focused lint are required before deployment. Hosted proof is
-recorded in the execution ledger after deployment; it is not implied by this file.
+Production build, focused lint and execution-config/Phase 5 service tests passed.
+Render deployment dep-dasnhlg473hc7394d80g is live at a613939 on the dedicated
+Interview service, with automatic deployment still off.
+
+A headless hosted test used the authorized account and a fictional test_tunnel
+session d41235b1-c7a3-44fa-a64d-a9b41a6ce748. Transcription exchange returned 200
+with the managed marker; WebRTC data channel opened; turn returned 200 with
+44 characters of text and 52,224 bytes of speech. The audio was fed into the
+isolated WebRTC stream (no physical microphone or speakers); transcription
+completed with 44 characters. DELETE returned 202, then the hosted supervisor
+confirmed state stopped. The fixture was ended and its lease released; usage
+records remain retained. $1.35 remains reserved for audio, $0.002274 is recorded
+for text usage, and the unused $0.20 review allowance was released. These are
+application accounting figures, not a verified provider invoice.
+
+The user's fresh iPhone Coaching/microphone test through launcher option 5 is
+still required. Start a new session to receive the five-minute pilot snapshot.
 
 Tariffs reviewed September 27, 2026 from official model pages:
 [transcription](https://developers.openai.com/api/docs/models/gpt-live-transcribe),
