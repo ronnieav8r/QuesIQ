@@ -1,6 +1,11 @@
 # Interview V1 remaining gates
 
-Updated2026-09-10. Local Phase7 preparation does not authorize any gate below.
+- 2026-10-06 signed iPhone development build 0.1.0 (2) succeeded at [Expo build 7007ded7](https://expo.dev/accounts/a2rks-llc/projects/quesiq-interview/builds/7007ded7-0a24-4dd1-b442-a819385f03bd). IPA/version/signing profile inspected; install and actual iPhone Coaching behavior remain unverified. See [build evidence](INTERVIEW_IPHONE_BUILD_2026-10-06.md).
+
+- 2026-09-27 owner Coaching pilot activated: user approved reuse of the existing OpenAI key and $20 total application allowance, accepting that it is not a provider invoice cap. Dedicated Interview Render deploy dep-dasnhlg473hc7394d80g is live at a613939; only the configured owner account and Coaching mode are enabled. Five-minute sessions, $5 session allowance, lifetime $20 admission accounting and supervised transcription shutdown apply. Build, focused lint, beta/voice-safety/pilot and execution tests passed. Hosted headless test verified WebRTC connect, generated speech, completed transcription and confirmed provider shutdown. Audio holds $1.35 and recorded text usage $0.002274 remain in the test ledger; unused review allowance released. Physical iPhone mic/option-5 retest remains open. See [pilot evidence](INTERVIEW_COACHING_PILOT_2026-09-27.md). This supersedes older statements that all paid AI is disabled; public activation and other modes remain blocked.
+
+
+Updated 2026-10-06. Local Phase7 preparation does not authorize any gate below.
 Chained voice safeguards are implemented locally; see INTERVIEW_CHAINED_VOICE_SAFETY.md.
 The execution ledger owns local acceptance. No public-release readiness claim.
 
@@ -14,15 +19,15 @@ may proceed without a support response; live safeguards and paid-test gates rema
 | --- | --- | --- |
 | Paid AI quality | Unrun | Approve bounded budget and blinded human review across four role families/two experience levels, weak/strong/ambiguous/adversarial answers; retain held-out cases and report severe truthfulness/ownership violations |
 | Real costs and allowances | Unmeasured | Approve current tariff review, caps and a small matched live sample; reconcile provider usage with billing, include failures/retries and setup/evaluation costs; set customer pricing only afterward |
-| Voice cost bounds | Blocked for live activation | Explicit billing units and blocked guards are implemented; verify reliable usage/duration and speech output bounds before allowing audio dispatch; token-based text bounds do not establish audio bounds |
-| Realtime termination | Blocked for live activation | Chained transcription lifecycle/cleanup is locally implemented; verify live endpoint/termination behavior and supervision surviving host failure. Full Realtime control remains separate; client timers do not satisfy this gate |
+| Voice cost bounds | Restricted owner pilot active; general gate open | The $20 application allowance is not a provider invoice cap. Reconcile real provider usage, duration and speech output before broader audio activation. |
+| Realtime termination | Restricted owner pilot tested; general gate open | Hosted WebRTC connect and server-confirmed stop passed once. Host-failure recovery and reliable provider usage/termination remain unverified for broader activation. Full Realtime control remains separate. |
 | Android physical operation | Unrun | Install an approved build on an identified device; verify microphone/speaker, Bluetooth routes, interruptions, reconnect and WiFi/cellular transitions |
-| iPhone signing/installation | Unverified | Recheck Apple enrollment, provisioning and signed build/install; earlier enrollment-pending note is not current verification |
+| iPhone signing/installation | Signed development IPA verified; install unverified | Build 0.1.0 (2) `7007ded7` succeeded for the registered iPhone. Inspect the build/install link and test actual microphone, speaker and hotel tunnel on-device. Development JavaScript requires Metro. See INTERVIEW_IPHONE_BUILD_2026-10-06.md. |
 | Native durability | Unrun physically | Process-kill/reopen, disk failure and interrupted saves; verify committed text, account isolation and no automatic microphone restart |
 | File preparation | Unrun physically | Picker permission/cancellation, temporary-copy cleanup and actual resume formats on Android/iPhone |
 | Accessibility/input | September12 local fixes/tests accepted; physical checks open | Screen reader, focus order, dynamic text, keyboard avoidance, touch targets and device navigation across all five tabs/four modes |
 | Latency/battery/thermal | Unmeasured | Identified device/OS/build/network and sample counts; first-audio P50/P95, failures/recovery, sustained usage and thermal behavior |
-| Hosted backend/auth | Not activated | Approve hosting, TLS/reachability, token refresh/revocation and production configuration; loopback is not phone reachability |
+| Hosted backend/auth | Render/Supabase and Resend live; final account/device checks open | Gmail/Hotmail provider delivery and user link testing confirmed. Reconcile earlier old-password/refresh and Hotmail-login results in onboarding record; verify phone reachability separately. |
 | Privacy/retention/deletion | Release review pending | Review actual collection/retention, account deletion across product and usage records, backups, provider disclosure and user-facing policy URLs |
 | Store/distribution | Not prepared for submission | Signed artifacts, store assets/metadata, support URLs, sign-in requirements and platform declarations reviewed against current requirements |
 | Release operations | Not authorized | Reviewed commit/integration, staging migration and restore rehearsal, secrets/configuration ownership, monitoring, rollback and rollout decision |
