@@ -12,6 +12,7 @@ const mockGetUserMedia = jest.fn<() => Promise<unknown>>();
 type Peer = { channel: { onopen?: () => void; onmessage?: (event: { data: string }) => void; readyState: string; send: jest.Mock }; onconnectionstatechange?: () => void; connectionState: string };
 const mockPeers: Peer[] = [];
 let mockAcknowledgeClear = true;
+let mockPlayerReleased = false;
 const mockPlayer = { pause: jest.fn(), play: jest.fn(), replace: jest.fn(), addListener: jest.fn((..._args: unknown[]) => ({ remove: jest.fn() })) };
 const mockNetwork = jest.fn(() => () => undefined);
 let mockNetworkListener: ((state: { isConnected: boolean | null }) => void) | undefined;
@@ -19,7 +20,18 @@ let mockNetworkListener: ((state: { isConnected: boolean | null }) => void) | un
 jest.mock('@/providers/auth-provider', () => ({ useAuth: () => ({ fetchWithAuth: mockFetch }) }));
 jest.mock('expo-keep-awake', () => ({ useKeepAwake: () => undefined }));
 jest.mock('lucide-react-native', () => ({ Captions: () => null, CaptionsOff: () => null, CircleStop: () => null, Mic: () => null, MicOff: () => null, Radio: () => null, RotateCcw: () => null }));
-jest.mock('expo-audio', () => ({ useAudioPlayer: () => mockPlayer, setAudioModeAsync: async () => undefined, setIsAudioActiveAsync: async () => undefined }));
+jest.mock('expo-audio', () => ({
+  useAudioPlayer: () => {
+    const { useEffect } = jest.requireActual<typeof import('react')>('react');
+    useEffect(() => {
+      mockPlayerReleased = false;
+      return () => { mockPlayerReleased = true; };
+    }, []);
+    return mockPlayer;
+  },
+  setAudioModeAsync: async () => undefined,
+  setIsAudioActiveAsync: async () => undefined,
+}));
 jest.mock('expo-file-system', () => ({ Paths: { cache: '' }, File: class { exists = true; uri = 'mock.mp3'; create() {} write() {} delete() {} } }));
 jest.mock('@react-native-community/netinfo', () => ({ addEventListener: (listener: typeof mockNetworkListener) => { mockNetworkListener = listener; return mockNetwork(); } }));
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: jest.requireActual<typeof import('react-native')>('react-native').View }));
@@ -52,10 +64,22 @@ const ok = (result: unknown) => ({ ok: true, json: async () => result, text: asy
 beforeEach(() => {
   jest.clearAllMocks(); mockPeers.length = 0; mockAcknowledgeClear = true; mockTrack.enabled = false;
   mockNetworkListener = undefined;
+  mockPlayerReleased = false;
+  mockPlayer.pause.mockImplementation(() => {
+    if (mockPlayerReleased) throw new Error('Unable to find the native shared object');
+  });
   mockGetUserMedia.mockResolvedValue(mockStream);
   mockFetch.mockImplementation(async (path) => ok(path.endsWith('/turn') ? turnResult : {}));
 });
 afterEach(async () => { await cleanup(); jest.restoreAllMocks(); jest.useRealTimers(); });
+
+test('unmount after microphone permission does not call the released audio player', async () => {
+  const view = await render(<ChainedCoachingSession snapshot={snapshot} sessionId="test" onArtifactFinalized={jest.fn()} />);
+  await waitFor(() => expect(mockPeers).toHaveLength(1));
+  await expect(view.unmount()).resolves.not.toThrow();
+  expect(mockPlayerReleased).toBe(true);
+  expect(mockTrack.stop).toHaveBeenCalled();
+});
 
 test('microphone denial has a working connection retry, not an empty response retry', async () => {
   mockGetUserMedia.mockRejectedValueOnce(new Error('Permission denied'));

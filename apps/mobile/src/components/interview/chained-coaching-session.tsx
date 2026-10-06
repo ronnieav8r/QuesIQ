@@ -863,9 +863,10 @@ export function ChainedCoachingSession({
 
   useEffect(() => () => {
     lifecycle.cancelPending();
-    audioPlayer.pause();
+    // useAudioPlayer owns native playback teardown and releases before this
+    // effect's unmount cleanup. Calling pause here accesses a released object.
     cleanupAudioFile();
-  }, [audioPlayer, cleanupAudioFile, lifecycle]);
+  }, [cleanupAudioFile, lifecycle]);
 
   const retry = () => {
     if (!lifecycle.active) return;

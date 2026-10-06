@@ -1,0 +1,21 @@
+{
+  "cli": {
+    "version": ">= 16.0.1",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "environment": "development",
+      "node": "24.14.0",
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://quesiq-interview-api.onrender.com",
+        "EXPO_PUBLIC_DEV_AUTO_SIGN_IN": "false"
+      },
+      "ios": {
+        "simulator": false
+      }
+    }
+  }
+}

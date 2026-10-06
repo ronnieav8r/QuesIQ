@@ -9,6 +9,7 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "bundleIdentifier": "com.quesiq.interview",
+      "buildNumber": "2",
       "icon": "./assets/expo.icon",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "QuesIQ Interview uses your microphone for live interview practice with Que."
@@ -44,11 +45,19 @@
           "imageWidth": 76
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      "expo-image",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "owner": "a2rks-llc",
+    "extra": {
+      "eas": {
+        "projectId": "2b7b5307-d69e-4188-9392-c1e67d7d7b0d"
+      }
     }
   }
 }
